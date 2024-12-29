@@ -15,13 +15,6 @@ import (
 
 const VERSION = 002
 
-type FSEntry interface {
-	Stat() *objects.FileInfo
-	Name() string
-	Size() int64
-	Path() string
-}
-
 type Classification struct {
 	Analyzer string   `msgpack:"analyzer" json:"analyzer"`
 	Classes  []string `msgpack:"classes" json:"classes"`
@@ -169,39 +162,7 @@ func (fsc *Filesystem) GetEntry(path string) (*Entry, error) {
 	return fsc.lookup(path)
 }
 
-func (fsc *Filesystem) Stat(path string) (FSEntry, error) {
-	return fsc.lookup(path)
-}
-
 func (fsc *Filesystem) Children(path string) (<-chan string, error) {
-	fp, err := fsc.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer fp.Close()
-
-	dir, ok := fp.(fs.ReadDirFile)
-	if !ok {
-		return nil, fs.ErrInvalid
-	}
-
-	ch := make(chan string)
-	go func() {
-		defer close(ch)
-		for {
-			entries, err := dir.ReadDir(16)
-			if err != nil {
-				return
-			}
-			for i := range entries {
-				ch <- entries[i].Name()
-			}
-		}
-	}()
-	return ch, nil
-}
-
-func (fsc *Filesystem) ChildrenIter(path string) (chan<- string, error) {
 	fp, err := fsc.Open(path)
 	if err != nil {
 		return nil, err
