@@ -404,7 +404,7 @@ func (r *Repository) GetPackfile(checksum objects.Checksum) (io.Reader, error) {
 	return r.store.GetPackfile(checksum)
 }
 
-func (r *Repository) GetPackfileBlob(checksum objects.Checksum, offset uint32, length uint32) (io.Reader, error) {
+func (r *Repository) GetPackfileBlob(checksum objects.Checksum, offset uint32, length uint32) (io.ReadSeeker, error) {
 	t0 := time.Now()
 	defer func() {
 		r.Logger().Trace("repository", "GetPackfileBlob(%x, %d, %d): %s", checksum, offset, length, time.Since(t0))
@@ -425,7 +425,7 @@ func (r *Repository) GetPackfileBlob(checksum objects.Checksum, offset uint32, l
 		return nil, err
 	}
 
-	return bytes.NewBuffer(decoded), nil
+	return bytes.NewReader(decoded), nil
 }
 
 func (r *Repository) PutPackfile(checksum objects.Checksum, rd io.Reader) error {
@@ -446,7 +446,7 @@ func (r *Repository) DeletePackfile(checksum objects.Checksum) error {
 	return r.store.DeletePackfile(checksum)
 }
 
-func (r *Repository) GetBlob(Type packfile.Type, checksum objects.Checksum) (io.Reader, error) {
+func (r *Repository) GetBlob(Type packfile.Type, checksum objects.Checksum) (io.ReadSeeker, error) {
 	t0 := time.Now()
 	defer func() {
 		r.Logger().Trace("repository", "GetBlob(%x): %s", checksum, time.Since(t0))
