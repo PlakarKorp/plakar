@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go: [ '1.22.2' ]
+        go: [ '1.23.3' ]
     steps:
     - uses: actions/checkout@v2
 
