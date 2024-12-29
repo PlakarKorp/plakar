@@ -332,6 +332,14 @@ func (snap *Snapshot) Backup(scanDir string, options *BackupOptions) error {
 					fileEntry.AddClassification(result.Analyzer, result.Classes)
 				}
 
+				backupCtx.mufileidx.Lock()
+				err := backupCtx.fileidx.Update(record.Pathname, *fileEntry)
+				backupCtx.mufileidx.Unlock()
+				if err != nil {
+					backupCtx.recordError(record.Pathname, err)
+					return
+				}
+
 				serialized, err := fileEntry.ToBytes()
 				if err != nil {
 					backupCtx.recordError(record.Pathname, err)
