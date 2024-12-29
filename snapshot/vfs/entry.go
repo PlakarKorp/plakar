@@ -26,24 +26,24 @@ type Entry struct {
 	FileInfo   objects.FileInfo    `msgpack:"file_info" json:"file_info"`
 
 	/* Directory specific fields */
-	Summary *Summary `msgpack:"summary" json:"summary"`
+	Summary *Summary `msgpack:"summary" json:"summary,omitempty"`
 
 	/* File specific fields */
-	SymlinkTarget string          `msgpack:"symlinkTarget,omitempty" json:"symlinkTarget"`
-	Object        *objects.Object `msgpack:"object,omitempty" json:"object,omitempty"` // nil for !regular files
+	SymlinkTarget string          `msgpack:"symlinkTarget,omitempty" json:"symlink_target"`
+	Object        *objects.Object `msgpack:"object,omitempty" json:"object"` // nil for !regular files
 
 	/* Windows specific fields */
-	AlternateDataStreams []AlternateDataStream `msgpack:"alternate_data_streams,omitempty" json:"alternate_data_streams"`
-	SecurityDescriptor   []byte                `msgpack:"security_descriptor,omitempty" json:"security_descriptor"`
-	FileAttributes       uint32                `msgpack:"file_attributes,omitempty" json:"file_attributes"`
+	AlternateDataStreams []AlternateDataStream `msgpack:"alternate_data_streams,omitempty" json:"alternate_data_streams,omitempty"`
+	SecurityDescriptor   []byte                `msgpack:"security_descriptor,omitempty" json:"security_descriptor,omitempty"`
+	FileAttributes       uint32                `msgpack:"file_attributes,omitempty" json:"file_attributes,omitempty"`
 
 	/* Unix fields */
-	ExtendedAttributes []ExtendedAttribute `msgpack:"extended_attributes,omitempty" json:"extended_attributes"`
+	ExtendedAttributes []ExtendedAttribute `msgpack:"extended_attributes,omitempty" json:"extended_attributes,omitempty"`
 
 	/* Custom metadata and tags */
-	Classifications []Classification `msgpack:"classifications,omitempty" json:"classifications"`
-	CustomMetadata  []CustomMetadata `msgpack:"custom_metadata,omitempty" json:"custom_metadata"`
-	Tags            []string         `msgpack:"tags,omitempty" json:"tags"`
+	Classifications []Classification `msgpack:"classifications,omitempty" json:"classifications,omitempty"`
+	CustomMetadata  []CustomMetadata `msgpack:"custom_metadata,omitempty" json:"custom_metadata,omitempty"`
+	Tags            []string         `msgpack:"tags,omitempty" json:"tags,omitempty"`
 
 	/* Errors */
 	Errors *objects.Checksum `msgpack:"errors,omitempty" json:"errors,omitempty"`
