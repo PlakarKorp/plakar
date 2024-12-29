@@ -5,7 +5,7 @@ import (
 	"io"
 	"io/fs"
 	"iter"
-	"path/filepath"
+	"path"
 	"sort"
 	"strings"
 
@@ -132,7 +132,7 @@ func (e *Entry) Open(fs *Filesystem, path string) fs.File {
 }
 
 func (e *Entry) Getdents(fsc *Filesystem) (iter.Seq2[*Entry, error], error) {
-	path := filepath.Join(e.ParentPath, e.FileInfo.Name())
+	path := path.Join(e.ParentPath, e.FileInfo.Name())
 	iter, err := fsc.tree.ScanFrom(path)
 	if err != nil {
 		return nil, err
@@ -175,7 +175,7 @@ func (e *Entry) Size() int64 {
 }
 
 func (e *Entry) Path() string {
-	return filepath.Join(e.ParentPath, e.FileInfo.Name())
+	return path.Join(e.ParentPath, e.FileInfo.Name())
 }
 
 func (e *Entry) IsDir() bool {
