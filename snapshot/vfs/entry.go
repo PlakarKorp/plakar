@@ -133,23 +133,24 @@ func (e *Entry) Open(fs *Filesystem, path string) fs.File {
 
 func (e *Entry) Getdents(fsc *Filesystem) (iter.Seq2[*Entry, error], error) {
 	path := path.Join(e.ParentPath, e.FileInfo.Name())
-	iter, err := fsc.tree.ScanFrom(path)
+
+	prefix := path
+	if !strings.HasSuffix(prefix, "/") {
+		prefix += "/"
+	}
+
+	iter, err := fsc.tree.ScanFrom(prefix)
 	if err != nil {
 		return nil, err
 	}
 
-	if !strings.HasSuffix(path, "/") {
-		path += "/"
-	}
-
-	prefix := path
 	return func(yield func(*Entry, error) bool) {
 		for iter.Next() {
 			path, entry := iter.Current()
 			if !strings.HasPrefix(path, prefix) {
 				break
 			}
-			if strings.Index(path[:len(prefix)], "/") != -1 {
+			if strings.Index(path[len(prefix):], "/") != -1 {
 				break
 			}
 			if !yield(&entry, nil) {
