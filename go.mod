@@ -24,6 +24,7 @@ require (
 	github.com/pkg/xattr v0.4.10
 	github.com/pmezard/go-difflib v1.0.0
 	github.com/secsy/goftp v0.0.0-20200609142545-aa2de14babf4
+	github.com/stretchr/testify v1.9.0
 	github.com/syndtr/goleveldb v1.0.0
 	github.com/vmihailenco/msgpack/v5 v5.3.5
 	github.com/whilp/git-urls v1.0.0
@@ -40,6 +41,7 @@ require (
 	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/charmbracelet/x/ansi v0.4.5 // indirect
 	github.com/charmbracelet/x/exp/golden v0.0.0-20240815200342-61de596daa2b // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dlclark/regexp2 v1.11.0 // indirect
 	github.com/felixge/httpsnoop v1.0.3 // indirect
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
@@ -72,6 +74,7 @@ require (
 	golang.org/x/text v0.21.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	modernc.org/gc/v3 v3.0.0-20240107210532-573471604cb6 // indirect
 	modernc.org/libc v1.55.3 // indirect
 	modernc.org/mathutil v1.6.0 // indirect
