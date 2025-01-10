@@ -17,23 +17,17 @@
 package archive
 
 import (
-	"archive/tar"
-	"archive/zip"
-	"compress/gzip"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/cmd/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/cmd/plakar/utils"
 	"github.com/PlakarKorp/plakar/repository"
-	"github.com/PlakarKorp/plakar/snapshot"
-	"github.com/PlakarKorp/plakar/snapshot/vfs"
 )
 
 func init() {
@@ -71,11 +65,6 @@ func cmd_archive(ctx *appcontext.AppContext, repo *repository.Repository, args [
 	}
 	defer snap.Close()
 
-	fs, err := snap.Filesystem()
-	if err != nil {
-		log.Fatalf("%s: %s: %s", flag.CommandLine.Name(), pathname, err)
-	}
-
 	if opt_output == "" {
 		opt_output = fmt.Sprintf("plakar-%s.%s", time.Now().UTC().Format(time.RFC3339), supportedFormats[opt_format])
 	}
@@ -92,24 +81,10 @@ func cmd_archive(ctx *appcontext.AppContext, repo *repository.Repository, args [
 		out = tmp
 	}
 
-	switch opt_format {
-	case "tar":
-		if err := archiveTarball(snap, out, fs, pathname, opt_rebase); err != nil {
-			log.Fatal(err)
-		}
-	case "tarball":
-		gzipWriter := gzip.NewWriter(out)
-		if err := archiveTarball(snap, gzipWriter, fs, pathname, opt_rebase); err != nil {
-			log.Fatal(err)
-		}
-		gzipWriter.Close()
-	case "zip":
-		if err := archiveZip(snap, out, fs, pathname, opt_rebase); err != nil {
-			log.Fatal(err)
-		}
-	default:
-		log.Fatalf("%s: unsupported format %s", flag.CommandLine.Name(), opt_format)
+	if err = snap.Archive(out, opt_format, []string{pathname}, opt_rebase); err != nil {
+		log.Fatal(err)
 	}
+
 	if err := out.Close(); err != nil {
 		return 1
 	}
@@ -120,133 +95,4 @@ func cmd_archive(ctx *appcontext.AppContext, repo *repository.Repository, args [
 	}
 
 	return 0
-}
-
-func archiveTarball(snap *snapshot.Snapshot, out io.Writer, vfs *vfs.Filesystem, path string, rebase bool) error {
-	tarWriter := tar.NewWriter(out)
-	defer tarWriter.Close()
-
-	for file, err := range vfs.Pathnames() {
-		if err != nil {
-			return err
-		}
-		if path != "" && !utils.PathIsWithin(file, path) {
-			continue
-		}
-
-		fp, err := vfs.Open(file)
-		if err != nil {
-			snap.Logger().Error("could not open file %s: %s", file, err)
-			continue
-		}
-
-		sb, err := fp.Stat()
-		if err != nil {
-			snap.Logger().Error("could not stat file %s: %s", file, err)
-			fp.Close()
-			continue
-		}
-
-		filepath := file
-		if rebase {
-			filepath = strings.TrimPrefix(filepath, path)
-		}
-
-		header := &tar.Header{
-			Typeflag: tar.TypeReg,
-			Name:     filepath,
-			Size:     sb.Size(),
-			Mode:     int64(sb.Mode()),
-			ModTime:  sb.ModTime(),
-		}
-
-		if sb.Mode().IsDir() {
-			header.Typeflag = tar.TypeDir
-		}
-
-		err = tarWriter.WriteHeader(header)
-		if err != nil {
-			snap.Logger().Error("could not write header for file %s: %s", file, err)
-			fp.Close()
-			continue
-		}
-
-		if header.Typeflag == tar.TypeDir {
-			fp.Close()
-			continue
-		}
-
-		_, err = io.Copy(tarWriter, fp)
-		if err != nil {
-			snap.Logger().Error("could not write file %s: %s", file, err)
-			fp.Close()
-			return err
-		}
-		fp.Close()
-	}
-
-	return nil
-}
-
-func archiveZip(snap *snapshot.Snapshot, out io.Writer, vfs *vfs.Filesystem, path string, rebase bool) error {
-	zipWriter := zip.NewWriter(out)
-	defer zipWriter.Close()
-
-	for file, err := range vfs.Pathnames() {
-		if err != nil {
-			return err
-		}
-		if path != "" {
-			if !utils.PathIsWithin(file, path) {
-				continue
-			}
-		}
-
-		fp, err := vfs.Open(file)
-		if err != nil {
-			return err
-		}
-
-		sb, err := fp.Stat()
-		if err != nil {
-			snap.Logger().Printf("couldn't stat %s: %s", file, err)
-			fp.Close()
-			return err
-		}
-
-		filepath := file
-		if rebase {
-			filepath = strings.TrimPrefix(filepath, path)
-		}
-
-		if sb.Mode().IsDir() {
-			fp.Close()
-			continue
-		}
-
-		header, err := zip.FileInfoHeader(sb)
-		if err != nil {
-			snap.Logger().Printf("could not create header for file %s: %s", file, err)
-			fp.Close()
-			return err
-		}
-		header.Name = strings.TrimLeft(filepath, "/")
-		header.Method = zip.Deflate
-
-		writer, err := zipWriter.CreateHeader(header)
-		if err != nil {
-			snap.Logger().Printf("could not create zip entry for file %s: %s", file, err)
-			fp.Close()
-			return err
-		}
-
-		_, err = io.Copy(writer, fp)
-		if err != nil {
-			snap.Logger().Printf("could not write file %s: %s", file, err)
-			fp.Close()
-			return err
-		}
-		fp.Close()
-	}
-	return nil
 }
