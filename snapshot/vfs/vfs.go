@@ -56,6 +56,10 @@ func PathCmp(a, b string) int {
 // of parent from a filesystem perspective.  Parent has to have a
 // trailing slash.
 func IsEntryBelow(parent, entry string) bool {
+	if !strings.HasSuffix(parent, "/") {
+		parent += "/"
+	}
+
 	if !strings.HasPrefix(entry, parent) {
 		return false
 	}
