@@ -53,8 +53,7 @@ func PathCmp(a, b string) int {
 }
 
 // IsEntryBelow returns true when the entry string is a direct child
-// of parent from a filesystem perspective.  Parent has to have a
-// trailing slash.
+// of parent from a filesystem perspective.
 func IsEntryBelow(parent, entry string) bool {
 	if !strings.HasSuffix(parent, "/") {
 		parent += "/"
