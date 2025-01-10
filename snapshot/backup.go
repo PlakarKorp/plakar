@@ -331,14 +331,6 @@ func (snap *Snapshot) Backup(scanDir string, options *BackupOptions) error {
 					fileEntry.AddClassification(result.Analyzer, result.Classes)
 				}
 
-				backupCtx.mufileidx.Lock()
-				err := backupCtx.fileidx.Update(record.Pathname, *fileEntry)
-				backupCtx.mufileidx.Unlock()
-				if err != nil {
-					backupCtx.recordError(record.Pathname, err)
-					return
-				}
-
 				serialized, err := fileEntry.ToBytes()
 				if err != nil {
 					backupCtx.recordError(record.Pathname, err)
@@ -383,6 +375,15 @@ func (snap *Snapshot) Backup(scanDir string, options *BackupOptions) error {
 					backupCtx.recordError(record.Pathname, err)
 					return
 				}
+			}
+
+			// Update the file since we may have set its Object field
+			backupCtx.mufileidx.Lock()
+			err := backupCtx.fileidx.Update(record.Pathname, *fileEntry)
+			backupCtx.mufileidx.Unlock()
+			if err != nil {
+				backupCtx.recordError(record.Pathname, err)
+				return
 			}
 
 			// Record the checksum of the FileEntry in the cache
