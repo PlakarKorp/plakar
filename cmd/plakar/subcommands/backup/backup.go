@@ -70,8 +70,6 @@ func cmd_backup(ctx *appcontext.AppContext, repo *repository.Repository, args []
 	flags.BoolVar(&opt_quiet, "quiet", false, "suppress output")
 	flags.Parse(args)
 
-	go eventsProcessorStdio(ctx, opt_quiet)
-
 	for _, item := range opt_exclude {
 		excludes = append(excludes, glob.MustCompile(item))
 	}
@@ -144,8 +142,15 @@ func cmd_backup(ctx *appcontext.AppContext, repo *repository.Repository, args []
 		Excludes:       excludes,
 	}
 
+	// go eventsProcessorStdio(ctx, opt_quiet)
+
+	ep := NewEventsProcessorInteractive(ctx)
+
 	if flags.NArg() == 0 {
+		ep.Start()
 		err = snap.Backup(ctx.GetCWD(), opts)
+		ep.Close()
+
 	} else if flags.NArg() == 1 {
 		var cleanPath string
 
@@ -159,7 +164,9 @@ func cmd_backup(ctx *appcontext.AppContext, repo *repository.Repository, args []
 		} else {
 			cleanPath = path.Clean(flags.Arg(0))
 		}
+		ep.Start()
 		err = snap.Backup(cleanPath, opts)
+		ep.Close()
 	} else {
 		log.Fatal("only one directory pushable")
 	}
