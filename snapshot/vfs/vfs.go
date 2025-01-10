@@ -52,13 +52,7 @@ func PathCmp(a, b string) int {
 	return strings.Compare(a, b)
 }
 
-// IsEntryBelow returns true when the entry string is a direct child
-// of parent from a filesystem perspective.
-func IsEntryBelow(parent, entry string) bool {
-	if !strings.HasSuffix(parent, "/") {
-		parent += "/"
-	}
-
+func isEntryBelow(parent, entry string) bool {
 	if !strings.HasPrefix(entry, parent) {
 		return false
 	}

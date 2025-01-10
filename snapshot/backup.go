@@ -426,7 +426,10 @@ func (snap *Snapshot) Backup(scanDir string, options *BackupOptions) error {
 
 		for childiter.Next() {
 			childPath, childEntry := childiter.Current()
-			if !vfs.IsEntryBelow(prefix, childPath) {
+			if !strings.HasPrefix(childPath, prefix) {
+				break
+			}
+			if strings.Index(childPath[len(prefix):], "/") != -1 {
 				break
 			}
 
@@ -472,8 +475,8 @@ func (snap *Snapshot) Backup(scanDir string, options *BackupOptions) error {
 			if !strings.HasPrefix(errentry.Name, prefix) {
 				break
 			}
-			if !vfs.IsEntryBelow(prefix, errentry.Name) {
-				continue
+			if strings.Index(errentry.Name[len(prefix):], "/") != -1 {
+				break
 			}
 			dirEntry.Summary.Below.Errors++
 		}
