@@ -14,6 +14,8 @@ import (
 	"github.com/PlakarKorp/plakar/objects"
 	"github.com/PlakarKorp/plakar/search"
 	"github.com/PlakarKorp/plakar/snapshot"
+	"github.com/PlakarKorp/plakar/snapshot/header"
+	"github.com/PlakarKorp/plakar/snapshot/vfs"
 	"github.com/alecthomas/chroma/formatters"
 	"github.com/alecthomas/chroma/lexers"
 	"github.com/alecthomas/chroma/styles"
@@ -31,7 +33,7 @@ func snapshotHeader(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	return json.NewEncoder(w).Encode(Item{Item: snap.Header})
+	return json.NewEncoder(w).Encode(Item[*header.Header]{Item: snap.Header})
 }
 
 func snapshotReader(w http.ResponseWriter, r *http.Request) error {
@@ -165,10 +167,12 @@ func (signer SnapshotReaderURLSigner) Sign(w http.ResponseWriter, r *http.Reques
 		return err
 	}
 
-	return json.NewEncoder(w).Encode(Item{
-		struct {
-			Signature string `json:"signature"`
-		}{signature},
+	type Signature struct {
+		Signature string `json:"signature"`
+	}
+
+	return json.NewEncoder(w).Encode(Item[Signature]{
+		Signature{signature},
 	})
 }
 
@@ -250,7 +254,7 @@ func snapshotVFSBrowse(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	return json.NewEncoder(w).Encode(Item{Item: entry})
+	return json.NewEncoder(w).Encode(Item[*vfs.Entry]{Item: entry})
 }
 
 func snapshotVFSChildren(w http.ResponseWriter, r *http.Request) error {
@@ -302,9 +306,9 @@ func snapshotVFSChildren(w http.ResponseWriter, r *http.Request) error {
 		return nil
 	}
 
-	items := Items{
+	items := Items[*vfs.Entry]{
 		Total: int(fsinfo.Summary.Directory.Children),
-		Items: make([]interface{}, 0),
+		Items: make([]*vfs.Entry, 0),
 	}
 	iter, err := fsinfo.Getdents(fs)
 	if err != nil {
@@ -372,8 +376,8 @@ func snapshotVFSErrors(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	var i int64
-	items := Items{
-		Items: []interface{}{},
+	items := Items[snapshot.ErrorItem]{
+		Items: []snapshot.ErrorItem{},
 	}
 	for errorEntry := range errorList {
 		if i < offset {
@@ -419,9 +423,9 @@ func snapshotSearch(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	items := Items{
+	items := Items[search.FileEntry]{
 		Total: 0,
-		Items: make([]interface{}, 0),
+		Items: make([]search.FileEntry, 0),
 	}
 	i := int64(0)
 	for result := range results {

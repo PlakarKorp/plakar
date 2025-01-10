@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/PlakarKorp/plakar/objects"
 	"github.com/PlakarKorp/plakar/snapshot"
 	"github.com/PlakarKorp/plakar/snapshot/header"
 )
@@ -59,9 +60,9 @@ func repositorySnapshots(w http.ResponseWriter, r *http.Request) error {
 		headers = headers[offset : offset+limit]
 	}
 
-	items := Items{
+	items := Items[header.Header]{
 		Total: len(snapshotIDs),
-		Items: make([]interface{}, len(headers)),
+		Items: make([]header.Header, len(headers)),
 	}
 	for i, header := range headers {
 		items.Items[i] = header
@@ -76,9 +77,9 @@ func repositoryStates(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	items := Items{
+	items := Items[objects.Checksum]{
 		Total: len(states),
-		Items: make([]interface{}, len(states)),
+		Items: make([]objects.Checksum, len(states)),
 	}
 	for i, state := range states {
 		items.Items[i] = state
@@ -110,9 +111,9 @@ func repositoryPackfiles(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	items := Items{
+	items := Items[objects.Checksum]{
 		Total: len(packfiles),
-		Items: make([]interface{}, len(packfiles)),
+		Items: make([]objects.Checksum, len(packfiles)),
 	}
 	for i, packfile := range packfiles {
 		items.Items[i] = packfile

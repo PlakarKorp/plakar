@@ -5,6 +5,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+
+	"github.com/PlakarKorp/plakar/objects"
 )
 
 func storageConfiguration(w http.ResponseWriter, r *http.Request) error {
@@ -13,15 +15,14 @@ func storageConfiguration(w http.ResponseWriter, r *http.Request) error {
 }
 
 func storageStates(w http.ResponseWriter, r *http.Request) error {
-
 	states, err := lstore.GetStates()
 	if err != nil {
 		return err
 	}
 
-	items := Items{
+	items := Items[objects.Checksum]{
 		Total: len(states),
-		Items: make([]interface{}, len(states)),
+		Items: make([]objects.Checksum, len(states)),
 	}
 	for i, state := range states {
 		items.Items[i] = state
@@ -53,9 +54,9 @@ func storagePackfiles(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	items := Items{
+	items := Items[objects.Checksum]{
 		Total: len(packfiles),
-		Items: make([]interface{}, len(packfiles)),
+		Items: make([]objects.Checksum, len(packfiles)),
 	}
 	for i, packfile := range packfiles {
 		items.Items[i] = packfile

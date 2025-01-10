@@ -14,13 +14,13 @@ import (
 var lstore storage.Store
 var lrepository *repository.Repository
 
-type Item struct {
-	Item interface{} `json:"item"`
+type Item[T any] struct {
+	Item T `json:"item"`
 }
 
-type Items struct {
-	Total int           `json:"total"`
-	Items []interface{} `json:"items"`
+type Items[T any] struct {
+	Total int `json:"total"`
+	Items []T `json:"items"`
 }
 
 type ApiErrorRes struct {
