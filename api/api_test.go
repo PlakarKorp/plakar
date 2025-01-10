@@ -11,7 +11,7 @@ import (
 	"github.com/PlakarKorp/plakar/logging"
 	"github.com/PlakarKorp/plakar/repository"
 	"github.com/PlakarKorp/plakar/storage"
-	_ "github.com/PlakarKorp/plakar/testing"
+	ptesting "github.com/PlakarKorp/plakar/testing"
 )
 
 func TestNewRouter(t *testing.T) {
@@ -24,14 +24,17 @@ func TestNewRouter(t *testing.T) {
 }
 
 func TestAuthMiddleware(t *testing.T) {
-	lstore, err := storage.NewStore("fs", "/test/location")
+	config := ptesting.NewConfiguration()
+	lstore, err := storage.Create("/test/location", *config)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 	ctx := appcontext.NewAppContext()
-	ctx.SetCache(caching.NewManager("/tmp/test_plakar"))
+	cache := caching.NewManager("/tmp/test_plakar")
+	defer cache.Close()
+	ctx.SetCache(cache)
 	ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
-	repo, err := repository.New(ctx, lstore, []byte("secret"))
+	repo, err := repository.New(ctx, lstore, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
