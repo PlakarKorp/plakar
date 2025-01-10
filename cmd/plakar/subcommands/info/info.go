@@ -296,42 +296,42 @@ func info_state(repo *repository.Repository, args []string) error {
 				}
 			}
 
-			for snapshotID, subpart := range st.Snapshots {
+			for snapshot, subpart := range st.Snapshots {
 				fmt.Printf("snapshot %x : packfile %x, offset %d, length %d\n",
-					st.IdToChecksum[snapshotID],
-					st.IdToChecksum[subpart.Packfile],
+					snapshot,
+					subpart.Packfile,
 					subpart.Offset,
 					subpart.Length)
 			}
 
 			for chunk, subpart := range st.Chunks {
 				fmt.Printf("chunk %x : packfile %x, offset %d, length %d\n",
-					st.IdToChecksum[chunk],
-					st.IdToChecksum[subpart.Packfile],
+					chunk,
+					subpart.Packfile,
 					subpart.Offset,
 					subpart.Length)
 			}
 
 			for object, subpart := range st.Objects {
 				fmt.Printf("object %x : packfile %x, offset %d, length %d\n",
-					st.IdToChecksum[object],
-					st.IdToChecksum[subpart.Packfile],
+					object,
+					subpart.Packfile,
 					subpart.Offset,
 					subpart.Length)
 			}
 
 			for file, subpart := range st.VFS {
 				fmt.Printf("vfs node %x : packfile %x, offset %d, length %d\n",
-					st.IdToChecksum[file],
-					st.IdToChecksum[subpart.Packfile],
+					file,
+					subpart.Packfile,
 					subpart.Offset,
 					subpart.Length)
 			}
 
 			for data, subpart := range st.Datas {
 				fmt.Printf("data %x : packfile %x, offset %d, length %d\n",
-					st.IdToChecksum[data],
-					st.IdToChecksum[subpart.Packfile],
+					data,
+					subpart.Packfile,
 					subpart.Offset,
 					subpart.Length)
 			}
