@@ -472,6 +472,9 @@ func (snap *Snapshot) Backup(scanDir string, options *BackupOptions) error {
 			if !strings.HasPrefix(errentry.Name, prefix) {
 				break
 			}
+			if !vfs.IsEntryBelow(prefix, errentry.Name) {
+				continue
+			}
 			dirEntry.Summary.Below.Errors++
 		}
 		if err := erriter.Err(); err != nil {
