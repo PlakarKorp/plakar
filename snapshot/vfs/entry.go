@@ -150,10 +150,7 @@ func (e *Entry) Getdents(fsc *Filesystem) (iter.Seq2[*Entry, error], error) {
 			if prefix == path {
 				continue
 			}
-			if !strings.HasPrefix(path, prefix) {
-				break
-			}
-			if strings.Index(path[len(prefix):], "/") != -1 {
+			if !isEntryBelow(prefix, path) {
 				break
 			}
 			if !yield(&entry, nil) {
@@ -426,11 +423,7 @@ func (vf *vdir) ReadDir(n int) (entries []fs.DirEntry, err error) {
 		if path == prefix {
 			continue
 		}
-
-		if !strings.HasPrefix(path, prefix) {
-			break
-		}
-		if strings.Index(path[len(prefix):], "/") != -1 {
+		if !isEntryBelow(prefix, path) {
 			break
 		}
 

@@ -52,6 +52,16 @@ func PathCmp(a, b string) int {
 	return strings.Compare(a, b)
 }
 
+func isEntryBelow(parent, entry string) bool {
+	if !strings.HasPrefix(entry, parent) {
+		return false
+	}
+	if strings.Index(entry[len(parent):], "/") != -1 {
+		return false
+	}
+	return true
+}
+
 func NewFilesystem(repo *repository.Repository, root objects.Checksum) (*Filesystem, error) {
 	rd, err := repo.GetBlob(packfile.TYPE_VFS, root)
 	if err != nil {
