@@ -38,59 +38,53 @@ type Metadata struct {
 }
 
 type Location struct {
-	Packfile uint64
+	Packfile objects.Checksum
 	Offset   uint32
 	Length   uint32
 }
 
 type State struct {
-	muChecksum   sync.Mutex
-	checksumToId map[objects.Checksum]uint64
-	IdToChecksum map[uint64]objects.Checksum
-
 	muChunks sync.Mutex
-	Chunks   map[uint64]Location
+	Chunks   map[objects.Checksum]Location
 
 	muObjects sync.Mutex
-	Objects   map[uint64]Location
+	Objects   map[objects.Checksum]Location
 
-	muVFS   sync.Mutex
-	VFS     map[uint64]Location
+	muVFS sync.Mutex
+	VFS   map[objects.Checksum]Location
 
 	muChildren sync.Mutex
-	Children   map[uint64]Location
+	Children   map[objects.Checksum]Location
 
 	muDatas sync.Mutex
-	Datas   map[uint64]Location
+	Datas   map[objects.Checksum]Location
 
 	muSnapshots sync.Mutex
-	Snapshots   map[uint64]Location
+	Snapshots   map[objects.Checksum]Location
 
 	muSignatures sync.Mutex
-	Signatures   map[uint64]Location
+	Signatures   map[objects.Checksum]Location
 
 	muErrors sync.Mutex
-	Errors   map[uint64]Location
+	Errors   map[objects.Checksum]Location
 
 	muDeletedSnapshots sync.Mutex
-	DeletedSnapshots   map[uint64]time.Time
+	DeletedSnapshots   map[objects.Checksum]time.Time
 
 	Metadata Metadata
 }
 
 func New() *State {
 	return &State{
-		IdToChecksum:     make(map[uint64]objects.Checksum),
-		checksumToId:     make(map[objects.Checksum]uint64),
-		Chunks:           make(map[uint64]Location),
-		Objects:          make(map[uint64]Location),
-		VFS:              make(map[uint64]Location),
-		Children:         make(map[uint64]Location),
-		Datas:            make(map[uint64]Location),
-		Snapshots:        make(map[uint64]Location),
-		Signatures:       make(map[uint64]Location),
-		Errors:           make(map[uint64]Location),
-		DeletedSnapshots: make(map[uint64]time.Time),
+		Chunks:           make(map[objects.Checksum]Location),
+		Objects:          make(map[objects.Checksum]Location),
+		VFS:              make(map[objects.Checksum]Location),
+		Children:         make(map[objects.Checksum]Location),
+		Datas:            make(map[objects.Checksum]Location),
+		Snapshots:        make(map[objects.Checksum]Location),
+		Signatures:       make(map[objects.Checksum]Location),
+		Errors:           make(map[objects.Checksum]Location),
+		DeletedSnapshots: make(map[objects.Checksum]time.Time),
 		Metadata: Metadata{
 			Version:   VERSION,
 			Timestamp: time.Now(),
@@ -104,20 +98,6 @@ func (st *State) Derive() *State {
 	nst := New()
 	nst.Metadata.Extends = st.Metadata.Extends
 	return nst
-}
-
-func (st *State) getOrCreateIdForChecksum(checksum objects.Checksum) uint64 {
-	st.muChecksum.Lock()
-	defer st.muChecksum.Unlock()
-
-	if id, exists := st.checksumToId[checksum]; exists {
-		return id
-	}
-
-	newID := uint64(len(st.IdToChecksum))
-	st.checksumToId[checksum] = newID
-	st.IdToChecksum[newID] = checksum
-	return newID
 }
 
 func (st *State) SerializeStream(w io.Writer) error {
@@ -135,8 +115,13 @@ func (st *State) SerializeStream(w io.Writer) error {
 		return err
 	}
 
+	writeCsum := func(value objects.Checksum) error {
+		_, err := w.Write(value[:])
+		return err
+	}
+
 	writeLocation := func(loc Location) error {
-		if err := writeUint64(loc.Packfile); err != nil {
+		if err := writeCsum(loc.Packfile); err != nil {
 			return err
 		}
 		if err := writeUint32(loc.Offset); err != nil {
@@ -171,20 +156,15 @@ func (st *State) SerializeStream(w io.Writer) error {
 		}
 	}
 
-	if err := serializeMapping(w, st.DeletedSnapshots, writeUint64, func(value time.Time) error {
+	if err := serializeMapping(w, st.DeletedSnapshots, writeCsum, func(value time.Time) error {
 		return writeUint64(uint64(value.UnixNano()))
 	}); err != nil {
 		return fmt.Errorf("failed to serialize DeletedSnapshots: %w", err)
 	}
 
-	// Serialize each mapping
-	if err := serializeMapping(w, st.IdToChecksum, writeUint64, func(v objects.Checksum) error { _, err := w.Write(v[:]); return err }); err != nil {
-		return fmt.Errorf("failed to serialize IdToChecksum: %w", err)
-	}
-
 	mappings := []struct {
 		name string
-		data map[uint64]Location
+		data map[objects.Checksum]Location
 	}{
 		{"Chunks", st.Chunks},
 		{"Objects", st.Objects},
@@ -197,7 +177,7 @@ func (st *State) SerializeStream(w io.Writer) error {
 	}
 
 	for _, m := range mappings {
-		if err := serializeMapping(w, m.data, writeUint64, writeLocation); err != nil {
+		if err := serializeMapping(w, m.data, writeCsum, writeLocation); err != nil {
 			return fmt.Errorf("failed to serialize %s: %w", m.name, err)
 		}
 	}
@@ -223,6 +203,14 @@ func serializeMapping[K comparable, V any](w io.Writer, mapping map[K]V, writeKe
 }
 
 func DeserializeStream(r io.Reader) (*State, error) {
+	readCsum := func() (objects.Checksum, error) {
+		var csum objects.Checksum
+		if _, err := io.ReadFull(r, csum[:]); err != nil {
+			return csum, err
+		}
+		return csum, nil
+	}
+
 	readUint64 := func() (uint64, error) {
 		buf := make([]byte, 8)
 		if _, err := io.ReadFull(r, buf); err != nil {
@@ -240,7 +228,7 @@ func DeserializeStream(r io.Reader) (*State, error) {
 	}
 
 	readLocation := func() (Location, error) {
-		packfile, err := readUint64()
+		packfile, err := readCsum()
 		if err != nil {
 			return Location{}, err
 		}
@@ -289,8 +277,8 @@ func DeserializeStream(r io.Reader) (*State, error) {
 		st.Metadata.Extends[i] = checksum
 	}
 
-	st.DeletedSnapshots = make(map[uint64]time.Time)
-	if err := deserializeMapping(r, st.DeletedSnapshots, readUint64, func() (time.Time, error) {
+	st.DeletedSnapshots = make(map[objects.Checksum]time.Time)
+	if err := deserializeMapping(r, st.DeletedSnapshots, readCsum, func() (time.Time, error) {
 		timestamp, err := readUint64()
 		if err != nil {
 			return time.Time{}, err
@@ -300,21 +288,10 @@ func DeserializeStream(r io.Reader) (*State, error) {
 		return nil, fmt.Errorf("failed to deserialize DeletedSnapshots: %w", err)
 	}
 
-	st.IdToChecksum = make(map[uint64]objects.Checksum)
-	if err := deserializeMapping(r, st.IdToChecksum, readUint64, func() (objects.Checksum, error) {
-		var checksum objects.Checksum
-		if _, err := io.ReadFull(r, checksum[:]); err != nil {
-			return objects.Checksum{}, err
-		}
-		return checksum, nil
-	}); err != nil {
-		return nil, fmt.Errorf("failed to deserialize IdToChecksum: %w", err)
-	}
-
 	// Deserialize each mapping
 	mappings := []struct {
 		name string
-		data *map[uint64]Location
+		data *map[objects.Checksum]Location
 	}{
 		{"Chunks", &st.Chunks},
 		{"Objects", &st.Objects},
@@ -327,8 +304,8 @@ func DeserializeStream(r io.Reader) (*State, error) {
 	}
 
 	for _, m := range mappings {
-		*m.data = make(map[uint64]Location)
-		if err := deserializeMapping(r, *m.data, readUint64, readLocation); err != nil {
+		*m.data = make(map[objects.Checksum]Location)
+		if err := deserializeMapping(r, *m.data, readCsum, readLocation); err != nil {
 			return nil, fmt.Errorf("failed to deserialize %s: %w", m.name, err)
 		}
 	}
@@ -371,7 +348,7 @@ func (st *State) Extends(stateID objects.Checksum) {
 }
 
 func (st *State) mergeLocationMaps(Type packfile.Type, deltaState *State) {
-	var mapPtr *map[uint64]Location
+	var mapPtr *map[objects.Checksum]Location
 	switch Type {
 	case packfile.TYPE_SNAPSHOT:
 		deltaState.muSnapshots.Lock()
@@ -409,10 +386,8 @@ func (st *State) mergeLocationMaps(Type packfile.Type, deltaState *State) {
 		panic("invalid blob type")
 	}
 
-	for deltaBlobChecksumID, subpart := range *mapPtr {
-		packfileChecksum := deltaState.IdToChecksum[subpart.Packfile]
-		deltaChunkChecksum := deltaState.IdToChecksum[deltaBlobChecksumID]
-		st.SetPackfileForBlob(Type, packfileChecksum, deltaChunkChecksum,
+	for deltaBlobChecksum, subpart := range *mapPtr {
+		st.SetPackfileForBlob(Type, subpart.Packfile, deltaBlobChecksum,
 			subpart.Offset,
 			subpart.Length,
 		)
@@ -430,18 +405,14 @@ func (st *State) Merge(stateID objects.Checksum, deltaState *State) {
 	st.mergeLocationMaps(packfile.TYPE_ERROR, deltaState)
 
 	deltaState.muDeletedSnapshots.Lock()
-	for originalSnapshotID, tm := range deltaState.DeletedSnapshots {
-		originalChecksum := deltaState.IdToChecksum[originalSnapshotID]
-		snapshotID := st.getOrCreateIdForChecksum(originalChecksum)
-		st.DeletedSnapshots[snapshotID] = tm
+	for originalSnapshot, tm := range deltaState.DeletedSnapshots {
+		st.DeletedSnapshots[originalSnapshot] = tm
 	}
 	deltaState.muDeletedSnapshots.Unlock()
 }
 
 func (st *State) GetSubpartForBlob(Type packfile.Type, blobChecksum objects.Checksum) (objects.Checksum, uint32, uint32, bool) {
-	blobID := st.getOrCreateIdForChecksum(blobChecksum)
-
-	var mapPtr *map[uint64]Location
+	var mapPtr *map[objects.Checksum]Location
 	switch Type {
 	case packfile.TYPE_SNAPSHOT:
 		st.muSnapshots.Lock()
@@ -479,20 +450,15 @@ func (st *State) GetSubpartForBlob(Type packfile.Type, blobChecksum objects.Chec
 		panic("invalid blob type")
 	}
 
-	if blob, exists := (*mapPtr)[blobID]; !exists {
+	if blob, exists := (*mapPtr)[blobChecksum]; !exists {
 		return objects.Checksum{}, 0, 0, false
 	} else {
-		st.muChecksum.Lock()
-		packfileChecksum := st.IdToChecksum[blob.Packfile]
-		st.muChecksum.Unlock()
-		return packfileChecksum, blob.Offset, blob.Length, true
+		return blob.Packfile, blob.Offset, blob.Length, true
 	}
 }
 
 func (st *State) BlobExists(Type packfile.Type, blobChecksum objects.Checksum) bool {
-	blobID := st.getOrCreateIdForChecksum(blobChecksum)
-
-	var mapPtr *map[uint64]Location
+	var mapPtr *map[objects.Checksum]Location
 	switch Type {
 	case packfile.TYPE_SNAPSHOT:
 		st.muSnapshots.Lock()
@@ -530,7 +496,7 @@ func (st *State) BlobExists(Type packfile.Type, blobChecksum objects.Checksum) b
 		panic("invalid blob type")
 	}
 
-	if _, exists := (*mapPtr)[blobID]; !exists {
+	if _, exists := (*mapPtr)[blobChecksum]; !exists {
 		return false
 	} else {
 		return true
@@ -538,10 +504,7 @@ func (st *State) BlobExists(Type packfile.Type, blobChecksum objects.Checksum) b
 }
 
 func (st *State) SetPackfileForBlob(Type packfile.Type, packfileChecksum objects.Checksum, blobChecksum objects.Checksum, packfileOffset uint32, chunkLength uint32) {
-	packfileID := st.getOrCreateIdForChecksum(packfileChecksum)
-	blobID := st.getOrCreateIdForChecksum(blobChecksum)
-
-	var mapPtr *map[uint64]Location
+	var mapPtr *map[objects.Checksum]Location
 	switch Type {
 	case packfile.TYPE_SNAPSHOT:
 		st.muSnapshots.Lock()
@@ -579,9 +542,9 @@ func (st *State) SetPackfileForBlob(Type packfile.Type, packfileChecksum objects
 		panic("invalid blob type")
 	}
 
-	if _, exists := (*mapPtr)[blobID]; !exists {
-		(*mapPtr)[blobID] = Location{
-			Packfile: packfileID,
+	if _, exists := (*mapPtr)[blobChecksum]; !exists {
+		(*mapPtr)[blobChecksum] = Location{
+			Packfile: packfileChecksum,
 			Offset:   packfileOffset,
 			Length:   chunkLength,
 		}
@@ -589,20 +552,18 @@ func (st *State) SetPackfileForBlob(Type packfile.Type, packfileChecksum objects
 }
 
 func (st *State) DeleteSnapshot(snapshotChecksum objects.Checksum) error {
-	snapshotID := st.getOrCreateIdForChecksum(snapshotChecksum)
-
 	st.muSnapshots.Lock()
 	defer st.muSnapshots.Unlock()
-	_, exists := st.Snapshots[snapshotID]
+	_, exists := st.Snapshots[snapshotChecksum]
 
 	if !exists {
 		return fmt.Errorf("snapshot not found")
 	}
 
-	delete(st.Snapshots, snapshotID)
+	delete(st.Snapshots, snapshotChecksum)
 
 	st.muDeletedSnapshots.Lock()
-	st.DeletedSnapshots[snapshotID] = time.Now()
+	st.DeletedSnapshots[snapshotChecksum] = time.Now()
 	st.muDeletedSnapshots.Unlock()
 
 	return nil
@@ -610,7 +571,7 @@ func (st *State) DeleteSnapshot(snapshotChecksum objects.Checksum) error {
 
 func (st *State) ListBlobs(Type packfile.Type) iter.Seq[objects.Checksum] {
 	return func(yield func(objects.Checksum) bool) {
-		var mapPtr *map[uint64]Location
+		var mapPtr *map[objects.Checksum]Location
 		var mtx *sync.Mutex
 		switch Type {
 		case packfile.TYPE_CHUNK:
@@ -641,7 +602,7 @@ func (st *State) ListBlobs(Type packfile.Type) iter.Seq[objects.Checksum] {
 		blobsList := make([]objects.Checksum, 0)
 		mtx.Lock()
 		for k := range *mapPtr {
-			blobsList = append(blobsList, st.IdToChecksum[k])
+			blobsList = append(blobsList, k)
 		}
 		mtx.Unlock()
 
@@ -662,7 +623,7 @@ func (st *State) ListSnapshots() iter.Seq[objects.Checksum] {
 			_, deleted := st.DeletedSnapshots[k]
 			st.muDeletedSnapshots.Unlock()
 			if !deleted {
-				snapshotsList = append(snapshotsList, st.IdToChecksum[k])
+				snapshotsList = append(snapshotsList, k)
 			}
 		}
 		st.muSnapshots.Unlock()
