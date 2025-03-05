@@ -56,6 +56,7 @@ type Maintenance struct {
 
 	repository    *repository.Repository
 	maintenanceID objects.MAC
+	cutoff        time.Time
 }
 
 func (cmd *Maintenance) Name() string {
@@ -79,7 +80,6 @@ func (cmd *Maintenance) updateCache(ctx *appcontext.AppContext, cache *caching.M
 			continue
 		}
 
-		fmt.Fprintf(ctx.Stdout, "updating cache with snapshot: %x\n", snapshotID)
 		iter, err := snapshot.ListPackfiles()
 		if err != nil {
 			return err
@@ -111,7 +111,6 @@ func (cmd *Maintenance) updateCache(ctx *appcontext.AppContext, cache *caching.M
 			continue
 		}
 
-		fmt.Fprintf(ctx.Stdout, "deleting %x from local cache\n", snapshotID)
 		cache.DeleletePackfiles(snapshotID)
 		cache.DeleteSnapshot(snapshotID)
 	}
@@ -121,9 +120,48 @@ func (cmd *Maintenance) updateCache(ctx *appcontext.AppContext, cache *caching.M
 
 func (cmd *Maintenance) colourPass(ctx *appcontext.AppContext, cache *caching.MaintenanceCache) error {
 	var packfiles map[objects.MAC]struct{} = make(map[objects.MAC]struct{})
-
 	for packfileMAC := range cmd.repository.ListPackfiles() {
-		if !cache.HasPackfile(packfileMAC) {
+		packfiles[packfileMAC] = struct{}{}
+	}
+
+	// Now go over the list of packfile as given by the storage so that we can
+	// identify orphaned packfiles (eg. from an aborted backup)
+	repoPackfiles, err := cmd.repository.GetPackfiles()
+	if err != nil {
+		return err
+	}
+
+	orphanedPackfiles := 0
+	for _, packfileMAC := range repoPackfiles {
+		_, ok := packfiles[packfileMAC]
+		if ok {
+			continue
+		}
+
+		// Maybe it was already colored by a previous run, let's not open the
+		// packfile once again
+		has, err := cmd.repository.HasDeletedPackfile(packfileMAC)
+		if err != nil {
+			return err
+		}
+
+		if has {
+			continue
+		}
+
+		// The packfile is not available through state, so it's orphaned, but
+		// we must take some care as it might be from an in progress backup. In
+		// order to avoid deleting those we rely on the grace period. Sadly
+		// this means we have to load the packfile from the repository,
+		// hopefuly those are rare enough that it's not a problem in practice.
+		packfile, err := cmd.repository.GetPackfile(packfileMAC)
+		if err != nil {
+			return err
+		}
+
+		packfileDate := time.Unix(0, packfile.Footer.Timestamp)
+		if packfileDate.Before(cmd.cutoff) {
+			orphanedPackfiles++
 			packfiles[packfileMAC] = struct{}{}
 		}
 	}
@@ -141,6 +179,10 @@ func (cmd *Maintenance) colourPass(ctx *appcontext.AppContext, cache *caching.Ma
 
 	coloredPackfiles := 0
 	for packfile := range packfiles {
+		if cache.HasPackfile(packfile) {
+			continue
+		}
+
 		has, err := cmd.repository.HasDeletedPackfile(packfile)
 		if err != nil {
 			return err
@@ -154,7 +196,7 @@ func (cmd *Maintenance) colourPass(ctx *appcontext.AppContext, cache *caching.Ma
 		}
 	}
 
-	fmt.Fprintf(ctx.Stdout, "colour: Coloured %d packfiles for deletion\n", coloredPackfiles)
+	fmt.Fprintf(ctx.Stdout, "maintenance: Coloured %d packfiles (%d orphaned) for deletion\n", coloredPackfiles, orphanedPackfiles)
 
 	buf := &bytes.Buffer{}
 	if err := deltaState.SerializeToStream(buf); err != nil {
@@ -169,15 +211,13 @@ func (cmd *Maintenance) colourPass(ctx *appcontext.AppContext, cache *caching.Ma
 }
 
 func (cmd *Maintenance) sweepPass(ctx *appcontext.AppContext, cache *caching.MaintenanceCache) error {
-	// These need to be configurable per repo, but we don't have a mechanism yet (comes in a PR soon!)
-	cutoff := time.Now().AddDate(0, 0, -30)
 	doDeletion := false
 
 	// First go over all the packfiles coloured by first pass.
-	packfileremoved := 0
 	blobRemoved := 0
+	toDelete := map[objects.MAC]struct{}{}
 	for packfileMAC, deletionTime := range cmd.repository.ListDeletedPackfiles() {
-		if deletionTime.After(cutoff) {
+		if deletionTime.After(cmd.cutoff) {
 			continue
 		}
 
@@ -194,16 +234,15 @@ func (cmd *Maintenance) sweepPass(ctx *appcontext.AppContext, cache *caching.Mai
 		// that now effectively all of its blob are unreachable
 		if err := cmd.repository.RemovePackfile(packfileMAC); err != nil {
 			fmt.Fprintf(ctx.Stderr, "maintenance: Failed to remove packfile %s from state\n", packfileMAC)
-		} else {
-			cmd.repository.RemoveDeletedPackfile(packfileMAC)
+			continue
 		}
 
-		packfileremoved++
+		cmd.repository.RemoveDeletedPackfile(packfileMAC)
+		toDelete[packfileMAC] = struct{}{}
 	}
 
 	// Second garbage collect dangling blobs in our state. This is the blobs we
 	// just orphaned plus potential orphan blobs from aborted backups etc.
-	toDelete := map[objects.MAC]struct{}{}
 	for blob, err := range cmd.repository.ListOrphanBlobs() {
 		if err != nil {
 			fmt.Fprintf(ctx.Stderr, "maintenance: Failed to fetch orphaned blob\n")
@@ -211,14 +250,13 @@ func (cmd *Maintenance) sweepPass(ctx *appcontext.AppContext, cache *caching.Mai
 		}
 
 		blobRemoved++
-		toDelete[blob.Location.Packfile] = struct{}{}
 		if err := cmd.repository.RemoveBlob(blob.Type, blob.Blob, blob.Location.Packfile); err != nil {
 			// No hurt in this failing, we just have cruft left around, but they are unreachable anyway.
 			fmt.Fprintf(ctx.Stderr, "maintenance: garbage orphaned blobs pass failed to remove blob %x, type %s\n", blob.Blob, blob.Type)
 		}
 	}
 
-	fmt.Fprintf(ctx.Stdout, "maintenance: %d blobs and %d packfiles were removed\n", blobRemoved, packfileremoved)
+	fmt.Fprintf(ctx.Stdout, "maintenance: %d blobs and %d packfiles were removed\n", blobRemoved, len(toDelete))
 	if err := cmd.repository.PutCurrentState(); err != nil {
 		return err
 	}
@@ -247,6 +285,10 @@ func (cmd *Maintenance) Execute(ctx *appcontext.AppContext, repo *repository.Rep
 	// 7. rebuild a new aggregate state with a new serial without the deleted packfiles
 
 	cmd.repository = repo
+
+	// This need to be configurable per repo, but we don't have a mechanism yet (comes in a PR soon!)
+	cmd.cutoff = time.Now().AddDate(0, 0, -30)
+
 	// This random id generation for non snapshot state should probably be encapsulated somewhere.
 	n, err := rand.Read(cmd.maintenanceID[:])
 	if err != nil {
