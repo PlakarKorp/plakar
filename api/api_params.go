@@ -78,6 +78,15 @@ func QueryParamToInt64(r *http.Request, param string) (int64, bool, error) {
 	return n, true, nil
 }
 
+func QueryParamToString(r *http.Request, param string) (string, bool, error) {
+	str := r.URL.Query().Get(param)
+	if str == "" {
+		return "", false, nil
+	}
+
+	return str, true, nil
+}
+
 func QueryParamToSortKeys(r *http.Request, param, def string) ([]string, error) {
 	str := r.URL.Query().Get(param)
 	if str == "" {

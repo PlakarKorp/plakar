@@ -5,6 +5,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"sort"
+	"strings"
 
 	"github.com/PlakarKorp/plakar/objects"
 	"github.com/PlakarKorp/plakar/snapshot"
@@ -26,6 +28,11 @@ func repositorySnapshots(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
+	importerType, _, err := QueryParamToString(r, "importer")
+	if err != nil {
+		return err
+	}
+
 	sortKeys, err := QueryParamToSortKeys(r, "sort", "Timestamp")
 	if err != nil {
 		return err
@@ -38,13 +45,22 @@ func repositorySnapshots(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
+	totalSnapshots := int(0)
 	headers := make([]header.Header, 0, len(snapshotIDs))
 	for _, snapshotID := range snapshotIDs {
 		snap, err := snapshot.Load(lrepository, snapshotID)
 		if err != nil {
 			return err
 		}
+
+		if importerType != "" && strings.ToLower(snap.Header.GetSource(0).Importer.Type) != strings.ToLower(importerType) {
+			snap.Close()
+			continue
+		}
+
 		headers = append(headers, *snap.Header)
+		totalSnapshots++
+		snap.Close()
 	}
 
 	if limit == 0 {
@@ -61,7 +77,7 @@ func repositorySnapshots(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	items := Items[header.Header]{
-		Total: len(snapshotIDs),
+		Total: totalSnapshots,
 		Items: make([]header.Header, len(headers)),
 	}
 	for i, header := range headers {
@@ -103,4 +119,44 @@ func repositoryState(w http.ResponseWriter, r *http.Request) error {
 		log.Println("write failed:", err)
 	}
 	return nil
+}
+
+func repositoryImporterTypes(w http.ResponseWriter, r *http.Request) error {
+	lrepository.RebuildState()
+
+	snapshotIDs, err := lrepository.GetSnapshots()
+	if err != nil {
+		return err
+	}
+
+	importerTypesMap := make(map[string]struct{})
+	for _, snapshotID := range snapshotIDs {
+		snap, err := snapshot.Load(lrepository, snapshotID)
+		if err != nil {
+			return err
+		}
+		importerTypesMap[strings.ToLower(snap.Header.GetSource(0).Importer.Type)] = struct{}{}
+	}
+
+	importerTypes := make([]string, 0, len(importerTypesMap))
+	for importerType := range importerTypesMap {
+		importerTypes = append(importerTypes, importerType)
+	}
+	sort.Slice(importerTypes, func(i, j int) bool {
+		return importerTypes[i] < importerTypes[j]
+	})
+
+	type Entry struct {
+		Name string `json:"name"`
+	}
+
+	items := Items[Entry]{
+		Total: len(importerTypes),
+		Items: make([]Entry, len(importerTypes)),
+	}
+	for i, importerType := range importerTypes {
+		items.Items[i] = Entry{Name: importerType}
+	}
+
+	return json.NewEncoder(w).Encode(items)
 }
