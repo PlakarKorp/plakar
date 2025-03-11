@@ -35,6 +35,9 @@ type BackupContext struct {
 	maxConcurrency chan bool
 	scanCache      *caching.ScanCache
 
+	flushEndCond *sync.Cond
+	isFlushing   bool
+
 	erridx   *btree.BTree[string, int, []byte]
 	muerridx sync.Mutex
 
@@ -203,6 +206,61 @@ func (snap *Snapshot) importerJob(backupCtx *BackupContext, options *BackupOptio
 	return filesChannel, nil
 }
 
+func (snap *Snapshot) flushDeltaState(tick *time.Ticker, doneChannel chan bool, bc *BackupContext) {
+	select {
+	case <-doneChannel:
+		return
+	case <-tick.C:
+		// We need to block Commit() in case there is an overlap.
+		bc.flushEndCond.L.Lock()
+		bc.isFlushing = true
+
+		// Take the write lock to be able to swap the pointers
+		snap.deltaMtx.Lock()
+		oldState := snap.deltaState
+		oldCache := snap.deltaCache
+
+		// Now make a new state backed by a new cache.
+		identifier, err := MakeSnapIdentifier()
+		if err != nil {
+			snap.Logger().Warn("Failed to generate delta identifier %s\n", err)
+			break
+		}
+
+		deltaCache, err := snap.repository.AppContext().GetCache().Scan(identifier)
+		if err != nil {
+			// XXX: ERROR HANDLING
+			snap.Logger().Warn("Failed to open deltaCache %s\n", err)
+			break
+		}
+
+		snap.deltaCache = deltaCache
+		snap.deltaState = snap.repository.NewStateDelta(deltaCache)
+		snap.deltaMtx.Unlock()
+
+		// Now that the backup is free to progress we can serialize and push
+		// the resulting packfile to the repo.
+		stateDeltaStream := buildSerializedDeltaState(oldState)
+		err = snap.repository.PutState(snap.Header.Identifier, stateDeltaStream)
+		if err != nil {
+			// XXX: ERROR HANDLING
+			snap.Logger().Warn("Failed to push the state to the repository %s", err)
+		}
+
+		// The first cache is always the scanCache, only in this function we
+		// allocate a new and different one, so when we first hit this function
+		// do not close the deltaCache, as it'll be closed at the end of the
+		// backup because it's used by other parts of the code.
+		if oldCache != snap.scanCache {
+			oldCache.Close()
+		}
+
+		bc.isFlushing = false
+		bc.flushEndCond.Broadcast()
+		bc.flushEndCond.L.Unlock()
+	}
+}
+
 func (snap *Snapshot) Backup(imp importer.Importer, options *BackupOptions) error {
 	snap.Event(events.StartEvent())
 	defer snap.Event(events.DoneEvent())
@@ -245,7 +303,12 @@ func (snap *Snapshot) Backup(imp importer.Importer, options *BackupOptions) erro
 		imp:            imp,
 		maxConcurrency: make(chan bool, maxConcurrency),
 		scanCache:      snap.scanCache,
+		flushEndCond:   sync.NewCond(&sync.Mutex{}),
 	}
+
+	ticker := time.NewTicker(10 * time.Minute)
+	flushDone := make(chan bool)
+	go snap.flushDeltaState(ticker, flushDone, backupCtx)
 
 	errstore := caching.DBStore[string, []byte]{
 		Prefix: "__error__",
@@ -665,7 +728,7 @@ func (snap *Snapshot) Backup(imp importer.Importer, options *BackupOptions) erro
 		},
 	}
 
-	return snap.Commit()
+	return snap.Commit(backupCtx)
 }
 
 func entropy(data []byte) (float64, [256]float64) {
@@ -847,6 +910,8 @@ func (snap *Snapshot) PutPackfile(packer *Packer) error {
 		return fmt.Errorf("could not write pack file %s", err.Error())
 	}
 
+	snap.deltaMtx.RLock()
+	defer snap.deltaMtx.RUnlock()
 	for _, Type := range packer.Types() {
 		for blobMAC := range packer.Blobs[Type] {
 			for idx, blob := range packer.Packfile.Index {
@@ -885,8 +950,20 @@ func (snap *Snapshot) PutPackfile(packer *Packer) error {
 	return nil
 }
 
-func (snap *Snapshot) Commit() error {
+func (snap *Snapshot) Commit(bc *BackupContext) error {
 	repo := snap.repository
+
+	// synchronize calls us without a BC, and doesn't do checkpoint so no need
+	// for this dance.
+	if bc != nil {
+		// There might already be a checkpoint delta state push in progress,
+		// wait for it to end, because we don't want them out of order.
+		bc.flushEndCond.L.Lock()
+		for bc.isFlushing {
+			bc.flushEndCond.Wait()
+		}
+		bc.flushEndCond.L.Unlock()
+	}
 
 	serializedHdr, err := snap.Header.Serialize()
 	if err != nil {
@@ -906,7 +983,7 @@ func (snap *Snapshot) Commit() error {
 	}
 	snap.packerManager.Wait()
 
-	stateDelta := snap.buildSerializedDeltaState()
+	stateDelta := buildSerializedDeltaState(snap.deltaState)
 	err = repo.PutState(snap.Header.Identifier, stateDelta)
 	if err != nil {
 		snap.Logger().Warn("Failed to push the state to the repository %s", err)
@@ -917,13 +994,13 @@ func (snap *Snapshot) Commit() error {
 	return nil
 }
 
-func (snap *Snapshot) buildSerializedDeltaState() io.Reader {
+func buildSerializedDeltaState(deltaState *state.LocalState) io.Reader {
 	pr, pw := io.Pipe()
 
 	/* By using a pipe and a goroutine we bound the max size in memory. */
 	go func() {
 		defer pw.Close()
-		if err := snap.deltaState.SerializeToStream(pw); err != nil {
+		if err := deltaState.SerializeToStream(pw); err != nil {
 			pw.CloseWithError(err)
 		}
 	}()

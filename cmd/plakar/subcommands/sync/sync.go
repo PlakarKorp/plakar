@@ -304,5 +304,5 @@ func synchronize(srcRepository, dstRepository *repository.Repository, snapshotID
 		return err
 	}
 
-	return dstSnapshot.Commit()
+	return dstSnapshot.Commit(nil)
 }
