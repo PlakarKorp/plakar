@@ -621,7 +621,7 @@ func (ls *LocalState) DelState(stateID objects.MAC) error {
 	return ls.cache.DelState(stateID)
 }
 
-func (ls *LocalState) PutDelta(de DeltaEntry) error {
+func (ls *LocalState) PutDelta(de *DeltaEntry) error {
 	return ls.cache.PutDelta(de.Type, de.Blob, de.Location.Packfile, de.ToBytes())
 }
 

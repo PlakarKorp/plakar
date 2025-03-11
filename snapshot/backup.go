@@ -851,7 +851,7 @@ func (snap *Snapshot) PutPackfile(packer *Packer) error {
 		for blobMAC := range packer.Blobs[Type] {
 			for idx, blob := range packer.Packfile.Index {
 				if blob.MAC == blobMAC && blob.Type == Type {
-					delta := state.DeltaEntry{
+					delta := &state.DeltaEntry{
 						Type:    blob.Type,
 						Version: packer.Packfile.Index[idx].Version,
 						Blob:    blobMAC,
@@ -866,13 +866,19 @@ func (snap *Snapshot) PutPackfile(packer *Packer) error {
 						return err
 					}
 
-					break
+					if err := snap.repository.PutStateDelta(delta); err != nil {
+						return err
+					}
+
 				}
 			}
 		}
 	}
 
 	if err := snap.deltaState.PutPackfile(snap.Header.Identifier, mac); err != nil {
+		return err
+	}
+	if err := snap.repository.PutStatePackfile(snap.Header.Identifier, mac); err != nil {
 		return err
 	}
 

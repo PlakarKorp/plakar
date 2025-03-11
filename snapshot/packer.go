@@ -202,26 +202,6 @@ func (snap *Snapshot) PutBlob(Type resources.Type, mac [32]byte, data []byte) er
 
 func (snap *Snapshot) GetBlob(Type resources.Type, mac [32]byte) ([]byte, error) {
 	snap.Logger().Trace("snapshot", "%x: GetBlob(%s, %x)", snap.Header.GetIndexShortID(), Type, mac)
-
-	// XXX: Temporary workaround, once the state API changes to get from both sources (delta+aggregated state)
-	// we can remove this hack.
-	if snap.deltaState != nil {
-		loc, exists, err := snap.deltaState.GetSubpartForBlob(Type, mac)
-		if err != nil {
-			return nil, err
-		}
-
-		if exists {
-			rd, err := snap.repository.GetPackfileBlob(loc)
-			if err != nil {
-				return nil, err
-			}
-
-			return io.ReadAll(rd)
-		}
-	}
-
-	// Not found in delta, let's lookup the localstate
 	rd, err := snap.repository.GetBlob(Type, mac)
 	if err != nil {
 		return nil, err
@@ -232,16 +212,11 @@ func (snap *Snapshot) GetBlob(Type resources.Type, mac [32]byte) ([]byte, error)
 
 func (snap *Snapshot) BlobExists(Type resources.Type, mac [32]byte) bool {
 	snap.Logger().Trace("snapshot", "%x: CheckBlob(%s, %064x)", snap.Header.GetIndexShortID(), Type, mac)
-
-	// XXX: Same here, remove this workaround when state API changes.
-	if snap.deltaState != nil {
-		if _, exists := snap.packerManager.inflightMACs[Type].Load(mac); exists {
-			return true
-		}
-		return snap.deltaState.BlobExists(Type, mac) || snap.repository.BlobExists(Type, mac)
-	} else {
-		return snap.repository.BlobExists(Type, mac)
+	if _, exists := snap.packerManager.inflightMACs[Type].Load(mac); exists {
+		return true
 	}
+
+	return snap.repository.BlobExists(Type, mac)
 }
 
 func (snap *Snapshot) PutBlobIfNotExists(Type resources.Type, mac [32]byte, data []byte) error {
