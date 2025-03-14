@@ -24,7 +24,6 @@ import (
 	"github.com/PlakarKorp/plakar/cmd/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/cmd/plakar/utils"
 	"github.com/PlakarKorp/plakar/repository"
-	"golang.org/x/mod/semver"
 )
 
 func init() {
@@ -42,14 +41,9 @@ func parse_cmd_version(ctx *appcontext.AppContext, repo *repository.Repository, 
 	return &Version{}, nil
 }
 
-type Version struct {
-}
+type Version struct{}
 
 func (cmd *Version) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	version := utils.GetVersion()
-	if !semver.IsValid(version) {
-		return 1, fmt.Errorf("invalid version string: %s", version)
-	}
-	fmt.Println(version)
+	fmt.Println(utils.GetVersion())
 	return 0, nil
 }

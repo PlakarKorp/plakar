@@ -257,6 +257,12 @@ func GetConfigDir(appName string) (string, error) {
 
 var VERSION = "v1.0.0"
 
+func init() {
+	if !semver.IsValid(VERSION) {
+		panic(fmt.Sprintln("invalid version string: %s", VERSION))
+	}
+}
+
 func GetVersion() string {
 	return VERSION
 }
