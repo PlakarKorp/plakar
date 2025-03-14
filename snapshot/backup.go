@@ -507,19 +507,9 @@ func (snap *Snapshot) Backup(imp importer.Importer, options *BackupOptions) erro
 				continue
 			}
 
-			childEntry, err := vfs.EntryFromBytes(bytes)
-			if err != nil {
-				return err
-			}
-
 			childPath := prefix + relpath
 
-			serialized, err := childEntry.ToBytes()
-			if err != nil {
-				return err
-			}
-
-			if err := fileidx.Insert(childPath, serialized); err != nil && err != btree.ErrExists {
+			if err := fileidx.Insert(childPath, bytes); err != nil && err != btree.ErrExists {
 				return err
 			}
 
