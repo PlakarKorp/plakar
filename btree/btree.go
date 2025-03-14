@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"slices"
+	"sync"
 
 	"github.com/PlakarKorp/plakar/resources"
 	"github.com/PlakarKorp/plakar/versioning"
@@ -22,7 +23,7 @@ func init() {
 	versioning.Register(resources.RT_BTREE_NODE, versioning.FromString(NODE_VERSION))
 }
 
-type Storer[K any, P any, V any] interface {
+type Storer[K any, P comparable, V any] interface {
 	// Get returns the node pointed by P.  The pointer is one
 	// previously returned by the Put method.
 	Get(P) (*Node[K, P, V], error)
@@ -32,7 +33,7 @@ type Storer[K any, P any, V any] interface {
 	Put(*Node[K, P, V]) (P, error)
 }
 
-type Node[K any, P any, V any] struct {
+type Node[K any, P comparable, V any] struct {
 	Version versioning.Version `msgpack:"version"`
 
 	// An intermediate node has only Keys and Pointers, while
@@ -51,17 +52,18 @@ type Node[K any, P any, V any] struct {
 // BTree implements a B+tree.  K is the type for the key, V for the
 // value stored, and P is a pointer type: it could be a disk sector,
 // a MAC in a packfile, or a key in a leveldb cache.  or more.
-type BTree[K any, P any, V any] struct {
+type BTree[K any, P comparable, V any] struct {
 	Version versioning.Version
 	Order   int
 	Count   int
 	Root    P
-	store   Storer[K, P, V]
+	cache   *cache[K, P, V]
 	compare func(K, K) int
+	rwlock  sync.RWMutex
 }
 
 // New returns a new, empty tree.
-func New[K any, P any, V any](store Storer[K, P, V], compare func(K, K) int, order int) (*BTree[K, P, V], error) {
+func New[K any, P comparable, V any](store Storer[K, P, V], compare func(K, K) int, order int) (*BTree[K, P, V], error) {
 	root := Node[K, P, V]{
 		Version: versioning.FromString(NODE_VERSION),
 	}
@@ -73,7 +75,7 @@ func New[K any, P any, V any](store Storer[K, P, V], compare func(K, K) int, ord
 	return &BTree[K, P, V]{
 		Order:   order,
 		Root:    ptr,
-		store:   store,
+		cache:   cachefor(store, order),
 		compare: compare,
 	}, nil
 }
@@ -81,17 +83,17 @@ func New[K any, P any, V any](store Storer[K, P, V], compare func(K, K) int, ord
 // FromStorage returns a btree from the given storage.  The root must
 // exist, eventually empty, i.e. it should be a tree previously
 // created via New().
-func FromStorage[K any, P any, V any](root P, store Storer[K, P, V], compare func(K, K) int, order int) *BTree[K, P, V] {
+func FromStorage[K any, P comparable, V any](root P, store Storer[K, P, V], compare func(K, K) int, order int) *BTree[K, P, V] {
 	return &BTree[K, P, V]{
 		Version: versioning.FromString(BTREE_VERSION),
 		Order:   order,
 		Root:    root,
-		store:   store,
+		cache:   cachefor(store, order),
 		compare: compare,
 	}
 }
 
-func Deserialize[K, P, V any](rd io.Reader, store Storer[K, P, V], compare func(K, K) int) (*BTree[K, P, V], error) {
+func Deserialize[K any, P comparable, V any](rd io.Reader, store Storer[K, P, V], compare func(K, K) int) (*BTree[K, P, V], error) {
 	var root BTree[K, P, V]
 	if err := msgpack.NewDecoder(rd).Decode(&root); err != nil {
 		return nil, err
@@ -99,7 +101,11 @@ func Deserialize[K, P, V any](rd io.Reader, store Storer[K, P, V], compare func(
 	return FromStorage(root.Root, store, compare, root.Order), nil
 }
 
-func newNodeFrom[K, P, V any](keys []K, pointers []P, values []V) *Node[K, P, V] {
+func (b *BTree[K, P, V]) Close() error {
+	return b.cache.flushall()
+}
+
+func newNodeFrom[K any, P comparable, V any](keys []K, pointers []P, values []V) *Node[K, P, V] {
 	node := &Node[K, P, V]{
 		Version:  versioning.FromString(NODE_VERSION),
 		Keys:     make([]K, len(keys)),
@@ -121,7 +127,7 @@ func (b *BTree[K, P, V]) findleaf(key K) (node *Node[K, P, V], path []P, err err
 
 	for {
 		path = append(path, ptr)
-		node, err = b.store.Get(ptr)
+		node, err = b.cache.Get(ptr)
 		if err != nil {
 			return
 		}
@@ -143,6 +149,9 @@ func (b *BTree[K, P, V]) findleaf(key K) (node *Node[K, P, V], path []P, err err
 }
 
 func (b *BTree[K, P, V]) Find(key K) (val V, found bool, err error) {
+	b.rwlock.RLock()
+	defer b.rwlock.RUnlock()
+
 	leaf, _, err := b.findleaf(key)
 	if err != nil {
 		return
@@ -213,7 +222,7 @@ func (b *BTree[K, P, V]) insert(key K, val V, overwrite bool) error {
 	if found {
 		if overwrite {
 			node.Values[idx] = val
-			return b.store.Update(ptr, node)
+			return b.cache.Update(ptr, node)
 		}
 		return ErrExists
 	}
@@ -222,17 +231,17 @@ func (b *BTree[K, P, V]) insert(key K, val V, overwrite bool) error {
 
 	node.insertAt(idx, key, val)
 	if len(node.Keys) < b.Order {
-		return b.store.Update(ptr, node)
+		return b.cache.Update(ptr, node)
 	}
 
 	new := node.split()
 	new.Next = node.Next
-	newptr, err := b.store.Put(new)
+	newptr, err := b.cache.Put(new)
 	if err != nil {
 		return err
 	}
 	node.Next = &newptr
-	if err := b.store.Update(ptr, node); err != nil {
+	if err := b.cache.Update(ptr, node); err != nil {
 		return err
 	}
 
@@ -241,16 +250,22 @@ func (b *BTree[K, P, V]) insert(key K, val V, overwrite bool) error {
 }
 
 func (b *BTree[K, P, V]) Insert(key K, val V) error {
+	b.rwlock.Lock()
+	defer b.rwlock.Unlock()
+
 	return b.insert(key, val, false)
 }
 
 func (b *BTree[K, P, V]) Update(key K, val V) error {
+	b.rwlock.Lock()
+	defer b.rwlock.Unlock()
+
 	return b.insert(key, val, true)
 }
 
 func (b *BTree[K, P, V]) insertUpwards(key K, ptr P, path []P) error {
 	for i := len(path) - 1; i >= 0; i-- {
-		node, err := b.store.Get(path[i])
+		node, err := b.cache.Get(path[i])
 		if err != nil {
 			return err
 		}
@@ -262,17 +277,17 @@ func (b *BTree[K, P, V]) insertUpwards(key K, ptr P, path []P) error {
 
 		node.insertInternal(idx, key, ptr)
 		if len(node.Keys) < b.Order {
-			return b.store.Update(path[i], node)
+			return b.cache.Update(path[i], node)
 		}
 
 		new := node.split()
 		key = new.Keys[0]
 		new.Keys = new.Keys[1:]
-		ptr, err = b.store.Put(new)
+		ptr, err = b.cache.Put(new)
 		if err != nil {
 			return err
 		}
-		if err := b.store.Update(path[i], node); err != nil {
+		if err := b.cache.Update(path[i], node); err != nil {
 			return err
 		}
 	}
@@ -283,10 +298,14 @@ func (b *BTree[K, P, V]) insertUpwards(key K, ptr P, path []P) error {
 		Keys:     []K{key},
 		Pointers: []P{b.Root, ptr},
 	}
-	rootptr, err := b.store.Put(newroot)
+	rootptr, err := b.cache.Put(newroot)
 	if err != nil {
 		return err
 	}
 	b.Root = rootptr
 	return nil
+}
+
+func (b *BTree[K, P, V]) Stats() (hits, miss, size int) {
+	return b.cache.hits, b.cache.miss, b.cache.size
 }

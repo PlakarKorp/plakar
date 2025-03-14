@@ -2,7 +2,7 @@ package btree
 
 import "github.com/PlakarKorp/plakar/iterator"
 
-type forwardIter[K, P any, V any] struct {
+type forwardIter[K any, P comparable, V any] struct {
 	b       *BTree[K, P, V]
 	ptr     P
 	current *Node[K, P, V]
@@ -25,7 +25,7 @@ func (fit *forwardIter[K, P, V]) Next() bool {
 	}
 	nextptr := *fit.current.Next
 
-	next, err := fit.b.store.Get(nextptr)
+	next, err := fit.b.cache.Get(nextptr)
 	if err != nil {
 		fit.err = err
 		return false
@@ -52,7 +52,7 @@ func (b *BTree[K, P, V]) ScanAll() (iterator.Iterator[K, V], error) {
 
 	var n *Node[K, P, V]
 	for {
-		node, err := b.store.Get(ptr)
+		node, err := b.cache.Get(ptr)
 		if err != nil {
 			return nil, err
 		}
@@ -98,7 +98,7 @@ func (b *BTree[K, P, V]) ScanFrom(key K) (iterator.Iterator[K, V], error) {
 			idx++ // key not found, make an empty iterator
 		} else {
 			ptr = *node.Next
-			node, err = b.store.Get(ptr)
+			node, err = b.cache.Get(ptr)
 			if err != nil {
 				return nil, err
 			}
@@ -120,7 +120,7 @@ type step[K, P, V any] struct {
 	idx int
 }
 
-type backwardIter[K, P, V any] struct {
+type backwardIter[K any, P comparable, V any] struct {
 	b     *BTree[K, P, V]
 	cur   *Node[K, P, V]
 	steps []step[K, P, V]
@@ -129,7 +129,7 @@ type backwardIter[K, P, V any] struct {
 
 func (bit *backwardIter[K, P, V]) dive(ptr P) error {
 	for {
-		node, err := bit.b.store.Get(ptr)
+		node, err := bit.b.cache.Get(ptr)
 		if err != nil {
 			return err
 		}
@@ -172,7 +172,7 @@ func (bit *backwardIter[K, P, V]) Next() bool {
 		}
 
 		// fetch parent node
-		node, err := bit.b.store.Get(last.ptr)
+		node, err := bit.b.cache.Get(last.ptr)
 		if err != nil {
 			bit.err = err
 			return false
@@ -208,7 +208,7 @@ func (b *BTree[K, P, V]) ScanAllReverse() (iterator.Iterator[K, V], error) {
 	return bit, nil
 }
 
-type dfsIter[K, P, V any] struct {
+type dfsIter[K any, P comparable, V any] struct {
 	b       *BTree[K, P, V]
 	stack   []step[K, P, V]
 	ptr     P
@@ -221,7 +221,7 @@ func (dit *dfsIter[K, P, V]) Next() bool {
 		s := &dit.stack[len(dit.stack)-1]
 
 		dit.ptr = s.ptr
-		dit.current, dit.err = dit.b.store.Get(dit.ptr)
+		dit.current, dit.err = dit.b.cache.Get(dit.ptr)
 		if dit.err != nil {
 			return false
 		}

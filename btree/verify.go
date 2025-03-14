@@ -10,7 +10,7 @@ func (b *BTree[K, P, V]) depth() int {
 	depth := 0
 
 	for {
-		node, err := b.store.Get(ptr)
+		node, err := b.cache.Get(ptr)
 		if err != nil {
 			return -1
 		}
@@ -35,7 +35,7 @@ type VerifyState struct {
 func (b *BTree[K, P, V]) Verify() error {
 	state := VerifyState{b.depth(), 0, 0}
 
-	rootNode, err := b.store.Get(b.Root)
+	rootNode, err := b.cache.Get(b.Root)
 	if err != nil {
 		return fmt.Errorf("failed to get root node: %w", err)
 	}
@@ -142,7 +142,7 @@ func (b *BTree[K, P, V]) verifyNode(cur, parent *Node[K, P, V], ptrIdx int, stat
 
 	state.CurrDepth++
 	for i, child := range cur.Pointers {
-		childNode, err := b.store.Get(child)
+		childNode, err := b.cache.Get(child)
 
 		if err != nil {
 			return fmt.Errorf("Failed to fetch node (%v)", child)
