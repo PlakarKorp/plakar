@@ -9,6 +9,7 @@ import (
 	"iter"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/PlakarKorp/plakar/appcontext"
@@ -33,7 +34,10 @@ type Snapshot struct {
 	repository *repository.Repository
 	scanCache  *caching.ScanCache
 
+	deltaCache *caching.ScanCache
 	deltaState *state.LocalState
+	//This is protecting the above two pointers, not their underlying objects
+	deltaMtx sync.RWMutex
 
 	filesystem *vfs.Filesystem
 
@@ -47,12 +51,9 @@ type Snapshot struct {
 func New(repo *repository.Repository) (*Snapshot, error) {
 	var identifier objects.MAC
 
-	n, err := rand.Read(identifier[:])
+	identifier, err := MakeSnapIdentifier()
 	if err != nil {
 		return nil, err
-	}
-	if n != len(identifier) {
-		return nil, io.ErrShortWrite
 	}
 
 	scanCache, err := repo.AppContext().GetCache().Scan(identifier)
@@ -63,6 +64,7 @@ func New(repo *repository.Repository) (*Snapshot, error) {
 	snap := &Snapshot{
 		repository: repo,
 		scanCache:  scanCache,
+		deltaCache: scanCache,
 
 		Header: header.NewHeader("default", identifier),
 	}
@@ -145,6 +147,19 @@ func Fork(repo *repository.Repository, Identifier objects.MAC) (*Snapshot, error
 
 	snap.Logger().Trace("snapshot", "%x: Fork(): %x", snap.Header.Identifier, snap.Header.GetIndexShortID())
 	return snap, nil
+}
+
+func MakeSnapIdentifier() (objects.MAC, error) {
+	var identifier objects.MAC
+	n, err := rand.Read(identifier[:])
+	if err != nil {
+		return objects.MAC{}, err
+	}
+	if n != len(identifier) {
+		return objects.MAC{}, io.ErrShortWrite
+	}
+
+	return identifier, nil
 }
 
 func (snap *Snapshot) Close() error {

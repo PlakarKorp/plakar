@@ -723,6 +723,22 @@ func (r *Repository) RemoveBlob(Type resources.Type, mac, packfileMAC objects.MA
 	return r.state.DelDelta(Type, mac, packfileMAC)
 }
 
+func (r *Repository) PutStateDelta(de *state.DeltaEntry) error {
+	t0 := time.Now()
+	defer func() {
+		r.Logger().Trace("repository", "PutStateDelta(%x): %s", de.Blob, time.Since(t0))
+	}()
+	return r.state.PutDelta(de)
+}
+
+func (r *Repository) PutStatePackfile(stateId, packfile objects.MAC) error {
+	t0 := time.Now()
+	defer func() {
+		r.Logger().Trace("repository", "PutStatePackfile(%x, %x): %s", stateId, packfile, time.Since(t0))
+	}()
+	return r.state.PutPackfile(stateId, packfile)
+}
+
 func (r *Repository) ListOrphanBlobs() iter.Seq2[state.DeltaEntry, error] {
 	t0 := time.Now()
 	defer func() {
