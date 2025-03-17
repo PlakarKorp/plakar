@@ -2,6 +2,7 @@ package snapshot
 
 import (
 	"bytes"
+	"fmt"
 	"sync"
 
 	"github.com/PlakarKorp/plakar/events"
@@ -14,11 +15,22 @@ type CheckOptions struct {
 	FastCheck      bool
 }
 
-func snapshotCheckPath(snap *Snapshot, opts *CheckOptions, concurrency chan bool, wg *sync.WaitGroup) func(entrypath string, e *vfs.Entry, err error) error {
-	return func(entrypath string, e *vfs.Entry, err error) error {
+type checkContext struct {
+	snapshot    *Snapshot
+	concurrency chan struct{}
+	fastCheck   bool
+	err         error
+	wg          sync.WaitGroup
+}
 
+func snapshotCheckPath(checkCtx *checkContext) func(entrypath string, e *vfs.Entry, err error) error {
+	return func(entrypath string, e *vfs.Entry, err error) error {
+		snap := checkCtx.snapshot
+		concurrency := checkCtx.concurrency
+		wg := &checkCtx.wg
 		if err != nil {
 			snap.Event(events.PathErrorEvent(snap.Header.Identifier, entrypath, err.Error()))
+			checkCtx.err = err
 			return err
 		}
 
@@ -35,7 +47,7 @@ func snapshotCheckPath(snap *Snapshot, opts *CheckOptions, concurrency chan bool
 		}
 
 		snap.Event(events.FileEvent(snap.Header.Identifier, entrypath))
-		concurrency <- true
+		concurrency <- struct{}{}
 		wg.Add(1)
 		go func(_fileEntry *vfs.Entry, path string) {
 			defer wg.Done()
@@ -44,6 +56,7 @@ func snapshotCheckPath(snap *Snapshot, opts *CheckOptions, concurrency chan bool
 			object, err := snap.LookupObject(_fileEntry.Object)
 			if err != nil {
 				snap.Event(events.ObjectMissingEvent(snap.Header.Identifier, _fileEntry.Object))
+				checkCtx.err = err
 				return
 			}
 
@@ -53,7 +66,7 @@ func snapshotCheckPath(snap *Snapshot, opts *CheckOptions, concurrency chan bool
 
 			for _, chunk := range object.Chunks {
 				snap.Event(events.ChunkEvent(snap.Header.Identifier, chunk.ContentMAC))
-				if opts.FastCheck {
+				if checkCtx.fastCheck {
 					if !snap.BlobExists(resources.RT_CHUNK, chunk.ContentMAC) {
 						snap.Event(events.ChunkMissingEvent(snap.Header.Identifier, chunk.ContentMAC))
 						complete = false
@@ -61,15 +74,11 @@ func snapshotCheckPath(snap *Snapshot, opts *CheckOptions, concurrency chan bool
 					}
 					snap.Event(events.ChunkOKEvent(snap.Header.Identifier, chunk.ContentMAC))
 				} else {
-					if !snap.BlobExists(resources.RT_CHUNK, chunk.ContentMAC) {
-						snap.Event(events.ChunkMissingEvent(snap.Header.Identifier, chunk.ContentMAC))
-						complete = false
-						break
-					}
 					data, err := snap.GetBlob(resources.RT_CHUNK, chunk.ContentMAC)
 					if err != nil {
 						snap.Event(events.ChunkMissingEvent(snap.Header.Identifier, chunk.ContentMAC))
 						complete = false
+						checkCtx.err = err
 						break
 					}
 					snap.Event(events.ChunkOKEvent(snap.Header.Identifier, chunk.ContentMAC))
@@ -80,6 +89,7 @@ func snapshotCheckPath(snap *Snapshot, opts *CheckOptions, concurrency chan bool
 					if !bytes.Equal(mac[:], chunk.ContentMAC[:]) {
 						snap.Event(events.ChunkCorruptedEvent(snap.Header.Identifier, chunk.ContentMAC))
 						complete = false
+						checkCtx.err = fmt.Errorf("chunk %s corrupted", chunk.ContentMAC)
 						break
 					}
 				}
@@ -91,7 +101,7 @@ func snapshotCheckPath(snap *Snapshot, opts *CheckOptions, concurrency chan bool
 				snap.Event(events.ObjectOKEvent(snap.Header.Identifier, object.ContentMAC))
 			}
 
-			if !opts.FastCheck {
+			if !checkCtx.fastCheck {
 				if !bytes.Equal(hasher.Sum(nil), object.ContentMAC[:]) {
 					snap.Event(events.ObjectCorruptedEvent(snap.Header.Identifier, object.ContentMAC))
 					snap.Event(events.FileCorruptedEvent(snap.Header.Identifier, path))
@@ -100,7 +110,7 @@ func snapshotCheckPath(snap *Snapshot, opts *CheckOptions, concurrency chan bool
 			}
 			snap.Event(events.FileOKEvent(snap.Header.Identifier, entrypath, e.Size()))
 		}(e, entrypath)
-		return nil
+		return checkCtx.err
 	}
 }
 
@@ -118,16 +128,22 @@ func (snap *Snapshot) Check(pathname string, opts *CheckOptions) (bool, error) {
 		maxConcurrency = uint64(snap.AppContext().MaxConcurrency)
 	}
 
-	maxConcurrencyChan := make(chan bool, maxConcurrency)
+	maxConcurrencyChan := make(chan struct{}, maxConcurrency)
 	wg := sync.WaitGroup{}
 	defer wg.Wait()
 	defer close(maxConcurrencyChan)
 
-	err = fs.WalkDir(pathname, snapshotCheckPath(snap, opts, maxConcurrencyChan, &wg))
+	checkCtx := &checkContext{
+		snapshot:    snap,
+		concurrency: maxConcurrencyChan,
+		fastCheck:   opts.FastCheck,
+	}
+
+	err = fs.WalkDir(pathname, snapshotCheckPath(checkCtx))
 	if err != nil {
 		return false, err
 	}
 	wg.Wait()
 
-	return true, nil
+	return checkCtx.err == nil, checkCtx.err
 }
