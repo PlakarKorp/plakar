@@ -17,7 +17,7 @@ type Configuration struct {
 
 type RepositoryConfig struct {
 	Name       string
-	Location   string
+	Location   string `validate:"required"`
 	Passphrase string
 }
 
@@ -143,9 +143,9 @@ type SyncConfig struct {
 }
 
 type MaintenanceConfig struct {
-	Interval   string `validate:"required"`
-	Retention  string `validate:"required"`
-	Repository RepositoryConfig
+	Interval   string           `validate:"required"`
+	Retention  string           `validate:"required"`
+	Repository RepositoryConfig `validate:"required"`
 }
 
 func NewConfiguration() *Configuration {
