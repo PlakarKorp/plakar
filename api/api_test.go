@@ -59,7 +59,7 @@ func TestAuthMiddleware(t *testing.T) {
 	mux := http.NewServeMux()
 	SetupRoutes(mux, repo, token)
 
-	req, err := http.NewRequest("GET", "/api/storage/configuration", nil)
+	req, err := http.NewRequest("GET", "/api/info", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

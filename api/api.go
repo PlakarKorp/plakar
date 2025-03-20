@@ -133,11 +133,6 @@ func SetupRoutes(server *http.ServeMux, repo *repository.Repository, token strin
 	}))
 
 	server.Handle("GET /api/info", authToken(JSONAPIView(apiInfo)))
-	server.Handle("GET /api/storage/configuration", authToken(JSONAPIView(storageConfiguration)))
-	server.Handle("GET /api/storage/states", authToken(JSONAPIView(storageStates)))
-	server.Handle("GET /api/storage/state/{state}", authToken(JSONAPIView(storageState)))
-	server.Handle("GET /api/storage/packfiles", authToken(JSONAPIView(storagePackfiles)))
-	server.Handle("GET /api/storage/packfile/{packfile}", authToken(JSONAPIView(storagePackfile)))
 
 	server.Handle("GET /api/repository/configuration", authToken(JSONAPIView(repositoryConfiguration)))
 	server.Handle("GET /api/repository/snapshots", authToken(JSONAPIView(repositorySnapshots)))

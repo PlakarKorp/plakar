@@ -276,12 +276,12 @@ func snapshotVFSChildren(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	offset, _, err := QueryParamToInt64(r, "offset")
+	offset, err := QueryParamToInt64(r, "offset", 0)
 	if err != nil {
 		return err
 	}
 
-	limit, _, err := QueryParamToInt64(r, "limit")
+	limit, err := QueryParamToInt64(r, "limit", 50)
 	if err != nil {
 		return err
 	}
@@ -433,12 +433,12 @@ func snapshotVFSErrors(w http.ResponseWriter, r *http.Request) error {
 		return parameterError("sort", InvalidArgument, ErrInvalidSortKey)
 	}
 
-	offset, _, err := QueryParamToInt64(r, "offset")
+	offset, err := QueryParamToInt64(r, "offset", 0)
 	if err != nil {
 		return err
 	}
 
-	limit, _, err := QueryParamToInt64(r, "limit")
+	limit, err := QueryParamToInt64(r, "limit", 50)
 	if err != nil {
 		return err
 	}
