@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-package version
+package config
 
 import (
 	"flag"
@@ -114,7 +114,7 @@ func cmd_remote(ctx *appcontext.AppContext, args []string) error {
 		return fmt.Errorf("validation not implemented")
 
 	default:
-		return fmt.Errorf("usage: plakar config remote [create | set | validate]")
+		return fmt.Errorf("usage: plakar config remote [create | set | unset | validate]")
 	}
 }
 
