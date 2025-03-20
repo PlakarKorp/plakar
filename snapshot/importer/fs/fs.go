@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"runtime"
@@ -88,7 +87,7 @@ func (p *FSImporter) NewExtendedAttributeReader(pathname string, attribute strin
 	if err != nil {
 		return nil, err
 	}
-	return ioutil.NopCloser(bytes.NewReader(data)), nil
+	return io.NopCloser(bytes.NewReader(data)), nil
 }
 
 func (p *FSImporter) GetExtendedAttributes(pathname string) ([]importer.ExtendedAttributes, error) {
