@@ -15,12 +15,6 @@ type Configuration struct {
 	Agent AgentConfig `yaml:"agent"`
 }
 
-type RepositoryConfig struct {
-	Name       string
-	Location   string `validate:"required"`
-	Passphrase string
-}
-
 type AgentConfig struct {
 	Alerting    *AlertingConfig
 	Maintenance []MaintenanceConfig `validate:"dive"`
@@ -46,8 +40,8 @@ type SmtpConfig struct {
 }
 
 type Task struct {
-	Name       string           `validate:"required"`
-	Repository RepositoryConfig `validate:"required"`
+	Name       string `validate:"required"`
+	Repository string `validate:"required"`
 
 	Backup  *BackupConfig
 	Check   []CheckConfig   `validate:"dive"`
@@ -143,9 +137,9 @@ type SyncConfig struct {
 }
 
 type MaintenanceConfig struct {
-	Interval   string           `validate:"required"`
-	Retention  string           `validate:"required"`
-	Repository RepositoryConfig `validate:"required"`
+	Interval   string `validate:"required"`
+	Retention  string `validate:"required"`
+	Repository string `validate:"required"`
 }
 
 func NewConfiguration() *Configuration {
