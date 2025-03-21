@@ -1,14 +1,12 @@
 agent:
   maintenance:
     - interval: 10s
-      repository:
-        location: /Users/gilles/.plakar
+      repository: /Users/gilles/.plakar
       retention: 24h
 
   tasks:
     - name: system
-      repository:
-        location: /Users/gilles/.plakar
+      repository: /Users/gilles/.plakar
       
       backup:
         path: /private/etc
