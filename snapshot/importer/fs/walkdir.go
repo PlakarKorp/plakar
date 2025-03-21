@@ -107,7 +107,7 @@ func walkDir_worker(jobs <-chan string, results chan<- *importer.ScanResult, wg 
 func walkDir_addPrefixDirectories(rootDir string, jobs chan<- string, results chan<- *importer.ScanResult) {
 	atoms := strings.Split(rootDir, string(os.PathSeparator))
 
-	for i := 0; i < len(atoms)-1; i++ {
+	for i := range len(atoms)-1 {
 		path := filepath.Join(atoms[0 : i+1]...)
 
 		if !strings.HasPrefix(path, "/") {
@@ -134,7 +134,7 @@ func walkDir_walker(rootDir string, numWorkers int) (<-chan *importer.ScanResult
 	var wg sync.WaitGroup
 
 	// Launch worker pool
-	for w := 1; w <= numWorkers; w++ {
+	for range numWorkers {
 		wg.Add(1)
 		go walkDir_worker(jobs, results, &wg, namecache)
 	}
@@ -143,27 +143,31 @@ func walkDir_walker(rootDir string, numWorkers int) (<-chan *importer.ScanResult
 	go func() {
 		defer close(jobs)
 
+		orig := rootDir
 		info, err := os.Lstat(rootDir)
 		if err != nil {
 			results <- importer.NewScanError(rootDir, err)
 			return
 		}
 		if info.Mode()&os.ModeSymlink != 0 {
-			originFile, err := os.Readlink(rootDir)
+			realpath, err := os.Readlink(rootDir)
 			if err != nil {
 				results <- importer.NewScanError(rootDir, err)
 				return
 			}
 
-			if !filepath.IsAbs(originFile) {
-				originFile = filepath.Join(filepath.Dir(rootDir), originFile)
+			if !filepath.IsAbs(realpath) {
+				realpath = filepath.Join(filepath.Dir(rootDir), realpath)
 			}
 			jobs <- rootDir
-			rootDir = originFile
+			rootDir = realpath
 		}
 
 		// Add prefix directories first
 		walkDir_addPrefixDirectories(rootDir, jobs, results)
+		if orig != rootDir {
+			walkDir_addPrefixDirectories(orig, jobs, results)
+		}
 
 		err = filepath.WalkDir(rootDir, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {

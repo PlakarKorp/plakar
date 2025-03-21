@@ -211,6 +211,11 @@ func (cmd *Ls) list_snapshot(ctx *appcontext.AppContext, repo *repository.Reposi
 		return err
 	}
 
+	pathname, err = pvfs.Realpath(pathname)
+	if err != nil {
+		return err
+	}
+
 	return pvfs.WalkDir(pathname, func(path string, d *vfs.Entry, err error) error {
 		if err != nil {
 			return err
