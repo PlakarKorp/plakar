@@ -1,9 +1,11 @@
 package vfs
 
 import (
+	"fmt"
 	"io"
 	"io/fs"
 	"iter"
+	"os"
 	"path"
 	"strings"
 
@@ -232,6 +234,30 @@ func (fsc *Filesystem) ReadDir(path string) (entries []fs.DirEntry, err error) {
 	}
 
 	return dir.ReadDir(-1)
+}
+
+func (fsc *Filesystem) Realpath(p string) (string, error) {
+	components := strings.Split(p, "/")
+
+	wip := "/"
+	for _, c := range components {
+		new := path.Join(wip, c)
+		entry, err := fsc.GetEntry(new)
+		if err != nil {
+			return "", fmt.Errorf("failed to resolve symlink %s: %w", new, err)
+		}
+
+		if entry.FileInfo.Lmode&os.ModeSymlink != 0 {
+			if path.IsAbs(entry.SymlinkTarget) {
+				wip = entry.SymlinkTarget
+			} else {
+				wip = path.Join(wip, entry.SymlinkTarget)
+			}
+		} else {
+			wip = new
+		}
+	}
+	return wip, nil
 }
 
 func (fsc *Filesystem) filesbelow(prefix string) iter.Seq2[*Entry, error] {
