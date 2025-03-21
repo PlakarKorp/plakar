@@ -99,7 +99,7 @@ func walkDir_addPrefixDirectories(rootDir string, jobs chan<- string, results ch
 	atoms := strings.Split(rootDir, string(os.PathSeparator))
 
 	jobs <- "/"
-	for i := 0; i < len(atoms)-1; i++ {
+	for i := range len(atoms)-1 {
 		pathname := strings.Join(atoms[0:i+1], string(os.PathSeparator))
 
 		if _, err := os.Stat(pathname); err != nil {

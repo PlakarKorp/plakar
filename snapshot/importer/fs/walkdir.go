@@ -107,7 +107,7 @@ func walkDir_worker(jobs <-chan string, results chan<- *importer.ScanResult, wg 
 func walkDir_addPrefixDirectories(rootDir string, jobs chan<- string, results chan<- *importer.ScanResult) {
 	atoms := strings.Split(rootDir, string(os.PathSeparator))
 
-	for i := 0; i < len(atoms)-1; i++ {
+	for i := range len(atoms)-1 {
 		path := filepath.Join(atoms[0 : i+1]...)
 
 		if !strings.HasPrefix(path, "/") {
@@ -134,7 +134,7 @@ func walkDir_walker(rootDir string, numWorkers int) (<-chan *importer.ScanResult
 	var wg sync.WaitGroup
 
 	// Launch worker pool
-	for w := 1; w <= numWorkers; w++ {
+	for range numWorkers {
 		wg.Add(1)
 		go walkDir_worker(jobs, results, &wg, namecache)
 	}
