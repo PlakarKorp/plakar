@@ -1,4 +1,6 @@
 agent:
+  #reporting:
+  #  emitter: http://localhost:8080/report
   maintenance:
     - interval: 10s
       repository: /Users/gilles/.plakar
