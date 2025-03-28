@@ -6,7 +6,9 @@ import (
 	"time"
 
 	"github.com/PlakarKorp/plakar/logging"
+	"github.com/PlakarKorp/plakar/objects"
 	"github.com/PlakarKorp/plakar/repository"
+	"github.com/PlakarKorp/plakar/snapshot"
 )
 
 type Emitter interface {
@@ -69,6 +71,25 @@ func (reporter *Reporter) WithRepository(repository *repository.Repository) {
 	reporter.currentRepository.Storage = &configuration
 }
 
+func (reporter *Reporter) WithSnapshotID(repository *repository.Repository, snapshotId objects.MAC) {
+	snap, err := snapshot.Load(repository, snapshotId)
+	if (err != nil) {
+		reporter.logger.Warn("failed to load snapshot: %s", err)
+		return
+	}
+	reporter.WithSnapshot(snap)
+	snap.Close()
+}
+
+func (reporter *Reporter) WithSnapshot(snapshot *snapshot.Snapshot) {
+	if reporter.currentSnapshot != nil {
+		reporter.logger.Warn("already has a snapshot")
+	}
+	reporter.currentSnapshot = &ReportSnapshot{
+		Header: snapshot.Header,
+	}
+}
+
 func (reporter *Reporter) TaskDone() {
 	reporter.taskEnd(StatusOK, 0, "")
 }
@@ -99,7 +120,7 @@ func (reporter *Reporter) taskEnd(status TaskStatus, errorCode TaskErrorCode, er
 	}
 
 	reporter.currentTask = nil
-	reporter.currentSnapshot = nil
 	reporter.currentRepository = nil
+	reporter.currentSnapshot = nil
 	reporter.emitter.Emit(report, reporter.logger)
 }
