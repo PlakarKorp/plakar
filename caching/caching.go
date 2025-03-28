@@ -111,3 +111,8 @@ func (m *Manager) Maintenance(repositoryID uuid.UUID) (*MaintenanceCache, error)
 func (m *Manager) Scan(snapshotID objects.MAC) (*ScanCache, error) {
 	return newScanCache(m, snapshotID)
 }
+
+// XXX - beware that caller has responsibility to call Close() on the returned cache
+func (m *Manager) Check() (*CheckCache, error) {
+	return newCheckCache(m)
+}
