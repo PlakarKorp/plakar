@@ -29,7 +29,7 @@ func (emitter *HttpEmitter) Emit(report Report, logger *logging.Logger) {
 		}
 		logger.Warn("failed to emit report: %s", err)
 	}
-	logger.Error("failed to emit report after %d tries", emitter.retry)
+	logger.Error("failed to emit report after %d attempts", emitter.retry)
 }
 
 func (reporter *HttpEmitter) tryEmit(data []byte) error {
