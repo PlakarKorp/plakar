@@ -2,20 +2,58 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"sort"
 	"strings"
 
+	"github.com/PlakarKorp/plakar/cmd/plakar/utils"
 	"github.com/PlakarKorp/plakar/objects"
 	"github.com/PlakarKorp/plakar/snapshot"
 	"github.com/PlakarKorp/plakar/snapshot/header"
+	"github.com/PlakarKorp/plakar/storage"
 )
 
-func repositoryConfiguration(w http.ResponseWriter, r *http.Request) error {
+type RepositoryInfoSnapshots struct {
+	Total int    `json:"total"`
+	Size  uint64 `json:"size"`
+}
+
+type RepositoryInfoResponse struct {
+	Location      string                  `json:"location"`
+	Snapshots     RepositoryInfoSnapshots `json:"snapshots"`
+	Configuration storage.Configuration   `json:"configuration"`
+}
+
+func repositoryInfo(w http.ResponseWriter, r *http.Request) error {
+
 	configuration := lrepository.Configuration()
-	return json.NewEncoder(w).Encode(configuration)
+
+	snapshotIDs, err := utils.LocateSnapshotIDs(lrepository, nil)
+	if err != nil {
+		return fmt.Errorf("unable to locate snapshots: %w", err)
+	}
+
+	totalSize := uint64(0)
+	for _, snapshotID := range snapshotIDs {
+		snap, err := snapshot.Load(lrepository, snapshotID)
+		if err != nil {
+			return fmt.Errorf("unable to load snapshot: %w", err)
+		}
+		totalSize += snap.Header.GetSource(0).Summary.Directory.Size + snap.Header.GetSource(0).Summary.Below.Size
+		snap.Close()
+	}
+
+	return json.NewEncoder(w).Encode(Item[RepositoryInfoResponse]{Item: RepositoryInfoResponse{
+		Location: lrepository.Location(),
+		Snapshots: RepositoryInfoSnapshots{
+			Total: len(snapshotIDs),
+			Size:  totalSize,
+		},
+		Configuration: configuration,
+	}})
 }
 
 func repositorySnapshots(w http.ResponseWriter, r *http.Request) error {
