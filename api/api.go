@@ -1,12 +1,12 @@
 package api
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"io/fs"
 	"log"
 	"net/http"
-	"strings"
 
 	"github.com/PlakarKorp/plakar/cmd/plakar/utils"
 	"github.com/PlakarKorp/plakar/repository"
@@ -101,7 +101,7 @@ func TokenAuthMiddleware(token string) func(http.Handler) http.Handler {
 					return
 				}
 
-				if strings.Compare(key, "Bearer "+token) != 0 {
+				if subtle.ConstantTimeCompare([]byte(key), []byte("Bearer "+token)) == 0 {
 					handleError(w, r, authError("invalid token"))
 					return
 				}
@@ -142,7 +142,7 @@ func SetupRoutes(server *http.ServeMux, repo *repository.Repository, token strin
 
 	server.Handle("GET /api/info", authToken(JSONAPIView(apiInfo)))
 
-	server.Handle("GET /api/repository/configuration", authToken(JSONAPIView(repositoryConfiguration)))
+	server.Handle("GET /api/repository/info", authToken(JSONAPIView(repositoryInfo)))
 	server.Handle("GET /api/repository/snapshots", authToken(JSONAPIView(repositorySnapshots)))
 	server.Handle("GET /api/repository/locate-pathname", authToken(JSONAPIView(repositoryLocatePathname)))
 	server.Handle("GET /api/repository/importer-types", authToken(JSONAPIView(repositoryImporterTypes)))

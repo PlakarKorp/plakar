@@ -174,8 +174,8 @@ func diff_directories(ctx *appcontext.AppContext, dirEntry1 *vfs.Entry, dirEntry
 func diff_files(ctx *appcontext.AppContext, snap1 *snapshot.Snapshot, fileEntry1 *vfs.Entry, snap2 *snapshot.Snapshot, fileEntry2 *vfs.Entry) (string, error) {
 	if fileEntry1.Object == fileEntry2.Object {
 		fmt.Fprintf(ctx.Stderr, "%s:%s and %s:%s are identical\n",
-			fmt.Sprintf("%x", snap1.Header.GetIndexShortID()), path.Join(fileEntry1.ParentPath, fileEntry1.Stat().Name()),
-			fmt.Sprintf("%x", snap2.Header.GetIndexShortID()), path.Join(fileEntry2.ParentPath, fileEntry2.Stat().Name()))
+			fmt.Sprintf("%x", snap1.Header.GetIndexShortID()), path.Join(fileEntry1.ParentPath, utils.SanitizeText(fileEntry1.Stat().Name())),
+			fmt.Sprintf("%x", snap2.Header.GetIndexShortID()), path.Join(fileEntry2.ParentPath, utils.SanitizeText(fileEntry2.Stat().Name())))
 		return "", nil
 	}
 
@@ -203,8 +203,8 @@ func diff_files(ctx *appcontext.AppContext, snap1 *snapshot.Snapshot, fileEntry1
 	diff := difflib.UnifiedDiff{
 		A:        difflib.SplitLines(string(buf1)),
 		B:        difflib.SplitLines(string(buf2)),
-		FromFile: fmt.Sprintf("%x", snap1.Header.GetIndexShortID()) + ":" + filename1,
-		ToFile:   fmt.Sprintf("%x", snap2.Header.GetIndexShortID()) + ":" + filename2,
+		FromFile: fmt.Sprintf("%x", snap1.Header.GetIndexShortID()) + ":" + utils.SanitizeText(filename1),
+		ToFile:   fmt.Sprintf("%x", snap2.Header.GetIndexShortID()) + ":" + utils.SanitizeText(filename2),
 		Context:  3,
 	}
 	text, err := difflib.GetUnifiedDiffString(diff)

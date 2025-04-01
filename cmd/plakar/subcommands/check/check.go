@@ -210,12 +210,20 @@ func (cmd *Check) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 		FastCheck:      cmd.FastCheck,
 	}
 
+	checkCache, err := ctx.GetCache().Check()
+	if err != nil {
+		return 1, err
+	}
+	defer checkCache.Close()
+
 	failures := false
 	for _, arg := range snapshots {
 		snap, pathname, err := utils.OpenSnapshotByPath(repo, arg)
 		if err != nil {
 			return 1, err
 		}
+
+		snap.SetCheckCache(checkCache)
 
 		if !cmd.NoVerify && snap.Header.Identity.Identifier != uuid.Nil {
 			if ok, err := snap.Verify(); err != nil {

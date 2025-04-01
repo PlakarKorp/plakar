@@ -34,6 +34,7 @@ var (
 type Snapshot struct {
 	repository *repository.Repository
 	scanCache  *caching.ScanCache
+	checkCache *caching.CheckCache
 
 	deltaCache *caching.ScanCache
 	deltaState *state.LocalState
@@ -431,4 +432,8 @@ func (snap *Snapshot) Unlock(ping chan bool) {
 
 func (snap *Snapshot) Logger() *logging.Logger {
 	return snap.AppContext().GetLogger()
+}
+
+func (snap *Snapshot) SetCheckCache(cache *caching.CheckCache) {
+	snap.checkCache = cache
 }

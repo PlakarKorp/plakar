@@ -6,58 +6,29 @@ import (
 	"fmt"
 	"iter"
 	"path/filepath"
-	"strings"
 
 	"github.com/PlakarKorp/plakar/objects"
+	"github.com/cockroachdb/pebble/v2"
 	"github.com/google/uuid"
-	"github.com/syndtr/goleveldb/leveldb"
-	"github.com/syndtr/goleveldb/leveldb/util"
 )
 
 type MaintenanceCache struct {
+	*PebbleCache
 	manager *Manager
-	db      *leveldb.DB
 }
 
 func newMaintenanceCache(cacheManager *Manager, repositoryID uuid.UUID) (*MaintenanceCache, error) {
 	cacheDir := filepath.Join(cacheManager.cacheDir, "maintenance", repositoryID.String())
 
-	db, err := leveldb.OpenFile(cacheDir, nil)
+	db, err := New(cacheDir)
 	if err != nil {
 		return nil, err
 	}
 
 	return &MaintenanceCache{
-		manager: cacheManager,
-		db:      db,
+		PebbleCache: db,
+		manager:     cacheManager,
 	}, nil
-}
-
-func (c *MaintenanceCache) Close() error {
-	return c.db.Close()
-}
-
-func (c *MaintenanceCache) put(prefix string, pathname string, data []byte) error {
-	return c.db.Put([]byte(fmt.Sprintf("%s:%s", prefix, pathname)), data, nil)
-}
-
-func (c *MaintenanceCache) has(prefix, key string) (bool, error) {
-	return c.db.Has([]byte(fmt.Sprintf("%s:%s", prefix, key)), nil)
-}
-
-func (c *MaintenanceCache) get(prefix, pathname string) ([]byte, error) {
-	data, err := c.db.Get([]byte(fmt.Sprintf("%s:%s", prefix, pathname)), nil)
-	if err != nil {
-		if err == leveldb.ErrNotFound {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return data, nil
-}
-
-func (c *MaintenanceCache) delete(prefix, key string) error {
-	return c.db.Delete([]byte(fmt.Sprintf("%s:%s", prefix, key)), nil)
 }
 
 func (c *MaintenanceCache) PutSnapshot(snapshotID objects.MAC, data []byte) error {
@@ -77,11 +48,7 @@ func (c *MaintenanceCache) PutPackfile(snapshotID, packfileMAC objects.MAC) erro
 }
 
 func (c *MaintenanceCache) HasPackfile(packfileMAC objects.MAC) bool {
-	keyPrefix := fmt.Sprintf("__packfile__:%x", packfileMAC)
-	iter := c.db.NewIterator(util.BytesPrefix([]byte(keyPrefix)), nil)
-	defer iter.Release()
-
-	for iter.Next() {
+	for range c.getObjects(fmt.Sprintf("__packfile__:%x:", packfileMAC)) {
 		return true
 	}
 
@@ -90,16 +57,8 @@ func (c *MaintenanceCache) HasPackfile(packfileMAC objects.MAC) bool {
 
 func (c *MaintenanceCache) GetPackfiles(snapshotID objects.MAC) iter.Seq[objects.MAC] {
 	return func(yield func(objects.MAC) bool) {
-		iter := c.db.NewIterator(nil, nil)
-		defer iter.Release()
-		keyPrefix := "__packfile__:"
-
-		for iter.Seek([]byte(keyPrefix)); iter.Valid(); iter.Next() {
-			if !strings.HasPrefix(string(iter.Key()), keyPrefix) {
-				break
-			}
-
-			if !yield(objects.MAC(iter.Value())) {
+		for p := range c.getObjects("__packfile__:") {
+			if !yield(objects.MAC(p)) {
 				return
 			}
 		}
@@ -107,10 +66,10 @@ func (c *MaintenanceCache) GetPackfiles(snapshotID objects.MAC) iter.Seq[objects
 }
 
 func (c *MaintenanceCache) DeleletePackfiles(snapshotID objects.MAC) error {
-	iter := c.db.NewIterator(nil, nil)
-	defer iter.Release()
+	iter, _ := c.db.NewIter(&pebble.IterOptions{})
+	defer iter.Close()
 
-	for iter.Next() {
+	for iter.First(); iter.Valid(); iter.Next() {
 		key := iter.Key()
 		hex_mac := string(key[bytes.LastIndexByte(key, byte(':'))+1:])
 		mac, err := hex.DecodeString(hex_mac)

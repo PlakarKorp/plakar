@@ -1,0 +1,144 @@
+package sync
+
+import (
+	"bytes"
+	"encoding/hex"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/PlakarKorp/plakar/config"
+	"github.com/PlakarKorp/plakar/snapshot"
+	_ "github.com/PlakarKorp/plakar/snapshot/exporter/fs"
+	ptesting "github.com/PlakarKorp/plakar/testing"
+	"github.com/stretchr/testify/require"
+)
+
+func init() {
+	os.Setenv("TZ", "UTC")
+}
+
+func generateSnapshot(t *testing.T, bufOut *bytes.Buffer, bufErr *bytes.Buffer) *snapshot.Snapshot {
+	return ptesting.GenerateSnapshot(t, bufOut, bufErr, nil, []ptesting.MockFile{
+		ptesting.NewMockDir("subdir"),
+		ptesting.NewMockDir("another_subdir"),
+		ptesting.NewMockFile("subdir/dummy.txt", 0644, "hello dummy"),
+		ptesting.NewMockFile("subdir/foo.txt", 0644, "hello foo"),
+		ptesting.NewMockFile("subdir/to_exclude", 0644, "*/subdir/to_exclude\n"),
+		ptesting.NewMockFile("another_subdir/bar.txt", 0644, "hello bar"),
+	})
+}
+
+func TestExecuteCmdSyncTo(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+
+	snap := generateSnapshot(t, bufOut, bufErr)
+	defer snap.Close()
+
+	ctx := snap.AppContext()
+	ctx.MaxConcurrency = 1
+
+	peerRepo := ptesting.GenerateRepository(t, bufOut, bufErr, nil)
+
+	localRepo := snap.Repository()
+	// override the homedir to avoid having test overwriting existing home configuration
+	ctx.HomeDir = localRepo.Location()
+	indexId := snap.Header.GetIndexID()
+	args := []string{fmt.Sprintf("%s", hex.EncodeToString(indexId[:])), "to", peerRepo.Location()}
+
+	subcommand, err := parse_cmd_sync(ctx, args)
+	require.NoError(t, err)
+	require.NotNil(t, subcommand)
+
+	status, err := subcommand.Execute(ctx, localRepo)
+	require.NoError(t, err)
+	require.Equal(t, 0, status)
+	require.Equal(t, "sync", subcommand.(*Sync).Name())
+
+	// output should look like this
+	// 2025-03-26T21:17:28Z info: sync: synchronization from /tmp/tmp_repo1957539148/repo to /tmp/tmp_repo2470692775/repo completed: 1 snapshots synchronized
+	output := bufOut.String()
+	require.Contains(t, strings.Trim(output, "\n"), fmt.Sprintf("info: sync: synchronization from %s to %s completed: 1 snapshots synchronized", localRepo.Location(), peerRepo.Location()))
+}
+
+func TestExecuteCmdSyncWith(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+
+	snap := generateSnapshot(t, bufOut, bufErr)
+	defer snap.Close()
+
+	ctx := snap.AppContext()
+	ctx.MaxConcurrency = 1
+
+	peerRepo := ptesting.GenerateRepository(t, bufOut, bufErr, nil)
+
+	localRepo := snap.Repository()
+	// override the homedir to avoid having test overwriting existing home configuration
+	ctx.HomeDir = localRepo.Location()
+	indexId := snap.Header.GetIndexID()
+	args := []string{fmt.Sprintf("%s", hex.EncodeToString(indexId[:])), "with", peerRepo.Location()}
+
+	subcommand, err := parse_cmd_sync(ctx, args)
+	require.NoError(t, err)
+	require.NotNil(t, subcommand)
+
+	status, err := subcommand.Execute(ctx, localRepo)
+	require.NoError(t, err)
+	require.Equal(t, 0, status)
+	require.Equal(t, "sync", subcommand.(*Sync).Name())
+
+	// output should look like this
+	// 2025-03-26T21:28:23Z info: sync: synchronization between /tmp/tmp_repo3863826583/repo and /tmp/tmp_repo327669581/repo completed: 1 snapshots synchronized
+	output := bufOut.String()
+	require.Contains(t, strings.Trim(output, "\n"), fmt.Sprintf("info: sync: synchronization between %s and %s completed: 1 snapshots synchronized", localRepo.Location(), peerRepo.Location()))
+}
+
+func TestExecuteCmdSyncWithEncryption(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+
+	snap := generateSnapshot(t, bufOut, bufErr)
+	defer snap.Close()
+
+	ctx := snap.AppContext()
+	ctx.MaxConcurrency = 1
+
+	passphrase := []byte("aZeRtY123456$#@!@")
+	peerRepo := ptesting.GenerateRepository(t, bufOut, bufErr, &passphrase)
+
+	localRepo := snap.Repository()
+	// override the homedir to avoid having test overwriting existing home configuration
+	ctx.HomeDir = localRepo.Location()
+
+	// need to recreate configuration to store passphrase on peer repo
+	opt_configfile := filepath.Join(peerRepo.Location(), "plakar.yml")
+	cfg, err := config.LoadOrCreate(opt_configfile)
+	require.NoError(t, err)
+	ctx.Config = cfg
+	ctx.Config.Repositories["peerRepo"] = make(map[string]string)
+	ctx.Config.Repositories["peerRepo"]["passphrase"] = string(passphrase)
+	ctx.Config.Repositories["peerRepo"]["location"] = string(peerRepo.Location())
+	err = ctx.Config.Save()
+	require.NoError(t, err)
+
+	indexId := snap.Header.GetIndexID()
+	args := []string{fmt.Sprintf("%s", hex.EncodeToString(indexId[:])), "with", "@peerRepo"}
+
+	subcommand, err := parse_cmd_sync(ctx, args)
+	require.NoError(t, err)
+	require.NotNil(t, subcommand)
+
+	status, err := subcommand.Execute(ctx, localRepo)
+	require.NoError(t, err)
+	require.Equal(t, 0, status)
+	require.Equal(t, "sync", subcommand.(*Sync).Name())
+
+	// output should look like this
+	// 2025-03-26T21:28:23Z info: sync: synchronization between /tmp/tmp_repo3863826583/repo and /tmp/tmp_repo327669581/repo completed: 1 snapshots synchronized
+	output := bufOut.String()
+	require.Contains(t, strings.Trim(output, "\n"), fmt.Sprintf("info: sync: synchronization between %s and %s completed: 1 snapshots synchronized", localRepo.Location(), peerRepo.Location()))
+}

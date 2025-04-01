@@ -183,7 +183,7 @@ func (cmd *Ls) list_snapshots(ctx *appcontext.AppContext, repo *repository.Repos
 				hex.EncodeToString(snap.Header.GetIndexShortID()),
 				humanize.Bytes(snap.Header.GetSource(0).Summary.Directory.Size+snap.Header.GetSource(0).Summary.Below.Size),
 				snap.Header.Duration.Round(time.Second),
-				snap.Header.GetSource(0).Importer.Directory)
+				utils.SanitizeText(snap.Header.GetSource(0).Importer.Directory))
 		} else {
 			indexID := snap.Header.GetIndexID()
 			fmt.Fprintf(ctx.Stdout, "%s %3s%10s%10s %s\n",
@@ -191,7 +191,7 @@ func (cmd *Ls) list_snapshots(ctx *appcontext.AppContext, repo *repository.Repos
 				hex.EncodeToString(indexID[:]),
 				humanize.Bytes(snap.Header.GetSource(0).Summary.Directory.Size+snap.Header.GetSource(0).Summary.Below.Size),
 				snap.Header.Duration.Round(time.Second),
-				snap.Header.GetSource(0).Importer.Directory)
+				utils.SanitizeText(snap.Header.GetSource(0).Importer.Directory))
 		}
 
 		snap.Close()
@@ -259,7 +259,7 @@ func (cmd *Ls) list_snapshot(ctx *appcontext.AppContext, repo *repository.Reposi
 			username,
 			groupname,
 			humanize.Bytes(uint64(sb.Size())),
-			entryname)
+			utils.SanitizeText(entryname))
 
 		if !recursive && pathname != path && sb.IsDir() {
 			return fs.SkipDir

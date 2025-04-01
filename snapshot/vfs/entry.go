@@ -55,6 +55,9 @@ type Entry struct {
 	Classifications []Classification `msgpack:"classifications,omitempty" json:"classifications"`
 	CustomMetadata  []CustomMetadata `msgpack:"custom_metadata,omitempty" json:"custom_metadata"`
 	Tags            []string         `msgpack:"tags,omitempty" json:"tags"`
+
+	// mac of the entry itself
+	MAC objects.MAC `msgpack:"-" json:"mac"`
 }
 
 func (e *Entry) HasObject() bool {

@@ -5,45 +5,25 @@ import (
 	"path/filepath"
 
 	"github.com/google/uuid"
-	"github.com/syndtr/goleveldb/leveldb"
 )
 
 type _VFSCache struct {
+	*PebbleCache
 	manager *Manager
-	db      *leveldb.DB
 }
 
 func newVFSCache(cacheManager *Manager, repositoryID uuid.UUID, scheme string, origin string) (*_VFSCache, error) {
 	cacheDir := filepath.Join(cacheManager.cacheDir, "vfs", repositoryID.String(), scheme, origin)
 
-	db, err := leveldb.OpenFile(cacheDir, nil)
+	db, err := New(cacheDir)
 	if err != nil {
 		return nil, err
 	}
 
 	return &_VFSCache{
-		manager: cacheManager,
-		db:      db,
+		PebbleCache: db,
+		manager:     cacheManager,
 	}, nil
-}
-
-func (c *_VFSCache) Close() error {
-	return c.db.Close()
-}
-
-func (c *_VFSCache) put(prefix string, pathname string, data []byte) error {
-	return c.db.Put([]byte(fmt.Sprintf("%s:%s", prefix, pathname)), data, nil)
-}
-
-func (c *_VFSCache) get(prefix, pathname string) ([]byte, error) {
-	data, err := c.db.Get([]byte(fmt.Sprintf("%s:%s", prefix, pathname)), nil)
-	if err != nil {
-		if err == leveldb.ErrNotFound {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return data, nil
 }
 
 func (c *_VFSCache) PutDirectory(pathname string, data []byte) error {

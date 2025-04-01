@@ -10,9 +10,10 @@ import (
 
 type SearchOpts struct {
 	// file filters
-	Recursive bool
-	Prefix    string // prefix directory
-	Mime      string
+	Recursive  bool
+	Prefix     string // prefix directory
+	Mime       string
+	NameFilter string
 
 	// pagination
 	Offset int
@@ -76,10 +77,27 @@ func visitmimes(snap *Snapshot, opts *SearchOpts) (iter.Seq2[*vfs.Entry, error],
 				yield(nil, err)
 				return
 			}
-			path := entry.Path()
-			if !strings.HasPrefix(path, opts.Prefix) {
+			entryPath := entry.Path()
+			if !strings.HasPrefix(entryPath, opts.Prefix) {
 				continue
 			}
+
+			if opts.NameFilter != "" {
+				matched := false
+				if path.Base(entryPath) == opts.NameFilter {
+					matched = true
+				}
+				if !matched {
+					matched, err := path.Match(opts.NameFilter, path.Base(entryPath))
+					if err != nil {
+						continue
+					}
+					if !matched {
+						continue
+					}
+				}
+			}
+
 			if !yield(entry, nil) {
 				return
 			}
@@ -121,8 +139,29 @@ func visitfiles(snap *Snapshot, opts *SearchOpts) (iter.Seq2[*vfs.Entry, error],
 				return
 			}
 
+			entryPath := entry.Path()
+			if !strings.HasPrefix(entryPath, opts.Prefix) {
+				continue
+			}
+
 			if !matchmime(opts.Mime, entry.ContentType()) {
 				continue
+			}
+
+			if opts.NameFilter != "" {
+				matched := false
+				if path.Base(entryPath) == opts.NameFilter {
+					matched = true
+				}
+				if !matched {
+					matched, err := path.Match(opts.NameFilter, path.Base(entryPath))
+					if err != nil {
+						continue
+					}
+					if !matched {
+						continue
+					}
+				}
 			}
 
 			if !yield(entry, nil) {

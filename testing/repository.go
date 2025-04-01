@@ -9,44 +9,18 @@ import (
 
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/caching"
-	"github.com/PlakarKorp/plakar/encryption/keypair"
+	"github.com/PlakarKorp/plakar/encryption"
 	"github.com/PlakarKorp/plakar/hashing"
 	"github.com/PlakarKorp/plakar/logging"
 	"github.com/PlakarKorp/plakar/repository"
 	"github.com/PlakarKorp/plakar/resources"
-	"github.com/PlakarKorp/plakar/snapshot"
-	"github.com/PlakarKorp/plakar/snapshot/importer/fs"
 	"github.com/PlakarKorp/plakar/storage"
 	bfs "github.com/PlakarKorp/plakar/storage/backends/fs"
 	"github.com/PlakarKorp/plakar/versioning"
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
 
-type MockFile struct {
-	Path    string
-	IsDir   bool
-	Mode    os.FileMode
-	Content []byte
-}
-
-func NewMockDir(path string) MockFile {
-	return MockFile{
-		Path:  path,
-		IsDir: true,
-		Mode:  0755,
-	}
-}
-
-func NewMockFile(path string, mode os.FileMode, content string) MockFile {
-	return MockFile{
-		Path:    path,
-		Mode:    mode,
-		Content: []byte(content),
-	}
-}
-
-func GenerateSnapshot(t *testing.T, bufout *bytes.Buffer, buferr *bytes.Buffer, keyPair *keypair.KeyPair, files []MockFile) *snapshot.Snapshot {
+func GenerateRepository(t *testing.T, bufout *bytes.Buffer, buferr *bytes.Buffer, passphrase *[]byte) *repository.Repository {
 	// init temporary directories
 	tmpRepoDirRoot, err := os.MkdirTemp("", "tmp_repo")
 	require.NoError(t, err)
@@ -62,25 +36,29 @@ func GenerateSnapshot(t *testing.T, bufout *bytes.Buffer, buferr *bytes.Buffer, 
 		os.RemoveAll(tmpRepoDirRoot)
 	})
 
-	for _, file := range files {
-		dest := filepath.Join(tmpBackupDir, filepath.FromSlash(file.Path))
-		if file.IsDir {
-			err = os.MkdirAll(dest, file.Mode)
-		} else {
-			err = os.WriteFile(dest, file.Content, file.Mode)
-		}
-	}
-
 	// create a storage
 	r, err := bfs.NewStore(map[string]string{"location": "fs://" + tmpRepoDir})
 	require.NotNil(t, r)
 	require.NoError(t, err)
 	config := storage.NewConfiguration()
-	config.Encryption = nil
+	hasher := hashing.GetHasher(hashing.DEFAULT_HASHING_ALGORITHM)
+
+	var key []byte
+	if passphrase != nil {
+		key, err = encryption.DeriveKey(config.Encryption.KDFParams, *passphrase)
+		require.NoError(t, err)
+
+		canary, err := encryption.DeriveCanary(config.Encryption, key)
+		require.NoError(t, err)
+
+		config.Encryption.Canary = canary
+		hasher = hashing.GetMACHasher(storage.DEFAULT_HASHING_ALGORITHM, key)
+	} else {
+		config.Encryption = nil
+	}
 	serialized, err := config.ToBytes()
 	require.NoError(t, err)
 
-	hasher := hashing.GetHasher(hashing.DEFAULT_HASHING_ALGORITHM)
 	wrappedConfigRd, err := storage.Serialize(hasher, resources.RT_CONFIG, versioning.GetCurrentVersion(resources.RT_CONFIG), bytes.NewReader(serialized))
 	require.NoError(t, err)
 
@@ -102,9 +80,9 @@ func GenerateSnapshot(t *testing.T, bufout *bytes.Buffer, buferr *bytes.Buffer, 
 	}
 	cache := caching.NewManager(tmpCacheDir)
 	ctx.SetCache(cache)
-	if keyPair != nil {
-		ctx.Identity = uuid.New()
-		ctx.Keypair = keyPair
+
+	if passphrase != nil {
+		ctx.SetSecret(key)
 	}
 
 	// Create a new logger
@@ -115,25 +93,10 @@ func GenerateSnapshot(t *testing.T, bufout *bytes.Buffer, buferr *bytes.Buffer, 
 		logger = logging.NewLogger(bufout, buferr)
 	}
 	logger.EnableInfo()
+	logger.EnableTrace("all")
 	ctx.SetLogger(logger)
 	repo, err := repository.New(ctx, r, serializedConfig)
 	require.NoError(t, err, "creating repository")
 
-	// create a snapshot
-	snap, err := snapshot.New(repo)
-	require.NoError(t, err)
-	require.NotNil(t, snap)
-
-	checkCache, err := cache.Check()
-	require.NoError(t, err)
-	snap.SetCheckCache(checkCache)
-
-	imp, err := fs.NewFSImporter(map[string]string{"location": tmpBackupDir})
-	require.NoError(t, err)
-	snap.Backup(imp, &snapshot.BackupOptions{Name: "test_backup", MaxConcurrency: 1})
-
-	err = snap.Repository().RebuildState()
-	require.NoError(t, err)
-
-	return snap
+	return repo
 }

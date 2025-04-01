@@ -26,8 +26,10 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
+	"unicode"
 
 	passwordvalidator "github.com/wagslane/go-password-validator"
 	"golang.org/x/mod/semver"
@@ -306,4 +308,39 @@ func NormalizePath(path string) (string, error) {
 	}
 
 	return normalizedPath, nil
+}
+
+var sbuilderPool = sync.Pool{
+	New: func() any {
+		return new(strings.Builder)
+	},
+}
+
+func issafe(str string) bool {
+	for _, r := range str {
+		if !unicode.IsPrint(r) {
+			return false
+		}
+	}
+	return true
+}
+
+func SanitizeText(input string) string {
+	if issafe(input) {
+		return input
+	}
+
+	sb := sbuilderPool.Get().(*strings.Builder)
+	defer sbuilderPool.Put(sb)
+	sb.Reset()
+
+	for _, r := range input {
+		if unicode.IsPrint(r) {
+			sb.WriteRune(r)
+		} else {
+			sb.WriteRune('?')
+		}
+	}
+
+	return sb.String()
 }

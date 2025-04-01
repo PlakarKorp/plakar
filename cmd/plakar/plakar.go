@@ -443,7 +443,7 @@ func entryPoint() int {
 	t1 := time.Since(t0)
 
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
+		fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), utils.SanitizeText(err.Error()))
 	}
 
 	err = repo.Close()

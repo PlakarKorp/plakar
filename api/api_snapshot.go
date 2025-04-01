@@ -402,6 +402,7 @@ func snapshotVFSSearch(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	var offset, limit int
+	var pattern string
 	if str := r.URL.Query().Get("offset"); str != "" {
 		o, err := strconv.ParseInt(str, 10, 32)
 		if err != nil {
@@ -420,6 +421,10 @@ func snapshotVFSSearch(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 
+	if str := r.URL.Query().Get("pattern"); str != "" {
+		pattern = str
+	}
+
 	snap, err := snapshot.Load(lrepository, snapshotID32)
 	if err != nil {
 		return err
@@ -434,9 +439,10 @@ func snapshotVFSSearch(w http.ResponseWriter, r *http.Request) error {
 	limit++
 
 	searchOpts := snapshot.SearchOpts{
-		Recursive: r.URL.Query().Get("recursive") == "true",
-		Mime:      r.URL.Query().Get("mime"),
-		Prefix:    path,
+		Recursive:  r.URL.Query().Get("recursive") == "true",
+		Mime:       r.URL.Query().Get("mime"),
+		Prefix:     path,
+		NameFilter: pattern,
 
 		Offset: offset,
 		Limit:  limit,

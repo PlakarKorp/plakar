@@ -16,7 +16,6 @@ type StateCache interface {
 
 	PutDelta(blobType resources.Type, blobCsum, packfile objects.MAC, data []byte) error
 	GetDelta(blobType resources.Type, blobCsum objects.MAC) iter.Seq2[objects.MAC, []byte]
-	HasDelta(blobType resources.Type, blobCsum objects.MAC) (bool, error)
 	GetDeltasByType(blobType resources.Type) iter.Seq2[objects.MAC, []byte]
 	GetDeltas() iter.Seq2[objects.MAC, []byte]
 	DelDelta(blobType resources.Type, blobCsum objects.MAC, packfileMAC objects.MAC) error

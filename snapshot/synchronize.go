@@ -73,13 +73,12 @@ func persistVFS(src *Snapshot, dst *Snapshot, fs *vfs.Filesystem, ctidx *btree.B
 			}
 		}
 
-		serializedEntry, err := entry.ToBytes()
-		if err != nil {
-			return objects.MAC{}, err
-		}
-
-		entryMAC := dst.Repository().ComputeMAC(serializedEntry)
+		entryMAC := entry.MAC
 		if !dst.BlobExists(resources.RT_VFS_ENTRY, entryMAC) {
+			serializedEntry, err := entry.ToBytes()
+			if err != nil {
+				return objects.MAC{}, err
+			}
 			err = dst.PutBlob(resources.RT_VFS_ENTRY, entryMAC, serializedEntry)
 			if err != nil {
 				return objects.MAC{}, err
@@ -187,8 +186,8 @@ func (src *Snapshot) Synchronize(dst *Snapshot) error {
 	})
 	dst.Header.GetSource(0).Indexes = []header.Index{
 		{
-			Name: "content-type",
-			Type: "btree",
+			Name:  "content-type",
+			Type:  "btree",
 			Value: ctsum,
 		},
 	}

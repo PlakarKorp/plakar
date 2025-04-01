@@ -9,7 +9,9 @@ import (
 	"github.com/google/uuid"
 )
 
-const CACHE_VERSION = "1.0.0"
+const CACHE_VERSION = "2.0.0"
+
+var ErrInUse = fmt.Errorf("cache in use")
 
 type Manager struct {
 	cacheDir string
@@ -43,6 +45,10 @@ func (m *Manager) Close() error {
 	}
 
 	for _, cache := range m.vfsCache {
+		cache.Close()
+	}
+
+	for _, cache := range m.maintenanceCache {
 		cache.Close()
 	}
 
@@ -104,4 +110,9 @@ func (m *Manager) Maintenance(repositoryID uuid.UUID) (*MaintenanceCache, error)
 // XXX - beware that caller has responsibility to call Close() on the returned cache
 func (m *Manager) Scan(snapshotID objects.MAC) (*ScanCache, error) {
 	return newScanCache(m, snapshotID)
+}
+
+// XXX - beware that caller has responsibility to call Close() on the returned cache
+func (m *Manager) Check() (*CheckCache, error) {
+	return newCheckCache(m)
 }

@@ -31,6 +31,7 @@ import (
 	"github.com/PlakarKorp/plakar/repository"
 	"github.com/PlakarKorp/plakar/resources"
 	"github.com/PlakarKorp/plakar/snapshot"
+	"golang.org/x/sync/errgroup"
 )
 
 func init() {
@@ -63,38 +64,50 @@ func (cmd *Maintenance) Name() string {
 
 // Builds the local cache of snapshot -> packfiles
 func (cmd *Maintenance) updateCache(ctx *appcontext.AppContext, cache *caching.MaintenanceCache) error {
+	wg, _ := errgroup.WithContext(ctx.GetContext())
+	wg.SetLimit(ctx.MaxConcurrency)
+
 	for snapshotID := range cmd.repository.ListSnapshots() {
-		snapshot, err := snapshot.Load(cmd.repository, snapshotID)
-		if err != nil {
-			return err
-		}
 
-		ok, err := cache.HasSnapshot(snapshotID)
-		if err != nil {
-			return err
-		}
-
-		if ok {
-			continue
-		}
-
-		iter, err := snapshot.ListPackfiles()
-		if err != nil {
-			return err
-		}
-
-		for packfile, err := range iter {
+		wg.Go(func() error {
+			snapshot, err := snapshot.Load(cmd.repository, snapshotID)
 			if err != nil {
 				return err
 			}
 
-			if err := cache.PutPackfile(snapshotID, packfile); err != nil {
+			ok, err := cache.HasSnapshot(snapshotID)
+			if err != nil {
 				return err
 			}
-		}
 
-		cache.PutSnapshot(snapshotID, nil)
-		snapshot.Close()
+			if ok {
+				return nil
+			}
+
+			iter, err := snapshot.ListPackfiles()
+			if err != nil {
+				return err
+			}
+
+			for packfile, err := range iter {
+				if err != nil {
+					return err
+				}
+
+				if err := cache.PutPackfile(snapshotID, packfile); err != nil {
+					return err
+				}
+			}
+
+			cache.PutSnapshot(snapshotID, nil)
+			snapshot.Close()
+
+			return nil
+		})
+	}
+
+	if err := wg.Wait(); err != nil {
+		return err
 	}
 
 	// While ListSnapshots doesn't return deleted snapshots, we still need to
