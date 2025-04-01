@@ -37,7 +37,7 @@ type ReportTask struct {
 
 type Report struct {
 	Timestamp  time.Time
-	Task       *ReportTask
-	Repository *ReportRepository
-	Snapshot   *ReportSnapshot
+	Task       *ReportTask       `json:"Task,omitempty"`
+	Repository *ReportRepository `json:"Repository,omitempty"`
+	Snapshot   *ReportSnapshot   `json:"Snapshot,omitempty"`
 }
