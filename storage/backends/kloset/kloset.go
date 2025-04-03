@@ -166,6 +166,14 @@ func (s *Store) Mode() storage.Mode {
 	return s.mode
 }
 
+func (s *Store) Size() int64 {
+	fi, err := s.fp.Stat()
+	if err != nil {
+		return 0
+	}
+	return fi.Size()
+}
+
 // states
 func (s *Store) GetStates() ([]objects.MAC, error) {
 	if s.mode&storage.ModeWrite != 0 {
@@ -177,19 +185,19 @@ func (s *Store) GetStates() ([]objects.MAC, error) {
 	}, nil
 }
 
-func (s *Store) PutState(mac objects.MAC, rd io.Reader) error {
+func (s *Store) PutState(mac objects.MAC, rd io.Reader) (int64, error) {
 	if s.mode&storage.ModeWrite == 0 {
-		return storage.ErrNotWritable
+		return 0, storage.ErrNotWritable
 	}
 
 	s.stateOffset = s.packfileOffset + s.packfileLength
 	nbytes, err := io.Copy(s.fp, rd)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	s.stateLength = nbytes
 
-	return nil
+	return nbytes, nil
 }
 
 func (s *Store) GetState(mac objects.MAC) (io.Reader, error) {
@@ -213,19 +221,19 @@ func (s *Store) GetPackfiles() ([]objects.MAC, error) {
 	}, nil
 }
 
-func (s *Store) PutPackfile(mac objects.MAC, rd io.Reader) error {
+func (s *Store) PutPackfile(mac objects.MAC, rd io.Reader) (int64, error) {
 	if s.mode&storage.ModeWrite == 0 {
-		return storage.ErrNotWritable
+		return 0, storage.ErrNotWritable
 	}
 
 	s.packfileOffset = s.configOffset + s.configLength
 	nbytes, err := io.Copy(s.fp, rd)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	s.packfileLength = nbytes
 
-	return nil
+	return nbytes, nil
 }
 
 func (s *Store) GetPackfile(mac objects.MAC) (io.Reader, error) {
@@ -248,11 +256,11 @@ func (s *Store) GetLocks() ([]objects.MAC, error) {
 	return []objects.MAC{}, nil
 }
 
-func (s *Store) PutLock(lockID objects.MAC, rd io.Reader) error {
+func (s *Store) PutLock(lockID objects.MAC, rd io.Reader) (int64, error) {
 	if s.mode&storage.ModeWrite == 0 {
-		return storage.ErrNotWritable
+		return 0, storage.ErrNotWritable
 	}
-	return nil
+	return 0, nil
 }
 
 func (s *Store) GetLock(lockID objects.MAC) (io.Reader, error) {
