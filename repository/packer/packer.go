@@ -1,12 +1,10 @@
-package snapshot
+package packer
 
 import (
-	"bytes"
 	"context"
 	"crypto/rand"
 	"fmt"
 	"hash"
-	"io"
 	"math/big"
 	"runtime"
 	"sync"
@@ -14,9 +12,11 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
+	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/objects"
 	"github.com/PlakarKorp/plakar/packfile"
 	"github.com/PlakarKorp/plakar/resources"
+	"github.com/PlakarKorp/plakar/storage"
 	"github.com/PlakarKorp/plakar/versioning"
 )
 
@@ -26,22 +26,32 @@ func init() {
 }
 
 type PackerManager struct {
-	snapshot       *Snapshot
-	inflightMACs   map[resources.Type]*sync.Map
+	InflightMACs   map[resources.Type]*sync.Map
 	packerChan     chan interface{}
 	packerChanDone chan struct{}
+
+	storageConf *storage.Configuration
+	hashFactory func() hash.Hash
+	appCtx      *appcontext.AppContext
+
+	// XXX: Temporary hack callback-based to ease the transition diff.
+	// To be revisited with either an interface or moving this file inside repository/
+	flush func(*Packer) error
 }
 
-func NewPackerManager(snapshot *Snapshot) *PackerManager {
+func NewPackerManager(ctx *appcontext.AppContext, storageConfiguration *storage.Configuration, hashFactory func() hash.Hash, flusher func(*Packer) error) *PackerManager {
 	inflightsMACs := make(map[resources.Type]*sync.Map)
 	for _, Type := range resources.Types() {
 		inflightsMACs[Type] = &sync.Map{}
 	}
 	return &PackerManager{
-		snapshot:       snapshot,
-		inflightMACs:   inflightsMACs,
+		InflightMACs:   inflightsMACs,
 		packerChan:     make(chan interface{}, runtime.NumCPU()*2+1),
 		packerChanDone: make(chan struct{}),
+		storageConf:    storageConfiguration,
+		hashFactory:    hashFactory,
+		appCtx:         ctx,
+		flush:          flusher,
 	}
 }
 
@@ -58,14 +68,14 @@ func (mgr *PackerManager) Run() {
 				continue
 			}
 
-			packer.AddPadding(int(mgr.snapshot.repository.Configuration().Chunking.MinSize))
+			packer.AddPadding(int(mgr.storageConf.Chunking.MinSize))
 
-			if err := mgr.snapshot.PutPackfile(packer); err != nil {
+			if err := mgr.flush(packer); err != nil {
 				return fmt.Errorf("failed to flush packer: %w", err)
 			}
 
 			for _, record := range packer.Packfile.Index {
-				mgr.inflightMACs[record.Type].Delete(record.MAC)
+				mgr.InflightMACs[record.Type].Delete(record.MAC)
 			}
 		}
 		return nil
@@ -94,15 +104,15 @@ func (mgr *PackerManager) Run() {
 					}
 
 					if packer == nil {
-						packer = NewPacker(mgr.snapshot.Repository().GetMACHasher())
-						packer.AddPadding(int(mgr.snapshot.repository.Configuration().Chunking.MinSize))
+						packer = NewPacker(mgr.hashFactory())
+						packer.AddPadding(int(mgr.storageConf.Chunking.MinSize))
 					}
 
 					if !packer.AddBlobIfNotExists(pm.Type, pm.Version, pm.MAC, pm.Data, pm.Flags) {
 						continue
 					}
 
-					if packer.Size() > uint32(mgr.snapshot.repository.Configuration().Packfile.MaxSize) {
+					if packer.Size() > uint32(mgr.storageConf.Packfile.MaxSize) {
 						packerResultChan <- packer
 						packer = nil
 					}
@@ -113,14 +123,14 @@ func (mgr *PackerManager) Run() {
 
 	// Wait for workers to finish.
 	if err := workerGroup.Wait(); err != nil {
-		mgr.snapshot.Logger().Error("Worker group error: %s", err)
+		mgr.appCtx.GetLogger().Error("Worker group error: %s", err)
 		cancel() // Propagate cancellation.
 	}
 
 	// Close the result channel and wait for the flusher to finish.
 	close(packerResultChan)
 	if err := flusherGroup.Wait(); err != nil {
-		mgr.snapshot.Logger().Error("Flusher group error: %s", err)
+		mgr.appCtx.GetLogger().Error("Flusher group error: %s", err)
 	}
 
 	// Signal completion.
@@ -131,6 +141,11 @@ func (mgr *PackerManager) Run() {
 func (mgr *PackerManager) Wait() {
 	close(mgr.packerChan)
 	<-mgr.packerChanDone
+}
+
+func (mgr *PackerManager) PutBlob(Type resources.Type, mac objects.MAC, data []byte) error {
+	mgr.packerChan <- &PackerMsg{Type: Type, Version: versioning.GetCurrentVersion(Type), Timestamp: time.Now(), MAC: mac, Data: data}
+	return nil
 }
 
 type PackerMsg struct {
@@ -211,58 +226,4 @@ func (packer *Packer) Types() []resources.Type {
 		ret = append(ret, k)
 	}
 	return ret
-}
-
-func (snap *Snapshot) PutBlob(Type resources.Type, mac [32]byte, data []byte) error {
-	snap.Logger().Trace("snapshot", "%x: PutBlob(%s, %064x) len=%d", snap.Header.GetIndexShortID(), Type, mac, len(data))
-
-	if snap.repository.InTransaction() {
-		if _, exists := snap.packerManager.inflightMACs[Type].LoadOrStore(mac, struct{}{}); exists {
-			// tell prom exporter that we collided a blob
-			return nil
-		}
-	}
-
-	encodedReader, err := snap.repository.Encode(bytes.NewReader(data))
-	if err != nil {
-		return err
-	}
-
-	encoded, err := io.ReadAll(encodedReader)
-	if err != nil {
-		return err
-	}
-
-	snap.packerManager.packerChan <- &PackerMsg{Type: Type, Version: versioning.GetCurrentVersion(Type), Timestamp: time.Now(), MAC: mac, Data: encoded}
-	return nil
-}
-
-func (snap *Snapshot) GetBlob(Type resources.Type, mac [32]byte) ([]byte, error) {
-	snap.Logger().Trace("snapshot", "%x: GetBlob(%s, %x)", snap.Header.GetIndexShortID(), Type, mac)
-	rd, err := snap.repository.GetBlob(Type, mac)
-	if err != nil {
-		return nil, err
-	}
-
-	return io.ReadAll(rd)
-}
-
-func (snap *Snapshot) BlobExists(Type resources.Type, mac [32]byte) bool {
-	snap.Logger().Trace("snapshot", "%x: CheckBlob(%s, %064x)", snap.Header.GetIndexShortID(), Type, mac)
-
-	if snap.repository.InTransaction() {
-		if _, exists := snap.packerManager.inflightMACs[Type].Load(mac); exists {
-			return true
-		}
-	}
-
-	return snap.repository.BlobExists(Type, mac)
-}
-
-func (snap *Snapshot) PutBlobIfNotExists(Type resources.Type, mac [32]byte, data []byte) error {
-	snap.Logger().Trace("snapshot", "%x: PutBlobIfNotExists(%s, %064x) len=%d", snap.Header.GetIndexShortID(), Type, mac, len(data))
-	if snap.BlobExists(Type, mac) {
-		return nil
-	}
-	return snap.PutBlob(Type, mac, data)
 }

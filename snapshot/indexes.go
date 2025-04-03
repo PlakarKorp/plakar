@@ -25,7 +25,7 @@ func (snap *Snapshot) ContentTypeIdx() (*btree.BTree[string, objects.MAC, object
 		return nil, nil
 	}
 
-	d, err := snap.GetBlob(resources.RT_BTREE_ROOT, mac)
+	d, err := snap.repository.GetBlobBytes(resources.RT_BTREE_ROOT, mac)
 	if err != nil {
 		return nil, err
 	}
