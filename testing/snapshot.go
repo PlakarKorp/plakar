@@ -120,7 +120,7 @@ func GenerateSnapshot(t *testing.T, bufout *bytes.Buffer, buferr *bytes.Buffer, 
 	require.NoError(t, err, "creating repository")
 
 	// create a snapshot
-	snap, err := snapshot.New(repo)
+	snap, err := snapshot.Create(repo)
 	require.NoError(t, err)
 	require.NotNil(t, snap)
 

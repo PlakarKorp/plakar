@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"math/bits"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -43,14 +44,15 @@ type Repository struct {
 	store         storage.Store
 	state         *state.LocalState
 	configuration storage.Configuration
-
-	appContext *appcontext.AppContext
+	appContext    *appcontext.AppContext
 
 	wBytes atomic.Int64
 	rBytes atomic.Int64
 
 	storageSize      int64
 	storageSizeDirty bool
+	transactionMtx   sync.RWMutex
+	deltaState       *state.LocalState
 }
 
 func Inexistent(ctx *appcontext.AppContext, storeConfig map[string]string) (*Repository, error) {
@@ -396,8 +398,67 @@ func (r *Repository) Chunker(rd io.ReadCloser) (*chunkers.Chunker, error) {
 	})
 }
 
-func (r *Repository) NewStateDelta(cache *caching.ScanCache) *state.LocalState {
-	return r.state.Derive(cache)
+func (r *Repository) StartTransaction(cache *caching.ScanCache) {
+	t0 := time.Now()
+	defer func() {
+		r.Logger().Trace("repository", "StartTransaction(): %s", time.Since(t0))
+	}()
+	r.transactionMtx.Lock()
+	defer r.transactionMtx.Unlock()
+	r.deltaState = r.state.Derive(cache)
+}
+
+func (r *Repository) FlushTransaction(newCache *caching.ScanCache, id objects.MAC) error {
+	t0 := time.Now()
+	defer func() {
+		r.Logger().Trace("repository", "FlushTransaction(): %s", time.Since(t0))
+	}()
+
+	r.transactionMtx.Lock()
+	oldState := r.deltaState
+	r.deltaState = r.state.Derive(newCache)
+	r.transactionMtx.Unlock()
+
+	return r.internalCommit(oldState, id)
+}
+
+func (r *Repository) CommitTransaction(id objects.MAC) error {
+	t0 := time.Now()
+	defer func() {
+		r.Logger().Trace("repository", "CommitTransaction(): %s", time.Since(t0))
+	}()
+
+	err := r.internalCommit(r.deltaState, id)
+	r.transactionMtx.Lock()
+	r.deltaState = nil
+	r.transactionMtx.Unlock()
+
+	return err
+}
+
+func (r *Repository) internalCommit(state *state.LocalState, id objects.MAC) error {
+	pr, pw := io.Pipe()
+
+	/* By using a pipe and a goroutine we bound the max size in memory. */
+	go func() {
+		defer pw.Close()
+
+		if err := state.SerializeToStream(pw); err != nil {
+			pw.CloseWithError(err)
+		}
+	}()
+
+	err := r.PutState(id, pr)
+	if err != nil {
+		return err
+	}
+
+	/* We are commiting the transaction, publish the new state to our local aggregated state. */
+	return r.state.PutState(id)
+}
+
+func (r *Repository) InTransaction() bool {
+	return r.deltaState != nil
 }
 
 func (r *Repository) Location() string {
@@ -823,7 +884,33 @@ func (r *Repository) PutStateDelta(de *state.DeltaEntry) error {
 	defer func() {
 		r.Logger().Trace("repository", "PutStateDelta(%x): %s", de.Blob, time.Since(t0))
 	}()
+
+	if r.deltaState == nil {
+		panic("Put outside of transaction")
+	}
+
+	r.transactionMtx.RLock()
+	defer r.transactionMtx.RUnlock()
+	if err := r.deltaState.PutDelta(de); err != nil {
+		return err
+	}
+
 	return r.state.PutDelta(de)
+}
+
+func (r *Repository) DeleteStateResource(Type resources.Type, mac objects.MAC) error {
+	t0 := time.Now()
+	defer func() {
+		r.Logger().Trace("repository", "DeleteStateResource(%s, %x): %s", Type.String(), mac, time.Since(t0))
+	}()
+
+	if r.deltaState == nil {
+		panic("Put outside of transaction")
+	}
+
+	r.transactionMtx.RLock()
+	defer r.transactionMtx.RUnlock()
+	return r.deltaState.DeleteResource(Type, mac)
 }
 
 func (r *Repository) PutStatePackfile(stateId, packfile objects.MAC) error {
@@ -831,16 +918,18 @@ func (r *Repository) PutStatePackfile(stateId, packfile objects.MAC) error {
 	defer func() {
 		r.Logger().Trace("repository", "PutStatePackfile(%x, %x): %s", stateId, packfile, time.Since(t0))
 	}()
-	return r.state.PutPackfile(stateId, packfile)
-}
 
-/* Publishes the current state to our local aggregated state */
-func (r *Repository) PutStateState(stateId objects.MAC) error {
-	t0 := time.Now()
-	defer func() {
-		r.Logger().Trace("repository", "PutStateState(%x): %s", stateId, time.Since(t0))
-	}()
-	return r.state.PutState(stateId)
+	if r.deltaState == nil {
+		panic("Put outside of transaction")
+	}
+
+	r.transactionMtx.RLock()
+	defer r.transactionMtx.RUnlock()
+	if err := r.deltaState.PutPackfile(stateId, packfile); err != nil {
+		return err
+	}
+
+	return r.state.PutPackfile(stateId, packfile)
 }
 
 func (r *Repository) ListOrphanBlobs() iter.Seq2[state.DeltaEntry, error] {

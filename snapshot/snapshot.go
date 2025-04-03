@@ -20,7 +20,6 @@ import (
 	"github.com/PlakarKorp/plakar/logging"
 	"github.com/PlakarKorp/plakar/objects"
 	"github.com/PlakarKorp/plakar/repository"
-	"github.com/PlakarKorp/plakar/repository/state"
 	"github.com/PlakarKorp/plakar/resources"
 	"github.com/PlakarKorp/plakar/snapshot/header"
 	"github.com/PlakarKorp/plakar/snapshot/vfs"
@@ -37,7 +36,6 @@ type Snapshot struct {
 	checkCache *caching.CheckCache
 
 	deltaCache *caching.ScanCache
-	deltaState *state.LocalState
 	//This is protecting the above two pointers, not their underlying objects
 	deltaMtx sync.RWMutex
 
@@ -66,7 +64,7 @@ func LogicalSize(repo *repository.Repository) (int, int64, error) {
 	return nSnapshots, totalSize, nil
 }
 
-func New(repo *repository.Repository) (*Snapshot, error) {
+func Create(repo *repository.Repository) (*Snapshot, error) {
 	identifier := objects.RandomMAC()
 	scanCache, err := repo.AppContext().GetCache().Scan(identifier)
 	if err != nil {
@@ -81,7 +79,6 @@ func New(repo *repository.Repository) (*Snapshot, error) {
 		Header: header.NewHeader("default", identifier),
 	}
 	snap.packerManager = NewPackerManager(snap)
-	snap.deltaState = repo.NewStateDelta(scanCache)
 
 	if snap.AppContext().Identity != uuid.Nil {
 		snap.Header.Identity.Identifier = snap.AppContext().Identity
@@ -99,6 +96,7 @@ func New(repo *repository.Repository) (*Snapshot, error) {
 	snap.Header.SetContext("MaxProcs", fmt.Sprintf("%d", runtime.GOMAXPROCS(0)))
 	snap.Header.SetContext("Client", snap.AppContext().Client)
 
+	repo.StartTransaction(scanCache)
 	go snap.packerManager.Run()
 
 	repo.Logger().Trace("snapshot", "%x: New()", snap.Header.GetIndexShortID())
