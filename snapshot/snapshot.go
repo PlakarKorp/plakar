@@ -6,6 +6,7 @@ import (
 	"io"
 	"iter"
 	"strings"
+	"sync"
 
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/btree"
@@ -27,6 +28,10 @@ var (
 type Snapshot struct {
 	repository *repository.Repository
 	checkCache *caching.CheckCache
+
+	deltaCache *caching.ScanCache
+	//This is protecting the above two pointers, not their underlying objects
+	deltaMtx sync.RWMutex
 
 	filesystem *vfs.Filesystem
 
