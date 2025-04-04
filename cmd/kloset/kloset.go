@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"flag"
-	"fmt"
 	"io"
 	"math"
 	"os"
@@ -13,12 +12,14 @@ import (
 	"github.com/PlakarKorp/plakar/compression"
 	"github.com/PlakarKorp/plakar/hashing"
 	"github.com/PlakarKorp/plakar/logging"
-	"github.com/PlakarKorp/plakar/packfile"
 	"github.com/PlakarKorp/plakar/repository"
 	"github.com/PlakarKorp/plakar/resources"
+	"github.com/PlakarKorp/plakar/snapshot"
+	"github.com/PlakarKorp/plakar/snapshot/importer"
 	"github.com/PlakarKorp/plakar/storage"
 	"github.com/PlakarKorp/plakar/versioning"
 
+	_ "github.com/PlakarKorp/plakar/snapshot/importer/fs"
 	_ "github.com/PlakarKorp/plakar/storage/backends/kloset"
 )
 
@@ -31,7 +32,6 @@ func main() {
 
 	location := flag.Arg(0)
 	data := flag.Arg(1)
-	_ = data
 
 	storageConfig := storage.NewConfiguration()
 	storageConfig.Compression = compression.NewDefaultConfiguration()
@@ -66,24 +66,44 @@ func main() {
 	appCtx.SetLogger(logger)
 	appCtx.SetCache(cache)
 
-	repo, err := repository.NewNoRebuild(appCtx, st, wrappedConfig)
+	repo, err := repository.New(appCtx, st, wrappedConfig)
 	if err != nil {
 		panic(err)
 	}
-
-	pack := packfile.New(repo.GetMACHasher())
-	serializedPack, err := pack.Serialize()
-	if err != nil {
-		panic(err)
-	}
-
-	packfileMAC := repo.ComputeMAC(serializedPack)
-	_ = packfileMAC
-	st.PutPackfile(packfileMAC, bytes.NewReader(serializedPack))
-
 	_ = repo
 
-	fmt.Println(st.GetPackfiles())
+	imp, err := importer.NewImporter(map[string]string{"location": data})
+	if err != nil {
+		panic(err)
+	}
+
+	snap, err := snapshot.Create(repo)
+	if err != nil {
+		panic(err)
+	}
+
+	backupOptions := &snapshot.BackupOptions{
+		MaxConcurrency: 4,
+	}
+
+	err = snap.Backup(imp, backupOptions)
+	if err != nil {
+		panic(err)
+	}
+
+	//	pack := packfile.New(repo.GetMACHasher())
+	//	serializedPack, err := pack.Serialize()
+	//	if err != nil {
+	//		panic(err)
+	//	}
+	//
+	//	packfileMAC := repo.ComputeMAC(serializedPack)
+	//	_ = packfileMAC
+	//	st.PutPackfile(packfileMAC, bytes.NewReader(serializedPack))
+	//
+	//	_ = repo
+	//
+	//	fmt.Println(st.GetPackfiles())
 
 	st.Close()
 

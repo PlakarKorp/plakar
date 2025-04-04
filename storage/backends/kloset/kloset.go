@@ -19,6 +19,7 @@ package kloset
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -70,7 +71,6 @@ func (s *Store) Create(config []byte) error {
 	fp.Write([]byte{'_', 'K', 'L', 'O', 'S', 'E', 'T', '_'})
 
 	version := versioning.FromString("1.0.0")
-
 	versionBytes := make([]byte, 4)
 	binary.LittleEndian.PutUint32(versionBytes, uint32(version))
 	fp.Write(versionBytes)
@@ -143,9 +143,7 @@ func (s *Store) Mode() storage.Mode {
 
 // states
 func (s *Store) GetStates() ([]objects.MAC, error) {
-	if s.mode&storage.ModeRead == 0 {
-		return []objects.MAC{}, storage.ErrNotReadable
-	}
+	fmt.Println("GetStates")
 	return []objects.MAC{}, nil
 }
 
@@ -153,13 +151,12 @@ func (s *Store) PutState(mac objects.MAC, rd io.Reader) error {
 	if s.mode&storage.ModeWrite == 0 {
 		return storage.ErrNotWritable
 	}
+	fmt.Println("PutState")
 	return nil
 }
 
 func (s *Store) GetState(mac objects.MAC) (io.Reader, error) {
-	if s.mode&storage.ModeRead == 0 {
-		return nil, storage.ErrNotReadable
-	}
+	fmt.Println("GetState")
 	return bytes.NewBuffer([]byte{}), nil
 }
 
@@ -167,14 +164,13 @@ func (s *Store) DeleteState(mac objects.MAC) error {
 	if s.mode&storage.ModeWrite == 0 {
 		return storage.ErrNotWritable
 	}
+	fmt.Println("DeleteState")
 	return nil
 }
 
 // packfiles
 func (s *Store) GetPackfiles() ([]objects.MAC, error) {
-	if s.mode&storage.ModeRead == 0 {
-		return []objects.MAC{}, storage.ErrNotReadable
-	}
+	fmt.Println("GetPackfiles")
 	return []objects.MAC{}, nil
 }
 
@@ -182,7 +178,7 @@ func (s *Store) PutPackfile(mac objects.MAC, rd io.Reader) error {
 	if s.mode&storage.ModeWrite == 0 {
 		return storage.ErrNotWritable
 	}
-
+	fmt.Println("PutPackfile")
 	_, err := io.Copy(s.fp, rd)
 	if err != nil {
 		return err
@@ -192,16 +188,12 @@ func (s *Store) PutPackfile(mac objects.MAC, rd io.Reader) error {
 }
 
 func (s *Store) GetPackfile(mac objects.MAC) (io.Reader, error) {
-	if s.mode&storage.ModeRead == 0 {
-		return nil, storage.ErrNotReadable
-	}
+	fmt.Println("GetPackfile")
 	return bytes.NewBuffer([]byte{}), nil
 }
 
 func (s *Store) GetPackfileBlob(mac objects.MAC, offset uint64, length uint32) (io.Reader, error) {
-	if s.mode&storage.ModeRead == 0 {
-		return nil, storage.ErrNotReadable
-	}
+	fmt.Println("GetPackfileBlob")
 	return bytes.NewBuffer([]byte{}), nil
 }
 
@@ -209,14 +201,13 @@ func (s *Store) DeletePackfile(mac objects.MAC) error {
 	if s.mode&storage.ModeWrite == 0 {
 		return storage.ErrNotWritable
 	}
+	fmt.Println("DeletePackfile")
 	return nil
 }
 
 /* Locks */
 func (s *Store) GetLocks() ([]objects.MAC, error) {
-	if s.mode&storage.ModeRead == 0 {
-		return []objects.MAC{}, storage.ErrNotReadable
-	}
+	fmt.Println("GetLocks")
 	return []objects.MAC{}, nil
 }
 
@@ -224,13 +215,17 @@ func (s *Store) PutLock(lockID objects.MAC, rd io.Reader) error {
 	if s.mode&storage.ModeWrite == 0 {
 		return storage.ErrNotWritable
 	}
+	fmt.Println("PutLock")
+
+	_, err := io.Copy(s.fp, rd)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func (s *Store) GetLock(lockID objects.MAC) (io.Reader, error) {
-	if s.mode&storage.ModeRead == 0 {
-		return nil, storage.ErrNotReadable
-	}
 	return bytes.NewBuffer([]byte{}), nil
 }
 
@@ -238,5 +233,6 @@ func (s *Store) DeleteLock(lockID objects.MAC) error {
 	if s.mode&storage.ModeWrite == 0 {
 		return storage.ErrNotWritable
 	}
+	fmt.Println("DeleteLock")
 	return nil
 }
