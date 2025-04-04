@@ -204,10 +204,6 @@ func (r *RepositoryWriter) PutPackfile(pfile *packfile.PackFile) error {
 		return err
 	}
 
-	if r.deltaState == nil {
-		panic("Put outside of transaction")
-	}
-
 	r.transactionMtx.RLock()
 	defer r.transactionMtx.RUnlock()
 	for idx, blob := range pfile.Index {
