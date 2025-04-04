@@ -30,6 +30,7 @@ import (
 	_ "github.com/PlakarKorp/plakar/storage/backends/database"
 	_ "github.com/PlakarKorp/plakar/storage/backends/fs"
 	_ "github.com/PlakarKorp/plakar/storage/backends/http"
+	_ "github.com/PlakarKorp/plakar/storage/backends/kloset"
 	_ "github.com/PlakarKorp/plakar/storage/backends/null"
 	_ "github.com/PlakarKorp/plakar/storage/backends/s3"
 	_ "github.com/PlakarKorp/plakar/storage/backends/sftp"
