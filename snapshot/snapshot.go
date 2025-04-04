@@ -1,17 +1,11 @@
 package snapshot
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
 	"iter"
-	"os"
-	"runtime"
-	"strconv"
 	"strings"
-	"sync"
-	"time"
 
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/btree"
@@ -32,16 +26,9 @@ var (
 
 type Snapshot struct {
 	repository *repository.Repository
-	scanCache  *caching.ScanCache
 	checkCache *caching.CheckCache
 
-	deltaCache *caching.ScanCache
-	//This is protecting the above two pointers, not their underlying objects
-	deltaMtx sync.RWMutex
-
 	filesystem *vfs.Filesystem
-
-	SkipDirs []string
 
 	Header *header.Header
 }
@@ -62,44 +49,6 @@ func LogicalSize(repo *repository.Repository) (int, int64, error) {
 	return nSnapshots, totalSize, nil
 }
 
-func Create(repo *repository.Repository) (*Snapshot, error) {
-	identifier := objects.RandomMAC()
-	scanCache, err := repo.AppContext().GetCache().Scan(identifier)
-	if err != nil {
-		return nil, err
-	}
-
-	snap := &Snapshot{
-		repository: repo,
-		scanCache:  scanCache,
-		deltaCache: scanCache,
-
-		Header: header.NewHeader("default", identifier),
-	}
-
-	if snap.AppContext().Identity != uuid.Nil {
-		snap.Header.Identity.Identifier = snap.AppContext().Identity
-		snap.Header.Identity.PublicKey = snap.AppContext().Keypair.PublicKey
-	}
-
-	snap.Header.SetContext("Hostname", snap.AppContext().Hostname)
-	snap.Header.SetContext("Username", snap.AppContext().Username)
-	snap.Header.SetContext("OperatingSystem", snap.AppContext().OperatingSystem)
-	snap.Header.SetContext("MachineID", snap.AppContext().MachineID)
-	snap.Header.SetContext("CommandLine", snap.AppContext().CommandLine)
-	snap.Header.SetContext("ProcessID", fmt.Sprintf("%d", snap.AppContext().ProcessID))
-	snap.Header.SetContext("Architecture", snap.AppContext().Architecture)
-	snap.Header.SetContext("NumCPU", fmt.Sprintf("%d", runtime.NumCPU()))
-	snap.Header.SetContext("MaxProcs", fmt.Sprintf("%d", runtime.GOMAXPROCS(0)))
-	snap.Header.SetContext("Client", snap.AppContext().Client)
-
-	repo.StartTransaction(scanCache)
-	repo.StartPackerManager(snap.Header.Identifier)
-
-	repo.Logger().Trace("snapshot", "%x: New()", snap.Header.GetIndexShortID())
-	return snap, nil
-}
-
 func Load(repo *repository.Repository, Identifier objects.MAC) (*Snapshot, error) {
 	hdr, _, err := GetSnapshot(repo, Identifier)
 	if err != nil {
@@ -114,50 +63,14 @@ func Load(repo *repository.Repository, Identifier objects.MAC) (*Snapshot, error
 	return snapshot, nil
 }
 
-func Clone(repo *repository.Repository, Identifier objects.MAC) (*Snapshot, error) {
-	snap, err := Load(repo, Identifier)
-	if err != nil {
-		return nil, err
-	}
-	snap.Header.Timestamp = time.Now()
-
-	uuidBytes, err := uuid.Must(uuid.NewRandom()).MarshalBinary()
-	if err != nil {
-		return nil, err
-	}
-
-	snap.Header.Identifier = repo.ComputeMAC(uuidBytes[:])
-	repo.StartPackerManager(snap.Header.Identifier)
-
-	repo.Logger().Trace("snapshot", "%x: Clone(): %s", snap.Header.Identifier, snap.Header.GetIndexShortID())
-	return snap, nil
-}
-
-func Fork(repo *repository.Repository, Identifier objects.MAC) (*Snapshot, error) {
-	identifier := objects.RandomMAC()
-	snap, err := Clone(repo, Identifier)
-	if err != nil {
-		return nil, err
-	}
-
-	snap.Header.Identifier = identifier
-
-	snap.Logger().Trace("snapshot", "%x: Fork(): %x", snap.Header.Identifier, snap.Header.GetIndexShortID())
-	return snap, nil
-}
-
 func (snap *Snapshot) Close() error {
 	snap.Logger().Trace("snapshot", "%x: Close(): %x", snap.Header.Identifier, snap.Header.GetIndexShortID())
-
-	if snap.scanCache != nil {
-		return snap.scanCache.Close()
-	}
 
 	return nil
 }
 
 func (snap *Snapshot) AppContext() *appcontext.AppContext {
-	return snap.Repository().AppContext()
+	return snap.repository.AppContext()
 }
 
 func (snap *Snapshot) Event(evt events.Event) {
@@ -203,10 +116,6 @@ func GetSnapshot(repo *repository.Repository, Identifier objects.MAC) (*header.H
 	}
 
 	return hdr, false, nil
-}
-
-func (snap *Snapshot) Repository() *repository.Repository {
-	return snap.repository
 }
 
 func (snap *Snapshot) LookupObject(mac objects.MAC) (*objects.Object, error) {
@@ -324,14 +233,14 @@ func (snap *Snapshot) ListPackfiles() (iter.Seq2[objects.MAC, error], error) {
 		if !yield(getPackfileForBlobWithError(snap, resources.RT_BTREE_ROOT, snap.Header.GetSource(0).Indexes[0].Value)) {
 			return
 		}
-		rd, err := snap.Repository().GetBlob(resources.RT_BTREE_ROOT, snap.Header.GetSource(0).Indexes[0].Value)
+		rd, err := snap.repository.GetBlob(resources.RT_BTREE_ROOT, snap.Header.GetSource(0).Indexes[0].Value)
 		if err != nil {
 			if !yield(objects.MAC{}, fmt.Errorf("Failed to load Index root entry %s", err)) {
 				return
 			}
 		}
 
-		store := repository.NewRepositoryStore[string, objects.MAC](snap.Repository(), resources.RT_BTREE_NODE)
+		store := repository.NewRepositoryStore[string, objects.MAC](snap.repository, resources.RT_BTREE_NODE)
 		tree, err := btree.Deserialize(rd, store, strings.Compare)
 		if err != nil {
 			if !yield(objects.MAC{}, fmt.Errorf("Failed to deserialize root entry %s", err)) {
@@ -348,96 +257,6 @@ func (snap *Snapshot) ListPackfiles() (iter.Seq2[objects.MAC, error], error) {
 		}
 
 	}, nil
-}
-
-func (snap *Snapshot) Lock() (chan bool, error) {
-	lockless, _ := strconv.ParseBool(os.Getenv("PLAKAR_LOCKLESS"))
-	lockDone := make(chan bool)
-	if lockless {
-		return lockDone, nil
-	}
-
-	lock := repository.NewSharedLock(snap.AppContext().Hostname)
-
-	buffer := &bytes.Buffer{}
-	err := lock.SerializeToStream(buffer)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = snap.repository.PutLock(snap.Header.Identifier, buffer)
-	if err != nil {
-		return nil, err
-	}
-
-	// We installed the lock, now let's see if there is a conflicting exclusive lock or not.
-	locksID, err := snap.repository.GetLocks()
-	if err != nil {
-		// We still need to delete it, and we need to do so manually.
-		snap.repository.DeleteLock(snap.Header.Identifier)
-		return nil, err
-	}
-
-	for _, lockID := range locksID {
-		version, rd, err := snap.repository.GetLock(lockID)
-		if err != nil {
-			snap.repository.DeleteLock(snap.Header.Identifier)
-			return nil, err
-		}
-
-		lock, err := repository.NewLockFromStream(version, rd)
-		if err != nil {
-			snap.repository.DeleteLock(snap.Header.Identifier)
-			return nil, err
-		}
-
-		/* Kick out stale locks */
-		if lock.IsStale() {
-			err := snap.repository.DeleteLock(lockID)
-			if err != nil {
-				snap.repository.DeleteLock(snap.Header.Identifier)
-				return nil, err
-			}
-		}
-
-		// There is an exclusive lock in place, we need to abort.
-		if lock.Exclusive {
-			err := snap.repository.DeleteLock(snap.Header.Identifier)
-			if err != nil {
-				return nil, err
-			}
-
-			return nil, fmt.Errorf("Can't take repository lock, it's already locked by maintenance.")
-		}
-	}
-
-	// The following bit is a "ping" mechanism, Lock() is a bit badly named at this point,
-	// we are just refreshing the existing lock so that the watchdog doesn't removes us.
-	go func() {
-		for {
-			select {
-			case <-lockDone:
-				snap.repository.DeleteLock(snap.Header.Identifier)
-				return
-			case <-time.After(repository.LOCK_REFRESH_RATE):
-				lock := repository.NewSharedLock(snap.AppContext().Hostname)
-
-				buffer := &bytes.Buffer{}
-
-				// We ignore errors here on purpose, it's tough to handle them
-				// correctly, and if they happen we will be ripped by the
-				// watchdog anyway.
-				lock.SerializeToStream(buffer)
-				snap.repository.PutLock(snap.Header.Identifier, buffer)
-			}
-		}
-	}()
-
-	return lockDone, nil
-}
-
-func (snap *Snapshot) Unlock(ping chan bool) {
-	close(ping)
 }
 
 func (snap *Snapshot) Logger() *logging.Logger {

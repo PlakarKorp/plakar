@@ -186,7 +186,7 @@ func (cmd *Maintenance) colourPass(ctx *appcontext.AppContext, cache *caching.Ma
 	// For now we keep the same serial so that those delete gets merged in.
 	// Once we do the real deletion we will rebuild the aggregated view
 	// excluding those resources alltogether.
-	cmd.repository.StartTransaction(sc)
+	repoWriter := cmd.repository.NewRepositoryWriter(sc, cmd.maintenanceID)
 
 	coloredPackfiles := 0
 	for packfile := range packfiles {
@@ -201,7 +201,7 @@ func (cmd *Maintenance) colourPass(ctx *appcontext.AppContext, cache *caching.Ma
 
 		if !has {
 			coloredPackfiles++
-			if err := cmd.repository.DeleteStateResource(resources.RT_PACKFILE, packfile); err != nil {
+			if err := repoWriter.DeleteStateResource(resources.RT_PACKFILE, packfile); err != nil {
 				return err
 			}
 		}
@@ -210,7 +210,7 @@ func (cmd *Maintenance) colourPass(ctx *appcontext.AppContext, cache *caching.Ma
 	fmt.Fprintf(ctx.Stdout, "maintenance: Coloured %d packfiles (%d orphaned) for deletion\n", coloredPackfiles, orphanedPackfiles)
 
 	if coloredPackfiles > 0 {
-		if err := cmd.repository.CommitTransaction(cmd.maintenanceID); err != nil {
+		if err := repoWriter.CommitTransaction(cmd.maintenanceID); err != nil {
 			return err
 		}
 	}
