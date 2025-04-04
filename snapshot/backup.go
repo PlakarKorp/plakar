@@ -84,7 +84,7 @@ func (bc *BackupContext) recordXattr(record *importer.ScanRecord, objectMAC obje
 	return bc.xattridx.Insert(xattr.ToPath(), serialized)
 }
 
-func (snapshot *Snapshot) skipExcludedPathname(options *BackupOptions, record *importer.ScanResult) bool {
+func (snapshot *Builder) skipExcludedPathname(options *BackupOptions, record *importer.ScanResult) bool {
 	var pathname string
 	switch {
 	case record.Record != nil:
@@ -107,7 +107,7 @@ func (snapshot *Snapshot) skipExcludedPathname(options *BackupOptions, record *i
 	return doExclude
 }
 
-func (snap *Snapshot) importerJob(backupCtx *BackupContext, options *BackupOptions) (chan *importer.ScanRecord, error) {
+func (snap *Builder) importerJob(backupCtx *BackupContext, options *BackupOptions) (chan *importer.ScanRecord, error) {
 	scanner, err := backupCtx.imp.Scan()
 	if err != nil {
 		return nil, err
@@ -203,7 +203,7 @@ func (snap *Snapshot) importerJob(backupCtx *BackupContext, options *BackupOptio
 	return filesChannel, nil
 }
 
-func (snap *Snapshot) flushDeltaState(bc *BackupContext) {
+func (snap *Builder) flushDeltaState(bc *BackupContext) {
 	for {
 		select {
 		case <-bc.flushEnd:
@@ -259,7 +259,7 @@ func (snap *Snapshot) flushDeltaState(bc *BackupContext) {
 	}
 }
 
-func (snap *Snapshot) Backup(imp importer.Importer, options *BackupOptions) error {
+func (snap *Builder) Backup(imp importer.Importer, options *BackupOptions) error {
 	snap.Event(events.StartEvent())
 	defer snap.Event(events.DoneEvent())
 
@@ -394,7 +394,7 @@ func (snap *Snapshot) Backup(imp importer.Importer, options *BackupOptions) erro
 									snap.Logger().Warn("VFS CACHE: Error unmarshaling object: %v", err)
 								} else {
 									object = cachedObject
-									objectMAC = snap.Repository().ComputeMAC(data)
+									objectMAC = snap.repository.ComputeMAC(data)
 									objectSerialized = data
 								}
 							}
@@ -757,7 +757,7 @@ func entropy(data []byte) (float64, [256]float64) {
 	return entropy, freq
 }
 
-func (snap *Snapshot) chunkify(imp importer.Importer, cf *classifier.Classifier, record *importer.ScanRecord) (*objects.Object, error) {
+func (snap *Builder) chunkify(imp importer.Importer, cf *classifier.Classifier, record *importer.ScanRecord) (*objects.Object, error) {
 	var rd io.ReadCloser
 	var err error
 
@@ -870,7 +870,7 @@ func (snap *Snapshot) chunkify(imp importer.Importer, cf *classifier.Classifier,
 	return object, nil
 }
 
-func (snap *Snapshot) Commit(bc *BackupContext) error {
+func (snap *Builder) Commit(bc *BackupContext) error {
 	// First thing is to stop the ticker, as we don't want any concurrent flushes to run.
 	// Maybe this could be stopped earlier.
 

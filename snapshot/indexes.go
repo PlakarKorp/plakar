@@ -31,9 +31,8 @@ func (snap *Snapshot) ContentTypeIdx() (*btree.BTree[string, objects.MAC, object
 	}
 
 	store := SnapshotStore[string, objects.MAC]{
-		readonly: true,
-		blobtype: resources.RT_BTREE_NODE,
-		snap:     snap,
+		blobtype:   resources.RT_BTREE_NODE,
+		snapReader: snap,
 	}
 	return btree.Deserialize(bytes.NewReader(d), &store, strings.Compare)
 }
