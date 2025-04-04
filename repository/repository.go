@@ -12,7 +12,6 @@ import (
 	"math/big"
 	"math/bits"
 	"strings"
-	"sync"
 	"time"
 
 	chunkers "github.com/PlakarKorp/go-cdc-chunkers"
@@ -44,9 +43,6 @@ type Repository struct {
 	state         *state.LocalState
 	configuration storage.Configuration
 	appContext    *appcontext.AppContext
-
-	transactionMtx sync.RWMutex
-	deltaState     *state.LocalState
 }
 
 func Inexistent(ctx *appcontext.AppContext, storeConfig map[string]string) (*Repository, error) {
@@ -363,67 +359,13 @@ func (r *Repository) Chunker(rd io.ReadCloser) (*chunkers.Chunker, error) {
 	})
 }
 
-func (r *Repository) StartTransaction(cache *caching.ScanCache) {
+func (r *Repository) NewRepositoryWriter(cache *caching.ScanCache, id objects.MAC) *RepositoryWriter {
 	t0 := time.Now()
 	defer func() {
-		r.Logger().Trace("repository", "StartTransaction(): %s", time.Since(t0))
-	}()
-	r.transactionMtx.Lock()
-	defer r.transactionMtx.Unlock()
-	r.deltaState = r.state.Derive(cache)
-}
-
-func (r *Repository) FlushTransaction(newCache *caching.ScanCache, id objects.MAC) error {
-	t0 := time.Now()
-	defer func() {
-		r.Logger().Trace("repository", "FlushTransaction(): %s", time.Since(t0))
+		r.Logger().Trace("repository", "NewRepositoryWriter(): %s", time.Since(t0))
 	}()
 
-	r.transactionMtx.Lock()
-	oldState := r.deltaState
-	r.deltaState = r.state.Derive(newCache)
-	r.transactionMtx.Unlock()
-
-	return r.internalCommit(oldState, id)
-}
-
-func (r *Repository) CommitTransaction(id objects.MAC) error {
-	t0 := time.Now()
-	defer func() {
-		r.Logger().Trace("repository", "CommitTransaction(): %s", time.Since(t0))
-	}()
-
-	err := r.internalCommit(r.deltaState, id)
-	r.transactionMtx.Lock()
-	r.deltaState = nil
-	r.transactionMtx.Unlock()
-
-	return err
-}
-
-func (r *Repository) internalCommit(state *state.LocalState, id objects.MAC) error {
-	pr, pw := io.Pipe()
-
-	/* By using a pipe and a goroutine we bound the max size in memory. */
-	go func() {
-		defer pw.Close()
-
-		if err := state.SerializeToStream(pw); err != nil {
-			pw.CloseWithError(err)
-		}
-	}()
-
-	err := r.PutState(id, pr)
-	if err != nil {
-		return err
-	}
-
-	/* We are commiting the transaction, publish the new state to our local aggregated state. */
-	return r.state.PutState(id)
-}
-
-func (r *Repository) InTransaction() bool {
-	return r.deltaState != nil
+	return r.newRepositoryWriter(cache, id)
 }
 
 func (r *Repository) Location() string {
@@ -695,19 +637,6 @@ func (r *Repository) GetPackfileBlob(loc state.Location) (io.ReadSeeker, error) 
 	return bytes.NewReader(decoded), nil
 }
 
-func (r *Repository) PutPackfile(mac objects.MAC, rd io.Reader) error {
-	t0 := time.Now()
-	defer func() {
-		r.Logger().Trace("repository", "PutPackfile(%x, ...): %s", mac, time.Since(t0))
-	}()
-
-	rd, err := storage.Serialize(r.GetMACHasher(), resources.RT_PACKFILE, versioning.GetCurrentVersion(resources.RT_PACKFILE), rd)
-	if err != nil {
-		return err
-	}
-	return r.store.PutPackfile(mac, rd)
-}
-
 // Deletes a packfile from the store. Warning this is a true delete and is unrecoverable.
 func (r *Repository) DeletePackfile(mac objects.MAC) error {
 	t0 := time.Now()
@@ -820,11 +749,26 @@ func (r *Repository) GetBlob(Type resources.Type, mac objects.MAC) (io.ReadSeeke
 	return rd, nil
 }
 
+func (r *Repository) GetBlobBytes(Type resources.Type, mac objects.MAC) ([]byte, error) {
+	t0 := time.Now()
+	defer func() {
+		r.Logger().Trace("repository", "GetBlobByte(%s, %x): %s", Type, mac, time.Since(t0))
+	}()
+
+	rd, err := r.GetBlob(Type, mac)
+	if err != nil {
+		return nil, err
+	}
+
+	return io.ReadAll(rd)
+}
+
 func (r *Repository) BlobExists(Type resources.Type, mac objects.MAC) bool {
 	t0 := time.Now()
 	defer func() {
 		r.Logger().Trace("repository", "BlobExists(%s, %x): %s", Type, mac, time.Since(t0))
 	}()
+
 	return r.state.BlobExists(Type, mac)
 }
 
@@ -835,59 +779,6 @@ func (r *Repository) RemoveBlob(Type resources.Type, mac, packfileMAC objects.MA
 		r.Logger().Trace("repository", "DeleteBlob(%s, %x, %x): %s", Type, mac, packfileMAC, time.Since(t0))
 	}()
 	return r.state.DelDelta(Type, mac, packfileMAC)
-}
-
-func (r *Repository) PutStateDelta(de *state.DeltaEntry) error {
-	t0 := time.Now()
-	defer func() {
-		r.Logger().Trace("repository", "PutStateDelta(%x): %s", de.Blob, time.Since(t0))
-	}()
-
-	if r.deltaState == nil {
-		panic("Put outside of transaction")
-	}
-
-	r.transactionMtx.RLock()
-	defer r.transactionMtx.RUnlock()
-	if err := r.deltaState.PutDelta(de); err != nil {
-		return err
-	}
-
-	return r.state.PutDelta(de)
-}
-
-func (r *Repository) DeleteStateResource(Type resources.Type, mac objects.MAC) error {
-	t0 := time.Now()
-	defer func() {
-		r.Logger().Trace("repository", "DeleteStateResource(%s, %x): %s", Type.String(), mac, time.Since(t0))
-	}()
-
-	if r.deltaState == nil {
-		panic("Put outside of transaction")
-	}
-
-	r.transactionMtx.RLock()
-	defer r.transactionMtx.RUnlock()
-	return r.deltaState.DeleteResource(Type, mac)
-}
-
-func (r *Repository) PutStatePackfile(stateId, packfile objects.MAC) error {
-	t0 := time.Now()
-	defer func() {
-		r.Logger().Trace("repository", "PutStatePackfile(%x, %x): %s", stateId, packfile, time.Since(t0))
-	}()
-
-	if r.deltaState == nil {
-		panic("Put outside of transaction")
-	}
-
-	r.transactionMtx.RLock()
-	defer r.transactionMtx.RUnlock()
-	if err := r.deltaState.PutPackfile(stateId, packfile); err != nil {
-		return err
-	}
-
-	return r.state.PutPackfile(stateId, packfile)
 }
 
 func (r *Repository) ListOrphanBlobs() iter.Seq2[state.DeltaEntry, error] {

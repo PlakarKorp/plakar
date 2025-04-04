@@ -19,7 +19,7 @@ func (snap *Snapshot) Verify() (bool, error) {
 		return false, nil
 	}
 
-	signature, err := snap.GetBlob(resources.RT_SIGNATURE, snap.Header.Identifier)
+	signature, err := snap.repository.GetBlobBytes(resources.RT_SIGNATURE, snap.Header.Identifier)
 	if err != nil {
 		return false, err
 	}

@@ -97,7 +97,7 @@ func snapshotCheckPath(snap *Snapshot, opts *CheckOptions, concurrency chan bool
 
 				snap.Event(events.ChunkEvent(snap.Header.Identifier, chunk.ContentMAC))
 				if opts.FastCheck {
-					if !snap.BlobExists(resources.RT_CHUNK, chunk.ContentMAC) {
+					if !snap.repository.BlobExists(resources.RT_CHUNK, chunk.ContentMAC) {
 						snap.Event(events.ChunkMissingEvent(snap.Header.Identifier, chunk.ContentMAC))
 						snap.checkCache.PutChunkStatus(chunk.ContentMAC, []byte("chunk missing"))
 						complete = false
@@ -106,7 +106,7 @@ func snapshotCheckPath(snap *Snapshot, opts *CheckOptions, concurrency chan bool
 					snap.checkCache.PutChunkStatus(chunk.ContentMAC, []byte(""))
 					snap.Event(events.ChunkOKEvent(snap.Header.Identifier, chunk.ContentMAC))
 				} else {
-					data, err := snap.GetBlob(resources.RT_CHUNK, chunk.ContentMAC)
+					data, err := snap.repository.GetBlobBytes(resources.RT_CHUNK, chunk.ContentMAC)
 					if err != nil {
 						snap.Event(events.ChunkMissingEvent(snap.Header.Identifier, chunk.ContentMAC))
 						snap.checkCache.PutChunkStatus(chunk.ContentMAC, []byte("chunk missing"))
