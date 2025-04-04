@@ -64,6 +64,10 @@ func Create(repo *repository.Repository) (*Builder, error) {
 	return snap, nil
 }
 
+func (snap *Builder) Repository() *repository.Repository {
+	return snap.repository.Repository
+}
+
 func (snap *Builder) Close() error {
 	snap.Logger().Trace("snapshotBuilder", "%x: Close(): %x", snap.Header.Identifier, snap.Header.GetIndexShortID())
 
@@ -72,10 +76,6 @@ func (snap *Builder) Close() error {
 	}
 
 	return nil
-}
-
-func (snap *Builder) Repository() *repository.Repository {
-	return snap.repository.Repository
 }
 
 func (snap *Builder) Logger() *logging.Logger {
