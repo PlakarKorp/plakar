@@ -82,7 +82,8 @@ func (mgr *PackerManager) Run() {
 	})
 
 	workerGroup, workerCtx := errgroup.WithContext(ctx)
-	for i := 0; i < runtime.NumCPU(); i++ {
+	//for i := 0; i < runtime.NumCPU(); i++ {
+	for i := 0; i < 1; i++ {
 		workerGroup.Go(func() error {
 			var pfile *packfile.PackFile
 

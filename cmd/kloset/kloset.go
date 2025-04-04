@@ -91,20 +91,6 @@ func main() {
 		panic(err)
 	}
 
-	//	pack := packfile.New(repo.GetMACHasher())
-	//	serializedPack, err := pack.Serialize()
-	//	if err != nil {
-	//		panic(err)
-	//	}
-	//
-	//	packfileMAC := repo.ComputeMAC(serializedPack)
-	//	_ = packfileMAC
-	//	st.PutPackfile(packfileMAC, bytes.NewReader(serializedPack))
-	//
-	//	_ = repo
-	//
-	//	fmt.Println(st.GetPackfiles())
-
 	st.Close()
 
 }
