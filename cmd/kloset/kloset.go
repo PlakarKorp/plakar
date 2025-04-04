@@ -84,6 +84,7 @@ func main() {
 
 	backupOptions := &snapshot.BackupOptions{
 		MaxConcurrency: 4,
+		NoCheckpoint:   true,
 	}
 
 	err = snap.Backup(imp, backupOptions)
