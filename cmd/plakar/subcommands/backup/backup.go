@@ -135,7 +135,7 @@ func (cmd *Backup) Name() string {
 }
 
 func (cmd *Backup) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	snap, err := snapshot.New(repo)
+	snap, err := snapshot.Create(repo)
 	if err != nil {
 		ctx.GetLogger().Error("%s", err)
 		return 1, err

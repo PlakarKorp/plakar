@@ -216,7 +216,7 @@ func (packer *Packer) Types() []resources.Type {
 func (snap *Snapshot) PutBlob(Type resources.Type, mac [32]byte, data []byte) error {
 	snap.Logger().Trace("snapshot", "%x: PutBlob(%s, %064x) len=%d", snap.Header.GetIndexShortID(), Type, mac, len(data))
 
-	if snap.deltaState != nil {
+	if snap.repository.InTransaction() {
 		if _, exists := snap.packerManager.inflightMACs[Type].LoadOrStore(mac, struct{}{}); exists {
 			// tell prom exporter that we collided a blob
 			return nil
@@ -250,7 +250,7 @@ func (snap *Snapshot) GetBlob(Type resources.Type, mac [32]byte) ([]byte, error)
 func (snap *Snapshot) BlobExists(Type resources.Type, mac [32]byte) bool {
 	snap.Logger().Trace("snapshot", "%x: CheckBlob(%s, %064x)", snap.Header.GetIndexShortID(), Type, mac)
 
-	if snap.deltaState != nil {
+	if snap.repository.InTransaction() {
 		if _, exists := snap.packerManager.inflightMACs[Type].Load(mac); exists {
 			return true
 		}
