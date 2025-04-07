@@ -304,7 +304,7 @@ func entryPoint() int {
 	}
 
 	// these commands need to be ran before the repository is opened
-	if command == "agent" || command == "config" || command == "version" || command == "help" {
+	if command == "agent" || command == "config" || command == "version" || command == "help" || command == "login" {
 		cmd, err := subcommands.Parse(ctx, command, args)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
