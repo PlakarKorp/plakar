@@ -24,7 +24,7 @@ type RepositoryWriter struct {
 	transactionMtx sync.RWMutex
 	deltaState     *state.LocalState
 
-	PackerManager  *packer.PackerManager
+	PackerManager  packer.PackerManagerInt
 	currentStateID objects.MAC
 }
 
@@ -103,7 +103,8 @@ func (r *RepositoryWriter) BlobExists(Type resources.Type, mac objects.MAC) bool
 		r.Logger().Trace("repositorywriter", "BlobExists(%s, %x): %s", Type, mac, time.Since(t0))
 	}()
 
-	if _, exists := r.PackerManager.InflightMACs[Type].Load(mac); exists {
+	ok, _ := r.PackerManager.Exists(Type, mac)
+	if ok {
 		return true
 	}
 
@@ -123,8 +124,9 @@ func (r *RepositoryWriter) PutBlob(Type resources.Type, mac objects.MAC, data []
 		r.Logger().Trace("repositorywriter", "PutBlob(%s, %x): %s", Type, mac, time.Since(t0))
 	}()
 
-	if _, exists := r.PackerManager.InflightMACs[Type].LoadOrStore(mac, struct{}{}); exists {
-		// tell prom exporter that we collided a blob
+	if ok, err := r.PackerManager.InsertIfNotPresent(Type, mac); err != nil {
+		return err
+	} else if ok {
 		return nil
 	}
 
@@ -138,7 +140,7 @@ func (r *RepositoryWriter) PutBlob(Type resources.Type, mac objects.MAC, data []
 		return err
 	}
 
-	r.PackerManager.PutBlob(Type, mac, encoded)
+	r.PackerManager.Put(Type, mac, encoded)
 
 	return nil
 }

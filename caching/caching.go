@@ -116,3 +116,8 @@ func (m *Manager) Scan(snapshotID objects.MAC) (*ScanCache, error) {
 func (m *Manager) Check() (*CheckCache, error) {
 	return newCheckCache(m)
 }
+
+// XXX - beware that caller has responsibility to call Close() on the returned cache
+func (m *Manager) Packing() (*PackingCache, error) {
+	return newPackingCache(m)
+}
