@@ -84,6 +84,12 @@ func (mgr *platarPackerManager) Run() {
 		})
 	}
 
+	// Wait for workers to finish.
+	if err := workerGroup.Wait(); err != nil {
+		mgr.appCtx.GetLogger().Error("Worker group error: %s", err)
+		cancel() // Propagate cancellation.
+	}
+
 	flusherGroup, _ := errgroup.WithContext(ctx)
 	flusherGroup.Go(func() error {
 		if packer.size() == 0 {
@@ -96,12 +102,6 @@ func (mgr *platarPackerManager) Run() {
 
 		return nil
 	})
-
-	// Wait for workers to finish.
-	if err := workerGroup.Wait(); err != nil {
-		mgr.appCtx.GetLogger().Error("Worker group error: %s", err)
-		cancel() // Propagate cancellation.
-	}
 
 	// Close the result channel and wait for the flusher to finish.
 	close(packerResultChan)

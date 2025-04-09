@@ -113,7 +113,8 @@ func (s *Store) Open() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if string(magic) != "_KLOSET_" {
+
+	if bytes.Equal(magic, []byte("_KLOSET_")) {
 		return nil, storage.ErrInvalidMagic
 	}
 

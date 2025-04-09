@@ -40,7 +40,7 @@ func (r *Repository) newRepositoryWriter(cache *caching.ScanCache, id objects.MA
 		currentStateID: id,
 	}
 
-	rw.PackerManager = packer.NewPackerManager(rw.AppContext(), &rw.configuration, rw.GetMACHasher, rw.PutPackfile)
+	rw.PackerManager, _ = packer.NewPlatarPackerManager(rw.AppContext(), &rw.configuration, rw.GetMACHasher, rw.PutPackfile)
 
 	// XXX: Better placement for this
 	go rw.PackerManager.Run()
