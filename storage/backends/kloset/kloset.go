@@ -80,7 +80,7 @@ func (s *Store) Create(config []byte) error {
 	}
 	s.fp = fp
 
-	fp.Write([]byte{'_', 'K', 'L', 'O', 'S', 'E', 'T', '_'})
+	fp.Write([]byte{'_', 'P', 'L', 'A', 'T', 'A', 'R', '_'})
 
 	version := versioning.FromString("1.0.0")
 	versionBytes := make([]byte, 4)
@@ -114,7 +114,7 @@ func (s *Store) Open() ([]byte, error) {
 		return nil, err
 	}
 
-	if !bytes.Equal(magic, []byte("_KLOSET_")) {
+	if !bytes.Equal(magic, []byte("_PLATAR_")) {
 		return nil, storage.ErrInvalidMagic
 	}
 
