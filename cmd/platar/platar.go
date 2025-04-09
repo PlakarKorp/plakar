@@ -20,7 +20,7 @@ import (
 	"github.com/PlakarKorp/plakar/versioning"
 
 	_ "github.com/PlakarKorp/plakar/snapshot/importer/fs"
-	_ "github.com/PlakarKorp/plakar/storage/backends/kloset"
+	_ "github.com/PlakarKorp/plakar/storage/backends/platar"
 )
 
 func main() {
