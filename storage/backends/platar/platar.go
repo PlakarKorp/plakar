@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-package kloset
+package platar
 
 import (
 	"bytes"
@@ -52,7 +52,7 @@ var stateMAC = objects.MAC{0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07,
 var packfileMAC = objects.MAC{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f}
 
 func init() {
-	storage.Register(NewStore, "kloset")
+	storage.Register(NewStore, "platar")
 }
 
 func NewStore(storeConfig map[string]string) (storage.Store, error) {
@@ -69,7 +69,7 @@ func (s *Store) Create(config []byte) error {
 	s.config = config
 	s.mode = storage.ModeRead | storage.ModeWrite
 
-	location := strings.TrimPrefix(s.location, "kloset://")
+	location := strings.TrimPrefix(s.location, "platar://")
 	if location == "" {
 		return storage.ErrInvalidLocation
 	}
@@ -97,7 +97,7 @@ func (s *Store) Create(config []byte) error {
 func (s *Store) Open() ([]byte, error) {
 	s.mode = storage.ModeRead
 
-	location := strings.TrimPrefix(s.location, "kloset://")
+	location := strings.TrimPrefix(s.location, "platar://")
 	if location == "" {
 		return nil, storage.ErrInvalidLocation
 	}
