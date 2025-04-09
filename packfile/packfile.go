@@ -15,10 +15,6 @@ import (
 
 const VERSION = "1.0.0"
 
-func init() {
-	versioning.Register(resources.RT_PACKFILE, versioning.FromString(VERSION))
-}
-
 type Blob struct {
 	Type    resources.Type
 	Version versioning.Version
