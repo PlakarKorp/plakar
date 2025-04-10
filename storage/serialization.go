@@ -43,7 +43,7 @@ func newDeserializeReader(hasher hash.Hash, resourceType resources.Type, inner i
 
 	magic := buf[0:8]
 	if !bytes.Equal(magic, []byte("_PLAKAR_")) {
-		return versioning.Version(0), nil, fmt.Errorf("invalid magic")
+		return versioning.Version(0), nil, fmt.Errorf("invalid plakar magic: %s", magic)
 	}
 	parsedResourceType := resources.Type(binary.LittleEndian.Uint32(buf[8:12]))
 	parsedResourceVersion := versioning.Version(binary.LittleEndian.Uint32(buf[12:16]))

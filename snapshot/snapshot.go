@@ -65,7 +65,6 @@ func Load(repo *repository.Repository, Identifier objects.MAC) (*Snapshot, error
 
 func (snap *Snapshot) Close() error {
 	snap.Logger().Trace("snapshot", "%x: Close(): %x", snap.Header.Identifier, snap.Header.GetIndexShortID())
-
 	return nil
 }
 
