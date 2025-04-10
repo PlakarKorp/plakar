@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-package platar
+package ptar
 
 import (
 	"bytes"
@@ -41,16 +41,16 @@ import (
 )
 
 func init() {
-	subcommands.Register("platar", parse_cmd_platar)
+	subcommands.Register("ptar", parse_cmd_ptar)
 }
 
-func parse_cmd_platar(ctx *appcontext.AppContext, args []string) (subcommands.Subcommand, error) {
+func parse_cmd_ptar(ctx *appcontext.AppContext, args []string) (subcommands.Subcommand, error) {
 	var opt_hashing string
 	var opt_noencryption bool
 	var opt_nocompression bool
 	var opt_allowweak bool
 
-	flags := flag.NewFlagSet("create", flag.ExitOnError)
+	flags := flag.NewFlagSet("ptar", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: plakar [at /path/to/repository] %s [OPTIONS]\n", flags.Name())
 		fmt.Fprintf(flags.Output(), "       plakar [at @REPOSITORY] %s [OPTIONS]\n", flags.Name())
@@ -72,7 +72,7 @@ func parse_cmd_platar(ctx *appcontext.AppContext, args []string) (subcommands.Su
 		return nil, fmt.Errorf("%s: unknown hashing algorithm", flag.CommandLine.Name())
 	}
 
-	return &Platar{
+	return &Ptar{
 		AllowWeak:     opt_allowweak,
 		Hashing:       opt_hashing,
 		NoEncryption:  opt_noencryption,
@@ -81,7 +81,7 @@ func parse_cmd_platar(ctx *appcontext.AppContext, args []string) (subcommands.Su
 	}, nil
 }
 
-type Platar struct {
+type Ptar struct {
 	AllowWeak     bool
 	Hashing       string
 	NoEncryption  bool
@@ -89,7 +89,7 @@ type Platar struct {
 	Location      string
 }
 
-func (cmd *Platar) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+func (cmd *Ptar) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	storageConfiguration := storage.NewConfiguration()
 	if cmd.NoCompression {
 		storageConfiguration.Compression = nil

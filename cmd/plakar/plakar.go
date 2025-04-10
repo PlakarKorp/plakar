@@ -31,7 +31,7 @@ import (
 	_ "github.com/PlakarKorp/plakar/storage/backends/fs"
 	_ "github.com/PlakarKorp/plakar/storage/backends/http"
 	_ "github.com/PlakarKorp/plakar/storage/backends/null"
-	_ "github.com/PlakarKorp/plakar/storage/backends/platar"
+	_ "github.com/PlakarKorp/plakar/storage/backends/ptar"
 	_ "github.com/PlakarKorp/plakar/storage/backends/s3"
 	_ "github.com/PlakarKorp/plakar/storage/backends/sftp"
 
@@ -284,7 +284,7 @@ func entryPoint() int {
 
 	// create is a special case, it operates without a repository...
 	// but needs a repository location to store the new repository
-	if command == "create" || command == "platar" || command == "server" {
+	if command == "create" || command == "ptar" || command == "server" {
 		repo, err := repository.Inexistent(ctx, storeConfig)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
