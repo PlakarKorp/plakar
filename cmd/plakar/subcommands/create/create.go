@@ -166,5 +166,8 @@ func (cmd *Create) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 		return 1, err
 	}
 
+	fmt.Fprintln(ctx.Stdout, "plakar checks for critical issues fixed in newer releases and warns you if needed.")
+	fmt.Fprintln(ctx.Stdout, "export PLAKAR_NO_CRITICAL_CHECKS to disable but be aware you may miss important fixes.")
+
 	return 0, nil
 }

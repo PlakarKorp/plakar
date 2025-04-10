@@ -167,19 +167,22 @@ func entryPoint() int {
 	defer ctx.GetCache().Close()
 
 	// best effort check if security or reliability fix have been issued
-	if rus, err := utils.CheckUpdate(ctx.CacheDir); err == nil {
-		if rus.SecurityFix || rus.ReliabilityFix {
-			concerns := ""
-			if rus.SecurityFix {
-				concerns = "security"
-			}
-			if rus.ReliabilityFix {
-				if concerns != "" {
-					concerns += " and "
+	_, noCriticalChecks := os.LookupEnv("PLAKAR_NO_CRITICAL_CHECKS")
+	if noCriticalChecks {
+		if rus, err := utils.CheckUpdate(ctx.CacheDir); err == nil {
+			if rus.SecurityFix || rus.ReliabilityFix {
+				concerns := ""
+				if rus.SecurityFix {
+					concerns = "security"
 				}
-				concerns += "reliability"
+				if rus.ReliabilityFix {
+					if concerns != "" {
+						concerns += " and "
+					}
+					concerns += "reliability"
+				}
+				fmt.Fprintf(os.Stderr, "WARNING: %s concerns affect your current version, please upgrade to %s (+%d releases).\n", concerns, rus.Latest, rus.FoundCount)
 			}
-			fmt.Fprintf(os.Stderr, "WARNING: %s concerns affect your current version, please upgrade to %s (+%d releases).\n", concerns, rus.Latest, rus.FoundCount)
 		}
 	}
 
