@@ -862,7 +862,11 @@ func (snap *Builder) chunkify(imp importer.Importer, cf *classifier.Classifier, 
 			if cdcChunk == nil {
 				break
 			}
-			if err := processChunk(cdcChunk); err != nil {
+
+			cdcCopy := make([]byte, len(cdcChunk))
+			copy(cdcCopy, cdcChunk)
+
+			if err := processChunk(cdcCopy); err != nil {
 				return nil, err
 			}
 			if err == io.EOF {

@@ -712,7 +712,13 @@ func (r *Repository) GetPackfileBlob(loc state.Location) (io.ReadSeeker, error) 
 	}
 	lengthDelta := uint32(uint64(overhead) - offsetDelta)
 
-	rd, err := r.store.GetPackfileBlob(loc.Packfile, offset+uint64(storage.STORAGE_HEADER_SIZE)-offsetDelta, length+uint32(offsetDelta)+lengthDelta)
+	offsetDelta = 0
+	lengthDelta = 0
+
+	adjOffset := offset + uint64(storage.STORAGE_HEADER_SIZE) - offsetDelta
+	adjLength := length + uint32(offsetDelta) + lengthDelta
+
+	rd, err := r.store.GetPackfileBlob(loc.Packfile, adjOffset, adjLength)
 	if err != nil {
 		return nil, err
 	}
@@ -849,6 +855,12 @@ func (r *Repository) GetBlob(Type resources.Type, mac objects.MAC) (io.ReadSeeke
 	}
 
 	r.rBytes.Add(int64(loc.Length))
+
+	//if "68e4727b5936945f4da1d89bdeda7ddb69913576ac33bd2a60aebe9722ac929f" == fmt.Sprintf("%x", mac) {
+	//	fmt.Println("GetBlob", loc, exists)
+	//	io.Copy(os.Stdout, rd)
+	//	panic("")
+	//}
 
 	return rd, nil
 }

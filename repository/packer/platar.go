@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"hash"
+	"io"
 	"runtime"
 	"time"
 
@@ -23,16 +24,17 @@ type platarPackerManager struct {
 	packerChan     chan interface{}
 	packerChanDone chan struct{}
 
-	storageConf *storage.Configuration
-	hashFactory func() hash.Hash
-	appCtx      *appcontext.AppContext
+	storageConf  *storage.Configuration
+	encodingFunc func(io.Reader) (io.Reader, error)
+	hashFactory  func() hash.Hash
+	appCtx       *appcontext.AppContext
 
 	// XXX: Temporary hack callback-based to ease the transition diff.
 	// To be revisited with either an interface or moving this file inside repository/
-	flush func(*Packer) error
+	flush func(*PtarPacker, io.Reader) error
 }
 
-func NewPlatarPackerManager(ctx *appcontext.AppContext, storageConfiguration *storage.Configuration, hashFactory func() hash.Hash, flusher func(*Packer) error) (PackerManagerInt, error) {
+func NewPlatarPackerManager(ctx *appcontext.AppContext, storageConfiguration *storage.Configuration, encodingFunc func(io.Reader) (io.Reader, error), hashFactory func() hash.Hash, flusher func(*PtarPacker, io.Reader) error) (PackerManagerInt, error) {
 	cache, err := ctx.GetCache().Packing()
 	if err != nil {
 		return nil, err
@@ -43,19 +45,20 @@ func NewPlatarPackerManager(ctx *appcontext.AppContext, storageConfiguration *st
 		packerChan:     make(chan interface{}, runtime.NumCPU()*2+1),
 		packerChanDone: make(chan struct{}),
 		storageConf:    storageConfiguration,
+		encodingFunc:   encodingFunc,
 		hashFactory:    hashFactory,
 		appCtx:         ctx,
 		flush:          flusher,
 	}, nil
 }
 
-func (mgr *platarPackerManager) Run() {
+func (mgr *platarPackerManager) Run() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	packerResultChan := make(chan *Packer, runtime.NumCPU())
+	packerResultChan := make(chan *PtarPacker, runtime.NumCPU())
 
-	packer := NewPacker(mgr.hashFactory())
+	packer := NewPtarPacker(mgr.flush, mgr.encodingFunc, mgr.hashFactory)
 	workerGroup, workerCtx := errgroup.WithContext(ctx)
 	for i := 0; i < 1; i++ {
 		workerGroup.Go(func() error {
@@ -65,9 +68,6 @@ func (mgr *platarPackerManager) Run() {
 					return workerCtx.Err()
 				case msg, ok := <-mgr.packerChan:
 					if !ok {
-						if packer != nil && packer.size() > 0 {
-							packerResultChan <- packer
-						}
 						return nil
 					}
 
@@ -76,8 +76,8 @@ func (mgr *platarPackerManager) Run() {
 						return fmt.Errorf("unexpected message type")
 					}
 
-					if !packer.addBlobIfNotExists(pm.Type, pm.Version, pm.MAC, pm.Data, pm.Flags) {
-						continue
+					if err := packer.Packfile.WriteBlob(pm.Type, pm.Version, pm.MAC, pm.Data, pm.Flags); err != nil {
+						return fmt.Errorf("failed to write blob: %w", err)
 					}
 				}
 			}
@@ -90,23 +90,12 @@ func (mgr *platarPackerManager) Run() {
 		cancel() // Propagate cancellation.
 	}
 
-	flusherGroup, _ := errgroup.WithContext(ctx)
-	flusherGroup.Go(func() error {
-		if packer.size() == 0 {
-			return nil
-		}
-
-		if err := mgr.flush(packer); err != nil {
-			return fmt.Errorf("failed to flush packer: %w", err)
-		}
-
-		return nil
-	})
-
 	// Close the result channel and wait for the flusher to finish.
 	close(packerResultChan)
-	if err := flusherGroup.Wait(); err != nil {
-		mgr.appCtx.GetLogger().Error("Flusher group error: %s", err)
+
+	err := packer.Packfile.Finalize()
+	if err != nil {
+		return fmt.Errorf("failed to write packfile: %w", err)
 	}
 
 	// Signal completion.
@@ -114,6 +103,8 @@ func (mgr *platarPackerManager) Run() {
 	close(mgr.packerChanDone)
 
 	mgr.packingCache.Close()
+
+	return nil
 }
 
 func (mgr *platarPackerManager) Wait() {
@@ -146,4 +137,31 @@ func (mgr *platarPackerManager) Put(Type resources.Type, mac objects.MAC, data [
 
 func (mgr *platarPackerManager) Exists(Type resources.Type, mac objects.MAC) (bool, error) {
 	return mgr.packingCache.HasBlob(Type, mac)
+}
+
+///
+
+type PtarPacker struct {
+	Packfile *PackWriter
+}
+
+func NewPtarPacker(putter func(*PtarPacker, io.Reader) error, encoder func(io.Reader) (io.Reader, error), hasher func() hash.Hash) *PtarPacker {
+	p := &PtarPacker{}
+	p.Packfile = NewPackWriter(func(rd io.Reader) error {
+		return putter(p, rd)
+	}, encoder, hasher)
+
+	return p
+}
+
+func (packer *PtarPacker) AddPadding(maxSize int) error {
+	return nil
+}
+
+func (packer *PtarPacker) addBlobIfNotExists(Type resources.Type, version versioning.Version, mac [32]byte, data []byte, flags uint32) error {
+	return packer.Packfile.WriteBlob(Type, version, mac, data, flags)
+}
+
+func (packer *PtarPacker) size() uint64 {
+	return packer.Packfile.Size()
 }

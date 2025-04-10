@@ -40,7 +40,7 @@ func (r *Repository) newRepositoryWriter(cache *caching.ScanCache, id objects.MA
 		currentStateID: id,
 	}
 
-	rw.PackerManager, _ = packer.NewPlatarPackerManager(rw.AppContext(), &rw.configuration, rw.GetMACHasher, rw.PutPackfile)
+	rw.PackerManager, _ = packer.NewPlatarPackerManager(rw.AppContext(), &rw.configuration, rw.Encode, rw.GetMACHasher, rw.PutPtarPackfile)
 
 	// XXX: Better placement for this
 	go rw.PackerManager.Run()
@@ -130,19 +130,7 @@ func (r *RepositoryWriter) PutBlob(Type resources.Type, mac objects.MAC, data []
 		return nil
 	}
 
-	encodedReader, err := r.Encode(bytes.NewReader(data))
-	if err != nil {
-		return err
-	}
-
-	encoded, err := io.ReadAll(encodedReader)
-	if err != nil {
-		return err
-	}
-
-	r.PackerManager.Put(Type, mac, encoded)
-
-	return nil
+	return r.PackerManager.Put(Type, mac, data)
 }
 
 func (r *RepositoryWriter) DeleteStateResource(Type resources.Type, mac objects.MAC) error {
@@ -217,6 +205,60 @@ func (r *RepositoryWriter) PutPackfile(pfile *packfile.PackFile) error {
 				Packfile: mac,
 				Offset:   pfile.Index[idx].Offset,
 				Length:   pfile.Index[idx].Length,
+			},
+		}
+
+		if err := r.deltaState.PutDelta(delta); err != nil {
+			return err
+		}
+
+		if err := r.state.PutDelta(delta); err != nil {
+			return err
+		}
+	}
+
+	if err := r.deltaState.PutPackfile(r.currentStateID, mac); err != nil {
+		return err
+	}
+
+	return r.state.PutPackfile(r.currentStateID, mac)
+}
+
+func (r *RepositoryWriter) PutPtarPackfile(packer *packer.PtarPacker, rd io.Reader) error {
+	t0 := time.Now()
+	defer func() {
+		r.Logger().Trace("repository", "PutPtarPackfile(%x): %s", r.currentStateID, time.Since(t0))
+	}()
+
+	mac := objects.RandomMAC()
+	//	mac := r.ComputeMAC(serializedPackfile)
+
+	rd, err := storage.Serialize(r.GetMACHasher(), resources.RT_PACKFILE, versioning.GetCurrentVersion(resources.RT_PACKFILE), rd)
+	if err != nil {
+		return err
+	}
+
+	nbytes, err := r.store.PutPackfile(mac, rd)
+	r.wBytes.Add(nbytes)
+	if err != nil {
+		return err
+	}
+
+	if r.deltaState == nil {
+		panic("Put outside of transaction")
+	}
+
+	r.transactionMtx.RLock()
+	defer r.transactionMtx.RUnlock()
+	for idx, blob := range packer.Packfile.Index {
+		delta := &state.DeltaEntry{
+			Type:    blob.Type,
+			Version: packer.Packfile.Index[idx].Version,
+			Blob:    blob.MAC,
+			Location: state.Location{
+				Packfile: mac,
+				Offset:   packer.Packfile.Index[idx].Offset,
+				Length:   packer.Packfile.Index[idx].Length,
 			},
 		}
 

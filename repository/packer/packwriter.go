@@ -1,6 +1,7 @@
 package packer
 
 import (
+	"bytes"
 	"encoding/binary"
 	"hash"
 	"io"
@@ -28,7 +29,8 @@ type Blob struct {
 const BLOB_RECORD_SIZE = 56
 
 type PackWriter struct {
-	hasher hash.Hash
+	encoder func(io.Reader) (io.Reader, error)
+	hasher  hash.Hash
 
 	Index         []Blob
 	writer        io.WriteCloser
@@ -62,10 +64,17 @@ func NewDefaultConfiguration() *Configuration {
 	}
 }
 
-func NewPackWriter(putter func(io.Reader) error, hasher hash.Hash) *PackWriter {
+func NewPackWriter(putter func(io.Reader) error, encoder func(io.Reader) (io.Reader, error), hasher func() hash.Hash) *PackWriter {
 	pipesync := make(chan struct{}, 1)
 	pr, pw := io.Pipe()
 
+	p := &PackWriter{
+		encoder:  encoder,
+		hasher:   hasher(),
+		Index:    make([]Blob, 0), // temporary
+		writer:   pw,
+		pipesync: pipesync,
+	}
 	// packfilewriter -> pw -> pipe -> pr <- putter (io.ReadAll())
 	go func() {
 		defer pr.Close()
@@ -75,31 +84,28 @@ func NewPackWriter(putter func(io.Reader) error, hasher hash.Hash) *PackWriter {
 		}
 	}()
 
-	return &PackWriter{
-		hasher:   hasher,
-		Index:    make([]Blob, 0), // temporary
-		writer:   pw,
-		pipesync: pipesync,
-	}
+	return p
 }
 
 func (pwr *PackWriter) WriteBlob(resourceType resources.Type, version versioning.Version, mac objects.MAC, data []byte, flags uint32) error {
+	encodedReader, err := pwr.encoder(bytes.NewReader(data))
+	if err != nil {
+		return err
+	}
+
+	nbytes, err := io.Copy(pwr.writer, encodedReader)
+	if err != nil {
+		return err
+	}
+
 	pwr.Index = append(pwr.Index, Blob{
 		Type:    resourceType,
 		Version: version,
 		MAC:     mac,
 		Offset:  uint64(pwr.currentOffset),
-		Length:  uint32(len(data)),
+		Length:  uint32(nbytes),
 		Flags:   flags,
 	})
-
-	nbytes, err := pwr.writer.Write(data)
-	if err != nil {
-		return err
-	}
-	if nbytes != len(data) {
-		return err
-	}
 
 	pwr.currentOffset += uint64(nbytes)
 	pwr.Footer.Count++
@@ -108,8 +114,8 @@ func (pwr *PackWriter) WriteBlob(resourceType resources.Type, version versioning
 	return nil
 }
 
-func (pwr *PackWriter) writeAndSum(data any) error {
-	if err := binary.Write(pwr.writer, binary.LittleEndian, data); err != nil {
+func (pwr *PackWriter) writeAndSum(writer io.Writer, data any) error {
+	if err := binary.Write(writer, binary.LittleEndian, data); err != nil {
 		return err
 	}
 	if err := binary.Write(pwr.hasher, binary.LittleEndian, data); err != nil {
@@ -119,47 +125,112 @@ func (pwr *PackWriter) writeAndSum(data any) error {
 }
 
 func (pwr *PackWriter) serializeIndex() error {
+	pr, pw := io.Pipe()
+
+	encoder, err := pwr.encoder(pr)
+	if err != nil {
+		return err
+	}
+
+	done := make(chan struct{})
+	go func() {
+		defer func() { close(done) }()
+		_, err := io.Copy(pwr.writer, encoder)
+		if err != nil {
+			pw.CloseWithError(err)
+		}
+	}()
+
 	for _, record := range pwr.Index {
-		if err := pwr.writeAndSum(record.Type); err != nil {
+		if err := pwr.writeAndSum(pw, record.Type); err != nil {
+			pw.CloseWithError(err)
 			return err
 		}
-		if err := pwr.writeAndSum(record.Version); err != nil {
+		if err := pwr.writeAndSum(pw, record.Version); err != nil {
+			pw.CloseWithError(err)
 			return err
 		}
-		if err := pwr.writeAndSum(record.MAC); err != nil {
+		if err := pwr.writeAndSum(pw, record.MAC); err != nil {
+			pw.CloseWithError(err)
 			return err
 		}
-		if err := pwr.writeAndSum(record.Offset); err != nil {
+		if err := pwr.writeAndSum(pw, record.Offset); err != nil {
+			pw.CloseWithError(err)
 			return err
 		}
-		if err := pwr.writeAndSum(record.Length); err != nil {
+		if err := pwr.writeAndSum(pw, record.Length); err != nil {
+			pw.CloseWithError(err)
 			return err
 		}
-		if err := pwr.writeAndSum(record.Flags); err != nil {
+		if err := pwr.writeAndSum(pw, record.Flags); err != nil {
+			pw.CloseWithError(err)
 			return err
 		}
 	}
+
+	if err := pw.Close(); err != nil {
+		return pw.Close()
+	}
+	<-done
+
 	return nil
 }
 
 func (pwr *PackWriter) serializeFooter() error {
 	pwr.Footer.IndexMAC = objects.MAC(pwr.hasher.Sum(nil))
-	if err := binary.Write(pwr.writer, binary.LittleEndian, pwr.Footer.Timestamp); err != nil {
+
+	pr, pw := io.Pipe()
+
+	encoder, err := pwr.encoder(pr)
+	if err != nil {
 		return err
 	}
-	if err := binary.Write(pwr.writer, binary.LittleEndian, pwr.Footer.Count); err != nil {
+
+	done := make(chan int64)
+	go func() {
+		defer func() { close(done) }()
+		n, err := io.Copy(pwr.writer, encoder)
+		if err != nil {
+			pw.CloseWithError(err)
+		} else {
+			done <- n
+		}
+	}()
+
+	if err := binary.Write(pw, binary.LittleEndian, pwr.Footer.Timestamp); err != nil {
+		pw.CloseWithError(err)
 		return err
 	}
-	if err := binary.Write(pwr.writer, binary.LittleEndian, pwr.Footer.IndexOffset); err != nil {
+	if err := binary.Write(pw, binary.LittleEndian, pwr.Footer.Count); err != nil {
+		pw.CloseWithError(err)
 		return err
 	}
-	if err := binary.Write(pwr.writer, binary.LittleEndian, pwr.Footer.IndexMAC); err != nil {
+	if err := binary.Write(pw, binary.LittleEndian, pwr.Footer.IndexOffset); err != nil {
+		pw.CloseWithError(err)
 		return err
 	}
-	if err := binary.Write(pwr.writer, binary.LittleEndian, pwr.Footer.Flags); err != nil {
+	if err := binary.Write(pw, binary.LittleEndian, pwr.Footer.IndexMAC); err != nil {
+		pw.CloseWithError(err)
 		return err
 	}
+	if err := binary.Write(pw, binary.LittleEndian, pwr.Footer.Flags); err != nil {
+		pw.CloseWithError(err)
+		return err
+	}
+
+	if err := pw.Close(); err != nil {
+		return pw.Close()
+	}
+	nbytes := <-done
+
+	encryptedFooterLength := make([]byte, 4)
+	binary.LittleEndian.PutUint32(encryptedFooterLength, uint32(nbytes))
+	if err := binary.Write(pwr.writer, binary.LittleEndian, encryptedFooterLength); err != nil {
+		return err
+	}
+
 	return nil
+
 }
 
 func (pwr *PackWriter) Size() uint64 {

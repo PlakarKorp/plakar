@@ -113,12 +113,14 @@ func snapshotCheckPath(snap *Snapshot, opts *CheckOptions, concurrency chan bool
 						complete = false
 						break
 					}
+
 					snap.checkCache.PutChunkStatus(chunk.ContentMAC, []byte(""))
 					snap.Event(events.ChunkOKEvent(snap.Header.Identifier, chunk.ContentMAC))
 
 					hasher.Write(data)
 
 					mac := snap.repository.ComputeMAC(data)
+					fmt.Printf("MAC: %x\n", mac[:])
 					if !bytes.Equal(mac[:], chunk.ContentMAC[:]) {
 						snap.Event(events.ChunkCorruptedEvent(snap.Header.Identifier, chunk.ContentMAC))
 						complete = false

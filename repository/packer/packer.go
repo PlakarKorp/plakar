@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"hash"
+	"io"
 	"math/big"
 	"runtime"
 	"sync"
@@ -26,7 +27,7 @@ func init() {
 }
 
 type PackerManagerInt interface {
-	Run()
+	Run() error
 	Wait()
 	InsertIfNotPresent(Type resources.Type, mac objects.MAC) (bool, error)
 	Put(Type resources.Type, mac objects.MAC, data []byte) error
@@ -38,16 +39,17 @@ type packerManager struct {
 	packerChan     chan interface{}
 	packerChanDone chan struct{}
 
-	storageConf *storage.Configuration
-	hashFactory func() hash.Hash
-	appCtx      *appcontext.AppContext
+	storageConf  *storage.Configuration
+	encodingFunc func(io.Reader) (io.Reader, error)
+	hashFactory  func() hash.Hash
+	appCtx       *appcontext.AppContext
 
 	// XXX: Temporary hack callback-based to ease the transition diff.
 	// To be revisited with either an interface or moving this file inside repository/
 	flush func(*packfile.PackFile) error
 }
 
-func NewPackerManager(ctx *appcontext.AppContext, storageConfiguration *storage.Configuration, hashFactory func() hash.Hash, flusher func(*packfile.PackFile) error) *packerManager {
+func NewPackerManager(ctx *appcontext.AppContext, storageConfiguration *storage.Configuration, encodingFunc func(io.Reader) (io.Reader, error), hashFactory func() hash.Hash, flusher func(*packfile.PackFile) error) PackerManagerInt {
 	inflightsMACs := make(map[resources.Type]*sync.Map)
 	for _, Type := range resources.Types() {
 		inflightsMACs[Type] = &sync.Map{}
@@ -57,13 +59,14 @@ func NewPackerManager(ctx *appcontext.AppContext, storageConfiguration *storage.
 		packerChan:     make(chan interface{}, runtime.NumCPU()*2+1),
 		packerChanDone: make(chan struct{}),
 		storageConf:    storageConfiguration,
+		encodingFunc:   encodingFunc,
 		hashFactory:    hashFactory,
 		appCtx:         ctx,
 		flush:          flusher,
 	}
 }
 
-func (mgr *packerManager) Run() {
+func (mgr *packerManager) Run() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -83,7 +86,7 @@ func (mgr *packerManager) Run() {
 			}
 
 			for _, record := range pfile.Index {
-				mgr.InflightMACs[record.Type].Delete(record.MAC)
+				mgr.inflightMACs[record.Type].Delete(record.MAC)
 			}
 		}
 		return nil
@@ -142,6 +145,7 @@ func (mgr *packerManager) Run() {
 	// Signal completion.
 	mgr.packerChanDone <- struct{}{}
 	close(mgr.packerChanDone)
+	return nil
 }
 
 func (mgr *packerManager) Wait() {

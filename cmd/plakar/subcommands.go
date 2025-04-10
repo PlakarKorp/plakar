@@ -18,6 +18,7 @@ import (
 	_ "github.com/PlakarKorp/plakar/cmd/plakar/subcommands/ls"
 	_ "github.com/PlakarKorp/plakar/cmd/plakar/subcommands/maintenance"
 	_ "github.com/PlakarKorp/plakar/cmd/plakar/subcommands/mount"
+	_ "github.com/PlakarKorp/plakar/cmd/plakar/subcommands/platar"
 	_ "github.com/PlakarKorp/plakar/cmd/plakar/subcommands/restore"
 	_ "github.com/PlakarKorp/plakar/cmd/plakar/subcommands/rm"
 	_ "github.com/PlakarKorp/plakar/cmd/plakar/subcommands/server"
