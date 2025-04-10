@@ -21,6 +21,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/google/uuid v1.6.0
 	github.com/johannesboyne/gofakes3 v0.0.0-20250106100439-5c39aecd6999
+	github.com/kevinburke/ssh_config v1.2.0
 	github.com/minio/minio-go/v7 v7.0.89
 	github.com/muesli/termenv v0.16.0
 	github.com/nickball/go-aes-key-wrap v0.0.0-20170929221519-1c3aa3e4dfc5

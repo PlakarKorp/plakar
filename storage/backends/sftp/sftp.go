@@ -23,85 +23,50 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"net"
 	"net/url"
-	"os"
-	"os/user"
 	"path"
 	"path/filepath"
 	"strings"
 
 	"github.com/PlakarKorp/plakar/objects"
 	"github.com/PlakarKorp/plakar/repository"
+	plakarsftp "github.com/PlakarKorp/plakar/sftp"
 	"github.com/PlakarKorp/plakar/storage"
 	"github.com/pkg/sftp"
-	"golang.org/x/crypto/ssh"
-	"golang.org/x/crypto/ssh/agent"
-	"golang.org/x/crypto/ssh/knownhosts"
 )
 
 type Store struct {
-	location  string
 	packfiles Buckets
 	states    Buckets
 	client    *sftp.Client
+
+	config   map[string]string
+	endpoint *url.URL
 }
 
 func init() {
 	storage.Register(NewStore, "sftp")
 }
 
-func defaultSigners() ([]ssh.Signer, error) {
-	var signers []ssh.Signer
-
-	// Try the SSH agent first.
-	if sock := os.Getenv("SSH_AUTH_SOCK"); sock != "" {
-		conn, err := net.Dial("unix", sock)
-		if err == nil {
-			ag := agent.NewClient(conn)
-			if s, err := ag.Signers(); err == nil {
-				signers = append(signers, s...)
-			}
-		}
-	}
-
-	// Fallback: load from default key files.
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return signers, err
-	}
-
-	// List of default private key paths.
-	keyFiles := []string{
-		path.Join(home, ".ssh", "id_rsa"),
-		path.Join(home, ".ssh", "id_dsa"),
-		path.Join(home, ".ssh", "id_ecdsa"),
-		path.Join(home, ".ssh", "id_ed25519"),
-	}
-
-	for _, file := range keyFiles {
-		data, err := os.ReadFile(file)
-		if err != nil {
-			continue // Skip files that don't exist.
-		}
-		signer, err := ssh.ParsePrivateKey(data)
-		if err != nil {
-			continue // Skip unparsable keys.
-		}
-		signers = append(signers, signer)
-	}
-
-	return signers, nil
-}
-
 func NewStore(storeConfig map[string]string) (storage.Store, error) {
+	location := storeConfig["location"]
+	if location == "" {
+		return nil, fmt.Errorf("missing location")
+	}
+
+	parsed, err := url.Parse(location)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Store{
-		location: storeConfig["location"],
+		config:   storeConfig,
+		endpoint: parsed,
 	}, nil
 }
 
 func (s *Store) Location() string {
-	return s.location
+	return s.config["location"]
 }
 
 func (s *Store) Path(args ...string) string {
@@ -123,66 +88,8 @@ func (s *Store) Path(args ...string) string {
 	return path.Join(args...)
 }
 
-func connect(location string) (*sftp.Client, error) {
-	parsed, err := url.Parse(location)
-	if err != nil {
-		return nil, err
-	}
-
-	var sshHost string
-	if parsed.Port() == "" {
-		sshHost = parsed.Host + ":22"
-	} else {
-		sshHost = parsed.Host
-	}
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get home directory: %v", err)
-	}
-	knownHostsPath := path.Join(homeDir, ".ssh", "known_hosts")
-
-	// Create the HostKeyCallback from the known_hosts file.
-	hostKeyCallback, err := knownhosts.New(knownHostsPath)
-	if err != nil {
-		return nil, fmt.Errorf("could not create hostkeycallback function: %v", err)
-	}
-
-	signers, err := defaultSigners()
-	if err != nil {
-		return nil, err
-	}
-
-	username := parsed.User.Username()
-	if username == "" {
-		u, err := user.Current()
-		if err != nil {
-			return nil, err
-		}
-		username = u.Username
-	}
-
-	config := &ssh.ClientConfig{
-		User: username,
-		Auth: []ssh.AuthMethod{
-			ssh.PublicKeys(signers...),
-		},
-		HostKeyCallback: hostKeyCallback,
-	}
-
-	client, err := ssh.Dial("tcp", sshHost, config)
-	if err != nil {
-		return nil, err
-	}
-	sftpClient, err := sftp.NewClient(client)
-	if err != nil {
-		client.Close()
-		return nil, err
-	}
-	return sftpClient, nil
-}
-
 func (s *Store) Create(config []byte) error {
-	client, err := connect(s.location)
+	client, err := plakarsftp.Connect(s.endpoint, s.config)
 	if err != nil {
 		return err
 	}
@@ -226,7 +133,7 @@ func (s *Store) Create(config []byte) error {
 }
 
 func (s *Store) Open() ([]byte, error) {
-	client, err := connect(s.location)
+	client, err := plakarsftp.Connect(s.endpoint, s.config)
 	if err != nil {
 		return nil, err
 	}

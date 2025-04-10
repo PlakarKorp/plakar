@@ -135,11 +135,6 @@ type Store interface {
 	Close() error
 }
 
-type backend struct {
-	name string
-	fn   func(map[string]string) (Store, error)
-}
-
 var backends = make(map[string]func(map[string]string) (Store, error))
 
 func NewStore(name string, storeConfig map[string]string) (Store, error) {
