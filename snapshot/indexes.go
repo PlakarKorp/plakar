@@ -37,20 +37,21 @@ func (snap *Snapshot) ContentTypeIdx() (*btree.BTree[string, objects.MAC, object
 	return btree.Deserialize(bytes.NewReader(d), &store, strings.Compare)
 }
 
-func (snap *Snapshot) MACIdx() (*btree.BTree[objects.MACTuple, objects.MAC, struct{}], error) {
+func (snap *Snapshot) MACIdx() (*btree.BTree[objects.MACTuple, objects.MAC, struct{}], objects.MAC, error) {
 	mac, found := snap.getidx("mac", "btree")
 	if !found {
-		return nil, nil
+		return nil, objects.MAC{}, nil
 	}
 
 	d, err := snap.repository.GetBlobBytes(resources.RT_BTREE_ROOT, mac)
 	if err != nil {
-		return nil, err
+		return nil, objects.MAC{}, err
 	}
 
 	store := SnapshotStore[objects.MACTuple, struct{}]{
 		blobtype: resources.RT_BTREE_NODE,
 		snapReader: snap,
 	}
-	return btree.Deserialize(bytes.NewReader(d), &store, objects.MACTupleCompare)
+	it, err := btree.Deserialize(bytes.NewReader(d), &store, objects.MACTupleCompare)
+	return it, mac, err
 }

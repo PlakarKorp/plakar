@@ -336,7 +336,7 @@ func (snap *Builder) Backup(imp importer.Importer, options *BackupOptions) error
 	}
 
 	macstore := caching.DBStore[objects.MACTuple, struct{}]{
-		Prefix: "__contenttype__",
+		Prefix: "__macidx__",
 		Cache:  snap.scanCache,
 	}
 	macidx, err := btree.New(&macstore, objects.MACTupleCompare, 100)
@@ -350,7 +350,11 @@ func (snap *Builder) Backup(imp importer.Importer, options *BackupOptions) error
 	// patch the repository writer so that we keep track of the
 	// objects in this backup
 	snap.repository.Tracker = func(res resources.Type, mac objects.MAC) error {
-		return macidx.Insert(objects.MACTuple{Resource: res, MAC: mac}, struct{}{})
+		err := macidx.Insert(objects.MACTuple{Resource: res, MAC: mac}, struct{}{})
+		if err == btree.ErrExists {
+			err = nil
+		}
+		return err
 	}
 
 	/* importer */
@@ -430,6 +434,11 @@ func (snap *Builder) Backup(imp importer.Importer, options *BackupOptions) error
 
 			// Chunkify the file if it is a regular file and we don't have a cached object
 			if record.FileInfo.Mode().IsRegular() {
+				//
+				// XXX this bypasses my stuff for the
+				// MACIdx; we might not record the
+				// chunks!
+				//
 				if object == nil || !snap.repository.BlobExists(resources.RT_OBJECT, objectMAC) {
 					object, err = snap.chunkify(imp, cf, record)
 					if err != nil {

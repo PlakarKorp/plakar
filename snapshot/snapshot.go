@@ -138,6 +138,53 @@ func getPackfileForBlobWithError(snap *Snapshot, res resources.Type, mac objects
 }
 
 func (snap *Snapshot) ListPackfiles() (iter.Seq2[objects.MAC, error], error) {
+	macidx, rootmac, err := snap.MACIdx()
+	if err != nil {
+		return nil, err
+	}
+
+	if macidx == nil {
+		return snap.crawlMACs()
+	}
+
+	it, err := macidx.ScanAll()
+	if err != nil {
+		return nil, err
+	}
+
+	return func(yield func(objects.MAC, error) bool) {
+		if !yield(getPackfileForBlobWithError(snap, resources.RT_SNAPSHOT, snap.Header.Identifier)) {
+			return
+		}
+
+		if snap.Header.Identity.Identifier != uuid.Nil {
+			if !yield(getPackfileForBlobWithError(snap, resources.RT_SIGNATURE, snap.Header.Identifier)) {
+				return
+			}
+		}
+
+		for it.Next() {
+			t, _ := it.Current()
+			if !yield(getPackfileForBlobWithError(snap, t.Resource, t.MAC)) {
+				return
+			}
+		}
+
+		if !yield(getPackfileForBlobWithError(snap, resources.RT_BTREE_ROOT, rootmac)) {
+			return
+		}
+
+		dit := macidx.IterDFS()
+		for dit.Next() {
+			mac, _ := dit.Current()
+			if !yield(getPackfileForBlobWithError(snap, resources.RT_BTREE_NODE, mac)) {
+				return
+			}
+		}
+	}, nil
+}
+
+func (snap *Snapshot) crawlMACs() (iter.Seq2[objects.MAC, error], error) {
 	pvfs, err := snap.Filesystem()
 	if err != nil {
 		return nil, err
