@@ -155,6 +155,7 @@ func SetupRoutes(server *http.ServeMux, repo *repository.Repository, token strin
 
 	server.Handle("GET /api/snapshot/vfs/{snapshot_path...}", authToken(JSONAPIView(snapshotVFSBrowse)))
 	server.Handle("GET /api/snapshot/vfs/children/{snapshot_path...}", authToken(JSONAPIView(snapshotVFSChildren)))
+	server.Handle("GET /api/snapshot/vfs/chunks/{snapshot_path...}", authToken(JSONAPIView(snapshotVFSChunks)))
 	server.Handle("GET /api/snapshot/vfs/search/{snapshot_path...}", authToken(JSONAPIView(snapshotVFSSearch)))
 	server.Handle("GET /api/snapshot/vfs/errors/{snapshot_path...}", authToken(JSONAPIView(snapshotVFSErrors)))
 
