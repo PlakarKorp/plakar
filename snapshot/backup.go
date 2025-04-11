@@ -464,6 +464,15 @@ func (snap *Builder) Backup(imp importer.Importer, options *BackupOptions) error
 						backupCtx.recordError(record.Pathname, err)
 						return
 					}
+				} else {
+					for i := range object.Chunks {
+						err := snap.repository.Tracker(resources.RT_CHUNK, object.Chunks[i].ContentMAC)
+						if err != nil {
+							snap.Event(events.FileErrorEvent(snap.Header.Identifier, record.Pathname, err.Error()))
+							backupCtx.recordError(record.Pathname, err)
+							return
+						}
+					}
 				}
 			}
 
