@@ -33,6 +33,7 @@ type PackWriter struct {
 	hasher  hash.Hash
 
 	Index         []Blob
+	Reader        io.Reader
 	writer        io.WriteCloser
 	currentOffset uint64
 
@@ -64,7 +65,7 @@ func NewDefaultConfiguration() *Configuration {
 	}
 }
 
-func NewPackWriter(putter func(io.Reader) error, encoder func(io.Reader) (io.Reader, error), hasher func() hash.Hash) *PackWriter {
+func NewPackWriter(putter func(*PackWriter) error, encoder func(io.Reader) (io.Reader, error), hasher func() hash.Hash) *PackWriter {
 	pipesync := make(chan struct{}, 1)
 	pr, pw := io.Pipe()
 
@@ -73,13 +74,14 @@ func NewPackWriter(putter func(io.Reader) error, encoder func(io.Reader) (io.Rea
 		hasher:   hasher(),
 		Index:    make([]Blob, 0), // temporary
 		writer:   pw,
+		Reader:   pr,
 		pipesync: pipesync,
 	}
 	// packfilewriter -> pw -> pipe -> pr <- putter (io.ReadAll())
 	go func() {
 		defer pr.Close()
 		defer func() { close(pipesync) }()
-		if err := putter(pr); err != nil {
+		if err := putter(p); err != nil {
 			pr.CloseWithError(err)
 		}
 	}()

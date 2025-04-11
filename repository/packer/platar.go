@@ -31,10 +31,10 @@ type platarPackerManager struct {
 
 	// XXX: Temporary hack callback-based to ease the transition diff.
 	// To be revisited with either an interface or moving this file inside repository/
-	flush func(*PtarPacker, io.Reader) error
+	flush func(*PackWriter) error
 }
 
-func NewPlatarPackerManager(ctx *appcontext.AppContext, storageConfiguration *storage.Configuration, encodingFunc func(io.Reader) (io.Reader, error), hashFactory func() hash.Hash, flusher func(*PtarPacker, io.Reader) error) (PackerManagerInt, error) {
+func NewPlatarPackerManager(ctx *appcontext.AppContext, storageConfiguration *storage.Configuration, encodingFunc func(io.Reader) (io.Reader, error), hashFactory func() hash.Hash, flusher func(*PackWriter) error) (PackerManagerInt, error) {
 	cache, err := ctx.GetCache().Packing()
 	if err != nil {
 		return nil, err
@@ -56,9 +56,7 @@ func (mgr *platarPackerManager) Run() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	packerResultChan := make(chan *PtarPacker, runtime.NumCPU())
-
-	packer := NewPtarPacker(mgr.flush, mgr.encodingFunc, mgr.hashFactory)
+	pfile := NewPackWriter(mgr.flush, mgr.encodingFunc, mgr.hashFactory)
 	workerGroup, workerCtx := errgroup.WithContext(ctx)
 	for i := 0; i < 1; i++ {
 		workerGroup.Go(func() error {
@@ -76,7 +74,7 @@ func (mgr *platarPackerManager) Run() error {
 						return fmt.Errorf("unexpected message type")
 					}
 
-					if err := packer.Packfile.WriteBlob(pm.Type, pm.Version, pm.MAC, pm.Data, pm.Flags); err != nil {
+					if err := pfile.WriteBlob(pm.Type, pm.Version, pm.MAC, pm.Data, pm.Flags); err != nil {
 						return fmt.Errorf("failed to write blob: %w", err)
 					}
 				}
@@ -90,10 +88,7 @@ func (mgr *platarPackerManager) Run() error {
 		cancel() // Propagate cancellation.
 	}
 
-	// Close the result channel and wait for the flusher to finish.
-	close(packerResultChan)
-
-	err := packer.Packfile.Finalize()
+	err := pfile.Finalize()
 	if err != nil {
 		return fmt.Errorf("failed to write packfile: %w", err)
 	}
@@ -137,31 +132,4 @@ func (mgr *platarPackerManager) Put(Type resources.Type, mac objects.MAC, data [
 
 func (mgr *platarPackerManager) Exists(Type resources.Type, mac objects.MAC) (bool, error) {
 	return mgr.packingCache.HasBlob(Type, mac)
-}
-
-///
-
-type PtarPacker struct {
-	Packfile *PackWriter
-}
-
-func NewPtarPacker(putter func(*PtarPacker, io.Reader) error, encoder func(io.Reader) (io.Reader, error), hasher func() hash.Hash) *PtarPacker {
-	p := &PtarPacker{}
-	p.Packfile = NewPackWriter(func(rd io.Reader) error {
-		return putter(p, rd)
-	}, encoder, hasher)
-
-	return p
-}
-
-func (packer *PtarPacker) AddPadding(maxSize int) error {
-	return nil
-}
-
-func (packer *PtarPacker) addBlobIfNotExists(Type resources.Type, version versioning.Version, mac [32]byte, data []byte, flags uint32) error {
-	return packer.Packfile.WriteBlob(Type, version, mac, data, flags)
-}
-
-func (packer *PtarPacker) size() uint64 {
-	return packer.Packfile.Size()
 }

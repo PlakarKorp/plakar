@@ -224,16 +224,18 @@ func (r *RepositoryWriter) PutPackfile(pfile *packfile.PackFile) error {
 	return r.state.PutPackfile(r.currentStateID, mac)
 }
 
-func (r *RepositoryWriter) PutPtarPackfile(packer *packer.PtarPacker, rd io.Reader) error {
+func (r *RepositoryWriter) PutPtarPackfile(packfile *packer.PackWriter) error {
 	t0 := time.Now()
 	defer func() {
 		r.Logger().Trace("repository", "PutPtarPackfile(%x): %s", r.currentStateID, time.Since(t0))
 	}()
 
 	mac := objects.RandomMAC()
+
+	// This is impossible with this format, the mac of the packfile has to be random. Shouldn't be a problem.
 	//	mac := r.ComputeMAC(serializedPackfile)
 
-	rd, err := storage.Serialize(r.GetMACHasher(), resources.RT_PACKFILE, versioning.GetCurrentVersion(resources.RT_PACKFILE), rd)
+	rd, err := storage.Serialize(r.GetMACHasher(), resources.RT_PACKFILE, versioning.GetCurrentVersion(resources.RT_PACKFILE), packfile.Reader)
 	if err != nil {
 		return err
 	}
@@ -244,21 +246,17 @@ func (r *RepositoryWriter) PutPtarPackfile(packer *packer.PtarPacker, rd io.Read
 		return err
 	}
 
-	if r.deltaState == nil {
-		panic("Put outside of transaction")
-	}
-
 	r.transactionMtx.RLock()
 	defer r.transactionMtx.RUnlock()
-	for idx, blob := range packer.Packfile.Index {
+	for idx, blob := range packfile.Index {
 		delta := &state.DeltaEntry{
 			Type:    blob.Type,
-			Version: packer.Packfile.Index[idx].Version,
+			Version: packfile.Index[idx].Version,
 			Blob:    blob.MAC,
 			Location: state.Location{
 				Packfile: mac,
-				Offset:   packer.Packfile.Index[idx].Offset,
-				Length:   packer.Packfile.Index[idx].Length,
+				Offset:   packfile.Index[idx].Offset,
+				Length:   packfile.Index[idx].Length,
 			},
 		}
 
