@@ -19,7 +19,7 @@ type Manager struct {
 	repositoryCache      map[uuid.UUID]*_RepositoryCache
 	repositoryCacheMutex sync.Mutex
 
-	vfsCache      map[string]*_VFSCache
+	vfsCache      map[string]*VFSCache
 	vfsCacheMutex sync.Mutex
 
 	maintenanceCache      map[uuid.UUID]*MaintenanceCache
@@ -31,7 +31,7 @@ func NewManager(cacheDir string) *Manager {
 		cacheDir: filepath.Join(cacheDir, CACHE_VERSION),
 
 		repositoryCache:  make(map[uuid.UUID]*_RepositoryCache),
-		vfsCache:         make(map[string]*_VFSCache),
+		vfsCache:         make(map[string]*VFSCache),
 		maintenanceCache: make(map[uuid.UUID]*MaintenanceCache),
 	}
 }
@@ -57,7 +57,7 @@ func (m *Manager) Close() error {
 	return nil
 }
 
-func (m *Manager) VFS(repositoryID uuid.UUID, scheme string, origin string) (*_VFSCache, error) {
+func (m *Manager) VFS(repositoryID uuid.UUID, scheme string, origin string) (*VFSCache, error) {
 	m.vfsCacheMutex.Lock()
 	defer m.vfsCacheMutex.Unlock()
 
