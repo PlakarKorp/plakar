@@ -140,6 +140,7 @@ func (cmd *Backup) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 		ctx.GetLogger().Error("%s", err)
 		return 1, err
 	}
+	ctx.SnapshotID = snap.Header.Identifier
 	defer snap.Close()
 
 	if cmd.Job != "" {

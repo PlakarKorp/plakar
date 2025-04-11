@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/reporting"
 )
 
 type Scheduler struct {
@@ -67,4 +68,8 @@ func (s *Scheduler) Run() {
 		}
 	}
 	<-make(chan struct{})
+}
+
+func (s *Scheduler) NewReporter() *reporting.Reporter {
+	return reporting.NewReporter(s.config.Agent.Reporting.Emitter, s.ctx.GetLogger())
 }
