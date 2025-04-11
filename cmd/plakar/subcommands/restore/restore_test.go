@@ -1,11 +1,10 @@
 package restore
 
 import (
-	"bytes"
 	"encoding/hex"
 	"fmt"
 	"os"
-	"strings"
+	"path/filepath"
 	"testing"
 
 	"github.com/PlakarKorp/plakar/repository"
@@ -19,27 +18,49 @@ func init() {
 	os.Setenv("TZ", "UTC")
 }
 
-func generateSnapshot(t *testing.T, bufOut *bytes.Buffer, bufErr *bytes.Buffer) (*repository.Repository, *snapshot.Snapshot) {
-	repo := ptesting.GenerateRepository(t, bufOut, bufErr, nil)
+func generateSnapshot(t *testing.T) (*repository.Repository, *snapshot.Snapshot) {
+	repo := ptesting.GenerateRepository(t, nil, nil, nil)
 	snap := ptesting.GenerateSnapshot(t, repo, []ptesting.MockFile{
 		ptesting.NewMockDir("subdir"),
 		ptesting.NewMockDir("another_subdir"),
 		ptesting.NewMockFile("subdir/dummy.txt", 0644, "hello dummy"),
 		ptesting.NewMockFile("subdir/foo.txt", 0644, "hello foo"),
-		ptesting.NewMockFile("subdir/to_exclude", 0644, "*/subdir/to_exclude\n"),
 		ptesting.NewMockFile("another_subdir/bar.txt", 0644, "hello bar"),
 	})
 	return repo, snap
 }
 
+func checkRestored(t *testing.T, restoreDir string) {
+	files := map[string]string{
+		filepath.FromSlash("subdir/dummy.txt"):       "hello dummy",
+		filepath.FromSlash("subdir/foo.txt"):         "hello foo",
+		filepath.FromSlash("another_subdir/bar.txt"): "hello bar",
+	}
+	dirs := []string{"subdir", "another_subdir"}
+
+	for file, exp := range files {
+		dest := filepath.Join(restoreDir, file)
+
+		content, err := os.ReadFile(dest)
+		require.NoError(t, err)
+		require.Equal(t, exp, string(content))
+
+		require.NoError(t, os.Remove(dest))
+	}
+
+	for _, dir := range dirs {
+		dest := filepath.Join(restoreDir, dir)
+		require.NoError(t, os.Remove(dest), "directory not empty?")
+	}
+
+	rest, err := os.ReadDir(restoreDir)
+	require.NoError(t, err)
+	require.Empty(t, rest)
+}
+
 func TestExecuteCmdRestoreDefault(t *testing.T) {
-	bufOut := bytes.NewBuffer(nil)
-	bufErr := bytes.NewBuffer(nil)
-
-	repo, snap := generateSnapshot(t, bufOut, bufErr)
+	repo, snap := generateSnapshot(t)
 	defer snap.Close()
-
-	ctx := repo.AppContext()
 
 	tmpToRestoreDir, err := os.MkdirTemp("", "tmp_to_restore")
 	require.NoError(t, err)
@@ -47,9 +68,7 @@ func TestExecuteCmdRestoreDefault(t *testing.T) {
 		os.RemoveAll(tmpToRestoreDir)
 	})
 
-	ctx.CWD = tmpToRestoreDir
-	args := []string{}
-	// args := []string{tmpBackupDir + "/subdir/dummy.txt"}
+	args := []string{"-to", tmpToRestoreDir}
 
 	subcommand, err := parse_cmd_restore(repo.AppContext(), args)
 	require.NoError(t, err)
@@ -60,33 +79,13 @@ func TestExecuteCmdRestoreDefault(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 0, status)
 
-	// output should be something like:
-	// 2025-02-25T21:35:42Z info: 31b0d219: OK ✓ /tmp/tmp_to_backup1287588797/another_subdir/bar
-	// 2025-02-25T21:35:42Z info: 31b0d219: OK ✓ /tmp/tmp_to_backup1287588797/another_subdir
-	// 2025-02-25T21:35:42Z info: 31b0d219: OK ✓ /tmp/tmp_to_backup1287588797/subdir/dummy.txt
-	// 2025-02-25T21:35:42Z info: 31b0d219: OK ✓ /tmp/tmp_to_backup1287588797/subdir/foo.txt
-	// 2025-02-25T21:35:42Z info: 31b0d219: OK ✓ /tmp/tmp_to_backup1287588797/subdir/to_exclude
-	// 2025-02-25T21:35:42Z info: 31b0d219: OK ✓ /tmp/tmp_to_backup1287588797/subdir
-	// 2025-02-25T21:35:42Z info: 31b0d219: OK ✓ /tmp/tmp_to_backup1287588797
-	// 2025-02-25T21:35:42Z info: restore: restoration of 31b0d219:/ at /tmp/tmp_to_restore3971085618/plakar-2025-02-25T21:35:42Z completed successfully
-
-	output := bufOut.String()
-	lines := strings.Split(strings.Trim(output, "\n"), "\n")
-	require.Equal(t, 8, len(lines))
-	// last line should have the summary
-	lastline := lines[len(lines)-1]
-	require.Contains(t, lastline, "info: restore: restoration of")
+	checkRestored(t, tmpToRestoreDir)
 }
 
 func TestExecuteCmdRestoreSpecificSnapshot(t *testing.T) {
-	bufOut := bytes.NewBuffer(nil)
-	bufErr := bytes.NewBuffer(nil)
-
 	// create one snapshot
-	repo, snap := generateSnapshot(t, bufOut, bufErr)
+	repo, snap := generateSnapshot(t)
 	defer snap.Close()
-
-	ctx := repo.AppContext()
 
 	tmpToRestoreDir, err := os.MkdirTemp("", "tmp_to_restore")
 	require.NoError(t, err)
@@ -94,9 +93,8 @@ func TestExecuteCmdRestoreSpecificSnapshot(t *testing.T) {
 		os.RemoveAll(tmpToRestoreDir)
 	})
 
-	ctx.CWD = tmpToRestoreDir
 	indexId := snap.Header.GetIndexID()
-	args := []string{fmt.Sprintf("%s", hex.EncodeToString(indexId[:]))}
+	args := []string{"-to", tmpToRestoreDir, fmt.Sprintf("%s", hex.EncodeToString(indexId[:]))}
 	subcommand, err := parse_cmd_restore(repo.AppContext(), args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
@@ -106,23 +104,5 @@ func TestExecuteCmdRestoreSpecificSnapshot(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 0, status)
 
-	// output should be something like:
-	// 2025-02-25T21:35:42Z info: 31b0d219: OK ✓ /tmp/tmp_to_backup1287588797/another_subdir/bar
-	// 2025-02-25T21:35:42Z info: 31b0d219: OK ✓ /tmp/tmp_to_backup1287588797/another_subdir
-	// 2025-02-25T21:35:42Z info: 31b0d219: OK ✓ /tmp/tmp_to_backup1287588797/subdir/dummy.txt
-	// 2025-02-25T21:35:42Z info: 31b0d219: OK ✓ /tmp/tmp_to_backup1287588797/subdir/foo.txt
-	// 2025-02-25T21:35:42Z info: 31b0d219: OK ✓ /tmp/tmp_to_backup1287588797/subdir/to_exclude
-	// 2025-02-25T21:35:42Z info: 31b0d219: OK ✓ /tmp/tmp_to_backup1287588797/subdir
-	// 2025-02-25T21:35:42Z info: 31b0d219: OK ✓ /tmp/tmp_to_backup1287588797
-	// 2025-02-25T21:35:42Z info: restore: restoration of 31b0d219:/ at /tmp/tmp_to_restore3971085618/plakar-2025-02-25T21:35:42Z completed successfully
-
-	output := bufOut.String()
-	lines := strings.Split(strings.Trim(output, "\n"), "\n")
-	if len(lines) != 8 {
-		t.Fatalf("Expected 8 lines; got %d; the content is:\n%s\n", len(lines), output)
-	}
-	require.Equal(t, 8, len(lines))
-	// last line should have the summary
-	lastline := lines[len(lines)-1]
-	require.Contains(t, lastline, "info: restore: restoration of")
+	checkRestored(t, tmpToRestoreDir)
 }

@@ -90,7 +90,9 @@ func GenerateRepository(t *testing.T, bufout *bytes.Buffer, buferr *bytes.Buffer
 	} else {
 		logger = logging.NewLogger(bufout, buferr)
 	}
-	logger.EnableInfo()
+	if bufout != nil && buferr != nil {
+		logger.EnableInfo()
+	}
 	// logger.EnableTrace("all")
 	ctx.SetLogger(logger)
 	repo, err := repository.New(ctx, r, serializedConfig)
