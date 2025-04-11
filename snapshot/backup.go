@@ -335,8 +335,23 @@ func (snap *Builder) Backup(imp importer.Importer, options *BackupOptions) error
 		return err
 	}
 
+	macstore := caching.DBStore[objects.MACTuple, struct{}]{
+		Prefix: "__contenttype__",
+		Cache:  snap.scanCache,
+	}
+	macidx, err := btree.New(&macstore, objects.MACTupleCompare, 100)
+	if err != nil {
+		return err
+	}
+
 	/* backup starts now */
 	beginTime := time.Now()
+
+	// patch the repository writer so that we keep track of the
+	// objects in this backup
+	snap.repository.Tracker = func(res resources.Type, mac objects.MAC) error {
+		return macidx.Insert(objects.MACTuple{Resource: res, MAC: mac}, struct{}{})
+	}
 
 	/* importer */
 	filesChannel, err := snap.importerJob(backupCtx, options)
@@ -725,6 +740,15 @@ func (snap *Builder) Backup(imp importer.Importer, options *BackupOptions) error
 		return backupCtx.abortedReason
 	}
 
+	// almost done, remove the resource tracker
+	snap.repository.Tracker = nil
+
+	macmac, err := persistIndex(snap, macidx, resources.RT_BTREE_ROOT,
+		resources.RT_BTREE_NODE,
+		func(empty struct{}) (struct{}, error) {
+			return empty, nil
+		})
+
 	snap.Header.GetSource(0).VFS = header.VFS{
 		Root:   rootcsum,
 		Xattrs: xattrcsum,
@@ -737,6 +761,11 @@ func (snap *Builder) Backup(imp importer.Importer, options *BackupOptions) error
 			Name:  "content-type",
 			Type:  "btree",
 			Value: ctmac,
+		},
+		{
+			Name:  "mac",
+			Type:  "btree",
+			Value: macmac,
 		},
 	}
 

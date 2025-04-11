@@ -25,6 +25,8 @@ type RepositoryWriter struct {
 
 	PackerManager  *packer.PackerManager
 	currentStateID objects.MAC
+
+	Tracker func(resources.Type, objects.MAC) error
 }
 
 func (r *Repository) newRepositoryWriter(cache *caching.ScanCache, id objects.MAC) *RepositoryWriter {
@@ -135,6 +137,12 @@ func (r *RepositoryWriter) PutBlob(Type resources.Type, mac objects.MAC, data []
 	encoded, err := io.ReadAll(encodedReader)
 	if err != nil {
 		return err
+	}
+
+	if r.Tracker != nil {
+		if err := r.Tracker(Type, mac); err != nil {
+			return err
+		}
 	}
 
 	r.PackerManager.PutBlob(Type, mac, encoded)

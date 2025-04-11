@@ -1,6 +1,7 @@
 package objects
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -20,6 +21,21 @@ func init() {
 }
 
 type MAC [32]byte
+
+type MACTuple struct {
+	Resource resources.Type
+	MAC      MAC
+}
+
+func MACTupleCompare(a, b MACTuple) int {
+	if a.Resource < b.Resource {
+		return -1
+	}
+	if a.Resource > b.Resource {
+		return -1
+	}
+	return bytes.Compare(a.MAC[:], b.MAC[:])
+}
 
 func (m MAC) MarshalJSON() ([]byte, error) {
 	return json.Marshal(fmt.Sprintf("%0x", m[:]))
