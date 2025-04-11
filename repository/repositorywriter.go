@@ -28,7 +28,14 @@ type RepositoryWriter struct {
 	currentStateID objects.MAC
 }
 
-func (r *Repository) newRepositoryWriter(cache *caching.ScanCache, id objects.MAC) *RepositoryWriter {
+type RepositoryType int
+
+const (
+	DefaultType RepositoryType = iota
+	PtarType                   = iota
+)
+
+func (r *Repository) newRepositoryWriter(cache *caching.ScanCache, id objects.MAC, typ RepositoryType) *RepositoryWriter {
 	t0 := time.Now()
 	defer func() {
 		r.Logger().Trace("repository", "NewRepositoryWriter(): %s", time.Since(t0))
@@ -40,7 +47,12 @@ func (r *Repository) newRepositoryWriter(cache *caching.ScanCache, id objects.MA
 		currentStateID: id,
 	}
 
-	rw.PackerManager, _ = packer.NewPlatarPackerManager(rw.AppContext(), &rw.configuration, rw.Encode, rw.GetMACHasher, rw.PutPtarPackfile)
+	switch typ {
+	case PtarType:
+		rw.PackerManager, _ = packer.NewPlatarPackerManager(rw.AppContext(), &rw.configuration, rw.Encode, rw.GetMACHasher, rw.PutPtarPackfile)
+	default:
+		rw.PackerManager = packer.NewPackerManager(rw.AppContext(), &rw.configuration, rw.Encode, rw.GetMACHasher, rw.PutPackfile)
+	}
 
 	// XXX: Better placement for this
 	go rw.PackerManager.Run()

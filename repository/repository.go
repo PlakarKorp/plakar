@@ -459,13 +459,13 @@ func (r *Repository) Chunker(rd io.ReadCloser) (*chunkers.Chunker, error) {
 	})
 }
 
-func (r *Repository) NewRepositoryWriter(cache *caching.ScanCache, id objects.MAC) *RepositoryWriter {
+func (r *Repository) NewRepositoryWriter(cache *caching.ScanCache, id objects.MAC, typ RepositoryType) *RepositoryWriter {
 	t0 := time.Now()
 	defer func() {
 		r.Logger().Trace("repository", "NewRepositoryWriter(): %s", time.Since(t0))
 	}()
 
-	return r.newRepositoryWriter(cache, id)
+	return r.newRepositoryWriter(cache, id, typ)
 }
 
 func (r *Repository) Location() string {
