@@ -32,7 +32,7 @@ func MACTupleCompare(a, b MACTuple) int {
 		return -1
 	}
 	if a.Resource > b.Resource {
-		return -1
+		return +1
 	}
 	return bytes.Compare(a.MAC[:], b.MAC[:])
 }
