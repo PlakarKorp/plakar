@@ -104,6 +104,10 @@ func (r *RepositoryWriter) BlobExists(Type resources.Type, mac objects.MAC) bool
 		r.Logger().Trace("repositorywriter", "BlobExists(%s, %x): %s", Type, mac, time.Since(t0))
 	}()
 
+	if r.Tracker != nil {
+		r.Tracker(Type, mac) // can't do anything if it fails!
+	}
+
 	if _, exists := r.PackerManager.InflightMACs[Type].Load(mac); exists {
 		return true
 	}
