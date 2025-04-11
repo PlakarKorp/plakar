@@ -338,16 +338,15 @@ func entropy(data []byte) (float64, [256]float64) {
 	return entropy, freq
 }
 
-func (snap *Builder) chunkify(imp importer.Importer, record *importer.ScanRecord) (*objects.Object, error) {
+func (snap *Builder) chunkify(backupCtx *BackupContext, record *importer.ScanRecord) (*objects.Object, error) {
 	var rd io.ReadCloser
 	var err error
 
 	if record.IsXattr {
-		rd, err = imp.NewExtendedAttributeReader(record.Pathname, record.XattrName)
+		rd, err = backupCtx.imp.NewExtendedAttributeReader(record.Pathname, record.XattrName)
 	} else {
-		rd, err = imp.NewReader(record.Pathname)
+		rd, err = backupCtx.imp.NewReader(record.Pathname)
 	}
-
 	if err != nil {
 		return nil, err
 	}
@@ -358,9 +357,6 @@ func (snap *Builder) chunkify(imp importer.Importer, record *importer.ScanRecord
 
 	objectHasher, releaseGlobalHasher := snap.repository.GetPooledMACHasher()
 	defer releaseGlobalHasher()
-
-	var firstChunk = true
-	var cdcOffset uint64
 	var object_t32 objects.MAC
 
 	var totalEntropy float64
@@ -368,65 +364,78 @@ func (snap *Builder) chunkify(imp importer.Importer, record *importer.ScanRecord
 	var totalDataSize uint64
 
 	// Helper function to process a chunk
-	processChunk := func(data []byte) error {
+	processChunk := func(idx int, data []byte) error {
 		var chunk_t32 objects.MAC
 
-		chunkHasher, releaseChunkHasher := snap.repository.GetPooledMACHasher()
-		if firstChunk {
+		if idx == 0 {
 			if object.ContentType == "" {
 				object.ContentType = mimetype.Detect(data).String()
 			}
-			firstChunk = false
 		}
 
+		entropyScore, freq := entropy(data)
+		if len(data) > 0 {
+			for i := range 256 {
+				totalFreq[i] += freq[i]
+			}
+		}
+
+		chunkHasher, releaseChunkHasher := snap.repository.GetPooledMACHasher()
 		chunkHasher.Write(data)
 		copy(chunk_t32[:], chunkHasher.Sum(nil))
 		releaseChunkHasher()
 
-		entropyScore, freq := entropy(data)
-		if len(data) > 0 {
-			for i := 0; i < 256; i++ {
-				totalFreq[i] += freq[i]
-			}
-		}
-		chunk := objects.NewChunk()
-		chunk.ContentMAC = chunk_t32
-		chunk.Length = uint32(len(data))
-		chunk.Entropy = entropyScore
+		object.Chunks[idx].ContentMAC = chunk_t32
+		object.Chunks[idx].Entropy = entropyScore
 
-		object.Chunks = append(object.Chunks, *chunk)
-		cdcOffset += uint64(len(data))
-
-		totalEntropy += chunk.Entropy * float64(len(data))
+		totalEntropy += object.Chunks[idx].Entropy * float64(len(data))
 		totalDataSize += uint64(len(data))
 
-		return snap.repository.PutBlobIfNotExists(resources.RT_CHUNK, chunk.ContentMAC, data)
+		return snap.repository.PutBlobIfNotExists(resources.RT_CHUNK, object.Chunks[idx].ContentMAC, data)
 	}
 
 	if record.FileInfo.Size() == 0 {
 		empty := []byte{}
-		// Produce an empty chunk for empty file
 		objectHasher.Write(empty)
-		if err := processChunk(empty); err != nil {
+
+		chunk := objects.NewChunk()
+		object.Chunks = append(object.Chunks, *chunk)
+
+		if err := processChunk(0, empty); err != nil {
 			return nil, err
 		}
 	} else if record.FileInfo.Size() < int64(snap.repository.Configuration().Chunking.MinSize) {
-		// Small file case: read entire file into memory
 		cdcChunk, err := io.ReadAll(rd)
 		if err != nil {
 			return nil, err
 		}
 		objectHasher.Write(cdcChunk)
-		if err := processChunk(cdcChunk); err != nil {
+
+		chunk := objects.NewChunk()
+		chunk.Length = uint32(len(cdcChunk))
+		object.Chunks = append(object.Chunks, *chunk)
+
+		if err := processChunk(0, cdcChunk); err != nil {
 			return nil, err
 		}
 	} else {
+		semaphoreSize := record.FileInfo.Size() / int64(snap.repository.Configuration().Chunking.MinSize)
+		if semaphoreSize < 1 {
+			semaphoreSize = 1
+		}
+		if semaphoreSize > int64(backupCtx.maxConcurrency) {
+			semaphoreSize = int64(backupCtx.maxConcurrency)
+		}
+		semaphore := make(chan struct{}, 42)
+		wg := sync.WaitGroup{}
+
 		// Large file case: chunk file with chunker
 		chk, err := snap.repository.Chunker(rd)
 		if err != nil {
 			return nil, err
 		}
-		for {
+
+		for idx := 0; ; idx++ {
 			cdcChunk, err := chk.Next()
 			if err != nil && err != io.EOF {
 				return nil, err
@@ -435,18 +444,33 @@ func (snap *Builder) chunkify(imp importer.Importer, record *importer.ScanRecord
 				break
 			}
 
-			chunkCopy := make([]byte, len(cdcChunk))
-			copy(chunkCopy, cdcChunk)
+			objectHasher.Write(cdcChunk)
 
-			objectHasher.Write(chunkCopy)
+			chunk := objects.NewChunk()
+			chunk.Length = uint32(len(cdcChunk))
+			object.Chunks = append(object.Chunks, *chunk)
 
-			if err := processChunk(chunkCopy); err != nil {
-				return nil, err
-			}
+			cdcCopy := make([]byte, len(cdcChunk))
+			copy(cdcCopy, cdcChunk)
+
+			semaphore <- struct{}{}
+			wg.Add(1)
+
+			go func(idx int, cdcCopy []byte) {
+				defer wg.Done()
+				defer func() { <-semaphore }()
+
+				if err := processChunk(idx, cdcCopy); err != nil {
+					//return nil, err
+				}
+			}(idx, cdcCopy)
+
 			if err == io.EOF {
 				break
 			}
 		}
+		wg.Wait()
+		close(semaphore)
 	}
 
 	if totalDataSize > 0 {
@@ -658,7 +682,7 @@ func (snap *Builder) processFileRecord(backupCtx *BackupContext, record *importe
 	// Chunkify the file if it is a regular file and we don't have a cached object
 	if record.FileInfo.Mode().IsRegular() {
 		if object == nil || !snap.repository.BlobExists(resources.RT_OBJECT, objectMAC) {
-			object, err = snap.chunkify(backupCtx.imp, record)
+			object, err = snap.chunkify(backupCtx, record)
 			if err != nil {
 				return err
 			}
