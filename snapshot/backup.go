@@ -42,6 +42,7 @@ type BackupContext struct {
 	erridx   *btree.BTree[string, int, []byte]
 	xattridx *btree.BTree[string, int, []byte]
 	ctidx    *btree.BTree[string, int, objects.MAC]
+	macidx   *btree.BTree[objects.MACTuple, int, struct{}]
 }
 
 type BackupOptions struct {
@@ -287,6 +288,17 @@ func (snap *Builder) Backup(imp importer.Importer, options *BackupOptions) error
 		return err
 	}
 	go snap.flushDeltaState(backupCtx)
+
+	// patch the repository writer so that we keep track of the
+	// objects in this backup
+	snap.repository.Tracker = func(res resources.Type, mac objects.MAC) error {
+		tuple := objects.MACTuple{Resource: res, MAC: mac}
+		err := backupCtx.macidx.Insert(tuple, struct{}{})
+		if err == btree.ErrExists {
+			err = nil
+		}
+		return err
+	}
 
 	/* importer */
 	filesChannel, err := snap.importerJob(backupCtx, options)
@@ -552,6 +564,11 @@ func (snap *Builder) prepareBackup(imp importer.Importer, backupOpts *BackupOpti
 		Cache:  snap.scanCache,
 	}
 
+	macstore := caching.DBStore[objects.MACTuple, struct{}]{
+		Prefix: "__macidx__",
+		Cache:  snap.scanCache,
+	}
+
 	if erridx, err := btree.New(&errstore, strings.Compare, 50); err != nil {
 		return nil, err
 	} else {
@@ -568,6 +585,12 @@ func (snap *Builder) prepareBackup(imp importer.Importer, backupOpts *BackupOpti
 		return nil, err
 	} else {
 		backupCtx.ctidx = ctidx
+	}
+
+	if macidx, err := btree.New(&macstore, objects.MACTupleCompare, 100); err != nil {
+		return nil, err
+	} else {
+		backupCtx.macidx = macidx
 	}
 
 	return backupCtx, nil
@@ -941,11 +964,28 @@ func (snap *Builder) persistIndexes(backupCtx *BackupContext) ([]header.Index, e
 		return nil, err
 	}
 
+	// This has to be done for last, with the tracker removed
+	snap.repository.Tracker = nil
+
+	macmac, err := persistIndex(snap, backupCtx.macidx,
+		resources.RT_BTREE_ROOT, resources.RT_BTREE_NODE,
+		func(empty struct{}) (struct{}, error) {
+			return empty, nil
+		})
+	if err != nil {
+		return nil, err
+	}
+
 	return []header.Index{
 		{
 			Name:  "content-type",
 			Type:  "btree",
 			Value: ctmac,
+		},
+		{
+			Name:  "mac",
+			Type:  "btree",
+			Value: macmac,
 		},
 	}, nil
 }

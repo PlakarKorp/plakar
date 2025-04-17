@@ -26,6 +26,8 @@ type RepositoryWriter struct {
 
 	PackerManager  *packer.PackerManager
 	currentStateID objects.MAC
+
+	Tracker func(resources.Type, objects.MAC) error
 }
 
 func (r *Repository) newRepositoryWriter(cache *caching.ScanCache, id objects.MAC) *RepositoryWriter {
@@ -103,6 +105,10 @@ func (r *RepositoryWriter) BlobExists(Type resources.Type, mac objects.MAC) bool
 		r.Logger().Trace("repositorywriter", "BlobExists(%s, %x): %s", Type, mac, time.Since(t0))
 	}()
 
+	if r.Tracker != nil {
+		r.Tracker(Type, mac) // can't do anything if it fails!
+	}
+
 	if _, exists := r.PackerManager.InflightMACs[Type].Load(mac); exists {
 		return true
 	}
@@ -136,6 +142,12 @@ func (r *RepositoryWriter) PutBlob(Type resources.Type, mac objects.MAC, data []
 	encoded, err := io.ReadAll(encodedReader)
 	if err != nil {
 		return err
+	}
+
+	if r.Tracker != nil {
+		if err := r.Tracker(Type, mac); err != nil {
+			return err
+		}
 	}
 
 	r.PackerManager.PutBlob(Type, mac, encoded)
