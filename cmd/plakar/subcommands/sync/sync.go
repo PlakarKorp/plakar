@@ -32,10 +32,10 @@ import (
 )
 
 func init() {
-	subcommands.Register("sync", parse_cmd_sync)
+	subcommands.Register(&Sync{}, "sync")
 }
 
-func parse_cmd_sync(ctx *appcontext.AppContext, args []string) (subcommands.Subcommand, error) {
+func (cmd *Sync) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags := flag.NewFlagSet("sync", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s [SNAPSHOT] to REPOSITORY\n", flags.Name())
@@ -59,26 +59,26 @@ func parse_cmd_sync(ctx *appcontext.AppContext, args []string) (subcommands.Subc
 		peerRepositoryPath = args[2]
 
 	default:
-		return nil, fmt.Errorf("usage: sync [SNAPSHOT] to|from REPOSITORY")
+		return fmt.Errorf("usage: sync [SNAPSHOT] to|from REPOSITORY")
 	}
 
 	if direction != "to" && direction != "from" && direction != "with" {
-		return nil, fmt.Errorf("invalid direction, must be to, from or with")
+		return fmt.Errorf("invalid direction, must be to, from or with")
 	}
 
 	storeConfig, err := ctx.Config.GetRepository(peerRepositoryPath)
 	if err != nil {
-		return nil, fmt.Errorf("peer repository: %w", err)
+		return fmt.Errorf("peer repository: %w", err)
 	}
 
 	peerStore, peerStoreSerializedConfig, err := storage.Open(storeConfig)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	peerStoreConfig, err := storage.NewConfigurationFromWrappedBytes(peerStoreSerializedConfig)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	var peerSecret []byte
@@ -86,10 +86,10 @@ func parse_cmd_sync(ctx *appcontext.AppContext, args []string) (subcommands.Subc
 		if pass, ok := storeConfig["passphrase"]; ok {
 			key, err := encryption.DeriveKey(peerStoreConfig.Encryption.KDFParams, []byte(pass))
 			if err != nil {
-				return nil, err
+				return err
 			}
 			if !encryption.VerifyCanary(peerStoreConfig.Encryption, key) {
-				return nil, fmt.Errorf("invalid passphrase")
+				return fmt.Errorf("invalid passphrase")
 			}
 			peerSecret = key
 		} else {
@@ -102,10 +102,10 @@ func parse_cmd_sync(ctx *appcontext.AppContext, args []string) (subcommands.Subc
 
 				key, err := encryption.DeriveKey(peerStoreConfig.Encryption.KDFParams, passphrase)
 				if err != nil {
-					return nil, err
+					return err
 				}
 				if !encryption.VerifyCanary(peerStoreConfig.Encryption, key) {
-					return nil, fmt.Errorf("invalid passphrase")
+					return fmt.Errorf("invalid passphrase")
 				}
 				peerSecret = key
 				break
@@ -117,16 +117,16 @@ func parse_cmd_sync(ctx *appcontext.AppContext, args []string) (subcommands.Subc
 	peerCtx.SetSecret(peerSecret)
 	_, err = repository.New(peerCtx, peerStore, peerStoreSerializedConfig)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return &Sync{
-		SourceRepositorySecret: ctx.GetSecret(),
-		PeerRepositoryLocation: peerRepositoryPath,
-		PeerRepositorySecret:   peerSecret,
-		Direction:              direction,
-		SnapshotPrefix:         syncSnapshotID,
-	}, nil
+	cmd.SourceRepositorySecret = ctx.GetSecret()
+	cmd.PeerRepositoryLocation = peerRepositoryPath
+	cmd.PeerRepositorySecret = peerSecret
+	cmd.Direction = direction
+	cmd.SnapshotPrefix = syncSnapshotID
+
+	return nil
 }
 
 type Sync struct {

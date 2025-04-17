@@ -26,10 +26,10 @@ import (
 )
 
 func init() {
-	subcommands.Register("config", parse_cmd_config)
+	subcommands.Register(&ConfigCmd{}, "config")
 }
 
-func parse_cmd_config(ctx *appcontext.AppContext, args []string) (subcommands.Subcommand, error) {
+func (cmd *ConfigCmd) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags := flag.NewFlagSet("config", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s\n", flags.Name())
@@ -37,16 +37,16 @@ func parse_cmd_config(ctx *appcontext.AppContext, args []string) (subcommands.Su
 	}
 
 	flags.Parse(args)
-	return &Config{
-		args: flags.Args(),
-	}, nil
+	cmd.args = flags.Args()
+
+	return nil
 }
 
-type Config struct {
+type ConfigCmd struct {
 	args []string
 }
 
-func (cmd *Config) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+func (cmd *ConfigCmd) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	if len(cmd.args) == 0 {
 		ctx.Config.Render(ctx.Stdout)
 		return 0, nil

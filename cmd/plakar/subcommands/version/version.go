@@ -31,10 +31,10 @@ import (
 )
 
 func init() {
-	subcommands.Register("version", parse_cmd_version)
+	subcommands.Register(&Version{}, "version")
 }
 
-func parse_cmd_version(ctx *appcontext.AppContext, args []string) (subcommands.Subcommand, error) {
+func (_ *Version) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags := flag.NewFlagSet("version", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s\n", flags.Name())
@@ -42,7 +42,8 @@ func parse_cmd_version(ctx *appcontext.AppContext, args []string) (subcommands.S
 	}
 
 	flags.Parse(args)
-	return &Version{}, nil
+
+	return nil
 }
 
 type Version struct{}

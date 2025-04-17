@@ -14,6 +14,10 @@ type MockedSubcommand struct {
 	name string
 }
 
+func (m MockedSubcommand) Parse(_ *appcontext.AppContext, _ []string) error {
+	return nil
+}
+
 func (m MockedSubcommand) Name() string {
 	return m.name
 }
@@ -25,11 +29,10 @@ func (m MockedSubcommand) Execute(ctx *appcontext.AppContext, repo *repository.R
 func TestRegister(t *testing.T) {
 	t.Cleanup(func() {
 		// need to reset the global var between tests
-		subcommands = make(map[string]parseArgsFn)
+		subcommands = make(map[string]Subcommand)
 	})
-	Register("test", func(*appcontext.AppContext, []string) (Subcommand, error) {
-		return MockedSubcommand{}, nil
-	})
+
+	Register(&MockedSubcommand{}, "test")
 
 	if _, exists := subcommands["test"]; !exists {
 		t.Errorf("expected subcommand to be registered")
@@ -39,21 +42,20 @@ func TestRegister(t *testing.T) {
 func TestParse(t *testing.T) {
 	t.Cleanup(func() {
 		// need to reset the global var between tests
-		subcommands = make(map[string]parseArgsFn)
+		subcommands = make(map[string]Subcommand)
 	})
 
-	Register("test", func(*appcontext.AppContext, []string) (Subcommand, error) {
-		return MockedSubcommand{}, nil
-	})
+	Register(&MockedSubcommand{}, "test")
 
 	ctx := &appcontext.AppContext{}
 	cmd := "test"
 	args := []string{}
 
-	_, err := Parse(ctx, "unknown", args)
-	require.Error(t, err, "unknown command: unknown")
+	subcmd := Lookup("unknown")
+	require.Nil(t, subcmd)
 
-	subcmd, err := Parse(ctx, cmd, args)
+	subcmd = Lookup(cmd)
+	err := subcmd.Parse(ctx, args)
 	require.NoError(t, err)
 	require.NotNil(t, subcmd)
 }
@@ -61,15 +63,11 @@ func TestParse(t *testing.T) {
 func TestList(t *testing.T) {
 	t.Cleanup(func() {
 		// need to reset the global var between tests
-		subcommands = make(map[string]parseArgsFn)
+		subcommands = make(map[string]Subcommand)
 	})
 
-	Register("test1", func(*appcontext.AppContext, []string) (Subcommand, error) {
-		return nil, nil
-	})
-	Register("test2", func(*appcontext.AppContext, []string) (Subcommand, error) {
-		return nil, nil
-	})
+	Register(&MockedSubcommand{}, "test1")
+	Register(&MockedSubcommand{}, "test2")
 
 	list := List()
 	if len(list) != 2 {

@@ -33,10 +33,11 @@ func TestExecuteCmdMaintenanceDefault(t *testing.T) {
 	indexId := snap.Header.GetIndexID()
 	args := []string{fmt.Sprintf("%s", hex.EncodeToString(indexId[:]))}
 
-	subcommand, err := parse_cmd_maintenance(repo.AppContext(), args)
+	subcommand := &Maintenance{}
+	err := subcommand.Parse(repo.AppContext(), args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
-	require.Equal(t, "maintenance", subcommand.(*Maintenance).Name())
+	require.Equal(t, "maintenance", subcommand.Name())
 
 	status, err := subcommand.Execute(repo.AppContext(), repo)
 	require.NoError(t, err)

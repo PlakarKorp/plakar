@@ -30,25 +30,12 @@ import (
 )
 
 func init() {
-	subcommands.Register("check", parse_cmd_check)
+	subcommands.Register(&Check{}, "check")
 }
 
-func parse_cmd_check(ctx *appcontext.AppContext, args []string) (subcommands.Subcommand, error) {
-	var opt_name string
-	var opt_category string
-	var opt_environment string
-	var opt_perimeter string
-	var opt_job string
-	var opt_tag string
+func (cmd *Check) Parse(ctx *appcontext.AppContext, args []string) error {
 	var opt_before string
 	var opt_since string
-	var opt_latest bool
-
-	var opt_concurrency uint64
-	var opt_fastCheck bool
-	var opt_noVerify bool
-	var opt_quiet bool
-	var opt_silent bool
 
 	flags := flag.NewFlagSet("check", flag.ExitOnError)
 	flags.Usage = func() {
@@ -57,20 +44,20 @@ func parse_cmd_check(ctx *appcontext.AppContext, args []string) (subcommands.Sub
 		flags.PrintDefaults()
 	}
 
-	flags.Uint64Var(&opt_concurrency, "concurrency", uint64(ctx.MaxConcurrency), "maximum number of parallel tasks")
-	flags.StringVar(&opt_name, "name", "", "filter by name")
-	flags.StringVar(&opt_category, "category", "", "filter by category")
-	flags.StringVar(&opt_environment, "environment", "", "filter by environment")
-	flags.StringVar(&opt_perimeter, "perimeter", "", "filter by perimeter")
-	flags.StringVar(&opt_job, "job", "", "filter by job")
-	flags.StringVar(&opt_tag, "tag", "", "filter by tag")
+	flags.Uint64Var(&cmd.Concurrency, "concurrency", uint64(ctx.MaxConcurrency), "maximum number of parallel tasks")
+	flags.StringVar(&cmd.OptName, "name", "", "filter by name")
+	flags.StringVar(&cmd.OptCategory, "category", "", "filter by category")
+	flags.StringVar(&cmd.OptEnvironment, "environment", "", "filter by environment")
+	flags.StringVar(&cmd.OptPerimeter, "perimeter", "", "filter by perimeter")
+	flags.StringVar(&cmd.OptJob, "job", "", "filter by job")
+	flags.StringVar(&cmd.OptTag, "tag", "", "filter by tag")
 	flags.StringVar(&opt_before, "before", "", "filter by date")
 	flags.StringVar(&opt_since, "since", "", "filter by date")
-	flags.BoolVar(&opt_latest, "latest", false, "use latest snapshot")
-	flags.BoolVar(&opt_noVerify, "no-verify", false, "disable signature verification")
-	flags.BoolVar(&opt_fastCheck, "fast", false, "enable fast checking (no digest verification)")
-	flags.BoolVar(&opt_quiet, "quiet", false, "suppress output")
-	flags.BoolVar(&opt_quiet, "silent", false, "suppress ALL output")
+	flags.BoolVar(&cmd.OptLatest, "latest", false, "use latest snapshot")
+	flags.BoolVar(&cmd.NoVerify, "no-verify", false, "disable signature verification")
+	flags.BoolVar(&cmd.FastCheck, "fast", false, "enable fast checking (no digest verification)")
+	flags.BoolVar(&cmd.Quiet, "quiet", false, "suppress output")
+	flags.BoolVar(&cmd.Silent, "silent", false, "suppress ALL output")
 	flags.Parse(args)
 
 	var err error
@@ -79,45 +66,31 @@ func parse_cmd_check(ctx *appcontext.AppContext, args []string) (subcommands.Sub
 	if opt_before != "" {
 		beforeDate, err = utils.ParseTimeFlag(opt_before)
 		if err != nil {
-			return nil, fmt.Errorf("invalid date format: %s", opt_before)
+			return fmt.Errorf("invalid date format: %s", opt_before)
 		}
+
+		cmd.OptBefore = beforeDate
 	}
 
 	var sinceDate time.Time
 	if opt_since != "" {
 		sinceDate, err = utils.ParseTimeFlag(opt_since)
 		if err != nil {
-			return nil, fmt.Errorf("invalid date format: %s", opt_since)
+			return fmt.Errorf("invalid date format: %s", opt_since)
 		}
+
+		cmd.OptSince = sinceDate
 	}
 
 	if flags.NArg() != 0 {
-		if opt_name != "" || opt_category != "" || opt_environment != "" || opt_perimeter != "" || opt_job != "" || opt_tag != "" || !beforeDate.IsZero() || !sinceDate.IsZero() || opt_latest {
+		if cmd.OptName != "" || cmd.OptCategory != "" || cmd.OptEnvironment != "" || cmd.OptPerimeter != "" || cmd.OptJob != "" || cmd.OptTag != "" || !beforeDate.IsZero() || !sinceDate.IsZero() || cmd.OptLatest {
 			ctx.GetLogger().Warn("snapshot specified, filters will be ignored")
 		}
 	}
 
-	return &Check{
-		RepositorySecret: ctx.GetSecret(),
+	cmd.RepositorySecret = ctx.GetSecret()
 
-		OptBefore: beforeDate,
-		OptSince:  sinceDate,
-		OptLatest: opt_latest,
-
-		OptName:        opt_name,
-		OptCategory:    opt_category,
-		OptEnvironment: opt_environment,
-		OptPerimeter:   opt_perimeter,
-		OptJob:         opt_job,
-		OptTag:         opt_tag,
-
-		Concurrency: opt_concurrency,
-		FastCheck:   opt_fastCheck,
-		NoVerify:    opt_noVerify,
-		Quiet:       opt_quiet,
-		Snapshots:   flags.Args(),
-		Silent:      opt_silent,
-	}, nil
+	return nil
 }
 
 type Check struct {

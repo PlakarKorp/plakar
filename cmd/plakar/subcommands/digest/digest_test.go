@@ -42,10 +42,11 @@ func TestExecuteCmdDigestDefault(t *testing.T) {
 	indexId := snap.Header.GetIndexID()
 	args := []string{fmt.Sprintf("%s", hex.EncodeToString(indexId[:]))}
 
-	subcommand, err := parse_cmd_digest(repo.AppContext(), args)
+	subcommand := &Digest{}
+	err := subcommand.Parse(repo.AppContext(), args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
-	require.Equal(t, "digest", subcommand.(*Digest).Name())
+	require.Equal(t, "digest", subcommand.Name())
 
 	status, err := subcommand.Execute(repo.AppContext(), repo)
 	require.NoError(t, err)
@@ -74,9 +75,9 @@ func TestExecuteCmdDigestNoParam(t *testing.T) {
 
 	args := []string{}
 
-	subcommand, err := parse_cmd_digest(repo.AppContext(), args)
+	subcommand := &Digest{}
+	err := subcommand.Parse(repo.AppContext(), args)
 	require.Error(t, err, "at least one parameter is required")
-	require.Nil(t, subcommand)
 }
 
 func TestExecuteCmdDigestWrongHashing(t *testing.T) {
@@ -89,7 +90,7 @@ func TestExecuteCmdDigestWrongHashing(t *testing.T) {
 	indexId := snap.Header.GetIndexID()
 	args := []string{"-hashing", "md5", fmt.Sprintf("%s", hex.EncodeToString(indexId[:]))}
 
-	subcommand, err := parse_cmd_digest(repo.AppContext(), args)
+	subcommand := &Digest{}
+	err := subcommand.Parse(repo.AppContext(), args)
 	require.Error(t, err, "at least one parameter is required")
-	require.Nil(t, subcommand)
 }

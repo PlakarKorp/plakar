@@ -29,53 +29,6 @@ import (
 	"github.com/PlakarKorp/plakar/repository"
 )
 
-func init() {
-	subcommands.Register("archive", parse_cmd_archive)
-}
-
-func parse_cmd_archive(ctx *appcontext.AppContext, args []string) (subcommands.Subcommand, error) {
-	var opt_rebase bool
-	var opt_output string
-	var opt_format string
-
-	flags := flag.NewFlagSet("archive", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS] [SNAPSHOT[:PATH]]\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
-		flags.PrintDefaults()
-	}
-
-	flags.StringVar(&opt_output, "output", "", "archive pathname")
-	flags.BoolVar(&opt_rebase, "rebase", false, "strip pathname when pulling")
-	flags.StringVar(&opt_format, "format", "tarball", "archive format: tar, tarball, zip")
-	flags.Parse(args)
-
-	if flags.NArg() == 0 {
-		return nil, fmt.Errorf("need at least one snapshot ID to pull")
-	}
-
-	supportedFormats := map[string]string{
-		"tar":     ".tar",
-		"tarball": ".tar.gz",
-		"zip":     ".zip",
-	}
-	if _, ok := supportedFormats[opt_format]; !ok {
-		return nil, fmt.Errorf("unsupported format %s", opt_format)
-	}
-
-	if opt_output == "" {
-		opt_output = fmt.Sprintf("plakar-%s.%s", time.Now().UTC().Format(time.RFC3339), supportedFormats[opt_format])
-	}
-
-	return &Archive{
-		RepositorySecret: ctx.GetSecret(),
-		Rebase:           opt_rebase,
-		Output:           opt_output,
-		Format:           opt_format,
-		SnapshotPrefix:   flags.Arg(0),
-	}, nil
-}
-
 type Archive struct {
 	RepositorySecret []byte
 
@@ -83,6 +36,43 @@ type Archive struct {
 	Output         string
 	Format         string
 	SnapshotPrefix string
+}
+
+func init() {
+	subcommands.Register(&Archive{}, "archive")
+}
+
+func (cmd *Archive) Parse(ctx *appcontext.AppContext, args []string) error {
+	flags := flag.NewFlagSet("archive", flag.ExitOnError)
+	flags.Usage = func() {
+		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS] [SNAPSHOT[:PATH]]\n", flags.Name())
+		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
+		flags.PrintDefaults()
+	}
+
+	flags.StringVar(&cmd.Output, "output", "", "archive pathname")
+	flags.BoolVar(&cmd.Rebase, "rebase", false, "strip pathname when pulling")
+	flags.StringVar(&cmd.Format, "format", "tarball", "archive format: tar, tarball, zip")
+	flags.Parse(args)
+
+	if flags.NArg() == 0 {
+		return fmt.Errorf("need at least one snapshot ID to pull")
+	}
+
+	supportedFormats := map[string]string{
+		"tar":     ".tar",
+		"tarball": ".tar.gz",
+		"zip":     ".zip",
+	}
+	if _, ok := supportedFormats[cmd.Format]; !ok {
+		return fmt.Errorf("unsupported format %s", cmd.Format)
+	}
+
+	if cmd.Output == "" {
+		cmd.Output = fmt.Sprintf("plakar-%s.%s", time.Now().UTC().Format(time.RFC3339), supportedFormats[cmd.Format])
+	}
+
+	return nil
 }
 
 func (cmd *Archive) Name() string {

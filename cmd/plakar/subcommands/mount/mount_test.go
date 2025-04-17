@@ -43,10 +43,11 @@ func TestExecuteCmdMountDefault(t *testing.T) {
 	ctx := repo.AppContext()
 	args := []string{tmpMountPoint}
 
-	subcommand, err := parse_cmd_mount(ctx, args)
+	subcommand := &Mount{}
+	err = subcommand.Parse(ctx, args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
-	require.Equal(t, "mount", subcommand.(*Mount).Name())
+	require.Equal(t, "mount", subcommand.Name())
 
 	subCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()

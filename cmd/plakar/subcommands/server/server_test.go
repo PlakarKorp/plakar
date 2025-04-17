@@ -43,10 +43,12 @@ func TestExecuteCmdServerDefault(t *testing.T) {
 	ctx := repo.AppContext()
 	args := []string{"-listen", "127.0.0.1:12345"}
 
-	subcommand, err := parse_cmd_server(ctx, args)
+	subcommand := &Server{}
+	err := subcommand.Parse(ctx, args)
+
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
-	require.Equal(t, "server", subcommand.(*Server).Name())
+	require.Equal(t, "server", subcommand.Name())
 
 	subCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()

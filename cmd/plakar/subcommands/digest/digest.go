@@ -33,10 +33,10 @@ import (
 )
 
 func init() {
-	subcommands.Register("digest", parse_cmd_digest)
+	subcommands.Register(&Digest{}, "digest")
 }
 
-func parse_cmd_digest(ctx *appcontext.AppContext, args []string) (subcommands.Subcommand, error) {
+func (cmd *Digest) Parse(ctx *appcontext.AppContext, args []string) error {
 	var opt_hashing string
 
 	flags := flag.NewFlagSet("digest", flag.ExitOnError)
@@ -50,20 +50,19 @@ func parse_cmd_digest(ctx *appcontext.AppContext, args []string) (subcommands.Su
 	flags.Parse(args)
 
 	if flags.NArg() == 0 {
-		ctx.GetLogger().Error("%s: at least one parameter is required", flags.Name())
-		return nil, fmt.Errorf("at least one parameter is required")
+		return fmt.Errorf("at least one parameter is required")
 	}
 
 	hashingFunction := strings.ToUpper(opt_hashing)
 	if hashing.GetHasher(hashingFunction) == nil {
-		return nil, fmt.Errorf("unsupported hashing algorithm: %s", hashingFunction)
+		return fmt.Errorf("unsupported hashing algorithm: %s", hashingFunction)
 	}
 
-	return &Digest{
-		RepositorySecret: ctx.GetSecret(),
-		HashingFunction:  hashingFunction,
-		Targets:          flags.Args(),
-	}, nil
+	cmd.RepositorySecret = ctx.GetSecret()
+	cmd.HashingFunction = hashingFunction
+	cmd.Targets = flags.Args()
+
+	return nil
 }
 
 type Digest struct {

@@ -39,10 +39,11 @@ func TestExecuteCmdClone(t *testing.T) {
 	outputDir := filepath.Join(tmpDestinationDir, "clone_test")
 	args := []string{"to", outputDir}
 
-	subcommand, err := parse_cmd_clone(repo.AppContext(), args)
+	subcommand := &Clone{}
+	err = subcommand.Parse(repo.AppContext(), args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
-	require.Equal(t, "clone", subcommand.(*Clone).Name())
+	require.Equal(t, "clone", subcommand.Name())
 
 	status, err := subcommand.Execute(repo.AppContext(), repo)
 	require.NoError(t, err)

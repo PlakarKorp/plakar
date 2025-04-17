@@ -31,21 +31,11 @@ import (
 )
 
 func init() {
-	subcommands.Register("restore", parse_cmd_restore)
+	subcommands.Register(&Restore{}, "restore")
 }
 
-func parse_cmd_restore(ctx *appcontext.AppContext, args []string) (subcommands.Subcommand, error) {
-	var opt_name string
-	var opt_category string
-	var opt_environment string
-	var opt_perimeter string
-	var opt_job string
-	var opt_tag string
-
+func (cmd *Restore) Parse(ctx *appcontext.AppContext, args []string) error {
 	var pullPath string
-	var opt_concurrency uint64
-	var opt_quiet bool
-	var opt_silent bool
 
 	flags := flag.NewFlagSet("restore", flag.ExitOnError)
 	flags.Usage = func() {
@@ -54,47 +44,36 @@ func parse_cmd_restore(ctx *appcontext.AppContext, args []string) (subcommands.S
 		flags.PrintDefaults()
 	}
 
-	flags.Uint64Var(&opt_concurrency, "concurrency", uint64(ctx.MaxConcurrency), "maximum number of parallel tasks")
-	flags.StringVar(&opt_name, "name", "", "filter by name")
-	flags.StringVar(&opt_category, "category", "", "filter by category")
-	flags.StringVar(&opt_environment, "environment", "", "filter by environment")
-	flags.StringVar(&opt_perimeter, "perimeter", "", "filter by perimeter")
-	flags.StringVar(&opt_job, "job", "", "filter by job")
-	flags.StringVar(&opt_tag, "tag", "", "filter by tag")
+	flags.Uint64Var(&cmd.Concurrency, "concurrency", uint64(ctx.MaxConcurrency), "maximum number of parallel tasks")
+	flags.StringVar(&cmd.OptName, "name", "", "filter by name")
+	flags.StringVar(&cmd.OptCategory, "category", "", "filter by category")
+	flags.StringVar(&cmd.OptEnvironment, "environment", "", "filter by environment")
+	flags.StringVar(&cmd.OptPerimeter, "perimeter", "", "filter by perimeter")
+	flags.StringVar(&cmd.OptJob, "job", "", "filter by job")
+	flags.StringVar(&cmd.OptTag, "tag", "", "filter by tag")
 
 	flags.StringVar(&pullPath, "to", "", "base directory where pull will restore")
-	flags.BoolVar(&opt_quiet, "quiet", false, "do not print progress")
-	flags.BoolVar(&opt_silent, "silent", false, "do not print ANY progress")
+	flags.BoolVar(&cmd.Quiet, "quiet", false, "do not print progress")
+	flags.BoolVar(&cmd.Silent, "silent", false, "do not print ANY progress")
 	flags.Parse(args)
 
 	if flags.NArg() != 0 {
-		if opt_name != "" || opt_category != "" || opt_environment != "" || opt_perimeter != "" || opt_job != "" || opt_tag != "" {
+		if cmd.OptName != "" || cmd.OptCategory != "" || cmd.OptEnvironment != "" || cmd.OptPerimeter != "" || cmd.OptJob != "" || cmd.OptTag != "" {
 			ctx.GetLogger().Warn("snapshot specified, filters will be ignored")
 		}
 	} else if flags.NArg() > 1 {
-		return nil, fmt.Errorf("multiple restore paths specified, please specify only one")
+		return fmt.Errorf("multiple restore paths specified, please specify only one")
 	}
 
 	if pullPath == "" {
 		pullPath = fmt.Sprintf("%s/plakar-%s", ctx.CWD, time.Now().Format(time.RFC3339))
 	}
 
-	return &Restore{
-		RepositorySecret: ctx.GetSecret(),
+	cmd.RepositorySecret = ctx.GetSecret()
+	cmd.Target = pullPath
+	cmd.Snapshots = flags.Args()
 
-		OptName:        opt_name,
-		OptCategory:    opt_category,
-		OptEnvironment: opt_environment,
-		OptPerimeter:   opt_perimeter,
-		OptJob:         opt_job,
-		OptTag:         opt_tag,
-
-		Target:      pullPath,
-		Concurrency: opt_concurrency,
-		Quiet:       opt_quiet,
-		Silent:      opt_silent,
-		Snapshots:   flags.Args(),
-	}, nil
+	return nil
 }
 
 type Restore struct {

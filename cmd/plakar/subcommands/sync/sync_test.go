@@ -48,14 +48,15 @@ func TestExecuteCmdSyncTo(t *testing.T) {
 	indexId := snap.Header.GetIndexID()
 	args := []string{fmt.Sprintf("%s", hex.EncodeToString(indexId[:])), "to", peerRepo.Location()}
 
-	subcommand, err := parse_cmd_sync(localRepo.AppContext(), args)
+	subcommand := &Sync{}
+	err := subcommand.Parse(localRepo.AppContext(), args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
 
 	status, err := subcommand.Execute(ctx, localRepo)
 	require.NoError(t, err)
 	require.Equal(t, 0, status)
-	require.Equal(t, "sync", subcommand.(*Sync).Name())
+	require.Equal(t, "sync", subcommand.Name())
 
 	// output should look like this
 	// 2025-03-26T21:17:28Z info: sync: synchronization from /tmp/tmp_repo1957539148/repo to /tmp/tmp_repo2470692775/repo completed: 1 snapshots synchronized
@@ -77,14 +78,14 @@ func TestExecuteCmdSyncWith(t *testing.T) {
 	indexId := snap.Header.GetIndexID()
 	args := []string{fmt.Sprintf("%s", hex.EncodeToString(indexId[:])), "with", peerRepo.Location()}
 
-	subcommand, err := parse_cmd_sync(ctx, args)
+	subcommand := &Sync{}
+	err := subcommand.Parse(localRepo.AppContext(), args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
 
 	status, err := subcommand.Execute(ctx, localRepo)
 	require.NoError(t, err)
 	require.Equal(t, 0, status)
-	require.Equal(t, "sync", subcommand.(*Sync).Name())
 
 	// output should look like this
 	// 2025-03-26T21:28:23Z info: sync: synchronization between /tmp/tmp_repo3863826583/repo and /tmp/tmp_repo327669581/repo completed: 1 snapshots synchronized
@@ -118,14 +119,14 @@ func TestExecuteCmdSyncWithEncryption(t *testing.T) {
 	indexId := snap.Header.GetIndexID()
 	args := []string{fmt.Sprintf("%s", hex.EncodeToString(indexId[:])), "with", "@peerRepo"}
 
-	subcommand, err := parse_cmd_sync(ctx, args)
+	subcommand := &Sync{}
+	err = subcommand.Parse(localRepo.AppContext(), args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
 
 	status, err := subcommand.Execute(ctx, localRepo)
 	require.NoError(t, err)
 	require.Equal(t, 0, status)
-	require.Equal(t, "sync", subcommand.(*Sync).Name())
 
 	// output should look like this
 	// 2025-03-26T21:28:23Z info: sync: synchronization between /tmp/tmp_repo3863826583/repo and /tmp/tmp_repo327669581/repo completed: 1 snapshots synchronized

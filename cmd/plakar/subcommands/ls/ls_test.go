@@ -41,10 +41,11 @@ func TestExecuteCmdLsDefault(t *testing.T) {
 
 	args := []string{}
 
-	subcommand, err := parse_cmd_ls(repo.AppContext(), args)
+	subcommand := &Ls{}
+	err = subcommand.Parse(repo.AppContext(), args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
-	require.Equal(t, "ls", subcommand.(*Ls).Name())
+	require.Equal(t, "ls", subcommand.Name())
 
 	status, err := subcommand.Execute(repo.AppContext(), repo)
 	require.NoError(t, err)
@@ -79,7 +80,8 @@ func TestExecuteCmdLsFilterByIDAndRecursive(t *testing.T) {
 
 	args := []string{"-recursive", hex.EncodeToString(snap.Header.GetIndexShortID())}
 
-	subcommand, err := parse_cmd_ls(repo.AppContext(), args)
+	subcommand := &Ls{}
+	err = subcommand.Parse(repo.AppContext(), args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
 
@@ -118,7 +120,8 @@ func TestExecuteCmdLsFilterUuid(t *testing.T) {
 
 	args := []string{"-uuid"}
 
-	subcommand, err := parse_cmd_ls(repo.AppContext(), args)
+	subcommand := &Ls{}
+	err = subcommand.Parse(repo.AppContext(), args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
 

@@ -35,21 +35,12 @@ import (
 )
 
 func init() {
-	subcommands.Register("ls", parse_cmd_ls)
+	subcommands.Register(&Ls{}, "ls")
 }
 
-func parse_cmd_ls(ctx *appcontext.AppContext, args []string) (subcommands.Subcommand, error) {
-	var opt_name string
-	var opt_category string
-	var opt_environment string
-	var opt_perimeter string
-	var opt_job string
-	var opt_tag string
+func (cmd *Ls) Parse(ctx *appcontext.AppContext, args []string) error {
 	var opt_before string
 	var opt_since string
-	var opt_latest bool
-	var opt_uuid bool
-	var opt_recursive bool
 
 	flags := flag.NewFlagSet("ls", flag.ExitOnError)
 	flags.Usage = func() {
@@ -58,21 +49,21 @@ func parse_cmd_ls(ctx *appcontext.AppContext, args []string) (subcommands.Subcom
 		flags.PrintDefaults()
 	}
 
-	flags.StringVar(&opt_name, "name", "", "filter by name")
-	flags.StringVar(&opt_category, "category", "", "filter by category")
-	flags.StringVar(&opt_environment, "environment", "", "filter by environment")
-	flags.StringVar(&opt_perimeter, "perimeter", "", "filter by perimeter")
-	flags.StringVar(&opt_job, "job", "", "filter by job")
-	flags.StringVar(&opt_tag, "tag", "", "filter by tag")
+	flags.StringVar(&cmd.OptName, "name", "", "filter by name")
+	flags.StringVar(&cmd.OptCategory, "category", "", "filter by category")
+	flags.StringVar(&cmd.OptEnvironment, "environment", "", "filter by environment")
+	flags.StringVar(&cmd.OptPerimeter, "perimeter", "", "filter by perimeter")
+	flags.StringVar(&cmd.OptJob, "job", "", "filter by job")
+	flags.StringVar(&cmd.OptTag, "tag", "", "filter by tag")
 	flags.StringVar(&opt_before, "before", "", "filter by date")
 	flags.StringVar(&opt_since, "since", "", "filter by date")
-	flags.BoolVar(&opt_latest, "latest", false, "use latest snapshot")
-	flags.BoolVar(&opt_uuid, "uuid", false, "display uuid instead of short ID")
-	flags.BoolVar(&opt_recursive, "recursive", false, "recursive listing")
+	flags.BoolVar(&cmd.OptLatest, "latest", false, "use latest snapshot")
+	flags.BoolVar(&cmd.DisplayUUID, "uuid", false, "display uuid instead of short ID")
+	flags.BoolVar(&cmd.Recursive, "recursive", false, "recursive listing")
 	flags.Parse(args)
 
 	if flags.NArg() > 1 {
-		return nil, fmt.Errorf("too many arguments")
+		return fmt.Errorf("too many arguments")
 	}
 
 	var err error
@@ -81,36 +72,26 @@ func parse_cmd_ls(ctx *appcontext.AppContext, args []string) (subcommands.Subcom
 	if opt_before != "" {
 		beforeDate, err = utils.ParseTimeFlag(opt_before)
 		if err != nil {
-			return nil, fmt.Errorf("invalid date format: %s", opt_before)
+			return fmt.Errorf("invalid date format: %s", opt_before)
 		}
+
+		cmd.OptBefore = beforeDate
 	}
 
 	var sinceDate time.Time
 	if opt_since != "" {
 		sinceDate, err = utils.ParseTimeFlag(opt_since)
 		if err != nil {
-			return nil, fmt.Errorf("invalid date format: %s", opt_since)
+			return fmt.Errorf("invalid date format: %s", opt_since)
 		}
+
+		cmd.OptSince = sinceDate
 	}
 
-	return &Ls{
-		RepositorySecret: ctx.GetSecret(),
+	cmd.RepositorySecret = ctx.GetSecret()
+	cmd.Path = flags.Arg(0)
 
-		OptBefore: beforeDate,
-		OptSince:  sinceDate,
-		OptLatest: opt_latest,
-
-		OptName:        opt_name,
-		OptCategory:    opt_category,
-		OptEnvironment: opt_environment,
-		OptPerimeter:   opt_perimeter,
-		OptJob:         opt_job,
-		OptTag:         opt_tag,
-
-		Recursive:   opt_recursive,
-		DisplayUUID: opt_uuid,
-		Path:        flags.Arg(0),
-	}, nil
+	return nil
 }
 
 type Ls struct {

@@ -32,15 +32,10 @@ import (
 )
 
 func init() {
-	subcommands.Register("ui", parse_cmd_ui)
+	subcommands.Register(&Ui{}, "ui")
 }
 
-func parse_cmd_ui(ctx *appcontext.AppContext, args []string) (subcommands.Subcommand, error) {
-	var opt_addr string
-	var opt_cors bool
-	var opt_noauth bool
-	var opt_nospawn bool
-
+func (cmd *Ui) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags := flag.NewFlagSet("ui", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS]\n", flags.Name())
@@ -48,19 +43,15 @@ func parse_cmd_ui(ctx *appcontext.AppContext, args []string) (subcommands.Subcom
 		flags.PrintDefaults()
 	}
 
-	flags.StringVar(&opt_addr, "addr", "", "address to listen on")
-	flags.BoolVar(&opt_cors, "cors", false, "enable CORS")
-	flags.BoolVar(&opt_noauth, "no-auth", false, "don't use authentication")
-	flags.BoolVar(&opt_nospawn, "no-spawn", false, "don't spawn browser")
+	flags.StringVar(&cmd.Addr, "addr", "", "address to listen on")
+	flags.BoolVar(&cmd.Cors, "cors", false, "enable CORS")
+	flags.BoolVar(&cmd.NoAuth, "no-auth", false, "don't use authentication")
+	flags.BoolVar(&cmd.NoSpawn, "no-spawn", false, "don't spawn browser")
 	flags.Parse(args)
 
-	return &Ui{
-		RepositorySecret: ctx.GetSecret(),
-		Addr:             opt_addr,
-		Cors:             opt_cors,
-		NoAuth:           opt_noauth,
-		NoSpawn:          opt_nospawn,
-	}, nil
+	cmd.RepositorySecret = ctx.GetSecret()
+
+	return nil
 }
 
 type Ui struct {

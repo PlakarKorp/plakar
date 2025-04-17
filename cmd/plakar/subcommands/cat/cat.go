@@ -33,13 +33,10 @@ import (
 )
 
 func init() {
-	subcommands.Register("cat", parse_cmd_cat)
+	subcommands.Register(&Cat{}, "cat")
 }
 
-func parse_cmd_cat(ctx *appcontext.AppContext, args []string) (subcommands.Subcommand, error) {
-	var opt_nodecompress bool
-	var opt_highlight bool
-
+func (cmd *Cat) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags := flag.NewFlagSet("cat", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS] [SNAPSHOT[:PATH]]...\n", flags.Name())
@@ -47,20 +44,18 @@ func parse_cmd_cat(ctx *appcontext.AppContext, args []string) (subcommands.Subco
 		flags.PrintDefaults()
 	}
 
-	flags.BoolVar(&opt_nodecompress, "no-decompress", false, "do not try to decompress output")
-	flags.BoolVar(&opt_highlight, "highlight", false, "highlight output")
+	flags.BoolVar(&cmd.NoDecompress, "no-decompress", false, "do not try to decompress output")
+	flags.BoolVar(&cmd.Highlight, "highlight", false, "highlight output")
 	flags.Parse(args)
 
 	if flags.NArg() == 0 {
-		return nil, fmt.Errorf("at least one parameter is required")
+		return fmt.Errorf("at least one parameter is required")
 	}
 
-	return &Cat{
-		RepositorySecret: ctx.GetSecret(),
-		NoDecompress:     opt_nodecompress,
-		Highlight:        opt_highlight,
-		Paths:            flags.Args(),
-	}, nil
+	cmd.RepositorySecret = ctx.GetSecret()
+	cmd.Paths = flags.Args()
+
+	return nil
 }
 
 type Cat struct {

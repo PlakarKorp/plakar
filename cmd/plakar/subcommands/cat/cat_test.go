@@ -32,7 +32,8 @@ func TestExecuteCmdCatDefault(t *testing.T) {
 
 	args := []string{":subdir/dummy.txt"}
 
-	subcommand, err := parse_cmd_cat(repo.AppContext(), args)
+	subcommand := &Cat{}
+	err := subcommand.Parse(repo.AppContext(), args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
 
@@ -77,7 +78,8 @@ func TestExecuteCmdCatErrorAmbiguous(t *testing.T) {
 
 	args := []string{":subdir/dummy.txt"}
 
-	subcommand, err := parse_cmd_cat(repo.AppContext(), args)
+	subcommand := &Cat{}
+	err := subcommand.Parse(repo.AppContext(), args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
 
@@ -106,7 +108,8 @@ func TestExecuteCmdCatErrorNotRegularFile(t *testing.T) {
 
 	args := []string{fmt.Sprintf("%s:/", hex.EncodeToString(snap.Header.GetIndexShortID()))}
 
-	subcommand, err := parse_cmd_cat(repo.AppContext(), args)
+	subcommand := &Cat{}
+	err := subcommand.Parse(repo.AppContext(), args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
 
@@ -135,7 +138,8 @@ func TestExecuteCmdCatErrorUnknownFile(t *testing.T) {
 
 	args := []string{fmt.Sprintf("%s:/unknown", hex.EncodeToString(snap.Header.GetIndexShortID()))}
 
-	subcommand, err := parse_cmd_cat(repo.AppContext(), args)
+	subcommand := &Cat{}
+	err := subcommand.Parse(repo.AppContext(), args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
 
@@ -164,7 +168,8 @@ func TestExecuteCmdCatHighlight(t *testing.T) {
 
 	args := []string{"--highlight", ":subdir/dummy.txt"}
 
-	subcommand, err := parse_cmd_cat(repo.AppContext(), args)
+	subcommand := &Cat{}
+	err := subcommand.Parse(repo.AppContext(), args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
 

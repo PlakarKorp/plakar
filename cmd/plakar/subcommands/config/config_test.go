@@ -34,7 +34,8 @@ func TestConfigEmpty(t *testing.T) {
 	repo := &repository.Repository{}
 	args := []string{}
 
-	subcommand, err := parse_cmd_config(ctx, args)
+	subcommand := &ConfigCmd{}
+	err = subcommand.Parse(ctx, args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
 
@@ -53,7 +54,8 @@ remotes: {}
 	bufErr.Reset()
 
 	args = []string{"unknown"}
-	subcommand, err = parse_cmd_config(ctx, args)
+	subcommand = &ConfigCmd{}
+	err = subcommand.Parse(ctx, args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
 
@@ -62,7 +64,8 @@ remotes: {}
 	require.Equal(t, 1, status)
 
 	args = []string{"remote", "create", "my-remote"}
-	subcommand, err = parse_cmd_config(ctx, args)
+	subcommand = &ConfigCmd{}
+	err = subcommand.Parse(ctx, args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
 
@@ -71,7 +74,8 @@ remotes: {}
 	require.Equal(t, 0, status)
 
 	args = []string{"repository", "create", "my-repo"}
-	subcommand, err = parse_cmd_config(ctx, args)
+	subcommand = &ConfigCmd{}
+	err = subcommand.Parse(ctx, args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
 

@@ -70,10 +70,11 @@ func TestExecuteCmdRestoreDefault(t *testing.T) {
 
 	args := []string{"-to", tmpToRestoreDir}
 
-	subcommand, err := parse_cmd_restore(repo.AppContext(), args)
+	subcommand := &Restore{}
+	err = subcommand.Parse(repo.AppContext(), args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
-	require.Equal(t, "restore", subcommand.(*Restore).Name())
+	require.Equal(t, "restore", subcommand.Name())
 
 	status, err := subcommand.Execute(repo.AppContext(), repo)
 	require.NoError(t, err)
@@ -95,10 +96,10 @@ func TestExecuteCmdRestoreSpecificSnapshot(t *testing.T) {
 
 	indexId := snap.Header.GetIndexID()
 	args := []string{"-to", tmpToRestoreDir, fmt.Sprintf("%s", hex.EncodeToString(indexId[:]))}
-	subcommand, err := parse_cmd_restore(repo.AppContext(), args)
+	subcommand := &Restore{}
+	err = subcommand.Parse(repo.AppContext(), args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
-	require.Equal(t, "restore", subcommand.(*Restore).Name())
 
 	status, err := subcommand.Execute(repo.AppContext(), repo)
 	require.NoError(t, err)

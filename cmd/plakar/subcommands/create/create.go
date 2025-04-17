@@ -38,15 +38,10 @@ import (
 )
 
 func init() {
-	subcommands.Register("create", parse_cmd_create)
+	subcommands.Register(&Create{}, "create")
 }
 
-func parse_cmd_create(ctx *appcontext.AppContext, args []string) (subcommands.Subcommand, error) {
-	var opt_hashing string
-	var opt_noencryption bool
-	var opt_nocompression bool
-	var opt_allowweak bool
-
+func (cmd *Create) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags := flag.NewFlagSet("create", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: plakar [at /path/to/repository] %s [OPTIONS]\n", flags.Name())
@@ -55,26 +50,21 @@ func parse_cmd_create(ctx *appcontext.AppContext, args []string) (subcommands.Su
 		flags.PrintDefaults()
 	}
 
-	flags.BoolVar(&opt_allowweak, "weak-passphrase", false, "allow weak passphrase to protect the repository")
-	flags.StringVar(&opt_hashing, "hashing", hashing.DEFAULT_HASHING_ALGORITHM, "hashing algorithm to use for digests")
-	flags.BoolVar(&opt_noencryption, "no-encryption", false, "disable transparent encryption")
-	flags.BoolVar(&opt_nocompression, "no-compression", false, "disable transparent compression")
+	flags.BoolVar(&cmd.AllowWeak, "weak-passphrase", false, "allow weak passphrase to protect the repository")
+	flags.StringVar(&cmd.Hashing, "hashing", hashing.DEFAULT_HASHING_ALGORITHM, "hashing algorithm to use for digests")
+	flags.BoolVar(&cmd.NoEncryption, "no-encryption", false, "disable transparent encryption")
+	flags.BoolVar(&cmd.NoCompression, "no-compression", false, "disable transparent compression")
 	flags.Parse(args)
 
 	if flags.NArg() != 0 {
-		return nil, fmt.Errorf("%s: too many parameters", flag.CommandLine.Name())
+		return fmt.Errorf("%s: too many parameters", flag.CommandLine.Name())
 	}
 
-	if hashing.GetHasher(strings.ToUpper(opt_hashing)) == nil {
-		return nil, fmt.Errorf("%s: unknown hashing algorithm", flag.CommandLine.Name())
+	if hashing.GetHasher(strings.ToUpper(cmd.Hashing)) == nil {
+		return fmt.Errorf("%s: unknown hashing algorithm", flag.CommandLine.Name())
 	}
 
-	return &Create{
-		AllowWeak:     opt_allowweak,
-		Hashing:       opt_hashing,
-		NoEncryption:  opt_noencryption,
-		NoCompression: opt_nocompression,
-	}, nil
+	return nil
 }
 
 type Create struct {

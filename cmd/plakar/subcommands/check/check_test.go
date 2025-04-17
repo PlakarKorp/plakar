@@ -41,10 +41,11 @@ func TestExecuteCmdCheckDefault(t *testing.T) {
 
 	args := []string{}
 
-	subcommand, err := parse_cmd_check(repo.AppContext(), args)
+	subcommand := &Check{}
+	err := subcommand.Parse(repo.AppContext(), args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
-	require.Equal(t, "check", subcommand.(*Check).Name())
+	require.Equal(t, "check", subcommand.Name())
 
 	status, err := subcommand.Execute(repo.AppContext(), repo)
 	require.NoError(t, err)
@@ -79,10 +80,10 @@ func TestExecuteCmdCheckSpecificSnapshot(t *testing.T) {
 	indexId := snap.Header.GetIndexID()
 	args := []string{fmt.Sprintf("%s", hex.EncodeToString(indexId[:]))}
 
-	subcommand, err := parse_cmd_check(repo.AppContext(), args)
+	subcommand := &Check{}
+	err := subcommand.Parse(repo.AppContext(), args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
-	require.Equal(t, "check", subcommand.(*Check).Name())
 
 	status, err := subcommand.Execute(repo.AppContext(), repo)
 	require.NoError(t, err)

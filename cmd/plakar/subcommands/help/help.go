@@ -33,11 +33,10 @@ import (
 var docs embed.FS
 
 func init() {
-	subcommands.Register("help", parse_cmd_help)
+	subcommands.Register(&Help{}, "help")
 }
 
-func parse_cmd_help(ctx *appcontext.AppContext, args []string) (subcommands.Subcommand, error) {
-	var opt_style string
+func (cmd *Help) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags := flag.NewFlagSet("help", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS]\n", flags.Name())
@@ -45,7 +44,7 @@ func parse_cmd_help(ctx *appcontext.AppContext, args []string) (subcommands.Subc
 		flags.PrintDefaults()
 		fmt.Fprint(flags.Output(), "\nTo view the man page for a specific command, run 'plakar help SUBCOMMAND'.\n")
 	}
-	flags.StringVar(&opt_style, "style", "dracula", "style to use")
+	flags.StringVar(&cmd.Style, "style", "dracula", "style to use")
 	flags.Parse(args)
 
 	command := ""
@@ -53,11 +52,9 @@ func parse_cmd_help(ctx *appcontext.AppContext, args []string) (subcommands.Subc
 		command = flags.Arg(0)
 	}
 
-	return &Help{
-		Style:   opt_style,
-		Command: command,
-	}, nil
+	cmd.Command = command
 
+	return nil
 }
 
 type Help struct {

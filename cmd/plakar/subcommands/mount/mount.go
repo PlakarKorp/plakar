@@ -25,10 +25,10 @@ import (
 )
 
 func init() {
-	subcommands.Register("mount", parse_cmd_mount)
+	subcommands.Register(&Mount{}, "mount")
 }
 
-func parse_cmd_mount(ctx *appcontext.AppContext, args []string) (subcommands.Subcommand, error) {
+func (cmd *Mount) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags := flag.NewFlagSet("mount", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s PATH\n", flags.Name())
@@ -36,13 +36,13 @@ func parse_cmd_mount(ctx *appcontext.AppContext, args []string) (subcommands.Sub
 	flags.Parse(args)
 
 	if flags.NArg() != 1 {
-		ctx.GetLogger().Error("need mountpoint")
-		return nil, fmt.Errorf("need mountpoint")
+		return fmt.Errorf("need mountpoint")
 	}
-	return &Mount{
-		RepositorySecret: ctx.GetSecret(),
-		Mountpoint:       flags.Arg(0),
-	}, nil
+
+	cmd.RepositorySecret = ctx.GetSecret()
+	cmd.Mountpoint = flags.Arg(0)
+
+	return nil
 }
 
 type Mount struct {

@@ -27,13 +27,11 @@ import (
 )
 
 func init() {
-	subcommands.Register("server", parse_cmd_server)
+	subcommands.Register(&Server{}, "server")
 }
 
-func parse_cmd_server(ctx *appcontext.AppContext, args []string) (subcommands.Subcommand, error) {
-	var opt_listen string
+func (cmd *Server) Parse(ctx *appcontext.AppContext, args []string) error {
 	var opt_allowdelete bool
-
 	flags := flag.NewFlagSet("server", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS]\n", flags.Name())
@@ -41,7 +39,7 @@ func parse_cmd_server(ctx *appcontext.AppContext, args []string) (subcommands.Su
 		flags.PrintDefaults()
 	}
 
-	flags.StringVar(&opt_listen, "listen", "127.0.0.1:9876", "address to listen on")
+	flags.StringVar(&cmd.ListenAddr, "listen", "127.0.0.1:9876", "address to listen on")
 	flags.BoolVar(&opt_allowdelete, "allow-delete", false, "enable delete operations")
 	flags.Parse(args)
 
@@ -49,12 +47,11 @@ func parse_cmd_server(ctx *appcontext.AppContext, args []string) (subcommands.Su
 	if opt_allowdelete {
 		noDelete = false
 	}
-	return &Server{
-		RepositorySecret: ctx.GetSecret(),
 
-		ListenAddr: opt_listen,
-		NoDelete:   noDelete,
-	}, nil
+	cmd.RepositorySecret = ctx.GetSecret()
+	cmd.NoDelete = noDelete
+
+	return nil
 }
 
 type Server struct {

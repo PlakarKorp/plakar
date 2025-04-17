@@ -105,7 +105,8 @@ func TestExecuteCmdCreateDefault(t *testing.T) {
 	ctx.HomeDir = repo.Location()
 	args := []string{tmpBackupDir}
 
-	subcommand, err := parse_cmd_backup(ctx, args)
+	subcommand := &Backup{}
+	err := subcommand.Parse(ctx, args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
 
@@ -144,7 +145,8 @@ func TestExecuteCmdCreateDefaultWithExcludes(t *testing.T) {
 	ctx.HomeDir = repo.Location()
 	args := []string{"-excludes", tmpBackupDir + "/subdir/to_exclude", tmpBackupDir}
 
-	subcommand, err := parse_cmd_backup(ctx, args)
+	subcommand := &Backup{}
+	err := subcommand.Parse(ctx, args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
 

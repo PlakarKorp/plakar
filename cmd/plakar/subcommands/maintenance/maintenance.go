@@ -35,19 +35,19 @@ import (
 )
 
 func init() {
-	subcommands.Register("maintenance", parse_cmd_maintenance)
+	subcommands.Register(&Maintenance{}, "maintenance")
 }
 
-func parse_cmd_maintenance(ctx *appcontext.AppContext, args []string) (subcommands.Subcommand, error) {
+func (cmd *Maintenance) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags := flag.NewFlagSet("maintenance", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s\n", flags.Name())
 	}
 	flags.Parse(args)
 
-	return &Maintenance{
-		RepositorySecret: ctx.GetSecret(),
-	}, nil
+	cmd.RepositorySecret = ctx.GetSecret()
+
+	return nil
 }
 
 type Maintenance struct {

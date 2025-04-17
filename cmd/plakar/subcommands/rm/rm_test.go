@@ -40,10 +40,11 @@ func TestExecuteCmdRmDefault(t *testing.T) {
 
 	args := []string{"-latest"}
 
-	subcommand, err := parse_cmd_rm(repo.AppContext(), args)
+	subcommand := &Rm{}
+	err := subcommand.Parse(repo.AppContext(), args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
-	require.Equal(t, "rm", subcommand.(*Rm).Name())
+	require.Equal(t, "rm", subcommand.Name())
 
 	status, err := subcommand.Execute(repo.AppContext(), repo)
 	require.NoError(t, err)
@@ -62,10 +63,10 @@ func TestExecuteCmdRmWithSnapshot(t *testing.T) {
 
 	args := []string{hex.EncodeToString(snap.Header.GetIndexShortID())}
 
-	subcommand, err := parse_cmd_rm(repo.AppContext(), args)
+	subcommand := &Rm{}
+	err := subcommand.Parse(repo.AppContext(), args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
-	require.Equal(t, "rm", subcommand.(*Rm).Name())
 
 	status, err := subcommand.Execute(repo.AppContext(), repo)
 	require.NoError(t, err)

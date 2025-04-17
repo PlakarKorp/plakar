@@ -52,10 +52,11 @@ func TestExecuteCmdDiffIdentical(t *testing.T) {
 	snapPath2 := fmt.Sprintf("%s:%s/subdir/dummy.txt", hex.EncodeToString(indexId2[:]), backupDir2)
 	args := []string{snapPath1, snapPath2}
 
-	subcommand, err := parse_cmd_diff(repo.AppContext(), args)
+	subcommand := &Diff{}
+	err := subcommand.Parse(repo.AppContext(), args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
-	require.Equal(t, "diff", subcommand.(*Diff).Name())
+	require.Equal(t, "diff", subcommand.Name())
 
 	status, err := subcommand.Execute(repo.AppContext(), repo)
 	require.NoError(t, err)
@@ -99,10 +100,10 @@ func TestExecuteCmdDiffFiles(t *testing.T) {
 	snapPath2 := fmt.Sprintf("%s:subdir/dummy.txt", hex.EncodeToString(indexId2[:]))
 	args := []string{snapPath1, snapPath2}
 
-	subcommand, err := parse_cmd_diff(repo.AppContext(), args)
+	subcommand := &Diff{}
+	err := subcommand.Parse(repo.AppContext(), args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
-	require.Equal(t, "diff", subcommand.(*Diff).Name())
 
 	status, err := subcommand.Execute(repo.AppContext(), repo)
 	require.NoError(t, err)

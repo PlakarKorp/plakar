@@ -34,7 +34,7 @@ import (
 )
 
 func init() {
-	subcommands.Register("backup", parse_cmd_backup)
+	subcommands.Register(&Backup{}, "backup")
 }
 
 type excludeFlags []string
@@ -48,16 +48,9 @@ func (e *excludeFlags) Set(value string) error {
 	return nil
 }
 
-func parse_cmd_backup(ctx *appcontext.AppContext, args []string) (subcommands.Subcommand, error) {
-	var opt_tags string
+func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
 	var opt_excludes string
 	var opt_exclude excludeFlags
-	var opt_concurrency uint64
-	var opt_quiet bool
-	var opt_silent bool
-	var opt_check bool
-	// var opt_stdio bool
-
 	excludes := []string{}
 
 	flags := flag.NewFlagSet("backup", flag.ExitOnError)
@@ -68,19 +61,19 @@ func parse_cmd_backup(ctx *appcontext.AppContext, args []string) (subcommands.Su
 		flags.PrintDefaults()
 	}
 
-	flags.Uint64Var(&opt_concurrency, "concurrency", uint64(ctx.MaxConcurrency), "maximum number of parallel tasks")
-	flags.StringVar(&opt_tags, "tag", "", "tag to assign to this snapshot")
+	flags.Uint64Var(&cmd.Concurrency, "concurrency", uint64(ctx.MaxConcurrency), "maximum number of parallel tasks")
+	flags.StringVar(&cmd.Tags, "tag", "", "tag to assign to this snapshot")
 	flags.StringVar(&opt_excludes, "excludes", "", "path to a file containing newline-separated regex patterns, treated as -exclude")
 	flags.Var(&opt_exclude, "exclude", "glob pattern to exclude files, can be specified multiple times to add several exclusion patterns")
-	flags.BoolVar(&opt_quiet, "quiet", false, "suppress output")
-	flags.BoolVar(&opt_silent, "silent", false, "suppress ALL output")
-	flags.BoolVar(&opt_check, "check", false, "check the snapshot after creating it")
+	flags.BoolVar(&cmd.Quiet, "quiet", false, "suppress output")
+	flags.BoolVar(&cmd.Silent, "silent", false, "suppress ALL output")
+	flags.BoolVar(&cmd.OptCheck, "check", false, "check the snapshot after creating it")
 	//flags.BoolVar(&opt_stdio, "stdio", false, "output one line per file to stdout instead of the default interactive output")
 	flags.Parse(args)
 
 	for _, item := range opt_exclude {
 		if _, err := glob.Compile(item); err != nil {
-			return nil, fmt.Errorf("failed to compile exclude pattern: %s", item)
+			return fmt.Errorf("failed to compile exclude pattern: %s", item)
 		}
 		excludes = append(excludes, item)
 	}
@@ -88,7 +81,7 @@ func parse_cmd_backup(ctx *appcontext.AppContext, args []string) (subcommands.Su
 	if opt_excludes != "" {
 		fp, err := os.Open(opt_excludes)
 		if err != nil {
-			return nil, fmt.Errorf("unable to open excludes file: %w", err)
+			return fmt.Errorf("unable to open excludes file: %w", err)
 		}
 		defer fp.Close()
 
@@ -97,24 +90,21 @@ func parse_cmd_backup(ctx *appcontext.AppContext, args []string) (subcommands.Su
 			line := scanner.Text()
 			_, err := glob.Compile(line)
 			if err != nil {
-				return nil, fmt.Errorf("failed to compile exclude pattern: %s", line)
+				return fmt.Errorf("failed to compile exclude pattern: %s", line)
 			}
 			excludes = append(excludes, line)
 		}
 		if err := scanner.Err(); err != nil {
 			ctx.GetLogger().Error("%s", err)
-			return nil, err
+			return err
 		}
 	}
-	return &Backup{
-		RepositorySecret: ctx.GetSecret(),
-		Concurrency:      opt_concurrency,
-		Tags:             opt_tags,
-		Excludes:         excludes,
-		Quiet:            opt_quiet,
-		Path:             flags.Arg(0),
-		OptCheck:         opt_check,
-	}, nil
+
+	cmd.RepositorySecret = ctx.GetSecret()
+	cmd.Excludes = excludes
+	cmd.Path = flags.Arg(0)
+
+	return nil
 }
 
 type Backup struct {

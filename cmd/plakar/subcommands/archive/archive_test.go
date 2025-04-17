@@ -41,10 +41,11 @@ func TestExecuteCmdArchiveDefault(t *testing.T) {
 	outputDir := fmt.Sprintf("%s/archive_test", tmpDestinationDir)
 	args := []string{"-output", outputDir, fmt.Sprintf("%s", hex.EncodeToString(indexId[:]))}
 
-	subcommand, err := parse_cmd_archive(repo.AppContext(), args)
+	subcommand := &Archive{}
+	err = subcommand.Parse(repo.AppContext(), args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
-	require.Equal(t, "archive", subcommand.(*Archive).Name())
+	require.Equal(t, "archive", subcommand.Name())
 
 	status, err := subcommand.Execute(repo.AppContext(), repo)
 	require.NoError(t, err)

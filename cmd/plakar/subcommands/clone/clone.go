@@ -35,10 +35,10 @@ import (
 )
 
 func init() {
-	subcommands.Register("clone", parse_cmd_clone)
+	subcommands.Register(&Clone{}, "clone")
 }
 
-func parse_cmd_clone(ctx *appcontext.AppContext, args []string) (subcommands.Subcommand, error) {
+func (cmd *Clone) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags := flag.NewFlagSet("clone", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s to /path/to/repository\n", flags.Name())
@@ -49,13 +49,13 @@ func parse_cmd_clone(ctx *appcontext.AppContext, args []string) (subcommands.Sub
 	flags.Parse(args)
 
 	if flags.NArg() != 2 || flags.Arg(0) != "to" {
-		return nil, fmt.Errorf("usage: %s to <repository>. See '%s -h' or 'help %s'", flags.Name(), flags.Name(), flags.Name())
+		return fmt.Errorf("usage: %s to <repository>. See '%s -h' or 'help %s'", flags.Name(), flags.Name(), flags.Name())
 	}
 
-	return &Clone{
-		RepositorySecret: ctx.GetSecret(),
-		Dest:             flags.Arg(1),
-	}, nil
+	cmd.RepositorySecret = ctx.GetSecret()
+	cmd.Dest = flags.Arg(1)
+
+	return nil
 }
 
 type Clone struct {

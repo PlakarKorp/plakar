@@ -10,23 +10,32 @@ import (
 )
 
 type Subcommand interface {
+	// Parse the command specific arguments.
+	Parse(ctx *appcontext.AppContext, args []string) error
+
+	// Executes the actual command
 	Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error)
 }
 
-type parseArgsFn func(*appcontext.AppContext, []string) (Subcommand, error)
-
-var subcommands map[string]parseArgsFn = make(map[string]parseArgsFn)
-
-func Register(command string, fn parseArgsFn) {
-	subcommands[command] = fn
+type subcmd struct {
+	args []string
+	cmd  Subcommand
 }
 
-func Parse(ctx *appcontext.AppContext, command string, args []string) (Subcommand, error) {
-	parsefn, exists := subcommands[command]
-	if !exists {
-		return nil, fmt.Errorf("unknown command: %s", command)
+var subcommands map[string]Subcommand = make(map[string]Subcommand)
+
+func Register(cmd Subcommand, name string) {
+	subcommands[name] = cmd
+}
+
+func Lookup(name string) Subcommand {
+	cmd, ok := subcommands[name]
+
+	if !ok {
+		return nil
+	} else {
+		return cmd
 	}
-	return parsefn(ctx, args)
 }
 
 func List() []string {

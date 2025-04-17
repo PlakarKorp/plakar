@@ -40,10 +40,12 @@ func TestExecuteCmdLocateDefault(t *testing.T) {
 
 	args := []string{"dummy.txt"}
 
-	subcommand, err := parse_cmd_locate(repo.AppContext(), args)
+	subcommand := &Locate{}
+	err := subcommand.Parse(repo.AppContext(), args)
+
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
-	require.Equal(t, "locate", subcommand.(*Locate).Name())
+	require.Equal(t, "locate", subcommand.Name())
 
 	status, err := subcommand.Execute(repo.AppContext(), repo)
 	require.NoError(t, err)
@@ -66,10 +68,11 @@ func TestExecuteCmdLocateWithSnapshotId(t *testing.T) {
 
 	args := []string{"-snapshot", hex.EncodeToString(snap.Header.GetIndexShortID()), "dummy.txt"}
 
-	subcommand, err := parse_cmd_locate(repo.AppContext(), args)
+	subcommand := &Locate{}
+	err := subcommand.Parse(repo.AppContext(), args)
+
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
-	require.Equal(t, "locate", subcommand.(*Locate).Name())
 
 	status, err := subcommand.Execute(repo.AppContext(), repo)
 	require.NoError(t, err)
