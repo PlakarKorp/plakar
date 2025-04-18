@@ -79,6 +79,7 @@ func snapshotReader(w http.ResponseWriter, r *http.Request) error {
 
 	do_highlight := false
 	do_download := false
+	do_raw := false
 
 	download := r.URL.Query().Get("download")
 	if download == "true" {
@@ -88,6 +89,10 @@ func snapshotReader(w http.ResponseWriter, r *http.Request) error {
 	render := r.URL.Query().Get("render")
 	if render == "highlight" {
 		do_highlight = true
+	}
+
+	if r.URL.Query().Get("raw") == "true" {
+		do_raw = true
 	}
 
 	snap, err := loadsnap(lrepository, snapshotID32)
@@ -134,7 +139,7 @@ func snapshotReader(w http.ResponseWriter, r *http.Request) error {
 		// best-effort to serve HTML & co as-is.  golang http
 		// sniffer actually alway uses "text/html;
 		// charset=utf-8".
-		if strings.HasPrefix(ctype, "text/") {
+		if do_raw && strings.HasPrefix(ctype, "text/") {
 			ctype = "text/plain; charset=utf-8"
 		}
 
