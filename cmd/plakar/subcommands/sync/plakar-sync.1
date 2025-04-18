@@ -1,4 +1,4 @@
-.Dd February 1, 2025
+.Dd April 18, 2025
 .Dt PLAKAR-SYNC 1
 .Os
 .Sh NAME
@@ -6,6 +6,15 @@
 .Nd Synchronize snapshots between Plakar repositories
 .Sh SYNOPSIS
 .Nm
+.Op Fl name Ar name
+.Op Fl category Ar category
+.Op Fl environment Ar environment
+.Op Fl perimeter Ar perimeter
+.Op Fl job Ar job
+.Op Fl tag Ar tag
+.Op Fl latest
+.Op Fl before Ar date
+.Op Fl since Ar date
 .Op Ar snapshotID
 .Cm to | from | with
 .Ar repository
@@ -15,6 +24,44 @@ The
 command synchronize snapshots between two Plakar repositories.
 If a specific snapshot ID is provided, only snapshots with matching
 IDs will be synchronized.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl name Ar string
+Only apply command to snapshots that match
+.Ar name .
+.It Fl category Ar string
+Only apply command to snapshots that match
+.Ar category .
+.It Fl environment Ar string
+Only apply command to snapshots that match
+.Ar environment .
+.It Fl perimeter Ar string
+Only apply command to snapshots that match
+.Ar perimeter .
+.It Fl job Ar string
+Only apply command to snapshots that match
+.Ar job .
+.It Fl tag Ar string
+Only apply command to snapshots that match
+.Ar tag .
+.It Fl latest
+Only apply command to latest snapshot matching filters.
+.It Fl before Ar date
+Only apply command to snapshots matching filters and older than the specified
+date.
+Accepted formats include relative durations
+.Pq e.g. "2d" for two days, "1w" for one week
+or specific dates in various formats
+.Pq e.g. "2006-01-02 15:04:05" .
+.It Fl since Ar date
+Only apply command to snapshots matching filters and created since the specified
+date, included.
+Accepted formats include relative durations
+.Pq e.g. "2d" for two days, "1w" for one week
+or specific dates in various formats
+.Pq e.g. "2006-01-02 15:04:05" .
+.El
 .Pp
 The arguments are as follows:
 .Bl -tag -width Ds
@@ -35,9 +82,16 @@ are fully synchronized.
 Path to the peer repository to synchronize with.
 .El
 .Sh EXAMPLES
-Bi-directional synchronization with peer repository:
+Synchronize the snapshot
+.Sq abcd
+with a peer repository:
 .Bd -literal -offset indent
-$ plakar sync with /path/to/peer/repo
+$ plakar sync abcd to @peer
+.Ed
+.Pp
+Bi-directional synchronization with peer repository of recent snapshots:
+.Bd -literal -offset indent
+$ plakar sync -since 7d with @peer
 .Ed
 .Sh DIAGNOSTICS
 .Ex -std

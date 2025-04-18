@@ -36,15 +36,18 @@ func init() {
 }
 
 func parse_cmd_sync(ctx *appcontext.AppContext, args []string) (subcommands.Subcommand, error) {
+	locateopts := utils.NewDefaultLocateOptions()
+
 	flags := flag.NewFlagSet("sync", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s [SNAPSHOT] to REPOSITORY\n", flags.Name())
 		fmt.Fprintf(flags.Output(), "       %s [SNAPSHOT] from REPOSITORY\n", flags.Name())
 		flags.PrintDefaults()
 	}
+
+	locateopts.InstallFlags(flags)
 	flags.Parse(args)
 
-	syncSnapshotID := ""
 	direction := ""
 	peerRepositoryPath := ""
 
@@ -54,7 +57,10 @@ func parse_cmd_sync(ctx *appcontext.AppContext, args []string) (subcommands.Subc
 		direction = args[0]
 		peerRepositoryPath = args[1]
 	case 3:
-		syncSnapshotID = args[0]
+		if !locateopts.Empty() {
+			ctx.GetLogger().Warn("snapshot specified, filters will be ignored")
+		}
+		locateopts.Prefix = args[0]
 		direction = args[1]
 		peerRepositoryPath = args[2]
 
@@ -125,7 +131,7 @@ func parse_cmd_sync(ctx *appcontext.AppContext, args []string) (subcommands.Subc
 		PeerRepositoryLocation: peerRepositoryPath,
 		PeerRepositorySecret:   peerSecret,
 		Direction:              direction,
-		SnapshotPrefix:         syncSnapshotID,
+		SrcLocateOptions:       locateopts,
 	}, nil
 }
 
@@ -137,7 +143,7 @@ type Sync struct {
 
 	Direction string
 
-	SnapshotPrefix string
+	SrcLocateOptions *utils.LocateOptions
 }
 
 func (cmd *Sync) Name() string {
@@ -201,9 +207,7 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 
 	srcSyncList := make([]objects.MAC, 0)
 
-	srcLocateOptions := utils.NewDefaultLocateOptions()
-	srcLocateOptions.Prefix = cmd.SnapshotPrefix
-	srcSnapshotIDs, err := utils.LocateSnapshotIDs(srcRepository, srcLocateOptions)
+	srcSnapshotIDs, err := utils.LocateSnapshotIDs(srcRepository, cmd.SrcLocateOptions)
 	if err != nil {
 		return 1, fmt.Errorf("could not locate snapshots in source repository %s: %s", dstRepository.Location(), err)
 	}
@@ -223,7 +227,7 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 	}
 
 	if cmd.Direction == "with" {
-		dstSnapshotIDs, err := utils.LocateSnapshotIDs(dstRepository, srcLocateOptions)
+		dstSnapshotIDs, err := utils.LocateSnapshotIDs(dstRepository, cmd.SrcLocateOptions)
 		if err != nil {
 			return 1, fmt.Errorf("could not locate snapshots in peer repository %s: %s", dstRepository.Location(), err)
 		}
