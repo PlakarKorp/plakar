@@ -12,7 +12,6 @@ import (
 	"path"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/PlakarKorp/plakar/caching/lru"
@@ -122,28 +121,25 @@ func snapshotReader(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	if !do_highlight {
-		ctype := mime.TypeByExtension(filepath.Ext(path))
-		if ctype == "" {
-			content := file.(io.ReadSeeker)
-			// read a chunk to decide between utf-8 text and binary
-			var buf [512]byte
-			n, _ := io.ReadFull(content, buf[:])
-			ctype = http.DetectContentType(buf[:n])
-			_, err := content.Seek(0, io.SeekStart) // rewind to output whole file
-			if err != nil {
-				http.Error(w, "seeker can't seek", http.StatusInternalServerError)
-				return nil
+
+		if do_raw {
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		} else {
+			ctype := mime.TypeByExtension(filepath.Ext(path))
+			if ctype == "" {
+				content := file.(io.ReadSeeker)
+				// read a chunk to decide between utf-8 text and binary
+				var buf [512]byte
+				n, _ := io.ReadFull(content, buf[:])
+				ctype = http.DetectContentType(buf[:n])
+				_, err := content.Seek(0, io.SeekStart) // rewind to output whole file
+				if err != nil {
+					http.Error(w, "seeker can't seek", http.StatusInternalServerError)
+					return nil
+				}
 			}
+			w.Header().Set("Content-Type", ctype)
 		}
-
-		// best-effort to serve HTML & co as-is.  golang http
-		// sniffer actually alway uses "text/html;
-		// charset=utf-8".
-		if do_raw && strings.HasPrefix(ctype, "text/") {
-			ctype = "text/plain; charset=utf-8"
-		}
-
-		w.Header().Set("Content-Type", ctype)
 
 		http.ServeContent(w, r, filepath.Base(path), entry.Stat().ModTime(), file.(io.ReadSeeker))
 		return nil
