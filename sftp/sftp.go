@@ -25,92 +25,40 @@ import (
 	"golang.org/x/term"
 )
 
-func Connect(endpoint *url.URL, config map[string]string) (*sftp.Client, error) {
-	// if plakar config has identity or insecure_ignore_host_key, use them
-	identity := config["identity"]
-	ignoreHostKey := config["insecure_ignore_host_key"] == "true"
+type config struct {
+	user               string
+	host               string
+	port               string
+	identity           string
+	knownHosts         string
+	strictHostChecking bool
+	proxyCmd           string
+}
 
-	// resolve ~/.ssh/config and provide fallback values
-	sshConfig := resolveSSHConfig(endpoint.User.Username(), endpoint.Hostname(), endpoint.Port())
-
-	var username string
-	var host string
-	var port string
-
-	// this is either the override or the default fallback
-	host = sshConfig["host"]
-	port = sshConfig["port"]
-
-	// if username is set in the URL, use it otherwise:
-	// - fallback to ssh_config
-	// - fallback to the user environment variable
-	// - fallback to the current user
-	if endpoint.User.Username() != "" {
-		username = endpoint.User.Username()
-	} else {
-		username = sshConfig["user"]
-		if username == "" {
-			username = os.Getenv("USER")
-			if username == "" {
-				u, err := user.Current()
-				if err != nil {
-					return nil, err
-				}
-				username = u.Username
-			}
-		}
-	}
-
-	// if identity is set in sshConfig and we didn't get one from the config, use it
-	if sshConfig["identity"] != "" && identity == "" {
-		identity = sshConfig["identity"]
-		if strings.HasPrefix(identity, "~/") {
-			home, err := os.UserHomeDir()
-			if err != nil {
-				return nil, fmt.Errorf("failed to get home directory: %v", err)
-			}
-			identity = filepath.Join(home, identity[2:])
-		}
-	}
-
-	// look for home directory to resolve known hosts...
-	homeDir, err := os.UserHomeDir()
+func Connect(endpoint *url.URL, params map[string]string) (*sftp.Client, error) {
+	home, err := os.UserHomeDir()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get home directory: %v", err)
 	}
 
-	// ... unless one was provided in config for override
-	knownHostsPath := filepath.Join(homeDir, ".ssh", "known_hosts")
-	if customPath := sshConfig["known_hosts"]; customPath != "" {
-		knownHostsPath = customPath
+	config, err := parseconfig(home, params, endpoint)
+	if err != nil {
+		return nil, err
 	}
 
-	if sshConfig["strict_host_checking"] != "" && !ignoreHostKey {
-		switch strings.ToLower(sshConfig["strict_host_checking"]) {
-		case "no":
-			ignoreHostKey = true
-		case "yes":
-			ignoreHostKey = false
-		case "ask":
-			// current prompt behavior
-		default:
-			// fallback to current prompt behavior
-		}
-	}
-
-	hostKeyCallback, err := safeHostKeyCallback(knownHostsPath, ignoreHostKey)
+	hostKeyCallback, err := safeHostKeyCallback(config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create host key callback: %w", err)
 	}
 
-	target := net.JoinHostPort(host, port)
-	proxyCommand := sshConfig["proxy_command"]
+	target := net.JoinHostPort(config.host, config.port)
+	proxyCommand := config.proxyCmd
 
 	// if there's a proxy command, pipe
 	var conn net.Conn
 	if proxyCommand != "" {
-		proxyCommand = strings.ReplaceAll(proxyCommand, "%h", host)
-		proxyCommand = strings.ReplaceAll(proxyCommand, "%p", port)
+		proxyCommand = strings.ReplaceAll(proxyCommand, "%h", config.host)
+		proxyCommand = strings.ReplaceAll(proxyCommand, "%p", config.port)
 
 		cmd := exec.Command("sh", "-c", proxyCommand)
 		stdin, err := cmd.StdinPipe()
@@ -140,10 +88,10 @@ func Connect(endpoint *url.URL, config map[string]string) (*sftp.Client, error) 
 	// we're done !
 	// connect to the server (or proxy)
 	sshClientConn, chans, reqs, err := ssh.NewClientConn(conn, target, &ssh.ClientConfig{
-		User: username,
+		User: config.user,
 		Auth: []ssh.AuthMethod{
 			ssh.PublicKeysCallback(func() ([]ssh.Signer, error) {
-				return loadSigners(identity)
+				return loadSigners(config.identity)
 			}),
 		},
 		HostKeyCallback: hostKeyCallback,
@@ -162,43 +110,71 @@ func Connect(endpoint *url.URL, config map[string]string) (*sftp.Client, error) 
 	return sftpClient, nil
 }
 
-func resolveSSHConfig(username string, host string, port string) map[string]string {
-	cfgPath := filepath.Join(os.Getenv("HOME"), ".ssh", "config")
-	file, err := os.Open(cfgPath)
-	if err != nil {
-		return map[string]string{}
-	}
-	defer file.Close()
-
-	cfg, err := sshcfg.Decode(file)
-	if err != nil {
-		return map[string]string{}
-	}
-
-	get := func(field string) string {
-		val, err := cfg.Get(host, field)
-		if err != nil {
-			return ""
+func parseconfig(home string, params map[string]string, endpoint *url.URL) (*config, error) {
+	username := endpoint.User.Username()
+	if username == "" {
+		username = os.Getenv("USER")
+		if username == "" {
+			u, err := user.Current()
+			if err != nil {
+				return nil, fmt.Errorf("can't get current user: %v", err)
+			}
+			username = u.Username
 		}
-		return val
 	}
 
-	return map[string]string{
-		"host":                 fallback(get("HostName"), host),
-		"user":                 fallback(get("User"), username),
-		"port":                 fallback(fallback(get("Port"), port), "22"),
-		"identity":             get("IdentityFile"),
-		"known_hosts":          get("UserKnownHostsFile"),
-		"strict_host_checking": get("StrictHostKeyChecking"),
-		"proxy_command":        get("ProxyCommand"),
+	cfgPath := filepath.Join(home, ".ssh", "config")
+	file, err := os.Open(cfgPath)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, fmt.Errorf("failed to open %s: %v", cfgPath, err)
 	}
-}
 
-func fallback(primary, fallback string) string {
-	if primary != "" {
-		return primary
+	var cfg *sshcfg.Config
+	if file != nil {
+		cfg, err = sshcfg.Decode(file)
+		file.Close()
+		if err != nil {
+			return nil, err
+		}
 	}
-	return fallback
+
+	host := endpoint.Hostname()
+	get := func(field string, def ...string) string {
+		var ret string
+		if cfg != nil {
+			ret, _ = cfg.Get(host, field)
+		}
+		if ret == "" {
+			for _, d := range def {
+				if d != "" {
+					return d
+				}
+			}
+		}
+		return ""
+	}
+
+	strict := params["insecure_ignore_host_key"] == "true"
+	if !strict {
+		strict = get("StrictHostKeyChecking") == "yes"
+	}
+
+	knownHosts := filepath.Join(home, ".ssh", "known_hosts")
+	conf := &config{
+		user:               get("User", username),
+		host:               get("HostName", host),
+		port:               get("Port", endpoint.Port(), "22"),
+		identity:           get("IdentityFile", params["identity"]),
+		knownHosts:         get("UserKnownHostsFile", knownHosts),
+		strictHostChecking: strict,
+		proxyCmd:           get("ProxyCommand"),
+	}
+
+	if strings.HasPrefix(conf.identity, "~/") {
+		conf.identity = filepath.Join(home, conf.identity[2:])
+	}
+
+	return conf, nil
 }
 
 func loadSigners(keyPath string) ([]ssh.Signer, error) {
@@ -239,17 +215,21 @@ func loadSigners(keyPath string) ([]ssh.Signer, error) {
 		if conn, err := net.Dial("unix", sock); err == nil {
 			ag := agent.NewClient(conn)
 			if agentSigners, err := ag.Signers(); err == nil && len(agentSigners) > 0 {
-				return agentSigners, nil // ✅ Use agent keys silently
+				return agentSigners, nil
 			}
 		}
 	}
 
 	// 2. Fallback to local keys
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
 	keyFiles := []string{
-		filepath.Join(os.Getenv("HOME"), ".ssh", "id_rsa"),
-		filepath.Join(os.Getenv("HOME"), ".ssh", "id_ed25519"),
-		filepath.Join(os.Getenv("HOME"), ".ssh", "id_ecdsa"),
-		filepath.Join(os.Getenv("HOME"), ".ssh", "id_dsa"),
+		filepath.Join(home, ".ssh", "id_rsa"),
+		filepath.Join(home, ".ssh", "id_ed25519"),
+		filepath.Join(home, ".ssh", "id_ecdsa"),
+		filepath.Join(home, ".ssh", "id_dsa"),
 	}
 
 	for _, file := range keyFiles {
@@ -292,12 +272,12 @@ func sha256Fingerprint(key ssh.PublicKey) string {
 	return "SHA256:" + base64.StdEncoding.EncodeToString(hash[:])
 }
 
-func safeHostKeyCallback(knownHostsPath string, ignore bool) (ssh.HostKeyCallback, error) {
-	if ignore {
+func safeHostKeyCallback(config *config) (ssh.HostKeyCallback, error) {
+	if config.strictHostChecking {
 		return ssh.InsecureIgnoreHostKey(), nil
 	}
 
-	rawCallback, err := knownhosts.New(knownHostsPath)
+	rawCallback, err := knownhosts.New(config.knownHosts)
 	if err != nil && !os.IsNotExist(err) {
 		return nil, fmt.Errorf("failed to parse known_hosts: %w", err)
 	}
@@ -342,10 +322,10 @@ func safeHostKeyCallback(knownHostsPath string, ignore bool) (ssh.HostKeyCallbac
 		}
 		line := fmt.Sprintf("%s %s", hostKey, strings.TrimSpace(string(ssh.MarshalAuthorizedKey(key))))
 
-		if err := os.MkdirAll(filepath.Dir(knownHostsPath), 0700); err != nil {
+		if err := os.MkdirAll(filepath.Dir(config.knownHosts), 0700); err != nil {
 			return fmt.Errorf("could not create .ssh dir: %w", err)
 		}
-		f, err := os.OpenFile(knownHostsPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+		f, err := os.OpenFile(config.knownHosts, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 		if err != nil {
 			return fmt.Errorf("failed to open known_hosts file: %w", err)
 		}
