@@ -19,18 +19,13 @@ package sftp
 import (
 	"fmt"
 	"io"
-	"net"
 	"net/url"
 	"os"
-	"os/user"
-	"path"
 
 	"github.com/PlakarKorp/plakar/objects"
+	plakarsftp "github.com/PlakarKorp/plakar/sftp"
 	"github.com/PlakarKorp/plakar/snapshot/exporter"
 	"github.com/pkg/sftp"
-	"golang.org/x/crypto/ssh"
-	"golang.org/x/crypto/ssh/agent"
-	"golang.org/x/crypto/ssh/knownhosts"
 )
 
 type SFTPExporter struct {
@@ -42,115 +37,24 @@ func init() {
 	exporter.Register("sftp", NewSFTPExporter)
 }
 
-func defaultSigners() ([]ssh.Signer, error) {
-	var signers []ssh.Signer
-
-	// Try the SSH agent first.
-	if sock := os.Getenv("SSH_AUTH_SOCK"); sock != "" {
-		conn, err := net.Dial("unix", sock)
-		if err == nil {
-			ag := agent.NewClient(conn)
-			if s, err := ag.Signers(); err == nil {
-				signers = append(signers, s...)
-			}
-		}
-	}
-
-	// Fallback: load from default key files.
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return signers, err
-	}
-
-	// List of default private key paths.
-	keyFiles := []string{
-		path.Join(home, ".ssh", "id_rsa"),
-		path.Join(home, ".ssh", "id_dsa"),
-		path.Join(home, ".ssh", "id_ecdsa"),
-		path.Join(home, ".ssh", "id_ed25519"),
-	}
-
-	for _, file := range keyFiles {
-		data, err := os.ReadFile(file)
-		if err != nil {
-			continue // Skip files that don't exist.
-		}
-		signer, err := ssh.ParsePrivateKey(data)
-		if err != nil {
-			continue // Skip unparsable keys.
-		}
-		signers = append(signers, signer)
-	}
-
-	return signers, nil
-}
-
-func connect(endpoint *url.URL) (*sftp.Client, error) {
-
-	var sshHost string
-	if endpoint.Port() == "" {
-		sshHost = endpoint.Host + ":22"
-	} else {
-		sshHost = endpoint.Host
-	}
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get home directory: %v", err)
-	}
-	knownHostsPath := path.Join(homeDir, ".ssh", "known_hosts")
-
-	// Create the HostKeyCallback from the known_hosts file.
-	hostKeyCallback, err := knownhosts.New(knownHostsPath)
-	if err != nil {
-		return nil, fmt.Errorf("could not create hostkeycallback function: %v", err)
-	}
-
-	signers, err := defaultSigners()
-	if err != nil {
-		return nil, err
-	}
-
-	username := endpoint.User.Username()
-	if username == "" {
-		u, err := user.Current()
-		if err != nil {
-			return nil, err
-		}
-		username = u.Username
-	}
-
-	config := &ssh.ClientConfig{
-		User: username,
-		Auth: []ssh.AuthMethod{
-			ssh.PublicKeys(signers...),
-		},
-		HostKeyCallback: hostKeyCallback,
-	}
-
-	client, err := ssh.Dial("tcp", sshHost, config)
-	if err != nil {
-		return nil, err
-	}
-	sftpClient, err := sftp.NewClient(client)
-	if err != nil {
-		client.Close()
-		return nil, err
-	}
-	return sftpClient, nil
-}
-
 func NewSFTPExporter(config map[string]string) (exporter.Exporter, error) {
+	var err error
+
 	location := config["location"]
+	if location == "" {
+		return nil, fmt.Errorf("missing location")
+	}
 
 	parsed, err := url.Parse(location)
 	if err != nil {
 		return nil, err
 	}
 
-	client, err := connect(parsed)
+	client, err := plakarsftp.Connect(parsed, config)
 	if err != nil {
 		return nil, err
 	}
+
 	return &SFTPExporter{
 		location: parsed.Path,
 		client:   client,

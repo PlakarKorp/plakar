@@ -21,7 +21,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/PlakarKorp/plakar/appcontext"
@@ -189,15 +188,9 @@ func (cmd *Backup) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 		}
 	}
 
-	imp, err := importer.NewImporter(importerConfig)
+	imp, err := importer.NewImporter(ctx, importerConfig)
 	if err != nil {
-		if !filepath.IsAbs(scanDir) {
-			scanDir = filepath.Join(ctx.CWD, scanDir)
-		}
-		imp, err = importer.NewImporter(map[string]string{"location": "fs://" + scanDir})
-		if err != nil {
-			return 1, fmt.Errorf("failed to create an importer for %s: %s", scanDir, err)
-		}
+		return 1, fmt.Errorf("failed to create an importer for %s: %s", scanDir, err)
 	}
 	defer imp.Close()
 

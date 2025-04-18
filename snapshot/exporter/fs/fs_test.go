@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/objects"
 	"github.com/PlakarKorp/plakar/snapshot/exporter"
 	"github.com/stretchr/testify/require"
@@ -21,7 +22,10 @@ func TestExporter(t *testing.T) {
 	})
 
 	var exporterInstance exporter.Exporter
-	exporterInstance, err = exporter.NewExporter(map[string]string{"location": tmpExportDir})
+	appCtx := appcontext.NewAppContext()
+
+	// Register the fs backen
+	exporterInstance, err = exporter.NewExporter(appCtx, map[string]string{"location": tmpExportDir})
 	require.NoError(t, err)
 	defer exporterInstance.Close()
 

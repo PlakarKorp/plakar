@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
 
+	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/objects"
 )
 
@@ -46,7 +48,7 @@ func Backends() []string {
 	return ret
 }
 
-func NewExporter(config map[string]string) (Exporter, error) {
+func NewExporter(ctx *appcontext.AppContext, config map[string]string) (Exporter, error) {
 
 	location, ok := config["location"]
 	if !ok {
@@ -81,7 +83,17 @@ func NewExporter(config map[string]string) (Exporter, error) {
 		return nil, fmt.Errorf("backend '%s' does not exist", backendName)
 	} else {
 		backendInstance, err := backend(config)
-		if err != nil {
+		if err != nil && backendName != "fs" {
+			return nil, err
+		} else if err != nil {
+			location = strings.TrimPrefix(location, "fs://")
+			if !filepath.IsAbs(location) {
+				location = filepath.Join(ctx.CWD, location)
+				config["location"] = location
+				if backendInstance, err = backend(config); err == nil {
+					return backendInstance, nil
+				}
+			}
 			return nil, err
 		}
 		return backendInstance, nil

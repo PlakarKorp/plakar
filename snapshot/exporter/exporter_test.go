@@ -4,6 +4,7 @@ import (
 	"io"
 	"testing"
 
+	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/objects"
 	"github.com/stretchr/testify/require"
 )
@@ -69,7 +70,9 @@ func TestNewExporter(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.location, func(t *testing.T) {
-			exporter, err := NewExporter(map[string]string{"location": test.location})
+			appCtx := appcontext.NewAppContext()
+
+			exporter, err := NewExporter(appCtx, map[string]string{"location": test.location})
 
 			if test.expectedError != "" {
 				require.Error(t, err)
