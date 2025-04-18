@@ -131,10 +131,10 @@ func snapshotReader(w http.ResponseWriter, r *http.Request) error {
 			}
 		}
 
-		// best-effort to serve HTML as-is.  golang http
+		// best-effort to serve HTML & co as-is.  golang http
 		// sniffer actually alway uses "text/html;
 		// charset=utf-8".
-		if strings.HasPrefix(ctype, "text/html") {
+		if strings.HasPrefix(ctype, "text/") {
 			ctype = "text/plain; charset=utf-8"
 		}
 
