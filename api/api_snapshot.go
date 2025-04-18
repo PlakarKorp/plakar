@@ -594,6 +594,11 @@ func snapshotVFSErrors(w http.ResponseWriter, r *http.Request) error {
 		path = "/"
 	}
 
+	dir, err := fs.GetEntry(path)
+	if err != nil {
+		return err
+	}
+
 	errorList, err := fs.Errors(path)
 	if err != nil {
 		return err
@@ -602,14 +607,17 @@ func snapshotVFSErrors(w http.ResponseWriter, r *http.Request) error {
 	var i int64
 	items := Items[*vfs.ErrorItem]{
 		Items: []*vfs.ErrorItem{},
+		Total: int(dir.Summary.Directory.Errors + dir.Summary.Below.Errors),
 	}
 	for errorEntry := range errorList {
 		if i >= offset && i < offset+limit {
 			items.Items = append(items.Items, errorEntry)
 		}
 		i++
+		if i >= offset+limit {
+			break
+		}
 	}
-	items.Total = int(i)
 	return json.NewEncoder(w).Encode(items)
 }
 
