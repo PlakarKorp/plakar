@@ -21,6 +21,31 @@ import (
 	"time"
 )
 
+// TimeFlag implements flag.Value interface
+type TimeFlag struct {
+	dest *time.Time
+}
+
+func NewTimeFlag(dest *time.Time) *TimeFlag {
+	return &TimeFlag{dest}
+}
+
+func (t *TimeFlag) String() string {
+	if t.dest == nil || t.dest.IsZero() {
+		return ""
+	}
+	return t.dest.String()
+}
+
+func (t *TimeFlag) Set(s string) error {
+	parsed, err := ParseTimeFlag(s)
+	if err != nil {
+		return err
+	}
+	*t.dest = parsed
+	return nil
+}
+
 func ParseTimeFlag(input string) (time.Time, error) {
 	if input == "" {
 		return time.Time{}, nil

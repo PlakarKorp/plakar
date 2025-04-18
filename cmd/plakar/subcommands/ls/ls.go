@@ -39,17 +39,10 @@ func init() {
 }
 
 func parse_cmd_ls(ctx *appcontext.AppContext, args []string) (subcommands.Subcommand, error) {
-	var opt_name string
-	var opt_category string
-	var opt_environment string
-	var opt_perimeter string
-	var opt_job string
-	var opt_tag string
-	var opt_before string
-	var opt_since string
-	var opt_latest bool
 	var opt_uuid bool
 	var opt_recursive bool
+
+	locateopts := utils.NewDefaultLocateOptions()
 
 	flags := flag.NewFlagSet("ls", flag.ExitOnError)
 	flags.Usage = func() {
@@ -58,15 +51,8 @@ func parse_cmd_ls(ctx *appcontext.AppContext, args []string) (subcommands.Subcom
 		flags.PrintDefaults()
 	}
 
-	flags.StringVar(&opt_name, "name", "", "filter by name")
-	flags.StringVar(&opt_category, "category", "", "filter by category")
-	flags.StringVar(&opt_environment, "environment", "", "filter by environment")
-	flags.StringVar(&opt_perimeter, "perimeter", "", "filter by perimeter")
-	flags.StringVar(&opt_job, "job", "", "filter by job")
-	flags.StringVar(&opt_tag, "tag", "", "filter by tag")
-	flags.StringVar(&opt_before, "before", "", "filter by date")
-	flags.StringVar(&opt_since, "since", "", "filter by date")
-	flags.BoolVar(&opt_latest, "latest", false, "use latest snapshot")
+	locateopts.InstallFlags(flags)
+
 	flags.BoolVar(&opt_uuid, "uuid", false, "display uuid instead of short ID")
 	flags.BoolVar(&opt_recursive, "recursive", false, "recursive listing")
 	flags.Parse(args)
@@ -75,61 +61,23 @@ func parse_cmd_ls(ctx *appcontext.AppContext, args []string) (subcommands.Subcom
 		return nil, fmt.Errorf("too many arguments")
 	}
 
-	var err error
-
-	var beforeDate time.Time
-	if opt_before != "" {
-		beforeDate, err = utils.ParseTimeFlag(opt_before)
-		if err != nil {
-			return nil, fmt.Errorf("invalid date format: %s", opt_before)
-		}
-	}
-
-	var sinceDate time.Time
-	if opt_since != "" {
-		sinceDate, err = utils.ParseTimeFlag(opt_since)
-		if err != nil {
-			return nil, fmt.Errorf("invalid date format: %s", opt_since)
-		}
-	}
-
 	return &Ls{
 		RepositorySecret: ctx.GetSecret(),
 
-		OptBefore: beforeDate,
-		OptSince:  sinceDate,
-		OptLatest: opt_latest,
-
-		OptName:        opt_name,
-		OptCategory:    opt_category,
-		OptEnvironment: opt_environment,
-		OptPerimeter:   opt_perimeter,
-		OptJob:         opt_job,
-		OptTag:         opt_tag,
-
-		Recursive:   opt_recursive,
-		DisplayUUID: opt_uuid,
-		Path:        flags.Arg(0),
+		LocateOptions: locateopts,
+		Recursive:     opt_recursive,
+		DisplayUUID:   opt_uuid,
+		Path:          flags.Arg(0),
 	}, nil
 }
 
 type Ls struct {
 	RepositorySecret []byte
 
-	OptBefore time.Time
-	OptSince  time.Time
-	OptLatest bool
-
-	OptName        string
-	OptCategory    string
-	OptEnvironment string
-	OptPerimeter   string
-	OptJob         string
-	OptTag         string
-
-	Recursive   bool
-	DisplayUUID bool
-	Path        string
+	LocateOptions *utils.LocateOptions
+	Recursive     bool
+	DisplayUUID   bool
+	Path          string
 }
 
 func (cmd *Ls) Name() string {
@@ -151,22 +99,10 @@ func (cmd *Ls) Execute(ctx *appcontext.AppContext, repo *repository.Repository) 
 }
 
 func (cmd *Ls) list_snapshots(ctx *appcontext.AppContext, repo *repository.Repository) error {
-	locateOptions := utils.NewDefaultLocateOptions()
-	locateOptions.MaxConcurrency = ctx.MaxConcurrency
-	locateOptions.SortOrder = utils.LocateSortOrderDescending
+	cmd.LocateOptions.MaxConcurrency = ctx.MaxConcurrency
+	cmd.LocateOptions.SortOrder = utils.LocateSortOrderDescending
 
-	locateOptions.Before = cmd.OptBefore
-	locateOptions.Since = cmd.OptSince
-	locateOptions.Latest = cmd.OptLatest
-
-	locateOptions.Name = cmd.OptName
-	locateOptions.Category = cmd.OptCategory
-	locateOptions.Environment = cmd.OptEnvironment
-	locateOptions.Perimeter = cmd.OptPerimeter
-	locateOptions.Job = cmd.OptJob
-	locateOptions.Tag = cmd.OptTag
-
-	snapshotIDs, err := utils.LocateSnapshotIDs(repo, locateOptions)
+	snapshotIDs, err := utils.LocateSnapshotIDs(repo, cmd.LocateOptions)
 	if err != nil {
 		return fmt.Errorf("ls: could not fetch snapshots list: %w", err)
 	}
