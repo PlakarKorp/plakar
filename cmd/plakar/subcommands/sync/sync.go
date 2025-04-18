@@ -130,8 +130,9 @@ func (cmd *Sync) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 type Sync struct {
-	SourceRepositorySecret []byte
+	subcommands.SubcommandBase
 
+	SourceRepositorySecret []byte
 	PeerRepositoryLocation string
 	PeerRepositorySecret   []byte
 

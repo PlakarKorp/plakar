@@ -43,6 +43,8 @@ func (cmd *ConfigCmd) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 type ConfigCmd struct {
+	subcommands.SubcommandBase
+
 	args []string
 }
 

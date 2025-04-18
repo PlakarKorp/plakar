@@ -46,7 +46,7 @@ func (cmd *Mount) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 type Mount struct {
-	RepositorySecret []byte
+	subcommands.SubcommandBase
 
 	Mountpoint string
 }

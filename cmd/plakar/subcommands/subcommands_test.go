@@ -11,6 +11,7 @@ import (
 )
 
 type MockedSubcommand struct {
+	SubcommandBase
 	name string
 }
 

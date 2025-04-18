@@ -108,9 +108,9 @@ func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 type Backup struct {
-	RepositorySecret []byte
-	Job              string
+	subcommands.SubcommandBase
 
+	Job         string
 	Concurrency uint64
 	Tags        string
 	Excludes    []string

@@ -77,7 +77,7 @@ func (cmd *Restore) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 type Restore struct {
-	RepositorySecret []byte
+	subcommands.SubcommandBase
 
 	OptName        string
 	OptCategory    string

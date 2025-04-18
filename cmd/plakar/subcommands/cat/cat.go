@@ -59,7 +59,7 @@ func (cmd *Cat) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 type Cat struct {
-	RepositorySecret []byte
+	subcommands.SubcommandBase
 
 	NoDecompress bool
 	Highlight    bool

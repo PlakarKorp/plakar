@@ -46,7 +46,9 @@ func (_ *Version) Parse(ctx *appcontext.AppContext, args []string) error {
 	return nil
 }
 
-type Version struct{}
+type Version struct {
+	subcommands.SubcommandBase
+}
 
 func (cmd *Version) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	fmt.Printf("plakar/%s\n", utils.GetVersion())

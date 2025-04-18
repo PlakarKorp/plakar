@@ -55,7 +55,7 @@ func (cmd *Server) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 type Server struct {
-	RepositorySecret []byte
+	subcommands.SubcommandBase
 
 	ListenAddr string
 	NoDelete   bool

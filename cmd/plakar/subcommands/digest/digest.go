@@ -66,7 +66,7 @@ func (cmd *Digest) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 type Digest struct {
-	RepositorySecret []byte
+	subcommands.SubcommandBase
 
 	HashingFunction string
 	Targets         []string

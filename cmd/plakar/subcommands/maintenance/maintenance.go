@@ -51,7 +51,7 @@ func (cmd *Maintenance) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 type Maintenance struct {
-	RepositorySecret []byte
+	subcommands.SubcommandBase
 
 	repository    *repository.Repository
 	maintenanceID objects.MAC

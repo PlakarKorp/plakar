@@ -9,12 +9,32 @@ import (
 	"github.com/vmihailenco/msgpack/v5"
 )
 
-type Subcommand interface {
-	// Parse the command specific arguments.
-	Parse(ctx *appcontext.AppContext, args []string) error
+type CommandFlags uint32
 
-	// Executes the actual command
+const (
+	NeedRepositoryKey CommandFlags = 1 << iota
+	BeforeRepositoryOpen
+	AgentSupport
+)
+
+type Subcommand interface {
+	Parse(ctx *appcontext.AppContext, args []string) error
 	Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error)
+	GetRepositorySecret() []byte
+	GetFlags() CommandFlags
+}
+
+type SubcommandBase struct {
+	RepositorySecret []byte
+	Flags            CommandFlags
+}
+
+func (cmd *SubcommandBase) GetFlags() CommandFlags {
+	return cmd.Flags
+}
+
+func (cmd *SubcommandBase) GetRepositorySecret() []byte {
+	return cmd.RepositorySecret
 }
 
 type subcmd struct {

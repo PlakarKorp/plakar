@@ -68,6 +68,8 @@ func (cmd *Create) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 type Create struct {
+	subcommands.SubcommandBase
+
 	AllowWeak     bool
 	Hashing       string
 	NoEncryption  bool

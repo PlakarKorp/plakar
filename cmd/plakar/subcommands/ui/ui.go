@@ -55,7 +55,7 @@ func (cmd *Ui) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 type Ui struct {
-	RepositorySecret []byte
+	subcommands.SubcommandBase
 
 	Addr    string
 	Cors    bool

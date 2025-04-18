@@ -94,7 +94,7 @@ func (cmd *Rm) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 type Rm struct {
-	RepositorySecret []byte
+	subcommands.SubcommandBase
 
 	OptBefore time.Time
 	OptSince  time.Time

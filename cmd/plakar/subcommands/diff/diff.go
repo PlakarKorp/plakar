@@ -59,7 +59,7 @@ func (cmd *Diff) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 type Diff struct {
-	RepositorySecret []byte
+	subcommands.SubcommandBase
 
 	Highlight     bool
 	SnapshotPath1 string

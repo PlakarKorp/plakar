@@ -30,7 +30,7 @@ import (
 )
 
 type Archive struct {
-	RepositorySecret []byte
+	subcommands.SubcommandBase
 
 	Rebase         bool
 	Output         string

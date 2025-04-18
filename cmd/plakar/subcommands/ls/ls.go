@@ -88,6 +88,7 @@ func (cmd *Ls) Parse(ctx *appcontext.AppContext, args []string) error {
 		cmd.OptSince = sinceDate
 	}
 
+	fmt.Printf("In parse we got %x\n", ctx.GetSecret())
 	cmd.RepositorySecret = ctx.GetSecret()
 	cmd.Path = flags.Arg(0)
 
@@ -95,7 +96,7 @@ func (cmd *Ls) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 type Ls struct {
-	RepositorySecret []byte
+	subcommands.SubcommandBase
 
 	OptBefore time.Time
 	OptSince  time.Time

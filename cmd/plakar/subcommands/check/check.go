@@ -94,7 +94,7 @@ func (cmd *Check) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 type Check struct {
-	RepositorySecret []byte
+	subcommands.SubcommandBase
 
 	OptBefore time.Time
 	OptSince  time.Time

@@ -92,7 +92,7 @@ func (cmd *Locate) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 type Locate struct {
-	RepositorySecret []byte
+	subcommands.SubcommandBase
 
 	OptBefore time.Time
 	OptSince  time.Time

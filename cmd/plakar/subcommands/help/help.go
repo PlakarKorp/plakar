@@ -58,6 +58,8 @@ func (cmd *Help) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 type Help struct {
+	subcommands.SubcommandBase
+
 	Style   string
 	Command string
 }

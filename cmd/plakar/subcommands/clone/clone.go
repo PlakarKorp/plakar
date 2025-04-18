@@ -59,7 +59,7 @@ func (cmd *Clone) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 type Clone struct {
-	RepositorySecret []byte
+	subcommands.SubcommandBase
 
 	Dest string
 }
