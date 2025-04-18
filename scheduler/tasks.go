@@ -11,6 +11,7 @@ import (
 	"github.com/PlakarKorp/plakar/cmd/plakar/subcommands/restore"
 	"github.com/PlakarKorp/plakar/cmd/plakar/subcommands/rm"
 	"github.com/PlakarKorp/plakar/cmd/plakar/subcommands/sync"
+	"github.com/PlakarKorp/plakar/cmd/plakar/utils"
 	"github.com/PlakarKorp/plakar/encryption"
 	"github.com/PlakarKorp/plakar/repository"
 	"github.com/PlakarKorp/plakar/storage"
@@ -84,7 +85,8 @@ func (s *Scheduler) backupTask(taskset Task, task BackupConfig) error {
 	}
 
 	rmSubcommand := &rm.Rm{}
-	rmSubcommand.OptJob = task.Name
+	rmSubcommand.LocateOptions = utils.NewDefaultLocateOptions()
+	rmSubcommand.LocateOptions.Job = task.Name
 
 	s.wg.Add(1)
 	go func() {
@@ -115,7 +117,7 @@ func (s *Scheduler) backupTask(taskset Task, task BackupConfig) error {
 
 			if task.Retention != "" {
 				rmCtx := appcontext.NewAppContextFrom(newCtx)
-				rmSubcommand.OptBefore = time.Now().Add(-retention)
+				rmSubcommand.LocateOptions.Before = time.Now().Add(-retention)
 				retval, err = rmSubcommand.Execute(rmCtx, repo)
 				if err != nil || retval != 0 {
 					s.ctx.GetLogger().Error("Error removing obsolete backups: %s", err)
@@ -140,8 +142,9 @@ func (s *Scheduler) checkTask(taskset Task, task CheckConfig) error {
 	}
 
 	checkSubcommand := &check.Check{}
-	checkSubcommand.OptJob = taskset.Name
-	checkSubcommand.OptLatest = task.Latest
+	checkSubcommand.LocateOptions = utils.NewDefaultLocateOptions()
+	checkSubcommand.LocateOptions.Job = taskset.Name
+	checkSubcommand.LocateOptions.Latest = task.Latest
 	checkSubcommand.Silent = true
 	if task.Path != "" {
 		checkSubcommand.Snapshots = []string{":" + task.Path}
@@ -332,7 +335,7 @@ func (s *Scheduler) maintenanceTask(task MaintenanceConfig) error {
 
 			if task.Retention != "" {
 				rmCtx := appcontext.NewAppContextFrom(newCtx)
-				rmSubcommand.OptBefore = time.Now().Add(-retention)
+				rmSubcommand.LocateOptions.Before = time.Now().Add(-retention)
 				retval, err = rmSubcommand.Execute(rmCtx, repo)
 				if err != nil || retval != 0 {
 					s.ctx.GetLogger().Error("Error removing obsolete backups: %s", err)

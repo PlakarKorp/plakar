@@ -18,6 +18,7 @@ package utils
 
 import (
 	"encoding/hex"
+	"flag"
 	"fmt"
 	"path"
 	"sort"
@@ -74,6 +75,24 @@ func NewDefaultLocateOptions() *LocateOptions {
 
 		Prefix: "",
 	}
+}
+
+func (lo *LocateOptions) Empty() bool {
+	return *lo == *NewDefaultLocateOptions()
+}
+
+func (lo *LocateOptions) InstallFlags(flags *flag.FlagSet) {
+	flags.StringVar(&lo.Name, "name", "", "filter by name")
+	flags.StringVar(&lo.Category, "category", "", "filter by category")
+	flags.StringVar(&lo.Environment, "environment", "", "filter by environment")
+	flags.StringVar(&lo.Perimeter, "perimeter", "", "filter by perimeter")
+	flags.StringVar(&lo.Job, "job", "", "filter by job")
+	flags.StringVar(&lo.Tag, "tag", "", "filter by tag")
+
+	flags.BoolVar(&lo.Latest, "latest", false, "use latest snapshot")
+
+	flags.Var(NewTimeFlag(&lo.Before), "before", "filter by date")
+	flags.Var(NewTimeFlag(&lo.Since), "since", "filter by date")
 }
 
 func LocateSnapshotIDs(repo *repository.Repository, opts *LocateOptions) ([]objects.MAC, error) {
