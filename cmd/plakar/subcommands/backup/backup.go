@@ -221,12 +221,8 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 
 		checkSnap.SetCheckCache(checkCache)
 
-		ok, err := checkSnap.Check("/", checkOptions)
-		if err != nil {
+		if err := checkSnap.Check("/", checkOptions); err != nil {
 			return 1, fmt.Errorf("failed to check snapshot: %w", err), objects.MAC{}
-		}
-		if !ok {
-			return 1, fmt.Errorf("snapshot is not valid"), objects.MAC{}
 		}
 	}
 
