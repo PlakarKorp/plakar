@@ -181,13 +181,13 @@ func checkEntry(snap *Snapshot, opts *CheckOptions, entrypath string, e *vfs.Ent
 	return nil
 }
 
-func (snap *Snapshot) Check(pathname string, opts *CheckOptions) (bool, error) {
+func (snap *Snapshot) Check(pathname string, opts *CheckOptions) error {
 	snap.Event(events.StartEvent())
 	defer snap.Event(events.DoneEvent())
 
 	vfsStatus, err := snap.checkCache.GetVFSStatus(snap.Header.GetSource(0).VFS.Root)
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	// if vfsStatus is nil, we've never seen this vfs and we have
@@ -195,14 +195,14 @@ func (snap *Snapshot) Check(pathname string, opts *CheckOptions) (bool, error) {
 	// otherwise.
 	if vfsStatus != nil {
 		if len(vfsStatus) != 0 {
-			return false, fmt.Errorf("%s", string(vfsStatus))
+			return fmt.Errorf("%s", string(vfsStatus))
 		}
-		return true, nil
+		return nil
 	}
 
 	fs, err := snap.Filesystem()
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	maxConcurrency := opts.MaxConcurrency
@@ -235,20 +235,20 @@ func (snap *Snapshot) Check(pathname string, opts *CheckOptions) (bool, error) {
 	})
 	if err != nil {
 		snap.checkCache.PutVFSStatus(snap.Header.GetSource(0).VFS.Root, []byte(err.Error()))
-		return false, err
+		return err
 	}
 	if err := wg.Wait(); err != nil {
 		snap.checkCache.PutVFSStatus(snap.Header.GetSource(0).VFS.Root, []byte(err.Error()))
-		return false, err
+		return err
 	}
 	if failed {
 		snap.checkCache.PutVFSStatus(snap.Header.GetSource(0).VFS.Root,
 			[]byte(ErrRootCorrupted.Error()))
-		return false, ErrRootCorrupted
+		return ErrRootCorrupted
 	}
 
 	snap.checkCache.PutVFSStatus(snap.Header.GetSource(0).VFS.Root, []byte(""))
-	return true, nil
+	return nil
 }
 
 /**/
