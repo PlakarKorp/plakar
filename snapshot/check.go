@@ -143,11 +143,10 @@ func checkEntry(snap *Snapshot, opts *CheckOptions, entrypath string, e *vfs.Ent
 		return err
 	}
 	if entryStatus != nil {
-		if len(entryStatus) == 0 {
-			return nil
-		} else {
+		if len(entryStatus) != 0 {
 			return fmt.Errorf("%s", string(entryStatus))
 		}
+		return nil
 	}
 
 	snap.Event(events.PathEvent(snap.Header.Identifier, entrypath))
