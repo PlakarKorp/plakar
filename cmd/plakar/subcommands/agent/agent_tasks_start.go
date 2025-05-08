@@ -39,10 +39,11 @@ func (cmd *AgentTasksStart) Execute(ctx *appcontext.AppContext, repo *repository
 		return 1, fmt.Errorf("agent scheduler already running")
 	}
 
-	fmt.Println("RUNNING !", agentContextSingleton.schedulerConfig)
-	//go func() {
-	scheduler.NewScheduler(ctx, agentContextSingleton.schedulerConfig).Run()
-	//}()
+	// this needs to execute in the agent context, not the client context
+	agentContextSingleton.schedulerCtx = appcontext.NewAppContextFrom(agentContextSingleton.agentCtx)
+	go func() {
+		scheduler.NewScheduler(agentContextSingleton.schedulerCtx, agentContextSingleton.schedulerConfig).Run()
+	}()
 
 	agentContextSingleton.schedulerState = AGENT_SCHEDULER_RUNNING
 	return 0, nil

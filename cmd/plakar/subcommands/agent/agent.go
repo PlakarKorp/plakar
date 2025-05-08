@@ -132,6 +132,8 @@ var (
 )
 
 type AgentContext struct {
+	agentCtx        *appcontext.AppContext
+	schedulerCtx    *appcontext.AppContext
 	schedulerConfig *scheduler.Configuration
 	schedulerState  schedulerState
 }
@@ -196,7 +198,9 @@ func isDisconnectError(err error) bool {
 
 func (cmd *Agent) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	fmt.Println("setting singleton to", cmd, os.Getpid())
-	agentContextSingleton = &AgentContext{}
+	agentContextSingleton = &AgentContext{
+		agentCtx: ctx,
+	}
 
 	if err := cmd.ListenAndServe(ctx); err != nil {
 		return 1, err

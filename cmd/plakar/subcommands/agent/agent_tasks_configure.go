@@ -50,6 +50,16 @@ func (cmd *AgentTasksConfigure) Execute(ctx *appcontext.AppContext, repo *reposi
 	if err != nil {
 		return 1, err
 	}
+
+	if agentContextSingleton.schedulerCtx != nil {
+		fmt.Fprintf(ctx.Stderr, "Reloading agent scheduler... (may take some time)\n")
+		agentContextSingleton.schedulerCtx.Cancel()
+		agentContextSingleton.schedulerCtx = appcontext.NewAppContextFrom(agentContextSingleton.agentCtx)
+		go func() {
+			scheduler.NewScheduler(agentContextSingleton.schedulerCtx, schedConfig).Run()
+		}()
+		fmt.Fprintf(ctx.Stderr, "done !\n")
+	}
 	agentContextSingleton.schedulerConfig = schedConfig
 	return 0, nil
 }
