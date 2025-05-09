@@ -85,6 +85,7 @@ func (f *FSImporter) walkDir_walker(results chan<- *importer.ScanResult, rootDir
 	real, err := f.realpathFollow(rootDir)
 	if err != nil {
 		results <- importer.NewScanError(rootDir, err)
+		close(results)
 		return
 	}
 

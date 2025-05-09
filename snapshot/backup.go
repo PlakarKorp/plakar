@@ -205,16 +205,13 @@ func (snap *Builder) importerJob(backupCtx *BackupContext, options *BackupOption
 				}
 			}(_record)
 		}
-
-		go func() {
-			for range scanner {
-				// drain the importer channel since we might
-				// have been cancelled while the importer is
-				// trying to still produce some records.
-			}
-		}()
-
 		wg.Wait()
+
+		for range scanner {
+			// drain the importer channel since we might
+			// have been cancelled while the importer is
+			// trying to still produce some records.
+		}
 
 		close(filesChannel)
 		doneEvent := events.DoneImporterEvent()

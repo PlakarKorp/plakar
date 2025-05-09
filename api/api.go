@@ -113,24 +113,22 @@ func TokenAuthMiddleware(token string) func(http.Handler) http.Handler {
 }
 
 func apiInfo(w http.ResponseWriter, r *http.Request) error {
+	authenticated := false
 	configuration := lrepository.Configuration()
-	cache, err := lrepository.AppContext().GetCache().Repository(configuration.RepositoryID)
-	if err != nil {
-		return err
-	}
-	authToken, _ := cache.GetAuthToken()
-	if err != nil {
-		//
+	if cache, err := lrepository.AppContext().GetCache().Repository(configuration.RepositoryID); err == nil {
+		if authToken, err := cache.GetAuthToken(); err == nil && authToken != "" {
+			authenticated = true
+		}
 	}
 
 	res := &struct {
-		AuthToken string `json:"auth_token"`
-		Version   string `json:"version"`
-		Browsable bool   `json:"browsable"`
+		Authenticated bool   `json:"authenticated"`
+		Version       string `json:"version"`
+		Browsable     bool   `json:"browsable"`
 	}{
-		AuthToken: authToken,
-		Version:   utils.GetVersion(),
-		Browsable: lrepository.Store().Mode()&storage.ModeRead != 0,
+		Authenticated: authenticated,
+		Version:       utils.GetVersion(),
+		Browsable:     lrepository.Store().Mode()&storage.ModeRead != 0,
 	}
 	return json.NewEncoder(w).Encode(res)
 }
@@ -154,9 +152,16 @@ func SetupRoutes(server *http.ServeMux, repo *repository.Repository, token strin
 
 	server.Handle("GET /api/info", authToken(JSONAPIView(apiInfo)))
 
-	server.Handle("POST /api/login/github", authToken(JSONAPIView(repositoryLoginGithub)))
-	server.Handle("POST /api/login/email", authToken(JSONAPIView(repositoryLoginEmail)))
-	server.Handle("POST /api/logout", authToken(JSONAPIView(repositoryLogout)))
+	server.Handle("POST /api/authentication/login/github", authToken(JSONAPIView(servicesLoginGithub)))
+	server.Handle("POST /api/authentication/login/email", authToken(JSONAPIView(servicesLoginEmail)))
+	server.Handle("POST /api/authentication/logout", authToken(JSONAPIView(servicesLogout)))
+
+	server.Handle("GET /api/proxy/v1/account/me", authToken(JSONAPIView(servicesProxy)))
+	server.Handle("GET /api/proxy/v1/account/notifications", authToken(JSONAPIView(servicesProxy)))
+	server.Handle("POST /api/proxy/v1/account/notifications/set-status", authToken(JSONAPIView(servicesProxy)))
+	server.Handle("GET /api/proxy/v1/account/services/alerting", authToken(JSONAPIView(servicesProxy)))
+	server.Handle("PUT /api/proxy/v1/account/services/alerting", authToken(JSONAPIView(servicesProxy)))
+	server.Handle("GET /api/proxy/v1/reporting/reports", authToken(JSONAPIView(servicesProxy)))
 
 	server.Handle("GET /api/repository/info", authToken(JSONAPIView(repositoryInfo)))
 	server.Handle("GET /api/repository/snapshots", authToken(JSONAPIView(repositorySnapshots)))
