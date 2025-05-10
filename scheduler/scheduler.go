@@ -34,42 +34,26 @@ func NewScheduler(ctx *appcontext.AppContext, config *Configuration) *Scheduler 
 
 func (s *Scheduler) Run() {
 	for _, cleanupCfg := range s.config.Agent.Maintenance {
-		err := s.maintenanceTask(cleanupCfg)
-		if err != nil {
-			s.ctx.GetLogger().Error("Error configuring maintenance task: %s", err)
-		}
+		go s.maintenanceTask(cleanupCfg)
 	}
 
 	for _, tasksetCfg := range s.config.Agent.Tasks {
 		if tasksetCfg.Backup != nil {
-			err := s.backupTask(tasksetCfg, *tasksetCfg.Backup)
-			if err != nil {
-				s.ctx.GetLogger().Error("Error configuring backup task: %s", err)
-			}
+			go s.backupTask(tasksetCfg, *tasksetCfg.Backup)
 		}
 
 		for _, checkCfg := range tasksetCfg.Check {
-			err := s.checkTask(tasksetCfg, checkCfg)
-			if err != nil {
-				s.ctx.GetLogger().Error("Error configuring check task: %s", err)
-			}
+			go s.checkTask(tasksetCfg, checkCfg)
 		}
 
 		for _, restoreCfg := range tasksetCfg.Restore {
-			err := s.restoreTask(tasksetCfg, restoreCfg)
-			if err != nil {
-				s.ctx.GetLogger().Error("Error configuring restore task: %s", err)
-			}
+			go s.restoreTask(tasksetCfg, restoreCfg)
 		}
 
 		for _, syncCfg := range tasksetCfg.Sync {
-			err := s.syncTask(tasksetCfg, syncCfg)
-			if err != nil {
-				s.ctx.GetLogger().Error("Error configuring sync task: %s", err)
-			}
+			go s.syncTask(tasksetCfg, syncCfg)
 		}
 	}
-	<-make(chan struct{})
 }
 
 func (s *Scheduler) NewTaskReporter(repo *repository.Repository, taskType, taskName, repoName string) *reporting.Reporter {

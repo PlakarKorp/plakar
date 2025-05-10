@@ -1,5 +1,5 @@
 agent:
-  #reporting:
+  reporting: true
   #  emitter: http://localhost:8080/report
   maintenance:
     - interval: 10s

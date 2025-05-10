@@ -52,6 +52,12 @@ import (
 )
 
 func init() {
+	subcommands.Register(func() subcommands.Subcommand { return &AgentTasksConfigure{} },
+		subcommands.AgentSupport, "agent", "tasks", "configure")
+	subcommands.Register(func() subcommands.Subcommand { return &AgentTasksStart{} },
+		subcommands.AgentSupport, "agent", "tasks", "start")
+	subcommands.Register(func() subcommands.Subcommand { return &AgentTasksStop{} },
+		subcommands.AgentSupport, "agent", "tasks", "stop")
 	subcommands.Register(func() subcommands.Subcommand { return &AgentRestart{} },
 		subcommands.AgentSupport|subcommands.IgnoreVersion, "agent", "restart")
 	subcommands.Register(func() subcommands.Subcommand { return &AgentStop{} },
@@ -61,6 +67,8 @@ func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &Agent{} },
 		subcommands.BeforeRepositoryOpen, "agent")
 }
+
+var agentContextSingleton *AgentContext
 
 func daemonize(argv []string) error {
 	binary, err := os.Executable()
@@ -89,7 +97,6 @@ func daemonize(argv []string) error {
 
 func (cmd *Agent) Parse(ctx *appcontext.AppContext, args []string) error {
 	var opt_foreground bool
-	var opt_tasks string
 	var opt_logfile string
 
 	flags := flag.NewFlagSet("agent", flag.ExitOnError)
@@ -99,20 +106,10 @@ func (cmd *Agent) Parse(ctx *appcontext.AppContext, args []string) error {
 		flags.PrintDefaults()
 	}
 
-	flags.StringVar(&opt_tasks, "tasks", "", "tasks configuration file")
 	flags.StringVar(&cmd.prometheus, "prometheus", "", "prometheus exporter interface, e.g. 127.0.0.1:9090")
 	flags.BoolVar(&opt_foreground, "foreground", false, "run in foreground")
 	flags.StringVar(&opt_logfile, "log", "", "log file")
 	flags.Parse(args)
-
-	var schedConfig *scheduler.Configuration
-	if opt_tasks != "" {
-		tmp, err := scheduler.ParseConfigFile(opt_tasks)
-		if err != nil {
-			return err
-		}
-		schedConfig = tmp
-	}
 
 	if !opt_foreground && os.Getenv("REEXEC") == "" {
 		err := daemonize(os.Args)
@@ -128,9 +125,22 @@ func (cmd *Agent) Parse(ctx *appcontext.AppContext, args []string) error {
 	}
 
 	cmd.socketPath = filepath.Join(ctx.CacheDir, "agent.sock")
-	cmd.schedConfig = schedConfig
 
 	return nil
+}
+
+type schedulerState int8
+
+var (
+	AGENT_SCHEDULER_STOPPED schedulerState = 0
+	AGENT_SCHEDULER_RUNNING schedulerState = 1
+)
+
+type AgentContext struct {
+	agentCtx        *appcontext.AppContext
+	schedulerCtx    *appcontext.AppContext
+	schedulerConfig *scheduler.Configuration
+	schedulerState  schedulerState
 }
 
 type AgentStop struct {
@@ -192,8 +202,6 @@ type Agent struct {
 	socketPath string
 
 	listener net.Listener
-
-	schedConfig *scheduler.Configuration
 }
 
 func (cmd *Agent) checkSocket() bool {
@@ -224,10 +232,8 @@ func isDisconnectError(err error) bool {
 }
 
 func (cmd *Agent) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	if cmd.schedConfig != nil {
-		go func() {
-			scheduler.NewScheduler(ctx, cmd.schedConfig).Run()
-		}()
+	agentContextSingleton = &AgentContext{
+		agentCtx: ctx,
 	}
 
 	if err := cmd.ListenAndServe(ctx); err != nil {
