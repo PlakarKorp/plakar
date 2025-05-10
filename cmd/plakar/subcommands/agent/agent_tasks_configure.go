@@ -45,7 +45,6 @@ func (cmd *AgentTasksConfigure) Execute(ctx *appcontext.AppContext, repo *reposi
 		return 1, fmt.Errorf("agent not started")
 	}
 
-	fmt.Println("RECONFIGURE !", cmd.ConfigurationFile)
 	schedConfig, err := scheduler.ParseConfigFile(cmd.ConfigurationFile)
 	if err != nil {
 		return 1, err

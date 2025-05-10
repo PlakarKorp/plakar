@@ -121,15 +121,15 @@ type Backup struct {
 }
 
 func (cmd *Backup) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	ret, err, _ := cmd.DoBackup(ctx, repo)
+	ret, err, _, _ := cmd.DoBackup(ctx, repo)
 	return ret, err
 }
 
-func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Repository) (int, error, objects.MAC) {
+func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Repository) (int, error, objects.MAC, error) {
 	snap, err := snapshot.Create(repo, repository.DefaultType)
 	if err != nil {
 		ctx.GetLogger().Error("%s", err)
-		return 1, err, objects.MAC{}
+		return 1, err, objects.MAC{}, nil
 	}
 	defer snap.Close()
 
@@ -148,7 +148,7 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 	for _, item := range cmd.Excludes {
 		g, err := glob.Compile(item)
 		if err != nil {
-			return 1, fmt.Errorf("failed to compile exclude pattern: %s", item), objects.MAC{}
+			return 1, fmt.Errorf("failed to compile exclude pattern: %s", item), objects.MAC{}, nil
 		}
 		excludes = append(excludes, g)
 	}
@@ -171,10 +171,10 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 	if strings.HasPrefix(scanDir, "@") {
 		remote, ok := ctx.Config.GetRemote(scanDir[1:])
 		if !ok {
-			return 1, fmt.Errorf("could not resolve importer: %s", scanDir), objects.MAC{}
+			return 1, fmt.Errorf("could not resolve importer: %s", scanDir), objects.MAC{}, nil
 		}
 		if _, ok := remote["location"]; !ok {
-			return 1, fmt.Errorf("could not resolve importer location: %s", scanDir), objects.MAC{}
+			return 1, fmt.Errorf("could not resolve importer location: %s", scanDir), objects.MAC{}, nil
 		} else {
 			importerConfig = remote
 		}
@@ -182,19 +182,19 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 
 	imp, err := importer.NewImporter(ctx, importerConfig)
 	if err != nil {
-		return 1, fmt.Errorf("failed to create an importer for %s: %s", scanDir, err), objects.MAC{}
+		return 1, fmt.Errorf("failed to create an importer for %s: %s", scanDir, err), objects.MAC{}, nil
 	}
 	defer imp.Close()
 
 	if cmd.Silent {
 		if err := snap.Backup(imp, opts); err != nil {
-			return 1, fmt.Errorf("failed to create snapshot: %w", err), objects.MAC{}
+			return 1, fmt.Errorf("failed to create snapshot: %w", err), objects.MAC{}, nil
 		}
 	} else {
 		ep := startEventsProcessor(ctx, imp.Root(), true, cmd.Quiet)
 		if err := snap.Backup(imp, opts); err != nil {
 			ep.Close()
-			return 1, fmt.Errorf("failed to create snapshot: %w", err), objects.MAC{}
+			return 1, fmt.Errorf("failed to create snapshot: %w", err), objects.MAC{}, nil
 		}
 		ep.Close()
 	}
@@ -209,13 +209,13 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 
 		checkSnap, err := snapshot.Load(repo, snap.Header.Identifier)
 		if err != nil {
-			return 1, fmt.Errorf("failed to load snapshot: %w", err), objects.MAC{}
+			return 1, fmt.Errorf("failed to load snapshot: %w", err), objects.MAC{}, nil
 		}
 		defer checkSnap.Close()
 
 		checkCache, err := ctx.GetCache().Check()
 		if err != nil {
-			return 1, err, objects.MAC{}
+			return 1, err, objects.MAC{}, nil
 		}
 		defer checkCache.Close()
 
@@ -223,10 +223,10 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 
 		ok, err := checkSnap.Check("/", checkOptions)
 		if err != nil {
-			return 1, fmt.Errorf("failed to check snapshot: %w", err), objects.MAC{}
+			return 1, fmt.Errorf("failed to check snapshot: %w", err), objects.MAC{}, nil
 		}
 		if !ok {
-			return 1, fmt.Errorf("snapshot is not valid"), objects.MAC{}
+			return 1, fmt.Errorf("snapshot is not valid"), objects.MAC{}, nil
 		}
 	}
 
@@ -245,5 +245,15 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		humanize.Bytes(uint64(snap.Repository().WBytes())),
 		savings,
 	)
-	return 0, nil, snap.Header.Identifier
+
+	totalErrors := uint64(0)
+	for i := 0; i < len(snap.Header.Sources); i++ {
+		s := snap.Header.GetSource(i)
+		totalErrors += s.Summary.Directory.Errors + s.Summary.Below.Errors
+	}
+	var warning error
+	if totalErrors > 0 {
+		warning = fmt.Errorf("%d errors during backup", totalErrors)
+	}
+	return 0, nil, snap.Header.Identifier, warning
 }

@@ -24,11 +24,10 @@ import (
 	"math/rand/v2"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"runtime"
 
 	"github.com/PlakarKorp/plakar/api"
+	"github.com/PlakarKorp/plakar/cmd/plakar/utils"
 	"github.com/PlakarKorp/plakar/repository"
 )
 
@@ -95,17 +94,8 @@ func Ui(repo *repository.Repository, addr string, opts *UiOptions) error {
 		url = fmt.Sprintf("http://%s?plakar_token=%s", addr, opts.Token)
 	}
 
-	var err error
 	if !opts.NoSpawn {
-		switch runtime.GOOS {
-		case "windows":
-			err = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
-		case "darwin":
-			err = exec.Command("open", url).Start()
-		default: // "linux", "freebsd", "openbsd", "netbsd"
-			err = exec.Command("xdg-open", url).Start()
-		}
-		if err != nil {
+		if err := utils.BrowserTrySpawn(url); err != nil {
 			repo.Logger().Printf("failed to launch browser: %s", err)
 			repo.Logger().Printf("you can access the webUI at %s", url)
 			return err

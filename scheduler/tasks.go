@@ -103,11 +103,13 @@ func (s *Scheduler) backupTask(taskset Task, task BackupConfig) {
 			}
 			reporter := s.NewTaskReporter(repo, "backup", taskset.Name, taskset.Repository)
 
-			if retval, err, snapId := backupSubcommand.DoBackup(s.ctx, repo); err != nil || retval != 0 {
+			var reportWarning error
+			if retval, err, snapId, warning := backupSubcommand.DoBackup(s.ctx, repo); err != nil || retval != 0 {
 				s.ctx.GetLogger().Error("Error creating backup: %s", err)
 				reporter.TaskFailed(1, "Error creating backup: retval=%d, err=%s", retval, err)
 				goto close
 			} else {
+				reportWarning = warning
 				reporter.WithSnapshotID(snapId)
 			}
 
@@ -119,7 +121,11 @@ func (s *Scheduler) backupTask(taskset Task, task BackupConfig) {
 					goto close
 				}
 			}
-			reporter.TaskDone()
+			if reportWarning != nil {
+				reporter.TaskWarning("Warning during backup: %s", reportWarning)
+			} else {
+				reporter.TaskDone()
+			}
 
 		close:
 			repo.Close()

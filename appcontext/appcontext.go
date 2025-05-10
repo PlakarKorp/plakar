@@ -117,3 +117,13 @@ func (c *AppContext) SetSecret(secret []byte) {
 func (c *AppContext) GetSecret() []byte {
 	return c.secret
 }
+
+func (c *AppContext) GetAuthToken(repository uuid.UUID) (string, error) {
+	if cache, err := c.cache.Repository(repository); err != nil {
+		return "", err
+	} else if authToken, err := cache.GetAuthToken(); err != nil {
+		return "", err
+	} else {
+		return authToken, nil
+	}
+}

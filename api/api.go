@@ -159,8 +159,8 @@ func SetupRoutes(server *http.ServeMux, repo *repository.Repository, token strin
 	server.Handle("GET /api/proxy/v1/account/me", authToken(JSONAPIView(servicesProxy)))
 	server.Handle("GET /api/proxy/v1/account/notifications", authToken(JSONAPIView(servicesProxy)))
 	server.Handle("POST /api/proxy/v1/account/notifications/set-status", authToken(JSONAPIView(servicesProxy)))
-	server.Handle("GET /api/proxy/v1/account/services/alerting", authToken(JSONAPIView(servicesProxy)))
-	server.Handle("PUT /api/proxy/v1/account/services/alerting", authToken(JSONAPIView(servicesProxy)))
+	server.Handle("GET /api/proxy/v1/account/services/alerting", authToken(JSONAPIView(servicesGetAlertingServiceConfiguration)))
+	server.Handle("PUT /api/proxy/v1/account/services/alerting", authToken(JSONAPIView(servicesSetAlertingServiceConfiguration)))
 	server.Handle("GET /api/proxy/v1/reporting/reports", authToken(JSONAPIView(servicesProxy)))
 
 	server.Handle("GET /api/repository/info", authToken(JSONAPIView(repositoryInfo)))

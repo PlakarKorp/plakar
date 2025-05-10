@@ -35,21 +35,21 @@ type TokenResponse struct {
 type loginFlow struct {
 	appCtx       *appcontext.AppContext
 	repositoryID uuid.UUID
+	noSpawn      bool
 }
 
-// NewLoginFlow spawns a local HTTP server in a goroutine, listening for the
-// OAuth callback on a random port.
-func NewLoginFlow(appCtx *appcontext.AppContext, repositoryID uuid.UUID) (*loginFlow, error) {
+func NewLoginFlow(appCtx *appcontext.AppContext, repositoryID uuid.UUID, noSpawn bool) (*loginFlow, error) {
 	flow := &loginFlow{
 		appCtx:       appCtx,
 		repositoryID: repositoryID,
+		noSpawn:      noSpawn,
 	}
 	return flow, nil
 }
 
 func (flow *loginFlow) Poll(pollID string, iterations int, delay time.Duration, progressCb func()) (string, error) {
+	tick := time.After(0)
 	for range iterations {
-		tick := time.After(delay)
 		select {
 		case <-flow.appCtx.Done():
 			return "", flow.appCtx.Err()
@@ -80,6 +80,7 @@ func (flow *loginFlow) Poll(pollID string, iterations int, delay time.Duration, 
 				return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 			}
 		}
+		tick = time.After(delay)
 	}
 	return "", fmt.Errorf("could not obtain token after %d iterations", iterations)
 }
@@ -133,13 +134,19 @@ func (flow *loginFlow) handleGithubResponse(resp *http.Response) (string, error)
 		return "", fmt.Errorf("failed to decode response JSON: %v", err)
 	}
 
-	fmt.Printf("\nPlease open the following URL in your browser:\n\n")
-	fmt.Printf("  %s\n\n", respData.URL)
+	if flow.noSpawn {
+		fmt.Printf("\nPlease open the following URL in your browser:\n\n")
+		fmt.Printf("  %s\n\n", respData.URL)
+	} else if err := BrowserTrySpawn(respData.URL); err != nil {
+		fmt.Printf("\nFailed to launch browser: %s\n\n", err)
+		fmt.Printf("\nPlease open the following URL in your browser:\n\n")
+		fmt.Printf("  %s\n\n", respData.URL)
+	}
 
 	// Wait for the token to be received
-	fmt.Printf("Waiting for your browser to complete the login...\n")
-
-	return flow.Poll(respData.PollID, 10, time.Second*5, func() { fmt.Printf(".") })
+	fmt.Printf("Waiting for your browser to complete the login")
+	defer fmt.Printf("\n")
+	return flow.Poll(respData.PollID, 300, time.Second, func() { fmt.Printf(".") })
 }
 
 func (flow *loginFlow) handleEmailResponse(resp *http.Response) (string, error) {
@@ -151,8 +158,8 @@ func (flow *loginFlow) handleEmailResponse(resp *http.Response) (string, error) 
 	}
 
 	fmt.Printf("\nCheck your email for the login link. Do not close this window until you have logged in.\n")
-
-	return flow.Poll(respData.PollID, 10, time.Second*5, func() { fmt.Printf(".") })
+	defer fmt.Printf("\n")
+	return flow.Poll(respData.PollID, 300, time.Second, func() { fmt.Printf(".") })
 }
 
 func (flow *loginFlow) RunUI(provider string, parameters map[string]string) (string, error) {
