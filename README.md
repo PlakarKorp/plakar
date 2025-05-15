@@ -6,7 +6,7 @@ plakar provides an intuitive, powerful, and scalable backup solution.
 
 Plakar goes beyond file-level backups. It captures application data with its full context.
 
-Data and context are stored using [Kloset](http://localhost:1313/posts/2025-04-29/kloset-the-immutable-data-store/), an open-source, immutable data store that enables the implementation of advanced data protection scenarios.
+Data and context are stored using [Kloset](https://www.plakar.io/posts/2025-04-29/kloset-the-immutable-data-store/), an open-source, immutable data store that enables the implementation of advanced data protection scenarios.
 
 Plakar's main strengths:
 - **Effortless**: Easy to use, clean default. Check out our [quick start guide](https://docs.plakar.io/en/quickstart/).
