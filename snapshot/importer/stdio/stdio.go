@@ -109,7 +109,7 @@ func (p *StdioImporter) Scan() (<-chan *importer.ScanResult, error) {
 }
 
 func (p *StdioImporter) NewReader(pathname string) (io.ReadCloser, error) {
-	return os.Stdin, nil
+	return io.NopCloser(p.appCtx.Stdin), nil
 }
 
 func (p *StdioImporter) NewExtendedAttributeReader(pathname string, attribute string) (io.ReadCloser, error) {
