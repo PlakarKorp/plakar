@@ -62,21 +62,6 @@ func loadRepository(newCtx *appcontext.AppContext, name string) (*repository.Rep
 }
 
 func (s *Scheduler) backupTask(taskset Task, task BackupConfig) {
-	interval, err := stringToDuration(task.Interval)
-	if err != nil {
-		s.ctx.Cancel()
-		return
-	}
-
-	var retention time.Duration
-	if task.Retention != "" {
-		retention, err = stringToDuration(task.Retention)
-		if err != nil {
-			s.ctx.Cancel()
-			return
-		}
-	}
-
 	backupSubcommand := &backup.Backup{}
 	backupSubcommand.Silent = true
 	backupSubcommand.Job = taskset.Name
@@ -91,7 +76,7 @@ func (s *Scheduler) backupTask(taskset Task, task BackupConfig) {
 	rmSubcommand.LocateOptions.Job = task.Name
 
 	for {
-		tick := time.After(interval)
+		tick := time.After(task.Interval)
 		select {
 		case <-s.ctx.Done():
 			return
@@ -113,8 +98,8 @@ func (s *Scheduler) backupTask(taskset Task, task BackupConfig) {
 				reporter.WithSnapshotID(snapId)
 			}
 
-			if task.Retention != "" {
-				rmSubcommand.LocateOptions.Before = time.Now().Add(-retention)
+			if task.Retention != 0 {
+				rmSubcommand.LocateOptions.Before = time.Now().Add(-task.Retention)
 				if retval, err := rmSubcommand.Execute(s.ctx, repo); err != nil || retval != 0 {
 					s.ctx.GetLogger().Error("Error removing obsolete backups: %s", err)
 					reporter.TaskWarning("Error removing obsolete backups: retval=%d, err=%s", retval, err)
@@ -135,12 +120,6 @@ func (s *Scheduler) backupTask(taskset Task, task BackupConfig) {
 }
 
 func (s *Scheduler) checkTask(taskset Task, task CheckConfig) {
-	interval, err := stringToDuration(task.Interval)
-	if err != nil {
-		s.ctx.Cancel()
-		return
-	}
-
 	checkSubcommand := &check.Check{}
 	checkSubcommand.LocateOptions = utils.NewDefaultLocateOptions()
 	checkSubcommand.LocateOptions.Job = taskset.Name
@@ -151,7 +130,7 @@ func (s *Scheduler) checkTask(taskset Task, task CheckConfig) {
 	}
 
 	for {
-		tick := time.After(interval)
+		tick := time.After(task.Interval)
 		select {
 		case <-s.ctx.Done():
 			return
@@ -178,12 +157,6 @@ func (s *Scheduler) checkTask(taskset Task, task CheckConfig) {
 }
 
 func (s *Scheduler) restoreTask(taskset Task, task RestoreConfig) {
-	interval, err := stringToDuration(task.Interval)
-	if err != nil {
-		s.ctx.Cancel()
-		return
-	}
-
 	restoreSubcommand := &restore.Restore{}
 	restoreSubcommand.OptJob = taskset.Name
 	restoreSubcommand.Target = task.Target
@@ -193,7 +166,7 @@ func (s *Scheduler) restoreTask(taskset Task, task RestoreConfig) {
 	}
 
 	for {
-		tick := time.After(interval)
+		tick := time.After(task.Interval)
 		select {
 		case <-s.ctx.Done():
 			return
@@ -220,12 +193,6 @@ func (s *Scheduler) restoreTask(taskset Task, task RestoreConfig) {
 }
 
 func (s *Scheduler) syncTask(taskset Task, task SyncConfig) {
-	interval, err := stringToDuration(task.Interval)
-	if err != nil {
-		s.ctx.Cancel()
-		return
-	}
-
 	syncSubcommand := &sync.Sync{}
 	syncSubcommand.PeerRepositoryLocation = task.Peer
 	if task.Direction == SyncDirectionTo {
@@ -248,7 +215,7 @@ func (s *Scheduler) syncTask(taskset Task, task SyncConfig) {
 	//	syncSubcommand.Silent = true
 
 	for {
-		tick := time.After(interval)
+		tick := time.After(task.Interval)
 		select {
 		case <-s.ctx.Done():
 			return
@@ -276,28 +243,13 @@ func (s *Scheduler) syncTask(taskset Task, task SyncConfig) {
 }
 
 func (s *Scheduler) maintenanceTask(task MaintenanceConfig) {
-	interval, err := stringToDuration(task.Interval)
-	if err != nil {
-		s.ctx.Cancel()
-		return
-	}
-
 	maintenanceSubcommand := &maintenance.Maintenance{}
 	rmSubcommand := &rm.Rm{}
 	rmSubcommand.LocateOptions = utils.NewDefaultLocateOptions()
 	rmSubcommand.LocateOptions.Job = "maintenance"
 
-	var retention time.Duration
-	if task.Retention != "" {
-		retention, err = stringToDuration(task.Retention)
-		if err != nil {
-			s.ctx.Cancel()
-			return
-		}
-	}
-
 	for {
-		tick := time.After(interval)
+		tick := time.After(task.Interval)
 		select {
 		case <-s.ctx.Done():
 			return
@@ -318,8 +270,8 @@ func (s *Scheduler) maintenanceTask(task MaintenanceConfig) {
 				s.ctx.GetLogger().Info("maintenance of repository %s succeeded", task.Repository)
 			}
 
-			if task.Retention != "" {
-				rmSubcommand.LocateOptions.Before = time.Now().Add(-retention)
+			if task.Retention != 0 {
+				rmSubcommand.LocateOptions.Before = time.Now().Add(-task.Retention)
 				retval, err = rmSubcommand.Execute(s.ctx, repo)
 				if err != nil || retval != 0 {
 					s.ctx.GetLogger().Error("Error removing obsolete backups: %s", err)

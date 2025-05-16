@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/go-viper/mapstructure/v2"
@@ -34,10 +35,10 @@ type Task struct {
 type BackupConfig struct {
 	Name      string
 	Tags      []string
-	Path      string `validate:"required"`
-	Interval  string `validate:"required"`
+	Path      string        `validate:"required"`
+	Interval  time.Duration `validate:"required"`
 	Check     BackupConfigCheck
-	Retention string
+	Retention time.Duration
 }
 
 // CheckDecodeHook is a mapstructure decode hook to allow users to specify
@@ -70,14 +71,14 @@ type CheckConfig struct {
 	Path     string `validate:"required"`
 	Since    string
 	Before   string
-	Interval string `validate:"required"`
+	Interval time.Duration `validate:"required"`
 	Latest   bool
 }
 
 type RestoreConfig struct {
-	Path     string `validate:"required"`
-	Target   string `validate:"required"`
-	Interval string `validate:"required"`
+	Path     string        `validate:"required"`
+	Target   string        `validate:"required"`
+	Interval time.Duration `validate:"required"`
 }
 
 type SyncDirection string
@@ -112,16 +113,42 @@ func SyncDirectionDecodeHook() mapstructure.DecodeHookFunc {
 	}
 }
 
+func DurationDecodeHook() mapstructure.DecodeHookFunc {
+	return func(
+		from reflect.Type,
+		to reflect.Type,
+		data interface{},
+	) (interface{}, error) {
+		var t time.Duration
+
+		if to == reflect.TypeOf(t) {
+			// We might want to allow from int?
+			if from == reflect.TypeOf("") {
+				d, err := time.ParseDuration(data.(string))
+				if err != nil {
+					return nil, err
+				}
+
+				return d, nil
+			} else {
+				return nil, fmt.Errorf("Expected duration to be a string, got invalid data %T", data)
+			}
+		}
+
+		return data, nil
+	}
+}
+
 type SyncConfig struct {
 	Peer      string        `validate:"required"`
 	Direction SyncDirection `validate:"required"`
-	Interval  string        `validate:"required"`
+	Interval  time.Duration `validate:"required"`
 }
 
 type MaintenanceConfig struct {
-	Interval   string `validate:"required"`
-	Retention  string `validate:"required"`
-	Repository string `validate:"required"`
+	Interval   time.Duration `validate:"required"`
+	Retention  time.Duration `validate:"required"`
+	Repository string        `validate:"required"`
 }
 
 func NewConfiguration() *Configuration {
@@ -148,6 +175,7 @@ func ParseConfigFile(filename string) (*Configuration, error) {
 		DecodeHook: mapstructure.ComposeDecodeHookFunc(
 			BackupConfigCheckDecodeHook(),
 			SyncDirectionDecodeHook(),
+			DurationDecodeHook(),
 		),
 		ErrorUnused: true, // errors out if there are extra/unmapped keys
 	})
