@@ -19,6 +19,10 @@ github.com/PlakarKorp/go-kloset-sdk v0.0.0-20250520215223-7895a2e49c64 h1:mqXArQ
 github.com/PlakarKorp/go-kloset-sdk v0.0.0-20250520215223-7895a2e49c64/go.mod h1:l4nyOwIKgH98DfN8lFpRgGiya0WpJriVPyrElqzuUOc=
 github.com/PlakarKorp/go-kloset-sdk v0.0.0-20250520221745-901c22a367eb h1:Qq+xIHPJ5D7UTdOKJtYyDdiqZ7LrJhHbJTi+88m1zVs=
 github.com/PlakarKorp/go-kloset-sdk v0.0.0-20250520221745-901c22a367eb/go.mod h1:l4nyOwIKgH98DfN8lFpRgGiya0WpJriVPyrElqzuUOc=
+github.com/PlakarKorp/go-kloset-sdk v0.0.0-20250520224712-3c3c5f45a9e2 h1:GtB9aTHKeGUtOWDk+B+Aut8wzIBCXrhCswo5IF7gn2A=
+github.com/PlakarKorp/go-kloset-sdk v0.0.0-20250520224712-3c3c5f45a9e2/go.mod h1:l4nyOwIKgH98DfN8lFpRgGiya0WpJriVPyrElqzuUOc=
+github.com/PlakarKorp/go-kloset-sdk v0.0.0-20250520224855-af5b50933fe5 h1:XLzAinUKH1VKCziHA64QNsHSrlNO8D+lGGpdPM1WAPw=
+github.com/PlakarKorp/go-kloset-sdk v0.0.0-20250520224855-af5b50933fe5/go.mod h1:l4nyOwIKgH98DfN8lFpRgGiya0WpJriVPyrElqzuUOc=
 github.com/aclements/go-perfevent v0.0.0-20240301234650-f7843625020f h1:JjxwchlOepwsUWcQwD2mLUAGE9aCp0/ehy6yCHFBOvo=
 github.com/aclements/go-perfevent v0.0.0-20240301234650-f7843625020f/go.mod h1:tMDTce/yLLN/SK8gMOxQfnyeMeCg8KGzp0D1cbECEeo=
 github.com/alecthomas/assert/v2 v2.11.0 h1:2Q9r3ki8+JYXvGsDyBXwH3LcJ+WK5D0gc5E8vS6K3D0=

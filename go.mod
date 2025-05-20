@@ -4,7 +4,7 @@ go 1.23.3
 
 require (
 	github.com/PlakarKorp/go-cdc-chunkers v0.0.10
-	github.com/PlakarKorp/go-kloset-sdk v0.0.0-20250520221745-901c22a367eb
+	github.com/PlakarKorp/go-kloset-sdk v0.0.0-20250520224855-af5b50933fe5
 	github.com/alecthomas/chroma v0.10.0
 	github.com/anacrolix/fuse v0.3.1
 	github.com/charmbracelet/bubbletea v1.3.4

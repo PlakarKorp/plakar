@@ -50,7 +50,6 @@ func (imp *PlakarImporterFS) Info(ctx context.Context, req *sdk.InfoRequest) (*s
 }
 
 func (imp *PlakarImporterFS) Scan(req *sdk.ScanRequest, stream sdk.ScanResponseStreamer) error {
-	fmt.Println("Scan called")
 	realp, err := realpathFollow(imp.rootDir)
 	if err != nil {
 		return err
@@ -67,15 +66,16 @@ func (imp *PlakarImporterFS) Scan(req *sdk.ScanRequest, stream sdk.ScanResponseS
 				return err
 			}
 
-			//var extendedAttr &importer.ExtendedAttribute{}
-			//if result.Record.IsXattr {
-			//	extendedAttr = &importer.ExtendedAttribute{
-			//		Name:  result.Record.XattrName,
-			//		Value: result.Record.XattrValue,
-			//	}
-			//} else {
-			//	extendedAttr = nil
-			//}
+			var xattr *sdk.ExtendedAttribute
+			if result.Record.IsXattr {
+				xattr = &sdk.ExtendedAttribute{
+					Name:  result.Record.XattrName,
+					Type: sdk.ExtendedAttributeType(result.Record.XattrType),
+				}
+			} else {
+				xattr = nil
+			}
+
 			if err := stream.Send(&sdk.ScanResponse{
 				Pathname: result.Record.Pathname,
 				Result: &sdk.ScanResponseRecord{
@@ -96,12 +96,12 @@ func (imp *PlakarImporterFS) Scan(req *sdk.ScanRequest, stream sdk.ScanResponseS
 							Flags:     result.Record.FileInfo.Flags,
 						},
 						FileAttributes: result.Record.FileAttributes,
-						Xattr: nil,
+						Xattr: xattr,
 					},
 				},
 			}); err != nil {
 				return err
-			}		
+			}
 		case result.Error != nil:
 			if err := stream.Send(&sdk.ScanResponse{
 				Pathname: result.Error.Pathname,
