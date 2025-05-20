@@ -1,21 +1,19 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 
+	"github.com/PlakarKorp/go-kloset-sdk/sdk"
 	"github.com/PlakarKorp/plakar/objects"
 	impor "github.com/PlakarKorp/plakar/snapshot/importer"
 	"github.com/pkg/xattr"
-	"github.com/PlakarKorp/go-kloset-sdk/sdk"
 )
 
 type PlakarImporterFS struct {
@@ -82,7 +80,7 @@ func (imp *PlakarImporterFS) Scan(req *sdk.ScanRequest, stream sdk.ScanResponseS
 				Pathname: result.Record.Pathname,
 				Result: &sdk.ScanResponseRecord{
 					Record: &sdk.ScanRecord{
-						Target: result.Record.Pathname,
+						Target: result.Record.Target,
 						Fileinfo: &sdk.ScanRecordFileInfo{
 							Name:      result.Record.FileInfo.Lname,
 							Size:      result.Record.FileInfo.Lsize,
@@ -98,12 +96,12 @@ func (imp *PlakarImporterFS) Scan(req *sdk.ScanRequest, stream sdk.ScanResponseS
 							Flags:     result.Record.FileInfo.Flags,
 						},
 						FileAttributes: result.Record.FileAttributes,
+						Xattr: nil,
 					},
 				},
 			}); err != nil {
-				fmt.Printf("Error sending scan response: %v\n", err)
 				return err
-			}
+			}		
 		case result.Error != nil:
 			if err := stream.Send(&sdk.ScanResponse{
 				Pathname: result.Error.Pathname,
@@ -153,11 +151,6 @@ func (imp *PlakarImporterFS) walkDir_walker(results chan<- *impor.ScanResult, ro
 	close(results)
 }
 
-func lookupIDs(uid, gid uint64) (uname, gname string) {
-	// Implementation omitted for brevity
-	return
-}
-
 func realpathFollow(path string) (resolved string, err error) {
 	info, err := os.Lstat(path)
 	if err != nil {
@@ -177,26 +170,6 @@ func realpathFollow(path string) (resolved string, err error) {
 	}
 
 	return path, nil
-}
-
-func NewReader(pathname string) (io.ReadCloser, error) {
-	fmt.Println("NewReader called with pathname:", pathname)
-	if pathname[0] == '/' && runtime.GOOS == "windows" {
-		pathname = pathname[1:]
-	}
-	return os.Open(pathname)
-}
-
-func NewExtendedAttributeReader(pathname string, attribute string) (io.ReadCloser, error) {
-	if pathname[0] == '/' && runtime.GOOS == "windows" {
-		pathname = pathname[1:]
-	}
-
-	data, err := xattr.Get(pathname, attribute)
-	if err != nil {
-		return nil, err
-	}
-	return io.NopCloser(bytes.NewReader(data)), nil
 }
 
 func walkDir_worker(jobs <-chan string, results chan<- *impor.ScanResult, wg *sync.WaitGroup) {
@@ -251,7 +224,7 @@ func walkDir_addPrefixDirectories(rootDir string, jobs chan<- string, results ch
 }
 
 func (imp *PlakarImporterFS) Read(req *sdk.ReadRequest, stream sdk.ReadResponseStramer) error {
-	file, err := os.Open(req.Pathname)
+	file, err := os.Open(req.Path)
 	if err != nil {
 		return err
 	}

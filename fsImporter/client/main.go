@@ -52,7 +52,7 @@ func GetFileContent(client importer.ImporterClient, filename string) {
 }
 
 func main() {
-	serverAddr := "localhost:50051"
+	serverAddr := "localhost:50052"
 	conn, err := grpc.NewClient(serverAddr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
