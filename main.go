@@ -30,6 +30,7 @@ import (
 	"github.com/denisbrodbeck/machineid"
 	"github.com/google/uuid"
 
+	_ "github.com/PlakarKorp/plakar/subcommands/agent"
 	_ "github.com/PlakarKorp/plakar/subcommands/archive"
 	_ "github.com/PlakarKorp/plakar/subcommands/backup"
 	_ "github.com/PlakarKorp/plakar/subcommands/cat"
