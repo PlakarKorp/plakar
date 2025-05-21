@@ -160,7 +160,8 @@ func EntryPoint() int {
 		fmt.Fprintf(os.Stderr, "%s: could not load configuration: %s\n", flag.CommandLine.Name(), err)
 		return 1
 	}
-	ctx.Config = cfg
+
+	ctx.SetConfig(cfg)
 
 	ctx.Client = "plakar/" + utils.GetVersion()
 	ctx.CWD = cwd
@@ -333,7 +334,7 @@ func EntryPoint() int {
 	} else {
 		repositoryPath = os.Getenv("PLAKAR_REPOSITORY")
 		if repositoryPath == "" {
-			def := ctx.Config.DefaultRepository
+			def := ctx.GetDefaultRepositoryName()
 			if def != "" {
 				repositoryPath = "@" + def
 			} else {
@@ -344,7 +345,7 @@ func EntryPoint() int {
 		args = flag.Args()
 	}
 
-	storeConfig, err := ctx.Config.GetRepository(repositoryPath)
+	storeConfig, err := ctx.GetRepositoryConfig(repositoryPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
 		return 1

@@ -54,7 +54,7 @@ type ConfigCmd struct {
 
 func (cmd *ConfigCmd) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	if len(cmd.args) == 0 {
-		ctx.Config.Render(ctx.Stdout)
+		ctx.RenderConfig(ctx.Stdout)
 		return 0, nil
 	}
 
@@ -85,33 +85,21 @@ func cmd_remote(ctx *appcontext.AppContext, args []string) error {
 			return fmt.Errorf("usage: plakar config remote create name")
 		}
 		name := args[1]
-		if ctx.Config.HasRemote(name) {
-			return fmt.Errorf("remote %q already exists", name)
-		}
-		ctx.Config.Remotes[name] = make(map[string]string)
-		return ctx.Config.Save()
+		return ctx.CreateRemoteConfig(name)
 
 	case "set":
 		if len(args) != 4 {
 			return fmt.Errorf("usage: plakar config remote set name option value")
 		}
 		name, option, value := args[1], args[2], args[3]
-		if !ctx.Config.HasRemote(name) {
-			return fmt.Errorf("remote %q does not exists", name)
-		}
-		ctx.Config.Remotes[name][option] = value
-		return ctx.Config.Save()
+		return ctx.SetRemoteConfig(name, option, value)
 
 	case "unset":
 		if len(args) != 3 {
 			return fmt.Errorf("usage: plakar config remote unset name option")
 		}
 		name, option := args[1], args[2]
-		if !ctx.Config.HasRemote(name) {
-			return fmt.Errorf("remote %q does not exists", name)
-		}
-		delete(ctx.Config.Remotes[name], option)
-		return ctx.Config.Save()
+		return ctx.SetRemoteConfig(name, option, "")
 
 	case "validate":
 		if len(args) != 2 {
@@ -135,47 +123,28 @@ func cmd_repository(ctx *appcontext.AppContext, args []string) error {
 			return fmt.Errorf("usage: plakar config repository create name")
 		}
 		name := args[1]
-		if ctx.Config.HasRepository(name) {
-			return fmt.Errorf("repository %q already exists", name)
-		}
-		ctx.Config.Repositories[name] = make(map[string]string)
-		return ctx.Config.Save()
+		return ctx.CreateRepositoryConfig(name)
 
 	case "default":
 		if len(args) != 2 {
 			return fmt.Errorf("usage: plakar config repository default name")
 		}
 		name := args[1]
-		if !ctx.Config.HasRepository(name) {
-			return fmt.Errorf("repository %q doesn't exist", name)
-		}
-		if _, ok := ctx.Config.Repositories[name]["location"]; !ok {
-			return fmt.Errorf("repository %q doesn't have a location set", name)
-		}
-		ctx.Config.DefaultRepository = name
-		return ctx.Config.Save()
 
+		return ctx.SetDefaultRepositoryConfig(name)
 	case "set":
 		if len(args) != 4 {
 			return fmt.Errorf("usage: plakar config repository set name option value")
 		}
 		name, option, value := args[1], args[2], args[3]
-		if !ctx.Config.HasRepository(name) {
-			return fmt.Errorf("repository %q does not exists", name)
-		}
-		ctx.Config.Repositories[name][option] = value
-		return ctx.Config.Save()
+		return ctx.SetRepositoryConfig(name, option, value)
 
 	case "unset":
 		if len(args) != 3 {
 			return fmt.Errorf("usage: plakar config repository unset name option")
 		}
 		name, option := args[1], args[2]
-		if !ctx.Config.HasRepository(name) {
-			return fmt.Errorf("repository %q does not exists", name)
-		}
-		delete(ctx.Config.Repositories[name], option)
-		return ctx.Config.Save()
+		return ctx.SetRepositoryConfig(name, option, "")
 
 	case "validate":
 		if len(args) != 2 {

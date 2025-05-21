@@ -91,7 +91,7 @@ func (cmd *Clone) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 		return 1, err
 	}
 
-	storeConfig, err := ctx.Config.GetRepository(cmd.Dest)
+	storeConfig, err := ctx.GetRepositoryConfig(cmd.Dest)
 	if err != nil {
 		return 1, err
 	}
