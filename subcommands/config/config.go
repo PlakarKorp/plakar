@@ -21,16 +21,46 @@ import (
 	"fmt"
 
 	"github.com/PlakarKorp/kloset/appcontext"
+	"github.com/PlakarKorp/kloset/config"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/subcommands"
-	"github.com/PlakarKorp/plakar/subcommands/agent"
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &agent.AgentRestart{} },
+	subcommands.Register(func() subcommands.Subcommand { return &ConfigReloadCmd{} },
 		subcommands.AgentSupport|subcommands.BeforeRepositoryOpen|subcommands.IgnoreVersion, "config", "reload")
 	subcommands.Register(func() subcommands.Subcommand { return &ConfigCmd{} },
-		subcommands.BeforeRepositoryOpen, "config")
+		subcommands.AgentSupport|subcommands.BeforeRepositoryOpen, "config")
+}
+
+type ConfigReloadCmd struct {
+	subcommands.Subcommand
+}
+
+func (cmd *ConfigReloadCmd) Parse(ctx *appcontext.AppContext, args []string) error {
+	flags := flag.NewFlagSet("config reload", flag.ExitOnError)
+	flags.Usage = func() {
+		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS]\n", flags.Name())
+		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
+		flags.PrintDefaults()
+	}
+	flags.Parse(args)
+	if flags.NArg() != 0 {
+		return fmt.Errorf("too many arguments")
+	}
+
+	return nil
+}
+
+func (cmd *ConfigReloadCmd) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+	cfg, err := config.LoadOrCreate(ctx.GetConfigPath())
+	if err != nil {
+		return 1, err
+	}
+
+	ctx.SetConfig(cfg)
+
+	return 0, nil
 }
 
 func (cmd *ConfigCmd) Parse(ctx *appcontext.AppContext, args []string) error {
