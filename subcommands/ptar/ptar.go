@@ -69,7 +69,7 @@ func (cmd *Ptar) Parse(ctx *appcontext.AppContext, args []string) error {
 
 	var peerSecret []byte
 	if len(opt_sync) > 0 {
-		storeConfig, err := ctx.Config.GetRepository(opt_sync)
+		storeConfig, err := ctx.GetRepositoryConfig(opt_sync)
 		if err != nil {
 			return fmt.Errorf("peer repository: %w", err)
 		}
@@ -249,7 +249,7 @@ func (cmd *Ptar) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 
 	repoWriter := repo.NewRepositoryWriter(scanCache, identifier, repository.PtarType)
 	if len(cmd.SyncFrom) > 0 {
-		storeConfig, err := ctx.Config.GetRepository(cmd.SyncFrom)
+		storeConfig, err := ctx.GetRepositoryConfig(cmd.SyncFrom)
 		if err != nil {
 			return 1, fmt.Errorf("source repository: %w", err)
 		}

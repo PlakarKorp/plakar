@@ -26,7 +26,7 @@ func TestConfigEmpty(t *testing.T) {
 	cfg, err := config.LoadOrCreate(configPath)
 	require.NoError(t, err)
 	ctx := appcontext.NewAppContext()
-	ctx.Config = cfg
+	ctx.SetConfig(cfg)
 	ctx.Stdout = bufOut
 	ctx.Stderr = bufErr
 	// override the homedir to avoid having test overwriting existing home configuration
@@ -102,7 +102,7 @@ func TestCmdRemote(t *testing.T) {
 	cfg, err := config.LoadOrCreate(configPath)
 	require.NoError(t, err)
 	ctx := appcontext.NewAppContext()
-	ctx.Config = cfg
+	ctx.SetConfig(cfg)
 	ctx.Stdout = bufOut
 	ctx.Stderr = bufErr
 
@@ -138,7 +138,7 @@ func TestCmdRemote(t *testing.T) {
 	err = cmd_remote(ctx, args)
 	require.EqualError(t, err, "validation not implemented")
 
-	ctx.Config.Render(ctx.Stdout)
+	ctx.RenderConfig(ctx.Stdout)
 
 	output := bufOut.String()
 	expectedOutput := `default-repo: ""
@@ -165,7 +165,7 @@ func TestCmdRepository(t *testing.T) {
 	cfg, err := config.LoadOrCreate(configPath)
 	require.NoError(t, err)
 	ctx := appcontext.NewAppContext()
-	ctx.Config = cfg
+	ctx.SetConfig(cfg)
 	ctx.Stdout = bufOut
 	ctx.Stderr = bufErr
 
@@ -209,7 +209,7 @@ func TestCmdRepository(t *testing.T) {
 	err = cmd_repository(ctx, args)
 	require.EqualError(t, err, "validation not implemented")
 
-	ctx.Config.Render(ctx.Stdout)
+	ctx.RenderConfig(ctx.Stdout)
 
 	output := bufOut.String()
 	expectedOutput := `default-repo: my-repo

@@ -72,7 +72,7 @@ func (cmd *Sync) Parse(ctx *appcontext.AppContext, args []string) error {
 		return fmt.Errorf("invalid direction, must be to, from or with")
 	}
 
-	storeConfig, err := ctx.Config.GetRepository(peerRepositoryPath)
+	storeConfig, err := ctx.GetRepositoryConfig(peerRepositoryPath)
 	if err != nil {
 		return fmt.Errorf("peer repository: %w", err)
 	}
@@ -146,7 +146,7 @@ type Sync struct {
 }
 
 func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	storeConfig, err := ctx.Config.GetRepository(cmd.PeerRepositoryLocation)
+	storeConfig, err := ctx.GetRepositoryConfig(cmd.PeerRepositoryLocation)
 	if err != nil {
 		return 1, fmt.Errorf("peer repository: %w", err)
 	}
