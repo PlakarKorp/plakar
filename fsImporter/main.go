@@ -69,7 +69,7 @@ func (imp *PlakarImporterFS) Scan(req *sdk.ScanRequest, stream sdk.ScanResponseS
 			var xattr *sdk.ExtendedAttribute
 			if result.Record.IsXattr {
 				xattr = &sdk.ExtendedAttribute{
-					Name:  result.Record.XattrName,
+					Name: result.Record.XattrName,
 					Type: sdk.ExtendedAttributeType(result.Record.XattrType),
 				}
 			} else {
@@ -85,7 +85,7 @@ func (imp *PlakarImporterFS) Scan(req *sdk.ScanRequest, stream sdk.ScanResponseS
 							Name:      result.Record.FileInfo.Lname,
 							Size:      result.Record.FileInfo.Lsize,
 							Mode:      uint32(result.Record.FileInfo.Lmode),
-							ModTime:   sdk.NewTimestamp(result.Record.FileInfo.LmodTime),
+							ModTime:   result.Record.FileInfo.LmodTime,
 							Dev:       result.Record.FileInfo.Ldev,
 							Ino:       result.Record.FileInfo.Lino,
 							Uid:       result.Record.FileInfo.Luid,
@@ -96,7 +96,7 @@ func (imp *PlakarImporterFS) Scan(req *sdk.ScanRequest, stream sdk.ScanResponseS
 							Flags:     result.Record.FileInfo.Flags,
 						},
 						FileAttributes: result.Record.FileAttributes,
-						Xattr: xattr,
+						Xattr:          xattr,
 					},
 				},
 			}); err != nil {
