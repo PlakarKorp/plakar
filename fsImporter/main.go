@@ -1,133 +1,84 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"io/fs"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strings"
 	"sync"
+	"bytes"
+	"path"
+	"runtime"
 
 	"github.com/PlakarKorp/go-kloset-sdk/sdk"
-	"github.com/PlakarKorp/plakar/objects"
-	impor "github.com/PlakarKorp/plakar/snapshot/importer"
+	"github.com/PlakarKorp/plakar/snapshot/importer"
 	"github.com/pkg/xattr"
+	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/objects"
 )
 
-type PlakarImporterFS struct {
+type FSImporter struct {
+	ctx     *appcontext.AppContext
 	rootDir string
+
+	uidToName map[uint64]string
+	gidToName map[uint64]string
+	mu        sync.RWMutex
 }
 
-func NewPlakarImporterFS(location string) (*PlakarImporterFS, error) {
-	var err error
+func NewFSImporter(appCtx *appcontext.AppContext, name string, config map[string]string) (importer.Importer, error) {
+	location := config["location"]
+	rootDir := strings.TrimPrefix(location, "fs://")
 
-	if strings.HasPrefix(location, "fs://") {
-		location = location[4:]
+	if !path.IsAbs(rootDir) {
+		return nil, fmt.Errorf("not an absolute path %s", location)
 	}
 
-	location, err = filepath.Abs(location)
-	if err != nil {
-		return nil, err
-	}
+	rootDir = path.Clean(rootDir)
 
-	return &PlakarImporterFS{
-		rootDir: location,
+	return &FSImporter{
+		ctx:       appCtx,
+		rootDir:   rootDir,
+		uidToName: make(map[uint64]string),
+		gidToName: make(map[uint64]string),
 	}, nil
 }
 
-func (imp *PlakarImporterFS) Info(ctx context.Context, req *sdk.InfoRequest) (*sdk.InfoResponse, error) {
+func (p *FSImporter) Origin() string {
 	hostname, err := os.Hostname()
 	if err != nil {
 		hostname = "localhost"
 	}
-	return &sdk.InfoResponse{
-		Type:   "fs",
-		Origin: hostname,
-		Root:   imp.rootDir,
-	}, nil
+	return hostname
 }
 
-func (imp *PlakarImporterFS) Scan(req *sdk.ScanRequest, stream sdk.ScanResponseStreamer) error {
-	realp, err := realpathFollow(imp.rootDir)
+func (p *FSImporter) Type() string {
+	return "fs"
+}
+
+func (p *FSImporter) Scan() (<-chan *importer.ScanResult, error) {
+	realp, err := p.realpathFollow(p.rootDir)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	results := make(chan *impor.ScanResult, 1000)
-	go imp.walkDir_walker(results, imp.rootDir, realp, 256)
-
-	for result := range results {
-		switch {
-		case result.Record != nil:
-			if err := stream.Context().Err(); err != nil {
-				fmt.Printf("Client connection closed: %v\n", err)
-				return err
-			}
-
-			var xattr *sdk.ExtendedAttribute
-			if result.Record.IsXattr {
-				xattr = &sdk.ExtendedAttribute{
-					Name: result.Record.XattrName,
-					Type: sdk.ExtendedAttributeType(result.Record.XattrType),
-				}
-			} else {
-				xattr = nil
-			}
-
-			if err := stream.Send(&sdk.ScanResponse{
-				Pathname: result.Record.Pathname,
-				Result: &sdk.ScanResponseRecord{
-					Record: &sdk.ScanRecord{
-						Target: result.Record.Target,
-						Fileinfo: &sdk.ScanRecordFileInfo{
-							Name:      result.Record.FileInfo.Lname,
-							Size:      result.Record.FileInfo.Lsize,
-							Mode:      uint32(result.Record.FileInfo.Lmode),
-							ModTime:   result.Record.FileInfo.LmodTime,
-							Dev:       result.Record.FileInfo.Ldev,
-							Ino:       result.Record.FileInfo.Lino,
-							Uid:       result.Record.FileInfo.Luid,
-							Gid:       result.Record.FileInfo.Lgid,
-							Nlink:     uint32(result.Record.FileInfo.Lnlink),
-							Username:  result.Record.FileInfo.Lusername,
-							Groupname: result.Record.FileInfo.Lgroupname,
-							Flags:     result.Record.FileInfo.Flags,
-						},
-						FileAttributes: result.Record.FileAttributes,
-						Xattr:          xattr,
-					},
-				},
-			}); err != nil {
-				return err
-			}
-		case result.Error != nil:
-			if err := stream.Send(&sdk.ScanResponse{
-				Pathname: result.Error.Pathname,
-				Result: &sdk.ScanResponseError{
-					Error: &sdk.ScanError{
-						Message: result.Error.Err.Error(),
-					},
-				},
-			}); err != nil {
-				return err
-			}
-		default:
-			panic("?? unknown result type ??")
-		}
-	}
-	return nil
+	results := make(chan *importer.ScanResult, 1000)
+	go p.walkDir_walker(results, p.rootDir, realp, 256)
+	return results, nil
 }
 
-func (imp *PlakarImporterFS) walkDir_walker(results chan<- *impor.ScanResult, rootDir, realp string, numWorkers int) {
-	jobs := make(chan string, 1000)
+func (f *FSImporter) walkDir_walker(results chan<- *importer.ScanResult, rootDir, realp string, numWorkers int) {
+	jobs := make(chan string, 1000) // Buffered channel to feed paths to workers
 	var wg sync.WaitGroup
-	for i := 0; i < numWorkers; i++ {
+	for range numWorkers {
 		wg.Add(1)
-		go walkDir_worker(jobs, results, &wg)
+		go f.walkDir_worker(jobs, results, &wg)
 	}
 
+	// Add prefix directories first
 	walkDir_addPrefixDirectories(realp, jobs, results)
 	if realp != rootDir {
 		jobs <- rootDir
@@ -135,15 +86,19 @@ func (imp *PlakarImporterFS) walkDir_walker(results chan<- *impor.ScanResult, ro
 	}
 
 	err := filepath.WalkDir(realp, func(path string, d fs.DirEntry, err error) error {
+		if f.ctx.Err() != nil {
+			return err
+		}
+
 		if err != nil {
-			results <- impor.NewScanError(path, err)
+			results <- importer.NewScanError(path, err)
 			return nil
 		}
 		jobs <- path
 		return nil
 	})
 	if err != nil {
-		results <- impor.NewScanError(realp, err)
+		results <- importer.NewScanError(realp, err)
 	}
 
 	close(jobs)
@@ -151,7 +106,110 @@ func (imp *PlakarImporterFS) walkDir_walker(results chan<- *impor.ScanResult, ro
 	close(results)
 }
 
-func realpathFollow(path string) (resolved string, err error) {
+func (f *FSImporter) walkDir_worker(jobs <-chan string, results chan<- *importer.ScanResult, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	for {
+		var (
+			path string
+			ok   bool
+		)
+
+		select {
+		case path, ok = <-jobs:
+			if !ok {
+				return
+			}
+		case <-f.ctx.Done():
+			return
+		}
+
+		info, err := os.Lstat(path)
+		if err != nil {
+			results <- importer.NewScanError(path, err)
+			continue
+		}
+
+		extendedAttributes, err := xattr.List(path)
+		if err != nil {
+			results <- importer.NewScanError(path, err)
+			continue
+		}
+
+		fileinfo := objects.FileInfoFromStat(info)
+		fileinfo.Lusername, fileinfo.Lgroupname = f.lookupIDs(fileinfo.Uid(), fileinfo.Gid())
+
+		var originFile string
+		if fileinfo.Mode()&os.ModeSymlink != 0 {
+			originFile, err = os.Readlink(path)
+			if err != nil {
+				results <- importer.NewScanError(path, err)
+				continue
+			}
+		}
+		results <- importer.NewScanRecord(filepath.ToSlash(path), originFile, fileinfo, extendedAttributes)
+		for _, attr := range extendedAttributes {
+			results <- importer.NewScanXattr(filepath.ToSlash(path), attr, objects.AttributeExtended)
+		}
+	}
+}
+
+func walkDir_addPrefixDirectories(rootDir string, jobs chan<- string, results chan<- *importer.ScanResult) {
+	atoms := strings.Split(rootDir, string(os.PathSeparator))
+
+	for i := range len(atoms) - 1 {
+		path := filepath.Join(atoms[0 : i+1]...)
+
+		if !strings.HasPrefix(path, "/") {
+			path = "/" + path
+		}
+
+		if _, err := os.Stat(path); err != nil {
+			results <- importer.NewScanError(path, err)
+			continue
+		}
+
+		jobs <- path
+	}
+}
+
+
+func (p *FSImporter) lookupIDs(uid, gid uint64) (uname, gname string) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
+	if name, ok := p.uidToName[uid]; !ok {
+		if u, err := user.LookupId(fmt.Sprint(uid)); err == nil {
+			uname = u.Username
+
+			p.mu.RUnlock()
+			p.mu.Lock()
+			p.uidToName[uid] = uname
+			p.mu.Unlock()
+			p.mu.RLock()
+		}
+	} else {
+		uname = name
+	}
+
+	if name, ok := p.gidToName[gid]; !ok {
+		if g, err := user.LookupGroupId(fmt.Sprint(gid)); err == nil {
+			gname = g.Name
+
+			p.mu.RUnlock()
+			p.mu.Lock()
+			p.gidToName[gid] = name
+			p.mu.Unlock()
+			p.mu.RLock()
+		}
+	} else {
+		gname = name
+	}
+
+	return
+}
+
+func (f *FSImporter) realpathFollow(path string) (resolved string, err error) {
 	info, err := os.Lstat(path)
 	if err != nil {
 		return "", err
@@ -172,81 +230,33 @@ func realpathFollow(path string) (resolved string, err error) {
 	return path, nil
 }
 
-func walkDir_worker(jobs <-chan string, results chan<- *impor.ScanResult, wg *sync.WaitGroup) {
-	defer wg.Done()
-
-	for path := range jobs {
-		info, err := os.Lstat(path)
-		if err != nil {
-			results <- impor.NewScanError(path, err)
-			continue
-		}
-
-		extendedAttributes, err := xattr.List(path)
-		if err != nil {
-			results <- impor.NewScanError(path, err)
-			continue
-		}
-
-		fileinfo := objects.FileInfoFromStat(info)
-		var originFile string
-		if fileinfo.Mode()&os.ModeSymlink != 0 {
-			originFile, err = os.Readlink(path)
-			if err != nil {
-				results <- impor.NewScanError(path, err)
-				continue
-			}
-		}
-		results <- impor.NewScanRecord(filepath.ToSlash(path), originFile, fileinfo, extendedAttributes)
-		for _, attr := range extendedAttributes {
-			results <- impor.NewScanXattr(filepath.ToSlash(path), attr, objects.AttributeExtended)
-		}
+func (p *FSImporter) NewReader(pathname string) (io.ReadCloser, error) {
+	if pathname[0] == '/' && runtime.GOOS == "windows" {
+		pathname = pathname[1:]
 	}
+	return os.Open(pathname)
 }
 
-func walkDir_addPrefixDirectories(rootDir string, jobs chan<- string, results chan<- *impor.ScanResult) {
-	atoms := strings.Split(rootDir, string(os.PathSeparator))
-
-	for i := 0; i < len(atoms)-1; i++ {
-		path := filepath.Join(atoms[0 : i+1]...)
-
-		if !strings.HasPrefix(path, "/") {
-			path = "/" + path
-		}
-
-		if _, err := os.Stat(path); err != nil {
-			results <- impor.NewScanError(path, err)
-			continue
-		}
-
-		jobs <- path
+func (p *FSImporter) NewExtendedAttributeReader(pathname string, attribute string) (io.ReadCloser, error) {
+	if pathname[0] == '/' && runtime.GOOS == "windows" {
+		pathname = pathname[1:]
 	}
-}
 
-func (imp *PlakarImporterFS) Read(req *sdk.ReadRequest, stream sdk.ReadResponseStramer) error {
-	file, err := os.Open(req.Path)
+	data, err := xattr.Get(pathname, attribute)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	defer file.Close()
+	return io.NopCloser(bytes.NewReader(data)), nil
+}
 
-	buf := make([]byte, 8192)
-	for {
-		n, err := file.Read(buf)
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return err
-		}
-		if err := stream.Send(&sdk.ReadResponse{
-			Data: buf[:n],
-		}); err != nil {
-			return err
-		}
-	}
+func (p *FSImporter) Close() error {
 	return nil
 }
+
+func (p *FSImporter) Root() string {
+	return p.rootDir
+}
+
 
 func main() {
 	if len(os.Args) < 2 {
@@ -255,7 +265,7 @@ func main() {
 	}
 
 	scanDir := os.Args[1]
-	fsImporter, err := NewPlakarImporterFS(scanDir)
+	fsImporter, err := NewFSImporter(appcontext.NewAppContext(), "fs", map[string]string{"location": scanDir})
 	if err != nil {
 		panic(err)
 	}

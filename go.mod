@@ -4,7 +4,7 @@ go 1.23.3
 
 require (
 	github.com/PlakarKorp/go-cdc-chunkers v0.0.10
-	github.com/PlakarKorp/go-kloset-sdk v0.0.0-20250521073320-343d737bc88a
+	github.com/PlakarKorp/go-kloset-sdk v0.0.0-20250521084722-43d915e4fa45
 	github.com/alecthomas/chroma v0.10.0
 	github.com/anacrolix/fuse v0.3.1
 	github.com/charmbracelet/bubbletea v1.3.4
@@ -45,7 +45,6 @@ require (
 	golang.org/x/term v0.30.0
 	golang.org/x/tools v0.31.0
 	google.golang.org/grpc v1.72.1
-	google.golang.org/protobuf v1.36.6
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.36.3
 )
@@ -129,6 +128,7 @@ require (
 	golang.org/x/sys v0.31.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250512202823-5a2f75b736a9 // indirect
+	google.golang.org/protobuf v1.36.6 // indirect
 	modernc.org/libc v1.62.0 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.9.1 // indirect
