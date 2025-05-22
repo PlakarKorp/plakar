@@ -79,7 +79,8 @@ func (p *StdioImporter) stdioWalker_addPrefixDirectories(results chan<- *importe
 			Lusername:  "",
 			Lgroupname: "",
 		}
-		results <- importer.NewScanRecord(subpath, "", fi, nil)
+		results <- importer.NewScanRecord(subpath, "", fi, nil,
+			func() (io.ReadCloser, error) { return os.Stdin, nil })
 	}
 }
 
@@ -102,7 +103,7 @@ func (p *StdioImporter) Scan() (<-chan *importer.ScanResult, error) {
 			Lusername:  "",
 			Lgroupname: "",
 		}
-		results <- importer.NewScanRecord(p.fileDir, "", fi, nil)
+		results <- importer.NewScanRecord(p.fileDir, "", fi, nil, nil)
 	}()
 
 	return results, nil

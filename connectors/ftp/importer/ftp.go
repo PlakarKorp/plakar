@@ -78,7 +78,8 @@ func (p *FTPImporter) ftpWalker_worker(jobs <-chan string, results chan<- *impor
 
 		fileinfo := objects.FileInfoFromStat(info)
 
-		results <- importer.NewScanRecord(filepath.ToSlash(path), "", fileinfo, nil)
+		results <- importer.NewScanRecord(filepath.ToSlash(path), "", fileinfo, nil,
+			func() (io.ReadCloser, error) { return p.NewReader(path) })
 
 		// Handle symlinks separately
 		if fileinfo.Mode()&os.ModeSymlink != 0 {
@@ -87,7 +88,7 @@ func (p *FTPImporter) ftpWalker_worker(jobs <-chan string, results chan<- *impor
 				results <- importer.NewScanError(path, err)
 				continue
 			}
-			results <- importer.NewScanRecord(filepath.ToSlash(path), originFile, fileinfo, nil)
+			results <- importer.NewScanRecord(filepath.ToSlash(path), originFile, fileinfo, nil, nil)
 		}
 	}
 }

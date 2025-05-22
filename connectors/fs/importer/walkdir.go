@@ -20,6 +20,7 @@
 package fs
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -72,9 +73,15 @@ func (f *FSImporter) walkDir_worker(jobs <-chan string, results chan<- *importer
 				continue
 			}
 		}
-		results <- importer.NewScanRecord(filepath.ToSlash(path), originFile, fileinfo, extendedAttributes)
+		results <- importer.NewScanRecord(filepath.ToSlash(path), originFile, fileinfo, extendedAttributes,
+			func() (io.ReadCloser, error) {
+				return f.NewReader(path)
+			})
 		for _, attr := range extendedAttributes {
-			results <- importer.NewScanXattr(filepath.ToSlash(path), attr, objects.AttributeExtended)
+			results <- importer.NewScanXattr(filepath.ToSlash(path), attr, objects.AttributeExtended,
+				func() (io.ReadCloser, error) {
+					return f.NewExtendedAttributeReader(path, attr)
+				})
 		}
 	}
 }
