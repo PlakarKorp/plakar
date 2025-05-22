@@ -82,6 +82,11 @@ func NewImporter(ctx *appcontext.AppContext, config map[string]string) (Importer
 	if !ok {
 		return nil, fmt.Errorf("missing location")
 	}
+	print("location: ", location)
+	err := backends.LoadPlugin(ctx)
+	if err == nil {
+		return nil, fmt.Errorf("failed to load plugin: %w", err)
+	}
 
 	proto, location, backend, ok := backends.Lookup(location)
 	if !ok {

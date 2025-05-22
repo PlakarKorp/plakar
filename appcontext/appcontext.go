@@ -39,6 +39,7 @@ type AppContext struct {
 	CookiesDir  string
 	CacheDir    string
 	KeyringDir  string
+	PluginsDir  string
 
 	OperatingSystem string
 	Architecture    string

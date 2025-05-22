@@ -316,6 +316,7 @@ func EntryPoint() int {
 	ctx.HomeDir = opt_userDefault.HomeDir
 	ctx.ProcessID = os.Getpid()
 	ctx.MaxConcurrency = ctx.NumCPU*8 + 1
+	ctx.PluginsDir = filepath.Join(opt_userDefault.HomeDir, ".plakar-plugins")
 
 	if flag.NArg() == 0 {
 		fmt.Fprintf(os.Stderr, "%s: a subcommand must be provided\n", filepath.Base(flag.CommandLine.Name()))

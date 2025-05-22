@@ -1,9 +1,15 @@
 package location
 
 import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
+
+	"github.com/PlakarKorp/plakar/appcontext"
 )
 
 type Location[T any] struct {
@@ -70,4 +76,55 @@ func (l *Location[T]) Lookup(uri string) (proto, location string, item T, ok boo
 
 	item, ok = l.items[proto]
 	return
+}
+
+type PluginInfo struct {
+	Name        string `json:"backupName"`
+}
+
+func (l *Location[T]) LoadPlugin(ctx *appcontext.AppContext) error {
+	l.mtx.Lock()
+	defer l.mtx.Unlock()
+	fmt.Printf("Loading plugins from %s\n", ctx.PluginsDir)
+	fmt.Printf("fallback: %s\n", l.fallback)
+
+	dirEntries, err := os.ReadDir(ctx.PluginsDir)
+	if err != nil {
+		return nil
+	}
+	fmt.Printf("Found %d plugins\n", len(dirEntries))
+	for i := range dirEntries {
+		dirEntry := dirEntries[i]
+		name := dirEntry.Name()
+		if dirEntry.IsDir() {
+			fmt.Printf("Skipping directory: %s\n", filepath.Join(ctx.PluginsDir, name))
+			pluginDirEntry, err := os.ReadDir(filepath.Join(ctx.PluginsDir, name))
+			if err != nil {
+				return nil
+			}
+			fmt.Printf("Found plugin directory: %s\n", name)
+			for _, entry := range pluginDirEntry {
+				if entry.IsDir() {
+					continue
+				}
+				pluginPath := filepath.Join(ctx.PluginsDir, name, entry.Name())
+				file := filepath.Base(pluginPath)
+				fmt.Printf("Found plugin: %s %s\n", pluginPath, file)
+				if file != ".info.json" {
+					fmt.Printf("Skipping non-info file: %s\n", file)
+					continue
+				}
+				pInfo, err := os.ReadFile(pluginPath)
+				if err != nil {
+					return nil
+				}
+				fmt.Printf("Plugin info: %s\n", string(pInfo))
+				var jsonContent PluginInfo
+				json.Unmarshal(pInfo, &jsonContent)	
+				fmt.Printf("Plugin name: %s\n", jsonContent.Name)
+				//l.Register(jsonContent.Name, nil)
+			}
+		}
+	}
+	return nil
 }
