@@ -151,6 +151,7 @@ func SetupRoutes(server *http.ServeMux, repo *repository.Repository, token strin
 	}))
 
 	server.Handle("GET /api/info", authToken(JSONAPIView(apiInfo)))
+	server.Handle("GET /api/terminal/ws", TerminalWebsocket(ctx, repo))
 
 	server.Handle("POST /api/authentication/login/github", authToken(JSONAPIView(servicesLoginGithub)))
 	server.Handle("POST /api/authentication/login/email", authToken(JSONAPIView(servicesLoginEmail)))
