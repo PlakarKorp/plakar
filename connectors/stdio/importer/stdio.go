@@ -17,7 +17,6 @@
 package stdio
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"path"
@@ -107,18 +106,6 @@ func (p *StdioImporter) Scan() (<-chan *importer.ScanResult, error) {
 	}()
 
 	return results, nil
-}
-
-func (p *StdioImporter) NewReader(pathname string) (io.ReadCloser, error) {
-	return os.Stdin, nil
-}
-
-func (p *StdioImporter) NewExtendedAttributeReader(pathname string, attribute string) (io.ReadCloser, error) {
-	return nil, fmt.Errorf("extended attributes are not supported on stdio")
-}
-
-func (p *StdioImporter) GetExtendedAttributes(pathname string) ([]importer.ExtendedAttributes, error) {
-	return nil, fmt.Errorf("extended attributes are not supported on stdio")
 }
 
 func (p *StdioImporter) Close() error {

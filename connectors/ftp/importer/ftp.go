@@ -17,7 +17,6 @@
 package ftp
 
 import (
-	"fmt"
 	"io"
 	"log"
 	"net/url"
@@ -181,10 +180,6 @@ func (p *FTPImporter) NewReader(pathname string) (io.ReadCloser, error) {
 	tmpfile.Seek(0, 0)
 
 	return tmpfile, nil
-}
-
-func (p *FTPImporter) NewExtendedAttributeReader(pathname string, attribute string) (io.ReadCloser, error) {
-	return nil, fmt.Errorf("extended attributes are not supported on FTP")
 }
 
 func (p *FTPImporter) Close() error {

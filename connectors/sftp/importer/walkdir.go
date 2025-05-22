@@ -51,7 +51,7 @@ func (p *SFTPImporter) walkDir_worker(jobs <-chan string, results chan<- *import
 			}
 		}
 		results <- importer.NewScanRecord(filepath.ToSlash(path), originFile, fileinfo, []string{},
-			func() (io.ReadCloser, error) { return p.NewReader(path) })
+			func() (io.ReadCloser, error) { return p.client.Open(path) })
 	}
 }
 
