@@ -63,6 +63,7 @@ import (
 	_ "github.com/PlakarKorp/plakar/connectors/sftp"
 	_ "github.com/PlakarKorp/plakar/connectors/sqlite"
 	_ "github.com/PlakarKorp/plakar/connectors/stdio"
+	_ "github.com/PlakarKorp/plakar/connectors/tar"
 )
 
 func EntryPoint() int {
