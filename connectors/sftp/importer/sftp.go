@@ -18,8 +18,6 @@ package sftp
 
 import (
 	"context"
-	"fmt"
-	"io"
 	"net/url"
 
 	"github.com/PlakarKorp/kloset/snapshot/importer"
@@ -69,14 +67,6 @@ func (p *SFTPImporter) Type() string {
 
 func (p *SFTPImporter) Scan() (<-chan *importer.ScanResult, error) {
 	return p.walkDir_walker(256)
-}
-
-func (p *SFTPImporter) NewReader(pathname string) (io.ReadCloser, error) {
-	return p.client.Open(pathname)
-}
-
-func (p *SFTPImporter) NewExtendedAttributeReader(pathname string, attribute string) (io.ReadCloser, error) {
-	return nil, fmt.Errorf("extended attributes are not supported by the sftp importer yet")
 }
 
 func (p *SFTPImporter) Close() error {

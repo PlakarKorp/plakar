@@ -17,21 +17,17 @@
 package fs
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"os/user"
 	"path"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 
 	"github.com/PlakarKorp/kloset/snapshot/importer"
-	"github.com/pkg/xattr"
 )
 
 type FSImporter struct {
@@ -178,25 +174,6 @@ func (f *FSImporter) realpathFollow(path string) (resolved string, err error) {
 	}
 
 	return path, nil
-}
-
-func (p *FSImporter) NewReader(pathname string) (io.ReadCloser, error) {
-	if pathname[0] == '/' && runtime.GOOS == "windows" {
-		pathname = pathname[1:]
-	}
-	return os.Open(pathname)
-}
-
-func (p *FSImporter) NewExtendedAttributeReader(pathname string, attribute string) (io.ReadCloser, error) {
-	if pathname[0] == '/' && runtime.GOOS == "windows" {
-		pathname = pathname[1:]
-	}
-
-	data, err := xattr.Get(pathname, attribute)
-	if err != nil {
-		return nil, err
-	}
-	return io.NopCloser(bytes.NewReader(data)), nil
 }
 
 func (p *FSImporter) Close() error {

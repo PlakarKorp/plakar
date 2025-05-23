@@ -17,6 +17,7 @@
 package sftp
 
 import (
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -49,7 +50,8 @@ func (p *SFTPImporter) walkDir_worker(jobs <-chan string, results chan<- *import
 				continue
 			}
 		}
-		results <- importer.NewScanRecord(filepath.ToSlash(path), originFile, fileinfo, []string{})
+		results <- importer.NewScanRecord(filepath.ToSlash(path), originFile, fileinfo, []string{},
+			func() (io.ReadCloser, error) { return p.client.Open(path) })
 	}
 }
 

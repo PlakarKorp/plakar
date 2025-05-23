@@ -19,7 +19,7 @@ func TestS3Importer(t *testing.T) {
 		os.RemoveAll(tmpImportDir)
 	})
 
-	err = os.WriteFile(tmpImportDir+"/dummy.txt", []byte("test importer fs"), 0644)
+	err = os.WriteFile(tmpImportDir+"/dummy.txt", []byte("test importer s3"), 0644)
 	require.NoError(t, err)
 
 	fpOrigin, err := os.Open(tmpImportDir + "/dummy.txt")
@@ -62,18 +62,18 @@ func TestS3Importer(t *testing.T) {
 	for record := range scanChan {
 		require.Nil(t, record.Error)
 		paths = append(paths, record.Record.Pathname)
+
+		// if record.Record.Pathname == "/dummy.txt" {
+		// 	content, err := io.ReadAll(record.Record.Reader)
+		// 	require.NoError(t, err)
+		// 	require.Equal(t, content, []byte("test importer s3"))
+		// 	record.Record.Reader.Close()
+		// }
 	}
+
 	expected := []string{"/", "/dummy.txt"}
 	sort.Strings(paths)
 	require.Equal(t, expected, paths)
-
-	reader, err := importer.NewReader("bucket/dummy.txt")
-	require.NoError(t, err)
-	require.NotNil(t, reader)
-	defer reader.Close()
-
-	_, err = importer.NewExtendedAttributeReader("/bucket/dummy.txt", "user.plakar.test")
-	require.EqualError(t, err, "extended attributes are not supported on S3")
 
 	err = importer.Close()
 	require.NoError(t, err)

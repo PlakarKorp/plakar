@@ -128,7 +128,7 @@ func (p *S3Importer) Scan() (<-chan *importer.ScanResult, error) {
 				0,
 				0,
 			)
-			result <- importer.NewScanRecord(parent, "", fi, nil)
+			result <- importer.NewScanRecord(parent, "", fi, nil, nil)
 
 			if parent == "/" {
 				break
@@ -159,7 +159,7 @@ func (p *S3Importer) Scan() (<-chan *importer.ScanResult, error) {
 					0,
 					0,
 				)
-				result <- importer.NewScanRecord("/"+parent, "", fi, nil)
+				result <- importer.NewScanRecord("/"+parent, "", fi, nil, nil)
 				parent = path.Dir(parent)
 			}
 
@@ -174,28 +174,13 @@ func (p *S3Importer) Scan() (<-chan *importer.ScanResult, error) {
 				0,
 				0,
 			)
-			result <- importer.NewScanRecord("/"+object.Key, "", fi, nil)
+			result <- importer.NewScanRecord("/"+object.Key, "", fi, nil, func() (io.ReadCloser, error) {
+				return p.minioClient.GetObject(p.ctx, p.bucket, object.Key, minio.GetObjectOptions{})
+			})
 		}
 
 	}()
 	return result, nil
-}
-
-func (p *S3Importer) NewReader(pathname string) (io.ReadCloser, error) {
-	if pathname == "/" {
-		return nil, fmt.Errorf("cannot read root directory")
-	}
-	if strings.HasSuffix(pathname, "/") {
-		return nil, fmt.Errorf("cannot read directory")
-	}
-	pathname = strings.TrimPrefix(pathname, "/")
-
-	obj, err := p.minioClient.GetObject(p.ctx, p.bucket, pathname,
-		minio.GetObjectOptions{})
-	if err != nil {
-		return nil, err
-	}
-	return obj, nil
 }
 
 func (p *S3Importer) NewExtendedAttributeReader(pathname string, attribute string) (io.ReadCloser, error) {

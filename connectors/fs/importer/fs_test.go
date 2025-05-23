@@ -1,6 +1,7 @@
 package fs
 
 import (
+	"io"
 	"os"
 	"sort"
 	"testing"
@@ -46,6 +47,13 @@ func TestFSImporter(t *testing.T) {
 			continue
 		}
 		paths = append(paths, record.Record.Pathname)
+
+		if record.Record.FileInfo.Mode().IsRegular() {
+			content, err := io.ReadAll(record.Record.Reader)
+			require.NoError(t, err)
+			require.Equal(t, content, []byte("test importer fs"))
+			record.Record.Reader.Close()
+		}
 	}
 	expected := []string{"/", "/tmp", tmpImportDir, tmpImportDir + "/dummy.txt"}
 	sort.Strings(paths)
@@ -58,11 +66,6 @@ func TestFSImporter(t *testing.T) {
 	// require.NoError(t, err)
 	// require.NotNil(t, extendedAttrReader)
 	// defer extendedAttrReader.Close()
-
-	reader, err := importer.NewReader(tmpImportDir + "/dummy.txt")
-	require.NoError(t, err)
-	require.NotNil(t, reader)
-	defer reader.Close()
 
 	err = importer.Close()
 	require.NoError(t, err)
