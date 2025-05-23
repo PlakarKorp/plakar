@@ -29,17 +29,18 @@ type AppContext struct {
 	Stdout io.Writer `msgpack:"-"`
 	Stderr io.Writer `msgpack:"-"`
 
-	NumCPU      int
-	Username    string
-	HomeDir     string
-	Hostname    string
-	CommandLine string
-	MachineID   string
-	KeyFromFile string
-	CookiesDir  string
-	CacheDir    string
-	KeyringDir  string
-	PluginsDir  string
+	NumCPU      	int
+	Username    	string
+	HomeDir     	string
+	Hostname    	string
+	CommandLine 	string
+	MachineID   	string
+	KeyFromFile 	string
+	CookiesDir  	string
+	CacheDir    	string
+	KeyringDir  	string
+	PluginsDir  	string
+	PluginsVersion 	string
 
 	OperatingSystem string
 	Architecture    string
