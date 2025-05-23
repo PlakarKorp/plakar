@@ -175,21 +175,12 @@ func (p *S3Importer) Scan() (<-chan *importer.ScanResult, error) {
 				0,
 			)
 			result <- importer.NewScanRecord("/"+object.Key, "", fi, nil, func() (io.ReadCloser, error) {
-				return p.NewReader(object.Key)
+				return p.minioClient.GetObject(p.ctx, p.bucket, object.Key, minio.GetObjectOptions{})
 			})
 		}
 
 	}()
 	return result, nil
-}
-
-func (p *S3Importer) NewReader(pathname string) (io.ReadCloser, error) {
-	obj, err := p.minioClient.GetObject(p.ctx, p.bucket, pathname,
-		minio.GetObjectOptions{})
-	if err != nil {
-		return nil, err
-	}
-	return obj, nil
 }
 
 func (p *S3Importer) NewExtendedAttributeReader(pathname string, attribute string) (io.ReadCloser, error) {
