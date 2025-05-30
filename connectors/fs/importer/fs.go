@@ -32,6 +32,7 @@ import (
 
 type FSImporter struct {
 	ctx     context.Context
+	opts    *importer.ImporterOptions
 	rootDir string
 
 	uidToName map[uint64]string
@@ -43,7 +44,7 @@ func init() {
 	importer.Register("fs", NewFSImporter)
 }
 
-func NewFSImporter(appCtx context.Context, name string, config map[string]string) (importer.Importer, error) {
+func NewFSImporter(appCtx context.Context, opts *importer.ImporterOptions, name string, config map[string]string) (importer.Importer, error) {
 	location := config["location"]
 	rootDir := strings.TrimPrefix(location, "fs://")
 
@@ -55,6 +56,7 @@ func NewFSImporter(appCtx context.Context, name string, config map[string]string
 
 	return &FSImporter{
 		ctx:       appCtx,
+		opts:      opts,
 		rootDir:   rootDir,
 		uidToName: make(map[uint64]string),
 		gidToName: make(map[uint64]string),
@@ -62,11 +64,7 @@ func NewFSImporter(appCtx context.Context, name string, config map[string]string
 }
 
 func (p *FSImporter) Origin() string {
-	hostname, err := os.Hostname()
-	if err != nil {
-		hostname = "localhost"
-	}
-	return hostname
+	return p.opts.Hostname
 }
 
 func (p *FSImporter) Type() string {

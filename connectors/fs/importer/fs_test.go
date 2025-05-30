@@ -20,14 +20,13 @@ func TestFSImporter(t *testing.T) {
 	err = os.WriteFile(tmpImportDir+"/dummy.txt", []byte("test importer fs"), 0644)
 	require.NoError(t, err)
 
-	appCtx := appcontext.NewAppContext()
+	ctx := appcontext.NewAppContext()
 
-	importer, err := NewFSImporter(appCtx, "fs", map[string]string{"location": tmpImportDir})
+	importer, err := NewFSImporter(ctx, ctx.ImporterOpts(), "fs", map[string]string{"location": tmpImportDir})
 	require.NoError(t, err)
 	require.NotNil(t, importer)
 
-	origin := importer.Origin()
-	require.NotEmpty(t, origin)
+	require.Equal(t, ctx.Hostname, importer.Origin())
 
 	root := importer.Root()
 	require.NoError(t, err)

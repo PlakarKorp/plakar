@@ -2,6 +2,7 @@ package appcontext
 
 import (
 	"github.com/PlakarKorp/kloset/kcontext"
+	"github.com/PlakarKorp/kloset/snapshot/importer"
 )
 
 type AppContext struct {
@@ -32,4 +33,16 @@ func (c *AppContext) SetSecret(secret []byte) {
 
 func (c *AppContext) GetSecret() []byte {
 	return c.secret
+}
+
+func (ctx *AppContext) ImporterOpts() *importer.ImporterOptions {
+	return &importer.ImporterOptions{
+		Hostname:        ctx.Hostname,
+		OperatingSystem: ctx.OperatingSystem,
+		Architecture:    ctx.Architecture,
+		CWD:             ctx.CWD,
+		MaxConcurrency:  ctx.MaxConcurrency,
+		Stdout:          ctx.Stdout,
+		Stderr:          ctx.Stderr,
+	}
 }

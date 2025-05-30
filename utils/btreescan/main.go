@@ -159,7 +159,9 @@ func main() {
 		log.Fatal("Failed to create the btree:", err)
 	}
 
-	imp, err := importer.NewImporter(appcontext.NewAppContext().GetInner(), importerSource)
+	ctx := appcontext.NewAppContext()
+
+	imp, err := importer.NewImporter(ctx.GetInner(), ctx.ImporterOpts(), importerSource)
 	if err != nil {
 		log.Fatal("new fs importer failed:", err)
 	}
