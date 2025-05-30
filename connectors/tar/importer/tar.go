@@ -97,7 +97,7 @@ func (t *TarImporter) Scan() (<-chan *importer.ScanResult, error) {
 }
 
 func finfo(hdr *tar.Header) objects.FileInfo {
-	return objects.FileInfo{
+	f := objects.FileInfo{
 		Lname:      path.Base(hdr.Name),
 		Lsize:      hdr.Size,
 		Lmode:      fs.FileMode(hdr.Mode),
@@ -109,6 +109,23 @@ func finfo(hdr *tar.Header) objects.FileInfo {
 		Lusername:  "",
 		Lgroupname: "",
 	}
+
+	switch hdr.Typeflag {
+	case tar.TypeLink:
+		f.Lmode |= fs.ModeSymlink
+	case tar.TypeChar:
+		f.Lmode |= fs.ModeCharDevice
+	case tar.TypeBlock:
+		f.Lmode |= fs.ModeDevice
+	case tar.TypeDir:
+		f.Lmode |= fs.ModeDir
+	case tar.TypeFifo:
+		f.Lmode |= fs.ModeNamedPipe
+	default:
+		// other are implicitly regular files.
+	}
+
+	return f
 }
 
 type entry struct {
