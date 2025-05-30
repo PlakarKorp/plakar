@@ -23,7 +23,7 @@ import (
 	"math/rand/v2"
 	"net/http"
 	"os"
-	"path/filepath"
+	"path"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/api"
@@ -47,12 +47,12 @@ func Ui(repo *repository.Repository, ctx *appcontext.AppContext, addr string, op
 
 	// Serve files from the ./frontend directory
 	server.HandleFunc("/{path...}", func(w http.ResponseWriter, r *http.Request) {
-		path := filepath.Join("frontend", r.PathValue("path"))
+		p := path.Join("frontend", r.PathValue("path"))
 
-		_, err := content.Open(path)
+		_, err := content.Open(p)
 		if os.IsNotExist(err) {
 			// File does not exist, serve index.html
-			index, err := content.ReadFile(filepath.Join("frontend", "index.html"))
+			index, err := content.ReadFile(path.Join("frontend", "index.html"))
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
