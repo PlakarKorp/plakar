@@ -250,6 +250,10 @@ func LocateSnapshotByPrefix(repo *repository.Repository, prefix string) (objects
 }
 
 func OpenSnapshotByPath(repo *repository.Repository, snapshotPath string) (*snapshot.Snapshot, string, error) {
+	return OpenSnapshotByPathN(0, repo, snapshotPath)
+}
+
+func OpenSnapshotByPathN(source int, repo *repository.Repository, snapshotPath string) (*snapshot.Snapshot, string, error) {
 	prefix, pathname := ParseSnapshotPath(snapshotPath)
 
 	snapshotID, err := LocateSnapshotByPrefix(repo, prefix)
@@ -266,7 +270,7 @@ func OpenSnapshotByPath(repo *repository.Repository, snapshotPath string) (*snap
 	if strings.HasPrefix(pathname, "/") {
 		snapRoot = pathname
 	} else {
-		snapRoot = path.Clean(path.Join(snap.Header.GetSource(0).Importer.Directory, pathname))
+		snapRoot = path.Clean(path.Join(snap.Header.GetSource(source).Importer.Directory, pathname))
 	}
 	return snap, path.Clean(snapRoot), err
 }

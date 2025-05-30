@@ -65,7 +65,7 @@ func (s *Scheduler) backupTask(taskset Task, task BackupConfig) {
 	backupSubcommand := &backup.Backup{}
 	backupSubcommand.Silent = true
 	backupSubcommand.Job = taskset.Name
-	backupSubcommand.Path = task.Path
+	//backupSubcommand.Path = task.Path
 	backupSubcommand.Quiet = true
 	if task.Check.Enabled {
 		backupSubcommand.OptCheck = true

@@ -24,11 +24,11 @@ import (
 	"os/user"
 	"time"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/kloset/snapshot/vfs"
+	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
 	"github.com/dustin/go-humanize"
@@ -50,6 +50,7 @@ func (cmd *Ls) Parse(ctx *appcontext.AppContext, args []string) error {
 
 	flags.BoolVar(&cmd.DisplayUUID, "uuid", false, "display uuid instead of short ID")
 	flags.BoolVar(&cmd.Recursive, "recursive", false, "recursive listing")
+	flags.IntVar(&cmd.Source, "source", 0, "source to display")
 	cmd.LocateOptions.InstallFlags(flags)
 
 	flags.Parse(args)
@@ -71,6 +72,7 @@ type Ls struct {
 	Recursive     bool
 	DisplayUUID   bool
 	Path          string
+	Source        int
 }
 
 func (cmd *Ls) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
@@ -131,7 +133,7 @@ func (cmd *Ls) list_snapshot(ctx *appcontext.AppContext, repo *repository.Reposi
 	}
 	defer snap.Close()
 
-	pvfs, err := snap.Filesystem()
+	pvfs, err := snap.FilesystemN(cmd.Source)
 	if err != nil {
 		return err
 	}
