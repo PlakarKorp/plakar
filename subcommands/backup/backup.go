@@ -180,7 +180,7 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		}
 	}
 
-	imp, err := importer.NewImporter(ctx.GetInner(), importerConfig)
+	imp, err := importer.NewImporter(ctx.GetInner(), ctx.ImporterOpts(), importerConfig)
 	if err != nil {
 		return 1, fmt.Errorf("failed to create an importer for %s: %s", scanDir, err), objects.MAC{}, nil
 	}

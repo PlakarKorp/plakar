@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	_ "github.com/PlakarKorp/plakar/connectors/fs/importer"
@@ -128,7 +129,17 @@ func GenerateSnapshot(t *testing.T, repo *repository.Repository, files []MockFil
 	require.NoError(t, err)
 	require.NotNil(t, builder)
 
-	imp, err := NewMockImporter(repo.AppContext(), "mock", map[string]string{"location": "mock://place"})
+	impopts := &importer.ImporterOptions{
+		Hostname:        "localhost",
+		OperatingSystem: runtime.GOOS,
+		Architecture:    runtime.GOARCH,
+		CWD:             "/",
+		MaxConcurrency:  1,
+		Stdout:          os.Stdout,
+		Stderr:          os.Stderr,
+	}
+
+	imp, err := NewMockImporter(repo.AppContext(), impopts, "mock", map[string]string{"location": "mock://place"})
 	require.NoError(t, err)
 	require.NotNil(t, imp)
 

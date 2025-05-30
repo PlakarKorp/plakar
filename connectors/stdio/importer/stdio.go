@@ -32,6 +32,7 @@ import (
 type StdioImporter struct {
 	fileDir string
 	appCtx  context.Context
+	opts    *importer.ImporterOptions
 	name    string
 }
 
@@ -39,7 +40,7 @@ func init() {
 	importer.Register("stdin", NewStdioImporter)
 }
 
-func NewStdioImporter(appCtx context.Context, name string, config map[string]string) (importer.Importer, error) {
+func NewStdioImporter(appCtx context.Context, opts *importer.ImporterOptions, name string, config map[string]string) (importer.Importer, error) {
 	location := config["location"]
 	location = strings.TrimPrefix(location, "stdin://")
 	if !strings.HasPrefix(location, "/") {
@@ -117,12 +118,7 @@ func (p *StdioImporter) Root() string {
 }
 
 func (p *StdioImporter) Origin() string {
-	hostname, err := os.Hostname()
-	if err != nil {
-		hostname = "localhost"
-	}
-
-	return hostname
+	return p.opts.Hostname
 }
 
 func (p *StdioImporter) Type() string {

@@ -290,8 +290,10 @@ func (cmd *Ptar) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 }
 
 func (cmd *Ptar) backup(ctx *appcontext.AppContext, repo *repository.RepositoryWriter) error {
+	impopts := ctx.ImporterOpts()
+
 	for _, loc := range cmd.Location {
-		imp, err := importer.NewImporter(ctx.GetInner(), map[string]string{"location": loc})
+		imp, err := importer.NewImporter(ctx.GetInner(), impopts, map[string]string{"location": loc})
 		if err != nil {
 			return err
 		}
