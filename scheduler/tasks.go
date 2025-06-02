@@ -53,7 +53,7 @@ func loadRepository(newCtx *appcontext.AppContext, name string) (*repository.Rep
 		newCtx.SetSecret(key)
 	}
 
-	repo, err := repository.New(newCtx.GetInner(), store, config)
+	repo, err := repository.New(newCtx.GetInner(), newCtx.GetSecret(), store, config)
 	if err != nil {
 		store.Close()
 		return nil, store, fmt.Errorf("unable to open repository: %w", err)

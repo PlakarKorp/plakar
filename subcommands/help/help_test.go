@@ -92,7 +92,7 @@ func TestParseCmdHelpDefault(t *testing.T) {
 	logger := logging.NewLogger(bytes.NewBuffer(nil), bytes.NewBuffer(nil))
 	logger.EnableInfo()
 	ctx.SetLogger(logger)
-	repo, err := repository.New(ctx.GetInner(), r, serializedConfig)
+	repo, err := repository.New(ctx.GetInner(), nil, r, serializedConfig)
 	// override the homedir to avoid having test overwriting existing home configuration
 	ctx.HomeDir = repo.Location()
 	args := []string{"-style", "notty"}
@@ -192,7 +192,7 @@ func TestParseCmdHelpCommand(t *testing.T) {
 	logger := logging.NewLogger(bytes.NewBuffer(nil), bytes.NewBuffer(nil))
 	logger.EnableInfo()
 	ctx.SetLogger(logger)
-	repo, err := repository.New(ctx.GetInner(), r, serializedConfig)
+	repo, err := repository.New(ctx.GetInner(), nil, r, serializedConfig)
 	// override the homedir to avoid having test overwriting existing home configuration
 	ctx.HomeDir = repo.Location()
 	args := []string{"-style", "notty", "version"}

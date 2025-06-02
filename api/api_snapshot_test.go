@@ -157,7 +157,7 @@ func _TestSnapshotHeader(t *testing.T) {
 
 			lstore, err := storage.Create(ctx.GetInner(), map[string]string{"location": c.location}, wrappedConfig)
 			require.NoError(t, err, "creating storage")
-			repo, err := repository.New(ctx.GetInner(), lstore, wrappedConfig)
+			repo, err := repository.New(ctx.GetInner(), nil, lstore, wrappedConfig)
 			require.NoError(t, err, "creating repository")
 
 			var noToken string
@@ -234,7 +234,7 @@ func TestSnapshotHeaderErrors(t *testing.T) {
 
 			lstore, err := storage.Create(ctx.GetInner(), map[string]string{"location": c.location}, wrappedConfig)
 			require.NoError(t, err, "creating storage")
-			repo, err := repository.New(ctx.GetInner(), lstore, wrappedConfig)
+			repo, err := repository.New(ctx.GetInner(), nil, lstore, wrappedConfig)
 			require.NoError(t, err, "creating repository")
 
 			var noToken string
@@ -296,7 +296,7 @@ func _TestSnapshotSign(t *testing.T) {
 
 			lstore, err := storage.Create(ctx.GetInner(), map[string]string{"location": c.location}, wrappedConfig)
 			require.NoError(t, err, "creating storage")
-			repo, err := repository.New(ctx.GetInner(), lstore, wrappedConfig)
+			repo, err := repository.New(ctx.GetInner(), nil, lstore, wrappedConfig)
 			require.NoError(t, err, "creating repository")
 
 			token := "test-token"

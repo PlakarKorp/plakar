@@ -6,6 +6,7 @@ import (
 
 type AppContext struct {
 	*kcontext.KContext
+	secret []byte
 }
 
 func NewAppContext() *AppContext {
@@ -23,4 +24,12 @@ func NewAppContextFrom(ctx *AppContext) *AppContext {
 // XXX: This needs to go away progressively by migrating to AppContext.
 func (c *AppContext) GetInner() *kcontext.KContext {
 	return c.KContext
+}
+
+func (c *AppContext) SetSecret(secret []byte) {
+	c.secret = secret
+}
+
+func (c *AppContext) GetSecret() []byte {
+	return c.secret
 }

@@ -56,7 +56,7 @@ func TestAuthMiddleware(t *testing.T) {
 
 	lstore, err := storage.Create(ctx.GetInner(), map[string]string{"location": "mock:///test/location"}, wrappedConfig)
 	require.NoError(t, err)
-	repo, err := repository.New(ctx.GetInner(), lstore, wrappedConfig)
+	repo, err := repository.New(ctx.GetInner(), nil, lstore, wrappedConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,7 +116,7 @@ func Test_UnknownEndpoint(t *testing.T) {
 
 	lstore, err := storage.Create(ctx.GetInner(), map[string]string{"location": "mock:///test/location"}, wrappedConfig)
 	require.NoError(t, err)
-	repo, err := repository.New(ctx.GetInner(), lstore, wrappedConfig)
+	repo, err := repository.New(ctx.GetInner(), nil, lstore, wrappedConfig)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -102,7 +102,7 @@ func GenerateRepository(t *testing.T, bufout *bytes.Buffer, buferr *bytes.Buffer
 	}
 	// logger.EnableTrace("all")
 	ctx.SetLogger(logger)
-	repo, err := repository.New(ctx.GetInner(), r, serializedConfig)
+	repo, err := repository.New(ctx.GetInner(), key, r, serializedConfig)
 	require.NoError(t, err, "creating repository")
 
 	// override the homedir to avoid having test overwriting existing home configuration

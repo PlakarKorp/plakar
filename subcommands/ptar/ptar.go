@@ -117,7 +117,7 @@ func (cmd *Ptar) Parse(ctx *appcontext.AppContext, args []string) error {
 
 		peerCtx := appcontext.NewAppContextFrom(ctx)
 		peerCtx.SetSecret(peerSecret)
-		_, err = repository.NewNoRebuild(peerCtx.GetInner(), peerStore, peerStoreSerializedConfig)
+		_, err = repository.NewNoRebuild(peerCtx.GetInner(), peerCtx.GetSecret(), peerStore, peerStoreSerializedConfig)
 		if err != nil {
 			return err
 		}
@@ -236,7 +236,7 @@ func (cmd *Ptar) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 		return 1, err
 	}
 
-	repo, err = repository.New(ctx.GetInner(), st, wrappedConfig)
+	repo, err = repository.New(ctx.GetInner(), ctx.GetSecret(), st, wrappedConfig)
 	if err != nil {
 		return 1, err
 	}
@@ -261,7 +261,7 @@ func (cmd *Ptar) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 
 		srcCtx := appcontext.NewAppContextFrom(ctx)
 		srcCtx.SetSecret(cmd.SyncSrcSecret)
-		srcRepository, err := repository.New(srcCtx.GetInner(), peerStore, peerStoreSerializedConfig)
+		srcRepository, err := repository.New(srcCtx.GetInner(), srcCtx.GetSecret(), peerStore, peerStoreSerializedConfig)
 		if err != nil {
 			return 1, fmt.Errorf("could not open source repository %s: %s", cmd.SyncFrom, err)
 		}

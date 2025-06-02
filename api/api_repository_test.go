@@ -47,7 +47,7 @@ func _Test_RepositoryConfiguration(t *testing.T) {
 	defer cache.Close()
 	ctx.SetCache(cache)
 	ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
-	repo, err := repository.New(ctx.GetInner(), lstore, wrappedConfig)
+	repo, err := repository.New(ctx.GetInner(), nil, lstore, wrappedConfig)
 	require.NoError(t, err, "creating repository")
 
 	cookies := cookies.NewManager("/tmp/test_plakar")
@@ -334,7 +334,7 @@ func _Test_RepositorySnapshots(t *testing.T) {
 
 			lstore, err := storage.Create(ctx.GetInner(), map[string]string{"location": c.location}, wrappedConfig)
 			require.NoError(t, err, "creating storage")
-			repo, err := repository.New(ctx.GetInner(), lstore, wrappedConfig)
+			repo, err := repository.New(ctx.GetInner(), nil, lstore, wrappedConfig)
 			require.NoError(t, err, "creating repository")
 
 			var noToken string
@@ -437,7 +437,7 @@ func _Test_RepositorySnapshotsErrors(t *testing.T) {
 
 			lstore, err := storage.Create(ctx.GetInner(), map[string]string{"location": c.location}, wrappedConfig)
 			require.NoError(t, err, "creating storage")
-			repo, err := repository.New(ctx.GetInner(), lstore, wrappedConfig)
+			repo, err := repository.New(ctx.GetInner(), nil, lstore, wrappedConfig)
 			require.NoError(t, err, "creating repository")
 
 			var noToken string
@@ -515,7 +515,7 @@ func _Test_RepositoryStates(t *testing.T) {
 
 			lstore, err := storage.Create(ctx.GetInner(), map[string]string{"location": c.location}, wrappedConfig)
 			require.NoError(t, err, "creating storage")
-			repo, err := repository.New(ctx.GetInner(), lstore, wrappedConfig)
+			repo, err := repository.New(ctx.GetInner(), nil, lstore, wrappedConfig)
 			require.NoError(t, err, "creating repository")
 
 			var noToken string
@@ -587,7 +587,7 @@ func _Test_RepositoryState(t *testing.T) {
 
 			lstore, err := storage.Create(ctx.GetInner(), map[string]string{"location": c.location}, wrappedConfig)
 			require.NoError(t, err, "creating storage")
-			repo, err := repository.New(ctx.GetInner(), lstore, wrappedConfig)
+			repo, err := repository.New(ctx.GetInner(), nil, lstore, wrappedConfig)
 			require.NoError(t, err, "creating repository")
 
 			var noToken string
@@ -664,7 +664,7 @@ func Test_RepositoryStateErrors(t *testing.T) {
 
 			lstore, err := storage.Create(ctx.GetInner(), map[string]string{"location": c.location}, wrappedConfig)
 			require.NoError(t, err, "creating storage")
-			repo, err := repository.New(ctx.GetInner(), lstore, wrappedConfig)
+			repo, err := repository.New(ctx.GetInner(), nil, lstore, wrappedConfig)
 			require.NoError(t, err, "creating repository")
 
 			var noToken string

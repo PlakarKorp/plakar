@@ -453,7 +453,7 @@ func handleClient(ctx *appcontext.AppContext, wg *sync.WaitGroup, conn net.Conn)
 		}
 		defer store.Close()
 
-		repo, err = repository.New(clientContext.GetInner(), store, serializedConfig)
+		repo, err = repository.New(clientContext.GetInner(), clientContext.GetSecret(), store, serializedConfig)
 		if err != nil {
 			clientContext.GetLogger().Warn("Failed to open repository: %v", err)
 			fmt.Fprintf(clientContext.Stderr, "Failed to open repository: %s\n", err)

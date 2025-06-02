@@ -93,7 +93,7 @@ func generateFixtures(t *testing.T, bufOut *bytes.Buffer, bufErr *bytes.Buffer) 
 	logger.EnableInfo()
 	// logger.EnableTrace("all")
 	ctx.SetLogger(logger)
-	repo, err := repository.New(ctx.GetInner(), r, serializedConfig)
+	repo, err := repository.New(ctx.GetInner(), nil, r, serializedConfig)
 	require.NoError(t, err, "creating repository")
 
 	return repo, tmpBackupDir, ctx

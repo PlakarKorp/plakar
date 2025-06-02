@@ -407,13 +407,13 @@ func EntryPoint() int {
 		}
 
 		if opt_agentless {
-			repo, err = repository.New(ctx.GetInner(), store, serializedConfig)
+			repo, err = repository.New(ctx.GetInner(), ctx.GetSecret(), store, serializedConfig)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
 				return 1
 			}
 		} else {
-			repo, err = repository.NewNoRebuild(ctx.GetInner(), store, serializedConfig)
+			repo, err = repository.NewNoRebuild(ctx.GetInner(), ctx.GetSecret(), store, serializedConfig)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
 				return 1
