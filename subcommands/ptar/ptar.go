@@ -307,7 +307,7 @@ func (cmd *Ptar) backup(ctx *appcontext.AppContext, repo *repository.RepositoryW
 			NoCommit:       true,
 		}
 
-		err = snap.Backup(imp, backupOptions)
+		err = snap.Backup([]importer.Importer{imp}, backupOptions)
 		if err != nil {
 			return err
 		}

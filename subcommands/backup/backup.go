@@ -102,7 +102,7 @@ func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
 
 	cmd.RepositorySecret = ctx.GetSecret()
 	cmd.Excludes = excludes
-	cmd.Path = flags.Arg(0)
+	cmd.Path = flags.Args()
 
 	return nil
 }
@@ -116,7 +116,7 @@ type Backup struct {
 	Excludes    []string
 	Silent      bool
 	Quiet       bool
-	Path        string
+	Path        []string
 	OptCheck    bool
 }
 
@@ -160,39 +160,38 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		Excludes:       excludes,
 	}
 
-	scanDir := ctx.CWD
-	if cmd.Path != "" {
-		scanDir = cmd.Path
-	}
-
-	importerConfig := map[string]string{
-		"location": scanDir,
-	}
-	if strings.HasPrefix(scanDir, "@") {
-		remote, ok := ctx.Config.GetRemote(scanDir[1:])
-		if !ok {
-			return 1, fmt.Errorf("could not resolve importer: %s", scanDir), objects.MAC{}, nil
+	var importers []importer.Importer
+	for _, scanDir := range cmd.Path {
+		importerConfig := map[string]string{
+			"location": scanDir,
 		}
-		if _, ok := remote["location"]; !ok {
-			return 1, fmt.Errorf("could not resolve importer location: %s", scanDir), objects.MAC{}, nil
-		} else {
-			importerConfig = remote
+		if strings.HasPrefix(scanDir, "@") {
+			remote, ok := ctx.Config.GetRemote(scanDir[1:])
+			if !ok {
+				return 1, fmt.Errorf("could not resolve importer: %s", scanDir), objects.MAC{}, nil
+			}
+			if _, ok := remote["location"]; !ok {
+				return 1, fmt.Errorf("could not resolve importer location: %s", scanDir), objects.MAC{}, nil
+			} else {
+				importerConfig = remote
+			}
 		}
-	}
 
-	imp, err := importer.NewImporter(ctx.GetInner(), importerConfig)
-	if err != nil {
-		return 1, fmt.Errorf("failed to create an importer for %s: %s", scanDir, err), objects.MAC{}, nil
+		imp, err := importer.NewImporter(ctx.GetInner(), importerConfig)
+		if err != nil {
+			return 1, fmt.Errorf("failed to create an importer for %s: %s", scanDir, err), objects.MAC{}, nil
+		}
+
+		importers = append(importers, imp)
 	}
-	defer imp.Close()
 
 	if cmd.Silent {
-		if err := snap.Backup(imp, opts); err != nil {
+		if err := snap.Backup(importers, opts); err != nil {
 			return 1, fmt.Errorf("failed to create snapshot: %w", err), objects.MAC{}, nil
 		}
 	} else {
-		ep := startEventsProcessor(ctx, imp.Root(), true, cmd.Quiet)
-		if err := snap.Backup(imp, opts); err != nil {
+		ep := startEventsProcessor(ctx, "/", true, cmd.Quiet)
+		if err := snap.Backup(importers, opts); err != nil {
 			ep.Close()
 			return 1, fmt.Errorf("failed to create snapshot: %w", err), objects.MAC{}, nil
 		}
@@ -226,7 +225,12 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		}
 	}
 
-	totalSize := snap.Header.GetSource(0).Summary.Directory.Size + snap.Header.GetSource(0).Summary.Below.Size
+	var totalSize, totalErrors uint64
+	for i := 0; i < len(snap.Header.Sources); i++ {
+		s := snap.Header.GetSource(i)
+		totalErrors += s.Summary.Directory.Errors + s.Summary.Below.Errors
+		totalSize += s.Summary.Directory.Size + s.Summary.Below.Size
+	}
 
 	ctx.GetLogger().Info("backup: created %s snapshot %x of size %s in %s (wrote %s)",
 		"unsigned",
@@ -236,14 +240,10 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		humanize.Bytes(uint64(snap.Repository().WBytes())),
 	)
 
-	totalErrors := uint64(0)
-	for i := 0; i < len(snap.Header.Sources); i++ {
-		s := snap.Header.GetSource(i)
-		totalErrors += s.Summary.Directory.Errors + s.Summary.Below.Errors
-	}
 	var warning error
 	if totalErrors > 0 {
 		warning = fmt.Errorf("%d errors during backup", totalErrors)
 	}
+
 	return 0, nil, snap.Header.Identifier, warning
 }
