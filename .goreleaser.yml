@@ -1,0 +1,215 @@
+version: 2
+
+builds:
+  - #
+    # ID of the build.
+    #
+    # Default: Project directory name.
+    id: "plakar"
+
+    # Path to main.go file or main package.
+    # Notice: when used with `gomod.proxy`, this must be a package.
+    #
+    # Default: `.`.
+    main: .
+
+    # Binary name.
+    # Can be a path (e.g. `bin/app`) to wrap the binary in a directory.
+    #
+    # Default: Project directory name.
+    binary: plakar
+
+    # Custom environment variables to be set during the builds.
+    # Invalid environment variables will be ignored.
+    # For more info refer to: https://pkg.go.dev/cmd/go#hdr-Environment_variables
+    #
+    # Default: os.Environ() ++ env config section.
+    # Templates: allowed.
+    env:
+      - CGO_ENABLED=0
+
+    # GOOS list to build for.
+    # For more info refer to: https://pkg.go.dev/cmd/go#hdr-Environment_variables
+    #
+    # Default: [ 'darwin', 'linux', 'windows' ].
+    goos:
+      - darwin
+      - linux
+      - openbsd
+      - freebsd
+
+    # GOARCH to build for.
+    # For more info refer to: https://pkg.go.dev/cmd/go#hdr-Environment_variables
+    #
+    # Default: [ '386', 'amd64', 'arm64' ].
+    goarch:
+      - amd64
+      - arm64
+
+    # Set the modified timestamp on the output binary, typically
+    # you would do this to ensure a build was reproducible.
+    # Pass an empty string to skip modifying the output.
+    #
+    # Templates: allowed.
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+nfpms:
+  - package_name: plakar
+
+    # IDs of the builds which should be archived in this package.
+    #
+    # Since: v2.8 (use 'builds' in previous versions).
+    # Default: empty (include all).
+    ids:
+      - plakar
+
+    # Your app's vendor.
+    vendor: PlakarKorp
+
+    # Your app's homepage.
+    #
+    # Default: inferred from global metadata.
+    homepage: https://plakar.io/
+
+    # Your app's maintainer (probably you).
+    #
+    # Default: inferred from global metadata.
+    maintainer: "Julien Castets <julien.castets@plakar.io>"
+
+    # Your app's description.
+    #
+    # Default: inferred from global metadata.
+    description: "Plakar is a secure backup solution for all your data sources, including filesystems, S3 buckets, Cloud resources, SFTP servers, and more."
+
+    # Your app's license.
+    #
+    # Default: inferred from global metadata.
+    license: ISC
+
+    # Formats to be generated.
+    formats:
+      - apk
+      - deb
+      - rpm
+      - archlinux
+
+    # Packages your package depends on. (overridable)
+    dependencies: []
+
+    # Packages it provides. (overridable)
+    provides:
+      - plakar
+
+    # Packages your package recommends installing. (overridable)
+    recommends: []
+
+    # Packages your package suggests installing. (overridable)
+    suggests: []
+
+    # Packages that conflict with your package. (overridable)
+    conflicts: []
+
+    # Packages it replaces. (overridable)
+    replaces: []
+
+    # Path that the binaries should be installed.
+    #
+    # Default: '/usr/bin'.
+    bindir: /usr/bin
+
+    # Version Release.
+    release: "1"
+
+    # Section.
+    section: utilities
+
+    # Priority.
+    priority: optional
+
+    # # Changelog YAML file, see: https://github.com/goreleaser/chglog
+    # #
+    # # You can use goreleaser/chglog to create the changelog for your project,
+    # # pass that changelog yaml file to GoReleaser,
+    # # and it should in turn setup it accordingly for the given available
+    # # formats (deb and rpm at the moment).
+    # #
+    # # Experimental.
+    # changelog: ./foo.yml
+
+    # Date to be used as mtime for the package itself, and its internal files.
+    # You may also want to set the mtime on its contents.
+    #
+    # Since: v2.6.
+    # Templates: allowed.
+    mtime: "{{ .CommitDate }}"
+
+brews:
+  - # Name of the recipe
+    #
+    # Default: the project name.
+    # Templates: allowed.
+    name: plakar
+
+    # NOTE: make sure the url_template, the token and given repo (github or
+    # gitlab) owner and name are from the same kind.
+    # We will probably unify this in the next major version like it is
+    # done with scoop.
+
+    # # URL which is determined by the given Token (github, gitlab or gitea).
+    # #
+    # # Default depends on the client.
+    # # Templates: allowed.
+    # url_template: "https://github.mycompany.com/foo/bar/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+
+    # Git author used to commit to the repository.
+    # Templates: allowed.
+    commit_author:
+      name: Julien Castets
+      email: julien.castets@plakar.io
+
+    # The project name and current git tag are used in the format string.
+    #
+    # Templates: allowed.
+    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+
+    # Directory inside the repository to put the formula.
+    directory: Formula
+
+    # Caveats for the user of your binary.
+    caveats: "Run plakar help to get started."
+
+    # Your app's homepage.
+    #
+    # Default: inferred from global metadata.
+    homepage: "https://plakar.io/"
+
+    # Your app's description.
+    #
+    # Templates: allowed.
+    # Default: inferred from global metadata.
+    description: "Plakar is a secure backup solution for all your data sources, including filesystems, S3 buckets, Cloud resources, SFTP servers, and more."
+
+    # SPDX identifier of your app's license.
+    #
+    # Default: inferred from global metadata.
+    license: "ISC"
+
+    # So you can `brew test` your formula.
+    #
+    # Template: allowed
+    test: |
+      system "#{bin}/plakar version"
+
+    # Repository to push the generated files to.
+    repository:
+      # Repository owner.
+      #
+      # Templates: allowed.
+      owner: PlakarKorp
+
+      # Repository name.
+      #
+      # Templates: allowed.
+      name: homebrew-tap
+
+      token: "{{ .Env.HOMEBREW_TOKEN }}"
