@@ -1,11 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
+	"os/exec"
 	"os/signal"
 	"os/user"
 	"path/filepath"
@@ -483,20 +486,64 @@ func EntryPoint() int {
 	return status
 }
 
-func getpassphrase(ctx *appcontext.AppContext, params map[string]string) []byte {
+func getpassphrase(ctx *appcontext.AppContext, params map[string]string) ([]byte, error) {
 	if ctx.KeyFromFile != "" {
-		return []byte(ctx.KeyFromFile)
+		return []byte(ctx.KeyFromFile), nil
 	}
 
 	if pass, ok := params["passphrase"]; ok {
-		return []byte(pass)
+		return []byte(pass), nil
+	}
+
+	if cmd, ok := params["passphrase_cmd"]; ok {
+		var c *exec.Cmd
+		switch runtime.GOOS {
+		case "windows":
+			c = exec.Command("cmd", "/C", cmd)
+		default: // assume unix-esque
+			c = exec.Command("/bin/sh", "-c", cmd)
+		}
+
+		stdout, err := c.StdoutPipe()
+		if err != nil {
+			return nil, err
+		}
+
+		if err := c.Start(); err != nil {
+			return nil, err
+		}
+
+		var pass string
+		var lines int
+		scan := bufio.NewScanner(stdout)
+		for scan.Scan() {
+			pass = scan.Text()
+			lines++
+		}
+
+		// don't deadlock in case the scanner fails
+		io.Copy(io.Discard, stdout)
+
+		if err := c.Wait(); err != nil {
+			return nil, err
+		}
+
+		if err := scan.Err(); err != nil {
+			return nil, err
+		}
+
+		if lines != 1 {
+			return nil, fmt.Errorf("passphrase_cmd returned too many lines")
+		}
+
+		return []byte(pass), nil
 	}
 
 	if pass, ok := os.LookupEnv("PLAKAR_PASSPHRASE"); ok {
-		return []byte(pass)
+		return []byte(pass), nil
 	}
 
-	return nil
+	return nil, nil
 }
 
 func setupEncryption(ctx *appcontext.AppContext, config *storage.Configuration, params map[string]string) error {
@@ -504,7 +551,11 @@ func setupEncryption(ctx *appcontext.AppContext, config *storage.Configuration, 
 		return nil
 	}
 
-	secret := getpassphrase(ctx, params)
+	secret, err := getpassphrase(ctx, params)
+	if err != nil {
+		return err
+	}
+
 	if secret != nil {
 		key, err := encryption.DeriveKey(config.Encryption.KDFParams,
 			secret)
