@@ -10,8 +10,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/events"
+	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
 	"github.com/vmihailenco/msgpack/v5"
@@ -142,6 +142,7 @@ func (c *Client) SendCommand(ctx *appcontext.AppContext, name []string, cmd subc
 	}
 	return 0, nil
 }
+
 func (c *Client) Close() error {
 	return c.conn.Close()
 }
