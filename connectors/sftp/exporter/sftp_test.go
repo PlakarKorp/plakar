@@ -1,12 +1,13 @@
 package sftp
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/objects"
+	"github.com/PlakarKorp/kloset/snapshot/exporter"
 	ptesting "github.com/PlakarKorp/plakar/testing"
 )
 
@@ -39,8 +40,9 @@ func TestExporter(t *testing.T) {
 	}
 
 	// Create the exporter
-	appCtx := appcontext.NewAppContext()
-	exporter, err := NewSFTPExporter(appCtx, "sftp", map[string]string{
+	ctx := context.Background()
+	opts := exporter.Options{}
+	exporter, err := NewSFTPExporter(ctx, &opts, "sftp", map[string]string{
 		"location":                 "sftp://" + server.Addr + "/",
 		"username":                 "test",
 		"identity":                 server.KeyFile,
