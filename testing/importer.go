@@ -17,7 +17,7 @@ func init() {
 	importer.Register("mock", NewMockImporter)
 }
 
-func NewMockImporter(appCtx context.Context, opts *importer.ImporterOptions, name string, config map[string]string) (importer.Importer, error) {
+func NewMockImporter(appCtx context.Context, opts *importer.Options, name string, config map[string]string) (importer.Importer, error) {
 	return &MockImporter{
 		location: config["location"],
 	}, nil
