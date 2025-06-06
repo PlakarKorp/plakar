@@ -124,7 +124,7 @@ func (c *Client) SendCommand(ctx *appcontext.AppContext, name []string, cmd subc
 		}
 		switch response.Type {
 		case "stdin":
-			var buf [1024]byte
+			var buf [8192]byte
 			n, err := os.Stdin.Read(buf[:])
 			pkt := &Packet{
 				Type: "stdin",
