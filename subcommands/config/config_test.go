@@ -34,7 +34,7 @@ func TestConfigEmpty(t *testing.T) {
 	repo := &repository.Repository{}
 	args := []string{}
 
-	subcommand := &ConfigCmd{}
+	subcommand := &ConfigKlosetCmd{}
 	err = subcommand.Parse(ctx, args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
@@ -44,26 +44,13 @@ func TestConfigEmpty(t *testing.T) {
 	require.Equal(t, 0, status)
 
 	output := bufOut.String()
-	expectedOutput := `default-repo: ""
-repositories: {}
-remotes: {}
-`
+	expectedOutput := ``
 	require.Equal(t, expectedOutput, output)
 
 	bufOut.Reset()
 	bufErr.Reset()
 
-	args = []string{"unknown"}
-	subcommand = &ConfigCmd{}
-	err = subcommand.Parse(ctx, args)
-	require.NoError(t, err)
-	require.NotNil(t, subcommand)
-
-	status, err = subcommand.Execute(ctx, repo)
-	require.ErrorContains(t, err, "config command takes no argument")
-	require.Equal(t, 1, status)
-
-	args = []string{"create", "my-remote", "s3://foobar"}
+	args = []string{"add", "my-remote", "s3://foobar"}
 	subcommandr := &ConfigRemoteCmd{}
 	err = subcommandr.Parse(ctx, args)
 	require.NoError(t, err)
@@ -73,7 +60,7 @@ remotes: {}
 	require.NoError(t, err)
 	require.Equal(t, 0, status)
 
-	args = []string{"create", "my-repo", "fs:/tmp/foobar"}
+	args = []string{"add", "my-repo", "fs:/tmp/foobar"}
 	subcommandk := &ConfigKlosetCmd{}
 	err = subcommandk.Parse(ctx, args)
 	require.NoError(t, err)
@@ -108,17 +95,17 @@ func TestCmdRemote(t *testing.T) {
 
 	args := []string{}
 	err = cmd_remote_config(ctx, args)
-	require.EqualError(t, err, "usage: plakar remote [create | set | unset | check | ping]")
+	require.NoError(t, err)
 
 	args = []string{"unknown"}
 	err = cmd_remote_config(ctx, args)
-	require.EqualError(t, err, "usage: plakar remote [create | set | unset | check | ping]")
+	require.EqualError(t, err, "usage: plakar remote [add|check|ls|ping|rm|set|unset]")
 
-	args = []string{"create", "my-remote", "s3://my-remote"}
+	args = []string{"add", "my-remote", "invalid://my-remote"}
 	err = cmd_remote_config(ctx, args)
 	require.NoError(t, err)
 
-	args = []string{"create", "my-remote2", "s3://my-remote2"}
+	args = []string{"add", "my-remote2", "invalid://my-remote2"}
 	err = cmd_remote_config(ctx, args)
 	require.NoError(t, err)
 
@@ -134,13 +121,9 @@ func TestCmdRemote(t *testing.T) {
 	err = cmd_remote_config(ctx, args)
 	require.NoError(t, err)
 
-	args = []string{"check", "my-remote2"}
+	args = []string{"check", "my-remote"}
 	err = cmd_remote_config(ctx, args)
-	require.EqualError(t, err, "check not implemented")
-
-	args = []string{"ping", "my-remote2"}
-	err = cmd_remote_config(ctx, args)
-	require.EqualError(t, err, "ping not implemented")
+	require.EqualError(t, err, "backend 'invalid' does not exist")
 
 	ctx.Config.Render(ctx.Stdout)
 
@@ -149,10 +132,10 @@ func TestCmdRemote(t *testing.T) {
 repositories: {}
 remotes:
     my-remote:
-        location: s3://my-remote
+        location: invalid://my-remote
         option: value
     my-remote2:
-        location: s3://my-remote2
+        location: invalid://my-remote2
 `
 	require.Equal(t, expectedOutput, output)
 }
@@ -177,9 +160,9 @@ func TestCmdRepository(t *testing.T) {
 
 	args := []string{"unknown"}
 	err = cmd_kloset_config(ctx, args)
-	require.EqualError(t, err, "usage: plakar kloset [create | default | set | unset | check]")
+	require.EqualError(t, err, "usage: plakar kloset [add|check|default|ls|ping|set|unset]")
 
-	args = []string{"create", "my-repo", "fs:/tmp/my-repo"}
+	args = []string{"add", "my-repo", "fs:/tmp/my-repo"}
 	err = cmd_kloset_config(ctx, args)
 	require.NoError(t, err)
 
@@ -191,7 +174,7 @@ func TestCmdRepository(t *testing.T) {
 	err = cmd_kloset_config(ctx, args)
 	require.NoError(t, err)
 
-	args = []string{"create", "my-repo2", "invalid://place2"}
+	args = []string{"add", "my-repo2", "invalid://place2"}
 	err = cmd_kloset_config(ctx, args)
 	require.NoError(t, err)
 
@@ -209,7 +192,7 @@ func TestCmdRepository(t *testing.T) {
 
 	args = []string{"check", "my-repo2"}
 	err = cmd_kloset_config(ctx, args)
-	require.EqualError(t, err, "check not implemented")
+	require.EqualError(t, err, "backend 'invalid' does not exist")
 
 	ctx.Config.Render(ctx.Stdout)
 
