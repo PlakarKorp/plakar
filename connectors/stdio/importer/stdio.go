@@ -30,8 +30,9 @@ import (
 )
 
 type StdioImporter struct {
+	stdin   io.Reader
 	fileDir string
-	appCtx  context.Context
+	ctx     context.Context
 	opts    *importer.ImporterOptions
 	name    string
 }
@@ -40,7 +41,7 @@ func init() {
 	importer.Register("stdin", NewStdioImporter)
 }
 
-func NewStdioImporter(appCtx context.Context, opts *importer.ImporterOptions, name string, config map[string]string) (importer.Importer, error) {
+func NewStdioImporter(ctx context.Context, opts *importer.ImporterOptions, name string, config map[string]string) (importer.Importer, error) {
 	location := config["location"]
 	location = strings.TrimPrefix(location, "stdin://")
 	if !strings.HasPrefix(location, "/") {
@@ -49,8 +50,9 @@ func NewStdioImporter(appCtx context.Context, opts *importer.ImporterOptions, na
 	location = path.Clean(location)
 
 	return &StdioImporter{
+		stdin:   opts.Stdin,
 		fileDir: location,
-		appCtx:  appCtx,
+		ctx:     ctx,
 		name:    name,
 		opts:    opts,
 	}, nil
@@ -104,7 +106,7 @@ func (p *StdioImporter) Scan() (<-chan *importer.ScanResult, error) {
 			Lgroupname: "",
 		}
 		results <- importer.NewScanRecord(p.fileDir, "", fi, nil,
-			func() (io.ReadCloser, error) { return os.Stdin, nil })
+			func() (io.ReadCloser, error) { return io.NopCloser(p.stdin), nil })
 	}()
 
 	return results, nil

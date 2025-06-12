@@ -17,6 +17,7 @@
 package agent
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -367,15 +368,9 @@ func handleClient(ctx *appcontext.AppContext, wg *sync.WaitGroup, conn net.Conn)
 			mu.Unlock()
 		}
 	}
-	read := func(v interface{}) (interface{}, error) {
-		if err := decoder.Decode(v); err != nil {
-			if isDisconnectError(err) {
-				clientContext.Close()
-			}
-			return nil, err
-		}
-		return v, nil
-	}
+
+	stdinchan := make(chan agent.Packet, 1)
+	defer close(stdinchan)
 
 	processStdout := func(data string) {
 		write(agent.Packet{
@@ -391,6 +386,7 @@ func handleClient(ctx *appcontext.AppContext, wg *sync.WaitGroup, conn net.Conn)
 		})
 	}
 
+	clientContext.Stdin = &CustomReader{stdinchan, encoder, &mu, ctx, nil}
 	clientContext.Stdout = &CustomWriter{processFunc: processStdout}
 	clientContext.Stderr = &CustomWriter{processFunc: processStderr}
 
@@ -411,8 +407,19 @@ func handleClient(ctx *appcontext.AppContext, wg *sync.WaitGroup, conn net.Conn)
 
 	// Attempt another decode to detect client disconnection during processing
 	go func() {
-		var tmp interface{}
-		read(&tmp)
+		for {
+			var pkt agent.Packet
+			if err := decoder.Decode(&pkt); err != nil {
+				if !isDisconnectError(err) {
+					processStderr(fmt.Sprintf("failed to decode: %s", err))
+				}
+				clientContext.Close()
+				return
+			}
+			if pkt.Type == "stdin" {
+				stdinchan <- pkt
+			}
+		}
 	}()
 
 	subcommand, _, _ := subcommands.Lookup(name)
@@ -510,4 +517,46 @@ type CustomWriter struct {
 func (cw *CustomWriter) Write(p []byte) (n int, err error) {
 	cw.processFunc(string(p))
 	return len(p), nil
+}
+
+type CustomReader struct {
+	ch      <-chan agent.Packet
+	encoder *msgpack.Encoder
+	mu      *sync.Mutex
+	ctx     context.Context
+	buf     []byte
+}
+
+func (cr *CustomReader) Read(p []byte) (n int, err error) {
+	for {
+		if len(cr.buf) != 0 {
+			n := copy(p, cr.buf)
+			cr.buf = cr.buf[n:]
+			return n, nil
+		}
+
+		req := agent.Packet{Type: "stdin"}
+		cr.mu.Lock()
+		if err := cr.encoder.Encode(&req); err != nil {
+			cr.mu.Unlock()
+			return 0, err
+		}
+		cr.mu.Unlock()
+
+		select {
+		case pkt, ok := <-cr.ch:
+			if !ok {
+				return 0, io.EOF
+			}
+			if pkt.Eof {
+				return 0, io.EOF
+			}
+			if pkt.Err != "" {
+				return 0, fmt.Errorf("%s", pkt.Err)
+			}
+			cr.buf = append(cr.buf, pkt.Data...)
+		case <-cr.ctx.Done():
+			return 0, io.EOF
+		}
+	}
 }
