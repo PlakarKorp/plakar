@@ -30,6 +30,7 @@ import (
 )
 
 type StdioImporter struct {
+	stdin   io.Reader
 	fileDir string
 	ctx     context.Context
 	opts    *importer.ImporterOptions
@@ -49,6 +50,7 @@ func NewStdioImporter(ctx context.Context, opts *importer.ImporterOptions, name 
 	location = path.Clean(location)
 
 	return &StdioImporter{
+		stdin:   opts.Stdin,
 		fileDir: location,
 		ctx:     ctx,
 		name:    name,
@@ -104,7 +106,7 @@ func (p *StdioImporter) Scan() (<-chan *importer.ScanResult, error) {
 			Lgroupname: "",
 		}
 		results <- importer.NewScanRecord(p.fileDir, "", fi, nil,
-			func() (io.ReadCloser, error) { return os.Stdin, nil })
+			func() (io.ReadCloser, error) { return io.NopCloser(p.stdin), nil })
 	}()
 
 	return results, nil
