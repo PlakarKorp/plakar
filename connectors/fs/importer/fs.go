@@ -32,7 +32,7 @@ import (
 
 type FSImporter struct {
 	ctx     context.Context
-	opts    *importer.ImporterOptions
+	opts    *importer.Options
 	rootDir string
 
 	uidToName map[uint64]string
@@ -44,7 +44,7 @@ func init() {
 	importer.Register("fs", NewFSImporter)
 }
 
-func NewFSImporter(appCtx context.Context, opts *importer.ImporterOptions, name string, config map[string]string) (importer.Importer, error) {
+func NewFSImporter(appCtx context.Context, opts *importer.Options, name string, config map[string]string) (importer.Importer, error) {
 	location := config["location"]
 	rootDir := strings.TrimPrefix(location, "fs://")
 

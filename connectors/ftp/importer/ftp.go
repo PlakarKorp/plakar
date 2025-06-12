@@ -51,7 +51,7 @@ func connectToFTP(host, username, password string) (*goftp.Client, error) {
 	return goftp.DialConfig(config, host)
 }
 
-func NewFTPImporter(appCtx context.Context, opts *importer.ImporterOptions, name string, config map[string]string) (importer.Importer, error) {
+func NewFTPImporter(appCtx context.Context, opts *importer.Options, name string, config map[string]string) (importer.Importer, error) {
 	target := config["location"]
 
 	parsed, err := url.Parse(target)

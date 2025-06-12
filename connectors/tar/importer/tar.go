@@ -51,7 +51,7 @@ func init() {
 	importer.Register("tgz", NewTarImporter)
 }
 
-func NewTarImporter(ctx context.Context, opts *importer.ImporterOptions, name string, config map[string]string) (importer.Importer, error) {
+func NewTarImporter(ctx context.Context, opts *importer.Options, name string, config map[string]string) (importer.Importer, error) {
 	location := strings.TrimPrefix(config["location"], name+"://")
 
 	fp, err := os.Open(location)

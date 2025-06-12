@@ -129,7 +129,7 @@ func GenerateSnapshot(t *testing.T, repo *repository.Repository, files []MockFil
 	require.NoError(t, err)
 	require.NotNil(t, builder)
 
-	impopts := &importer.ImporterOptions{
+	impopts := &importer.Options{
 		Hostname:        "localhost",
 		OperatingSystem: runtime.GOOS,
 		Architecture:    runtime.GOARCH,

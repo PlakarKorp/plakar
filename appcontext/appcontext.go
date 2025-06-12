@@ -35,8 +35,8 @@ func (c *AppContext) GetSecret() []byte {
 	return c.secret
 }
 
-func (ctx *AppContext) ImporterOpts() *importer.ImporterOptions {
-	return &importer.ImporterOptions{
+func (ctx *AppContext) ImporterOpts() *importer.Options {
+	return &importer.Options{
 		Hostname:        ctx.Hostname,
 		OperatingSystem: ctx.OperatingSystem,
 		Architecture:    ctx.Architecture,

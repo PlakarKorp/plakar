@@ -60,7 +60,7 @@ func connect(location *url.URL, useSsl bool, accessKeyID, secretAccessKey string
 	})
 }
 
-func NewS3Importer(ctx context.Context, opts *importer.ImporterOptions, name string, config map[string]string) (importer.Importer, error) {
+func NewS3Importer(ctx context.Context, opts *importer.Options, name string, config map[string]string) (importer.Importer, error) {
 	target := config["location"]
 
 	var accessKey string
