@@ -23,7 +23,12 @@ import (
 
 func TestNewRouter(t *testing.T) {
 	repo := &repository.Repository{}
+
 	ctx := appcontext.NewAppContext()
+	cache := caching.NewManager("/tmp/test_plakar")
+	defer cache.Close()
+	ctx.SetCache(cache)
+
 	token := "test-token"
 	mux := http.NewServeMux()
 	// Make sure SetupRoutes doesn't panic, which happens when invalid routes

@@ -88,7 +88,12 @@ func repositorySnapshots(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	lrepository.RebuildState()
+	cacheInstance, err := lrepository.AppContext().GetCache().Repository(lrepository.Configuration().RepositoryID)
+	if err != nil {
+		return err
+	}
+
+	lrepository.RebuildState(cacheInstance)
 
 	snapshotIDs, err := lrepository.GetSnapshots()
 	if err != nil {
@@ -172,7 +177,12 @@ func repositoryState(w http.ResponseWriter, r *http.Request) error {
 }
 
 func repositoryImporterTypes(w http.ResponseWriter, r *http.Request) error {
-	lrepository.RebuildState()
+	cacheInstance, err := lrepository.AppContext().GetCache().Repository(lrepository.Configuration().RepositoryID)
+	if err != nil {
+		return err
+	}
+
+	lrepository.RebuildState(cacheInstance)
 
 	snapshotIDs, err := lrepository.GetSnapshots()
 	if err != nil {
@@ -246,7 +256,7 @@ func repositoryLocatePathname(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	lrepository.RebuildState()
+	lrepository.RebuildState(cacheInstance)
 
 	snapshotIDs, err := lrepository.GetSnapshots()
 	if err != nil {

@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/PlakarKorp/kloset/caching"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/kloset/storage"
@@ -18,6 +19,7 @@ import (
 var lstore storage.Store
 var lconfig storage.Configuration
 var lctx *appcontext.AppContext // XXX: Adding this for transition, it needs to go away. Some places we only have Repository and out of AppContext we only get a KContext, except sometimes you truly need an AppContext.
+var cacheInstance caching.StateCache
 var lrepository *repository.Repository
 
 type Item[T any] struct {
@@ -135,11 +137,17 @@ func apiInfo(w http.ResponseWriter, r *http.Request) error {
 	return json.NewEncoder(w).Encode(res)
 }
 
-func SetupRoutes(server *http.ServeMux, repo *repository.Repository, ctx *appcontext.AppContext, token string) {
+func SetupRoutes(server *http.ServeMux, repo *repository.Repository, ctx *appcontext.AppContext, token string) error {
 	lstore = repo.Store()
 	lconfig = repo.Configuration()
 	lrepository = repo
 	lctx = ctx
+
+	var err error
+	cacheInstance, err = ctx.GetCache().Repository(repo.Configuration().RepositoryID)
+	if err != nil {
+		return err
+	}
 
 	authToken := TokenAuthMiddleware(token)
 	urlSigner := NewSnapshotReaderURLSigner(token)
@@ -185,4 +193,6 @@ func SetupRoutes(server *http.ServeMux, repo *repository.Repository, ctx *appcon
 
 	server.Handle("POST /api/snapshot/vfs/downloader/{snapshot_path...}", authToken(JSONAPIView(snapshotVFSDownloader)))
 	server.Handle("GET /api/snapshot/vfs/downloader-sign-url/{id}", JSONAPIView(snapshotVFSDownloaderSigned))
+
+	return nil
 }

@@ -200,7 +200,12 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 	}
 
 	if cmd.OptCheck {
-		repo.RebuildState()
+		cacheInstance, err := repo.AppContext().GetCache().Repository(repo.Configuration().RepositoryID)
+		if err != nil {
+			return 1, fmt.Errorf("failed to get the cache instance: %w", err), objects.MAC{}, nil
+		}
+
+		repo.RebuildState(cacheInstance)
 
 		checkOptions := &snapshot.CheckOptions{
 			MaxConcurrency: cmd.Concurrency,
