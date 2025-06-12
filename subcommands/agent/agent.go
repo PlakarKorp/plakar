@@ -17,6 +17,7 @@
 package agent
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -522,7 +523,7 @@ type CustomReader struct {
 	ch      <-chan agent.Packet
 	encoder *msgpack.Encoder
 	mu      *sync.Mutex
-	ctx     *appcontext.AppContext
+	ctx     context.Context
 	buf     []byte
 }
 
