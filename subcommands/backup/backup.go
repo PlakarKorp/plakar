@@ -29,6 +29,7 @@ import (
 	"github.com/PlakarKorp/kloset/snapshot/importer"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/PlakarKorp/plakar/utils"
 	"github.com/dustin/go-humanize"
 	"github.com/gobwas/glob"
 )
@@ -53,6 +54,8 @@ func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
 	var opt_exclude excludeFlags
 	excludes := []string{}
 
+	cmd.Opts = make(map[string]string)
+
 	flags := flag.NewFlagSet("backup", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS] path\n", flags.Name())
@@ -68,6 +71,7 @@ func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags.BoolVar(&cmd.Quiet, "quiet", false, "suppress output")
 	flags.BoolVar(&cmd.Silent, "silent", false, "suppress ALL output")
 	flags.BoolVar(&cmd.OptCheck, "check", false, "check the snapshot after creating it")
+	flags.Var(utils.NewOptsFlag(cmd.Opts), "o", "specify extra importer options")
 	//flags.BoolVar(&opt_stdio, "stdio", false, "output one line per file to stdout instead of the default interactive output")
 	flags.Parse(args)
 
@@ -118,6 +122,7 @@ type Backup struct {
 	Quiet       bool
 	Path        string
 	OptCheck    bool
+	Opts        map[string]string
 }
 
 func (cmd *Backup) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
@@ -165,9 +170,10 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		scanDir = cmd.Path
 	}
 
-	importerConfig := map[string]string{
-		"location": scanDir,
+	if _, found := cmd.Opts["location"]; !found {
+		cmd.Opts["location"] = scanDir
 	}
+
 	if strings.HasPrefix(scanDir, "@") {
 		remote, ok := ctx.Config.GetRemote(scanDir[1:])
 		if !ok {
@@ -176,11 +182,18 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		if _, ok := remote["location"]; !ok {
 			return 1, fmt.Errorf("could not resolve importer location: %s", scanDir), objects.MAC{}, nil
 		} else {
-			importerConfig = remote
+			// inherit all the options -- but the ones
+			// specified in the command line takes the
+			// precendence.
+			for k, v := range remote {
+				if _, found := cmd.Opts[k]; !found {
+					cmd.Opts[k] = v
+				}
+			}
 		}
 	}
 
-	imp, err := importer.NewImporter(ctx.GetInner(), ctx.ImporterOpts(), importerConfig)
+	imp, err := importer.NewImporter(ctx.GetInner(), ctx.ImporterOpts(), cmd.Opts)
 	if err != nil {
 		return 1, fmt.Errorf("failed to create an importer for %s: %s", scanDir, err), objects.MAC{}, nil
 	}

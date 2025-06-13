@@ -11,6 +11,7 @@ PLAKAR-BACKUP(1) - General Commands Manual
 \[**-exclude**&nbsp;*pattern*]
 \[**-excludes**&nbsp;*file*]
 \[**-check**]
+\[**-o**&nbsp;*option*]
 \[**-quiet**]
 \[**-tag**&nbsp;*tag*]
 \[*place*]
@@ -53,6 +54,13 @@ The options are as follows:
 **-check**
 
 > Perform a full check on the backup after success.
+
+**-o** *option*
+
+> Can be used to pass extra arguments to the importer.
+> The given
+> *option*
+> takes precence over the configuration file.
 
 **-quiet**
 
