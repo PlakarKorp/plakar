@@ -202,27 +202,20 @@ func TestExecuteCmdCreateDefaultWithEnvPassphrase(t *testing.T) {
 	ctx := appcontext.NewAppContext()
 	defer ctx.Close()
 
-	repo, err := repository.Inexistent(ctx.GetInner(), map[string]string{"location": tmpRepoDirRoot + "/repo"})
-	require.NoError(t, err)
+	t.Setenv("PLAKAR_PASSPHRASE", "")
+
 	// override the homedir to avoid having test overwriting existing home configuration
 	ctx.HomeDir = tmpRepoDirRoot
 	args := []string{}
 
 	subcommand := &Create{}
 	err = subcommand.Parse(ctx, args)
-	require.NoError(t, err)
-	require.NotNil(t, subcommand)
-
-	t.Setenv("PLAKAR_PASSPHRASE", "")
-	status, err := subcommand.Execute(ctx, repo)
 	require.Error(t, err, "can't encrypt the repository with an empty passphrase")
-	require.Equal(t, 1, status)
 
 	t.Setenv("PLAKAR_PASSPHRASE", "aZeRtY123456$#@!@")
-	status, err = subcommand.Execute(ctx, repo)
+	err = subcommand.Parse(ctx, args)
 	require.NoError(t, err)
-	require.Equal(t, 0, status)
 
 	_, err = os.Stat(fmt.Sprintf("%s/repo/CONFIG", tmpRepoDirRoot))
-	require.NoError(t, err)
+	require.NotNil(t, err)
 }

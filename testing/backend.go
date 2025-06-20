@@ -19,7 +19,7 @@ import (
 func init() {
 	storage.Register(func(ctx context.Context, proto string, storeConfig map[string]string) (storage.Store, error) {
 		return &MockBackend{location: storeConfig["location"]}, nil
-	}, "mock")
+	}, 0, "mock")
 }
 
 type mockedBackendBehavior struct {

@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package exporter;
+
+import "google/protobuf/timestamp.proto";
+
+service Exporter {
+  rpc Root(RootRequest) returns (RootResponse);
+  rpc CreateDirectory(CreateDirectoryRequest) returns (CreateDirectoryResponse);
+  rpc StoreFile(stream StoreFileRequest) returns (StoreFileResponse);
+  rpc SetPermissions(SetPermissionsRequest) returns (SetPermissionsResponse);
+  rpc Close(CloseRequest) returns (CloseResponse);
+}
+
+message RootRequest {}
+
+message RootResponse {
+  string root_path = 1;
+}
+
+message CreateDirectoryRequest {
+  string pathname = 1;
+}
+
+message CreateDirectoryResponse {}
+
+message StoreFileRequest {
+  oneof type {
+    Header header = 1;
+    Data data = 2;
+  }
+}
+
+message Header {
+  string pathname = 1;
+  uint64 size = 2;
+}
+
+message Data {
+  bytes chunk = 1;
+}
+
+message StoreFileResponse {}
+
+message FileInfo {
+  string name = 1;
+  int64 size = 2;
+  uint32 mode = 3;
+  google.protobuf.Timestamp mod_time = 4;
+  uint64 dev = 5;
+  uint64 ino = 6;
+  uint64 uid = 7;
+  uint64 gid = 8;
+  uint32 nlink = 9;
+  string username = 10;
+  string groupname = 11;
+  uint32 flags = 12;
+}
+
+message SetPermissionsRequest {
+  string pathname = 1;
+  FileInfo file_info = 2;
+}
+
+message SetPermissionsResponse {}
+
+message CloseRequest {}
+
+message CloseResponse {}

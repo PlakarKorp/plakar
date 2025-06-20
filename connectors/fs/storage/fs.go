@@ -28,6 +28,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/PlakarKorp/kloset/location"
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/storage"
@@ -40,7 +41,7 @@ type Store struct {
 }
 
 func init() {
-	storage.Register(NewStore, "fs")
+	storage.Register(NewStore, location.FLAG_LOCALFS, "fs")
 }
 
 func NewStore(ctx context.Context, proto string, storeConfig map[string]string) (storage.Store, error) {

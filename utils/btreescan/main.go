@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/PlakarKorp/kloset/btree"
-	"github.com/PlakarKorp/kloset/config"
 	"github.com/PlakarKorp/kloset/snapshot/importer"
 	"github.com/PlakarKorp/kloset/snapshot/vfs"
 	"github.com/PlakarKorp/plakar/appcontext"
@@ -122,7 +121,7 @@ func main() {
 		log.Fatal("failed to get plakar config dir: ", err)
 	}
 
-	config, err := config.LoadOrCreate(filepath.Join(cdir, "plakar.yml"))
+	config, err := utils.LoadOldConfigIfExists(filepath.Join(cdir, "plakar.yml"))
 	if err != nil {
 		log.Fatal("could not load config file: ", err)
 	}
@@ -130,9 +129,9 @@ func main() {
 	var importerSource map[string]string
 	if strings.HasPrefix(location, "@") {
 		var ok bool
-		importerSource, ok = config.GetRemote(location[1:])
+		importerSource, ok = config.GetSource(location[1:])
 		if !ok {
-			log.Fatal("could not load remote: ", location[1:])
+			log.Fatal("could not load source: ", location[1:])
 		}
 	} else {
 		importerSource = map[string]string{"location": location}

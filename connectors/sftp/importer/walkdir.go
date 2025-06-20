@@ -20,7 +20,6 @@ import (
 	"io"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
 	"sync"
 
@@ -50,18 +49,18 @@ func (p *SFTPImporter) walkDir_worker(jobs <-chan string, results chan<- *import
 				continue
 			}
 		}
-		results <- importer.NewScanRecord(filepath.ToSlash(path), originFile, fileinfo, []string{},
+		results <- importer.NewScanRecord(path, originFile, fileinfo, []string{},
 			func() (io.ReadCloser, error) { return p.client.Open(path) })
 	}
 }
 
 func (p *SFTPImporter) walkDir_addPrefixDirectories(jobs chan<- string, results chan<- *importer.ScanResult) {
 	// Clean the directory and split the path into components
-	directory := filepath.Clean(p.rootDir)
+	directory := path.Clean(p.rootDir)
 	atoms := strings.Split(directory, string(os.PathSeparator))
 
 	for i := range len(atoms) - 1 {
-		path := filepath.Join(atoms[0 : i+1]...)
+		path := path.Join(atoms[0 : i+1]...)
 
 		if !strings.HasPrefix(path, "/") {
 			path = "/" + path
@@ -103,8 +102,8 @@ func (p *SFTPImporter) walkDir_walker(numWorkers int) (<-chan *importer.ScanResu
 				return
 			}
 
-			if !filepath.IsAbs(originFile) {
-				originFile = filepath.Join(filepath.Dir(p.rootDir), originFile)
+			if !path.IsAbs(originFile) {
+				originFile = path.Join(path.Dir(p.rootDir), originFile)
 			}
 			jobs <- p.rootDir
 			p.rootDir = originFile

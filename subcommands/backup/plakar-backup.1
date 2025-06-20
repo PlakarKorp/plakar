@@ -10,6 +10,7 @@
 .Op Fl exclude Ar pattern
 .Op Fl excludes Ar file
 .Op Fl check
+.Op Fl o Ar option
 .Op Fl quiet
 .Op Fl tag Ar tag
 .Op Ar place
@@ -43,6 +44,11 @@ Specify a file containing glob exclusion patterns, one per line, to
 ignore files or directories in the backup.
 .It Fl check
 Perform a full check on the backup after success.
+.It Fl o Ar option
+Can be used to pass extra arguments to the importer.
+The given
+.Ar option
+takes precence over the configuration file.
 .It Fl quiet
 Suppress output to standard input, only logging errors and warnings.
 .It Fl tag Ar tag

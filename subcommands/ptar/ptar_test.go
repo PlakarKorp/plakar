@@ -31,7 +31,7 @@ func TestExecuteCmdPtarDefault(t *testing.T) {
 		os.RemoveAll(tmpDir)
 	})
 
-	args := []string{"-no-encryption", "-no-compression", "-b", filepath.Join(tmpSourceDir, "subdir"), filepath.Join(tmpDir, "test.ptar")}
+	args := []string{"-no-encryption", "-no-compression", "-p", filepath.Join(tmpSourceDir, "subdir"), filepath.Join(tmpDir, "test.ptar")}
 
 	subcommand := &Ptar{}
 	err = subcommand.Parse(ctx, args)

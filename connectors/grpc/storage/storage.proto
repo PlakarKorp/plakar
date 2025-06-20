@@ -1,0 +1,165 @@
+syntax = "proto3";
+
+package store;
+
+
+message MAC {
+    bytes value = 1;
+}
+
+service Store {
+    rpc Create(CreateRequest) returns (CreateResponse);
+    rpc Open(OpenRequest) returns (OpenResponse);
+    rpc Close(CloseRequest) returns (CloseResponse);
+
+    rpc GetLocation(GetLocationRequest) returns (GetLocationResponse);
+    rpc GetMode(GetModeRequest) returns (GetModeResponse);
+    rpc GetSize(GetSizeRequest) returns (GetSizeResponse);
+
+    rpc GetStates(GetStatesRequest) returns (GetStatesResponse);
+    rpc PutState(stream PutStateRequest) returns (PutStateResponse);
+    rpc GetState(GetStateRequest) returns (stream GetStateResponse);
+    rpc DeleteState(DeleteStateRequest) returns (DeleteStateResponse);
+
+    rpc GetPackfiles(GetPackfilesRequest) returns (GetPackfilesResponse);
+    rpc PutPackfile(stream PutPackfileRequest) returns (PutPackfileResponse);
+    rpc GetPackfile(GetPackfileRequest) returns (stream GetPackfileResponse);
+    rpc GetPackfileBlob(GetPackfileBlobRequest) returns (stream GetPackfileBlobResponse);
+    rpc DeletePackfile(DeletePackfileRequest) returns (DeletePackfileResponse);
+
+    rpc GetLocks(GetLocksRequest) returns (GetLocksResponse);
+    rpc PutLock(stream PutLockRequest) returns (PutLockResponse);
+    rpc GetLock(GetLockRequest) returns (stream GetLockResponse);
+    rpc DeleteLock(DeleteLockRequest) returns (DeleteLockResponse);
+}
+
+message CreateRequest {
+    bytes config = 1;
+}
+
+message CreateResponse {}
+
+message OpenRequest {}
+
+message OpenResponse {
+    bytes config = 1;
+}
+
+message CloseRequest {}
+
+message CloseResponse {}
+
+message GetLocationRequest {}
+
+message GetLocationResponse {
+    string location = 1;
+}
+
+message GetModeRequest {}
+
+message GetModeResponse {
+    int32 mode = 1;
+}
+
+message GetSizeRequest {}
+
+message GetSizeResponse {
+    int64 size = 1;
+}
+
+message GetStatesRequest {}
+
+message GetStatesResponse {
+    repeated MAC macs = 1;
+}
+
+message PutStateRequest {
+    MAC mac = 1;
+    bytes chunk = 2;
+}
+
+message PutStateResponse {
+    int64 bytes_written = 1;
+}
+
+message GetStateRequest {
+    MAC mac = 1;
+}
+
+message GetStateResponse {
+    bytes chunk = 1;
+}
+
+message DeleteStateRequest {
+    MAC mac = 1;
+}
+
+message DeleteStateResponse {}
+
+message GetPackfilesRequest {}
+
+message GetPackfilesResponse {
+    repeated MAC macs = 1;
+}
+
+message PutPackfileRequest {
+    MAC mac = 1;
+    bytes chunk = 2;
+}
+
+message PutPackfileResponse {
+    int64 bytes_written = 1;
+}
+
+message GetPackfileRequest {
+    MAC mac = 1;
+}
+
+message GetPackfileResponse {
+    bytes chunk = 1;
+}
+
+message GetPackfileBlobRequest {
+    MAC mac = 1;
+    uint64 offset = 2;
+    uint32 length = 3;
+}
+
+message GetPackfileBlobResponse {
+    bytes chunk = 1;
+}
+
+message DeletePackfileRequest {
+    MAC mac = 1;
+}
+
+message DeletePackfileResponse {}
+
+message GetLocksRequest {}
+
+message GetLocksResponse {
+    repeated MAC macs = 1;
+}
+
+message PutLockRequest {
+    MAC mac = 1;
+    bytes chunk = 2;
+}
+
+message PutLockResponse {
+    int64 bytes_written = 1;
+}
+
+message GetLockRequest {
+    MAC mac = 1;
+}
+
+message GetLockResponse {
+    bytes chunk = 1;
+}
+
+message DeleteLockRequest {
+    MAC mac = 1;
+}
+
+message DeleteLockResponse {}

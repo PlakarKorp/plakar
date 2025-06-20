@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 
 	"github.com/PlakarKorp/kloset/objects"
@@ -34,18 +33,18 @@ type StdioExporter struct {
 }
 
 func init() {
-	exporter.Register("stdout", NewStdioExporter)
-	exporter.Register("stderr", NewStdioExporter)
+	exporter.Register("stdout", 0, NewStdioExporter)
+	exporter.Register("stderr", 0, NewStdioExporter)
 }
 
-func NewStdioExporter(appCtx context.Context, name string, config map[string]string) (exporter.Exporter, error) {
+func NewStdioExporter(appCtx context.Context, opts *exporter.Options, name string, config map[string]string) (exporter.Exporter, error) {
 	var w io.Writer
 
 	switch name {
 	case "stdout":
-		w = os.Stdout
+		w = opts.Stdout
 	case "stderr":
-		w = os.Stderr
+		w = opts.Stderr
 	default:
 		return nil, fmt.Errorf("unknown stdio backend %s", name)
 	}

@@ -21,7 +21,6 @@ import (
 	"io"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -30,17 +29,18 @@ import (
 )
 
 type StdioImporter struct {
+	stdin   io.Reader
 	fileDir string
-	appCtx  context.Context
-	opts    *importer.ImporterOptions
+	ctx     context.Context
+	opts    *importer.Options
 	name    string
 }
 
 func init() {
-	importer.Register("stdin", NewStdioImporter)
+	importer.Register("stdin", 0, NewStdioImporter)
 }
 
-func NewStdioImporter(appCtx context.Context, opts *importer.ImporterOptions, name string, config map[string]string) (importer.Importer, error) {
+func NewStdioImporter(ctx context.Context, opts *importer.Options, name string, config map[string]string) (importer.Importer, error) {
 	location := config["location"]
 	location = strings.TrimPrefix(location, "stdin://")
 	if !strings.HasPrefix(location, "/") {
@@ -49,19 +49,20 @@ func NewStdioImporter(appCtx context.Context, opts *importer.ImporterOptions, na
 	location = path.Clean(location)
 
 	return &StdioImporter{
+		stdin:   opts.Stdin,
 		fileDir: location,
-		appCtx:  appCtx,
+		ctx:     ctx,
 		name:    name,
 		opts:    opts,
 	}, nil
 }
 
 func (p *StdioImporter) stdioWalker_addPrefixDirectories(results chan<- *importer.ScanResult) {
-	directory := filepath.Clean(p.fileDir)
+	directory := path.Clean(p.fileDir)
 	atoms := strings.Split(directory, string(os.PathSeparator))
 
 	for i := 0; i < len(atoms)-1; i++ {
-		subpath := filepath.Join(atoms[0 : i+1]...)
+		subpath := path.Join(atoms[0 : i+1]...)
 
 		if !strings.HasPrefix(subpath, "/") {
 			subpath = "/" + subpath
@@ -104,7 +105,7 @@ func (p *StdioImporter) Scan() (<-chan *importer.ScanResult, error) {
 			Lgroupname: "",
 		}
 		results <- importer.NewScanRecord(p.fileDir, "", fi, nil,
-			func() (io.ReadCloser, error) { return os.Stdin, nil })
+			func() (io.ReadCloser, error) { return io.NopCloser(p.stdin), nil })
 	}()
 
 	return results, nil

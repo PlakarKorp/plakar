@@ -10,8 +10,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/events"
+	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
 	"github.com/vmihailenco/msgpack/v5"
@@ -21,6 +21,7 @@ type Packet struct {
 	Type     string
 	Data     []byte
 	ExitCode int
+	Eof      bool
 	Err      string
 }
 
@@ -122,6 +123,21 @@ func (c *Client) SendCommand(ctx *appcontext.AppContext, name []string, cmd subc
 			return 1, fmt.Errorf("failed to decode response: %w", err)
 		}
 		switch response.Type {
+		case "stdin":
+			var buf [8192]byte
+			n, err := os.Stdin.Read(buf[:])
+			pkt := &Packet{
+				Type: "stdin",
+				Data: buf[:n],
+			}
+			if err != nil {
+				pkt.Eof = err == io.EOF
+				pkt.Err = err.Error()
+			}
+			err = c.enc.Encode(pkt)
+			if err != nil {
+				return 1, fmt.Errorf("failed to send stdin: %w", err)
+			}
 		case "stdout":
 			fmt.Printf("%s", string(response.Data))
 		case "stderr":
@@ -142,6 +158,7 @@ func (c *Client) SendCommand(ctx *appcontext.AppContext, name []string, cmd subc
 	}
 	return 0, nil
 }
+
 func (c *Client) Close() error {
 	return c.conn.Close()
 }

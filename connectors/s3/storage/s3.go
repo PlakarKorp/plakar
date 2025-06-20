@@ -54,7 +54,7 @@ type Store struct {
 }
 
 func init() {
-	storage.Register(NewStore, "s3")
+	storage.Register(NewStore, 0, "s3")
 }
 
 func NewStore(ctx context.Context, proto string, storeConfig map[string]string) (storage.Store, error) {

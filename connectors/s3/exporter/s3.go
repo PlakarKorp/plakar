@@ -38,7 +38,7 @@ type S3Exporter struct {
 }
 
 func init() {
-	exporter.Register("s3", NewS3Exporter)
+	exporter.Register("s3", 0, NewS3Exporter)
 }
 
 func connect(location *url.URL, useSsl bool, accessKeyID, secretAccessKey string) (*minio.Client, error) {
@@ -51,7 +51,7 @@ func connect(location *url.URL, useSsl bool, accessKeyID, secretAccessKey string
 	})
 }
 
-func NewS3Exporter(ctx context.Context, name string, config map[string]string) (exporter.Exporter, error) {
+func NewS3Exporter(ctx context.Context, opts *exporter.Options, name string, config map[string]string) (exporter.Exporter, error) {
 	target := config["location"]
 	var accessKey string
 	if tmp, ok := config["access_key"]; !ok {

@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"path/filepath"
+	"path"
 
 	"github.com/pkg/sftp"
 )
@@ -84,7 +84,7 @@ func ClosingLimitedReaderFromOffset(file *sftp.File, offset, length int64) (io.R
 }
 
 func WriteToFileAtomic(sftpClient *sftp.Client, filename string, rd io.Reader) (int64, error) {
-	return WriteToFileAtomicTempDir(sftpClient, filename, rd, filepath.Dir(filename))
+	return WriteToFileAtomicTempDir(sftpClient, filename, rd, path.Dir(filename))
 }
 
 func WriteToFileAtomicTempDir(sftpClient *sftp.Client, filename string, rd io.Reader, tmpdir string) (int64, error) {

@@ -22,6 +22,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/PlakarKorp/kloset/location"
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/snapshot/exporter"
 )
@@ -31,10 +32,10 @@ type FSExporter struct {
 }
 
 func init() {
-	exporter.Register("fs", NewFSExporter)
+	exporter.Register("fs", location.FLAG_LOCALFS, NewFSExporter)
 }
 
-func NewFSExporter(appCtx context.Context, name string, config map[string]string) (exporter.Exporter, error) {
+func NewFSExporter(ctx context.Context, opts *exporter.Options, name string, config map[string]string) (exporter.Exporter, error) {
 	return &FSExporter{
 		rootDir: strings.TrimPrefix(config["location"], "fs://"),
 	}, nil

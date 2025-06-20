@@ -109,4 +109,4 @@ you can read the documentation available at https://docs.plakar.io
 
 ## 💬 Community
 
-You can join our very active [Discord](https://discord.gg/uuegtnF2Q5) to discuss the project !
+You can join our very active [Discord](https://discord.gg/uqdP9Wfzx3) to discuss the project !

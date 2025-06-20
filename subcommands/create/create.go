@@ -25,7 +25,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/compression"
 	"github.com/PlakarKorp/kloset/encryption"
 	"github.com/PlakarKorp/kloset/hashing"
@@ -33,6 +32,7 @@ import (
 	"github.com/PlakarKorp/kloset/resources"
 	"github.com/PlakarKorp/kloset/storage"
 	"github.com/PlakarKorp/kloset/versioning"
+	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
 )
@@ -42,6 +42,8 @@ func init() {
 }
 
 func (cmd *Create) Parse(ctx *appcontext.AppContext, args []string) error {
+	var allow_weak bool
+
 	flags := flag.NewFlagSet("create", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: plakar [at /path/to/repository] %s [OPTIONS]\n", flags.Name())
@@ -50,7 +52,7 @@ func (cmd *Create) Parse(ctx *appcontext.AppContext, args []string) error {
 		flags.PrintDefaults()
 	}
 
-	flags.BoolVar(&cmd.AllowWeak, "weak-passphrase", false, "allow weak passphrase to protect the repository")
+	flags.BoolVar(&allow_weak, "weak-passphrase", false, "allow weak passphrase to protect the repository")
 	flags.StringVar(&cmd.Hashing, "hashing", hashing.DEFAULT_HASHING_ALGORITHM, "hashing algorithm to use for digests")
 	flags.BoolVar(&cmd.NoEncryption, "no-encryption", false, "disable transparent encryption")
 	flags.BoolVar(&cmd.NoCompression, "no-compression", false, "disable transparent compression")
@@ -64,41 +66,12 @@ func (cmd *Create) Parse(ctx *appcontext.AppContext, args []string) error {
 		return fmt.Errorf("%s: unknown hashing algorithm", flag.CommandLine.Name())
 	}
 
-	return nil
-}
-
-type Create struct {
-	subcommands.SubcommandBase
-
-	AllowWeak     bool
-	Hashing       string
-	NoEncryption  bool
-	NoCompression bool
-}
-
-func (cmd *Create) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	storageConfiguration := storage.NewConfiguration()
-	if cmd.NoCompression {
-		storageConfiguration.Compression = nil
-	} else {
-		storageConfiguration.Compression = compression.NewDefaultConfiguration()
-	}
-
-	hashingConfiguration, err := hashing.LookupDefaultConfiguration(strings.ToUpper(cmd.Hashing))
-	if err != nil {
-		return 1, err
-	}
-	storageConfiguration.Hashing = *hashingConfiguration
-
 	minEntropBits := 80.
-	if cmd.AllowWeak {
+	if allow_weak {
 		minEntropBits = 0.
 	}
 
-	var hasher hash.Hash
 	if !cmd.NoEncryption {
-		storageConfiguration.Encryption = encryption.NewDefaultConfiguration()
-
 		var passphrase []byte
 
 		envPassphrase, ok := os.LookupEnv("PLAKAR_PASSPHRASE")
@@ -121,10 +94,41 @@ func (cmd *Create) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 		}
 
 		if len(passphrase) == 0 {
-			return 1, fmt.Errorf("can't encrypt the repository with an empty passphrase")
+			return fmt.Errorf("can't encrypt the repository with an empty passphrase")
 		}
 
-		key, err := encryption.DeriveKey(storageConfiguration.Encryption.KDFParams, passphrase)
+		cmd.RepositorySecret = passphrase
+	}
+
+	return nil
+}
+
+type Create struct {
+	subcommands.SubcommandBase
+
+	Hashing       string
+	NoEncryption  bool
+	NoCompression bool
+}
+
+func (cmd *Create) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+	storageConfiguration := storage.NewConfiguration()
+	if cmd.NoCompression {
+		storageConfiguration.Compression = nil
+	} else {
+		storageConfiguration.Compression = compression.NewDefaultConfiguration()
+	}
+
+	hashingConfiguration, err := hashing.LookupDefaultConfiguration(strings.ToUpper(cmd.Hashing))
+	if err != nil {
+		return 1, err
+	}
+	storageConfiguration.Hashing = *hashingConfiguration
+
+	var hasher hash.Hash
+	if !cmd.NoEncryption {
+		key, err := encryption.DeriveKey(storageConfiguration.Encryption.KDFParams,
+			cmd.RepositorySecret)
 		if err != nil {
 			return 1, err
 		}

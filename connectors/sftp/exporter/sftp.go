@@ -34,10 +34,10 @@ type SFTPExporter struct {
 }
 
 func init() {
-	exporter.Register("sftp", NewSFTPExporter)
+	exporter.Register("sftp", 0, NewSFTPExporter)
 }
 
-func NewSFTPExporter(appCtx context.Context, name string, config map[string]string) (exporter.Exporter, error) {
+func NewSFTPExporter(ctx context.Context, opt *exporter.Options, name string, config map[string]string) (exporter.Exporter, error) {
 	var err error
 
 	target := config["location"]

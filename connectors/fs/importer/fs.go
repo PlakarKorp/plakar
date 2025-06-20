@@ -22,37 +22,42 @@ import (
 	"io/fs"
 	"os"
 	"os/user"
-	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 
+	"github.com/PlakarKorp/kloset/location"
 	"github.com/PlakarKorp/kloset/snapshot/importer"
 )
 
 type FSImporter struct {
 	ctx     context.Context
-	opts    *importer.ImporterOptions
+	opts    *importer.Options
 	rootDir string
 
 	uidToName map[uint64]string
 	gidToName map[uint64]string
 	mu        sync.RWMutex
+
+	nocrossfs bool
 }
 
 func init() {
-	importer.Register("fs", NewFSImporter)
+	importer.Register("fs", location.FLAG_LOCALFS, NewFSImporter)
 }
 
-func NewFSImporter(appCtx context.Context, opts *importer.ImporterOptions, name string, config map[string]string) (importer.Importer, error) {
+func NewFSImporter(appCtx context.Context, opts *importer.Options, name string, config map[string]string) (importer.Importer, error) {
 	location := config["location"]
 	rootDir := strings.TrimPrefix(location, "fs://")
 
-	if !path.IsAbs(rootDir) {
+	if !filepath.IsAbs(rootDir) {
 		return nil, fmt.Errorf("not an absolute path %s", location)
 	}
 
-	rootDir = path.Clean(rootDir)
+	rootDir = filepath.Clean(rootDir)
+
+	nocrossfs, _ := strconv.ParseBool(config["dont_traverse_fs"])
 
 	return &FSImporter{
 		ctx:       appCtx,
@@ -60,6 +65,7 @@ func NewFSImporter(appCtx context.Context, opts *importer.ImporterOptions, name 
 		rootDir:   rootDir,
 		uidToName: make(map[uint64]string),
 		gidToName: make(map[uint64]string),
+		nocrossfs: nocrossfs,
 	}, nil
 }
 
@@ -72,17 +78,17 @@ func (p *FSImporter) Type() string {
 }
 
 func (p *FSImporter) Scan() (<-chan *importer.ScanResult, error) {
-	realp, err := p.realpathFollow(p.rootDir)
+	realp, dev, err := p.realpathFollow(p.rootDir)
 	if err != nil {
 		return nil, err
 	}
 
 	results := make(chan *importer.ScanResult, 1000)
-	go p.walkDir_walker(results, p.rootDir, realp, 256)
+	go p.walkDir_walker(results, p.rootDir, realp, 256, dev)
 	return results, nil
 }
 
-func (f *FSImporter) walkDir_walker(results chan<- *importer.ScanResult, rootDir, realp string, numWorkers int) {
+func (f *FSImporter) walkDir_walker(results chan<- *importer.ScanResult, rootDir, realp string, numWorkers int, devno uint64) {
 	jobs := make(chan string, 1000) // Buffered channel to feed paths to workers
 	var wg sync.WaitGroup
 	for range numWorkers {
@@ -106,6 +112,18 @@ func (f *FSImporter) walkDir_walker(results chan<- *importer.ScanResult, rootDir
 			results <- importer.NewScanError(path, err)
 			return nil
 		}
+
+		if d.IsDir() && f.nocrossfs {
+			same, err := isSameFs(devno, d)
+			if err != nil {
+				results <- importer.NewScanError(path, err)
+				return nil
+			}
+			if !same {
+				return filepath.SkipDir
+			}
+		}
+
 		jobs <- path
 		return nil
 	})
@@ -153,16 +171,20 @@ func (p *FSImporter) lookupIDs(uid, gid uint64) (uname, gname string) {
 	return
 }
 
-func (f *FSImporter) realpathFollow(path string) (resolved string, err error) {
+func (f *FSImporter) realpathFollow(path string) (resolved string, dev uint64, err error) {
 	info, err := os.Lstat(path)
 	if err != nil {
-		return "", err
+		return
+	}
+
+	if info.Mode()&os.ModeDir != 0 {
+		dev = dirDevice(info)
 	}
 
 	if info.Mode()&os.ModeSymlink != 0 {
 		realpath, err := os.Readlink(path)
 		if err != nil {
-			return "", err
+			return "", 0, err
 		}
 
 		if !filepath.IsAbs(realpath) {
@@ -171,7 +193,7 @@ func (f *FSImporter) realpathFollow(path string) (resolved string, err error) {
 		path = realpath
 	}
 
-	return path, nil
+	return path, dev, nil
 }
 
 func (p *FSImporter) Close() error {
