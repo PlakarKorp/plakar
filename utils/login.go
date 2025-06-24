@@ -24,7 +24,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/PlakarKorp/kloset/kcontext"
+	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/google/uuid"
 )
 
@@ -33,12 +33,12 @@ type TokenResponse struct {
 }
 
 type loginFlow struct {
-	appCtx       *kcontext.KContext
+	appCtx       *appcontext.AppContext
 	repositoryID uuid.UUID
 	noSpawn      bool
 }
 
-func NewLoginFlow(appCtx *kcontext.KContext, repositoryID uuid.UUID, noSpawn bool) (*loginFlow, error) {
+func NewLoginFlow(appCtx *appcontext.AppContext, repositoryID uuid.UUID, noSpawn bool) (*loginFlow, error) {
 	flow := &loginFlow{
 		appCtx:       appCtx,
 		repositoryID: repositoryID,

@@ -86,7 +86,7 @@ func (s *Scheduler) backupTask(taskset Task, task BackupConfig) {
 				s.ctx.GetLogger().Error("Error loading repository: %s", err)
 				continue
 			}
-			reporter := s.NewTaskReporter(repo, "backup", taskset.Name, taskset.Repository)
+			reporter := s.NewTaskReporter(s.ctx, repo, "backup", taskset.Name, taskset.Repository)
 
 			var reportWarning error
 			if retval, err, snapId, warning := backupSubcommand.DoBackup(s.ctx, repo); err != nil || retval != 0 {
@@ -140,7 +140,7 @@ func (s *Scheduler) checkTask(taskset Task, task CheckConfig) {
 				s.ctx.GetLogger().Error("Error loading repository: %s", err)
 				continue
 			}
-			reporter := s.NewTaskReporter(repo, "check", taskset.Name, taskset.Repository)
+			reporter := s.NewTaskReporter(s.ctx, repo, "check", taskset.Name, taskset.Repository)
 
 			retval, err := checkSubcommand.Execute(s.ctx, repo)
 			if err != nil || retval != 0 {
@@ -176,7 +176,7 @@ func (s *Scheduler) restoreTask(taskset Task, task RestoreConfig) {
 				s.ctx.GetLogger().Error("Error loading repository: %s", err)
 				continue
 			}
-			reporter := s.NewTaskReporter(repo, "restore", taskset.Name, taskset.Repository)
+			reporter := s.NewTaskReporter(s.ctx, repo, "restore", taskset.Name, taskset.Repository)
 
 			retval, err := restoreSubcommand.Execute(s.ctx, repo)
 			if err != nil || retval != 0 {
@@ -225,7 +225,7 @@ func (s *Scheduler) syncTask(taskset Task, task SyncConfig) {
 				s.ctx.GetLogger().Error("Error loading repository: %s", err)
 				continue
 			}
-			reporter := s.NewTaskReporter(repo, "sync", taskset.Name, taskset.Repository)
+			reporter := s.NewTaskReporter(s.ctx, repo, "sync", taskset.Name, taskset.Repository)
 
 			retval, err := syncSubcommand.Execute(s.ctx, repo)
 			if err != nil || retval != 0 {
@@ -259,7 +259,7 @@ func (s *Scheduler) maintenanceTask(task MaintenanceConfig) {
 				s.ctx.GetLogger().Error("Error loading repository: %s", err)
 				continue
 			}
-			reporter := s.NewTaskReporter(repo, "maintenance", "maintenance", task.Repository)
+			reporter := s.NewTaskReporter(s.ctx, repo, "maintenance", "maintenance", task.Repository)
 
 			retval, err := maintenanceSubcommand.Execute(s.ctx, repo)
 			if err != nil || retval != 0 {

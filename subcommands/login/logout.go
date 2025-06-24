@@ -21,8 +21,8 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/repository"
+	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
 )
 
@@ -46,8 +46,8 @@ type Logout struct {
 }
 
 func (cmd *Logout) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	if repo.AppContext().GetCookies().HasAuthToken() {
-		repo.AppContext().GetCookies().DeleteAuthToken()
+	if ctx.GetCookies().HasAuthToken() {
+		ctx.GetCookies().DeleteAuthToken()
 	}
 	return 0, nil
 }

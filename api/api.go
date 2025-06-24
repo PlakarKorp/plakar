@@ -117,7 +117,7 @@ func TokenAuthMiddleware(token string) func(http.Handler) http.Handler {
 func apiInfo(w http.ResponseWriter, r *http.Request) error {
 	authenticated := false
 	configuration := lrepository.Configuration()
-	if authToken, err := lrepository.AppContext().GetCookies().GetAuthToken(); err == nil && authToken != "" {
+	if authToken, err := lctx.GetCookies().GetAuthToken(); err == nil && authToken != "" {
 		authenticated = true
 	}
 

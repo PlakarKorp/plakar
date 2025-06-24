@@ -1,9 +1,9 @@
 package task
 
 import (
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
+	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/reporting"
 	"github.com/PlakarKorp/plakar/services"
 	"github.com/PlakarKorp/plakar/subcommands"
@@ -45,7 +45,7 @@ func RunCommand(ctx *appcontext.AppContext, cmd subcommands.Subcommand, repo *re
 		}
 	}
 
-	reporter := reporting.NewReporter(doReport, repo, ctx.GetLogger())
+	reporter := reporting.NewReporter(ctx, doReport, repo, ctx.GetLogger())
 	reporter.TaskStart(taskKind, taskName)
 	if repo != nil {
 		reporter.WithRepositoryName(repo.Location())

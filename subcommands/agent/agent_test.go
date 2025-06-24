@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/PlakarKorp/kloset/caching"
-	"github.com/PlakarKorp/kloset/cookies"
 	"github.com/PlakarKorp/kloset/logging"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
@@ -54,9 +53,6 @@ func initContext(t *testing.T, bufout *bytes.Buffer, buferr *bytes.Buffer) (*app
 	cache := caching.NewManager(tmpCacheDir)
 	ctx.SetCache(cache)
 	ctx.MaxConcurrency = 1
-
-	cookies := cookies.NewManager("/tmp/test_plakar")
-	ctx.SetCookies(cookies)
 	ctx.Client = "plakar-test/1.0.0"
 
 	var logger *logging.Logger

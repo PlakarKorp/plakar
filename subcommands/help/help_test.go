@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/PlakarKorp/kloset/caching"
-	"github.com/PlakarKorp/kloset/cookies"
 	"github.com/PlakarKorp/kloset/hashing"
 	"github.com/PlakarKorp/kloset/logging"
 	"github.com/PlakarKorp/kloset/repository"
@@ -83,9 +82,6 @@ func TestParseCmdHelpDefault(t *testing.T) {
 	// create a repository
 	cache := caching.NewManager(tmpCacheDir)
 	ctx.SetCache(cache)
-
-	cookies := cookies.NewManager(tmpCacheDir)
-	ctx.SetCookies(cookies)
 	ctx.Client = "plakar-test/1.0.0"
 
 	// Create a new logger
@@ -183,9 +179,6 @@ func TestParseCmdHelpCommand(t *testing.T) {
 	// create a repository
 	cache := caching.NewManager(tmpCacheDir)
 	ctx.SetCache(cache)
-
-	cookies := cookies.NewManager(tmpCacheDir)
-	ctx.SetCookies(cookies)
 	ctx.Client = "plakar-test/1.0.0"
 
 	// Create a new logger

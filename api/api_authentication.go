@@ -32,7 +32,7 @@ func servicesLoginGithub(w http.ResponseWriter, r *http.Request) error {
 	parameters["redirect"] = req.Redirect
 	parameters["repository_id"] = lrepository.Configuration().RepositoryID.String()
 
-	lf, err := utils.NewLoginFlow(lrepository.AppContext(), lrepository.Configuration().RepositoryID, true)
+	lf, err := utils.NewLoginFlow(lctx, lrepository.Configuration().RepositoryID, true)
 	if err != nil {
 		return fmt.Errorf("failed to create login flow: %w", err)
 	}
@@ -63,7 +63,7 @@ func servicesLoginEmail(w http.ResponseWriter, r *http.Request) error {
 	parameters["redirect"] = req.Redirect
 	parameters["repository_id"] = lrepository.Configuration().RepositoryID.String()
 
-	lf, err := utils.NewLoginFlow(lrepository.AppContext(), lrepository.Configuration().RepositoryID, true)
+	lf, err := utils.NewLoginFlow(lctx, lrepository.Configuration().RepositoryID, true)
 	if err != nil {
 		return fmt.Errorf("failed to create login flow: %w", err)
 	}
@@ -82,8 +82,8 @@ func servicesLoginEmail(w http.ResponseWriter, r *http.Request) error {
 }
 
 func servicesLogout(w http.ResponseWriter, r *http.Request) error {
-	if lrepository.AppContext().GetCookies().HasAuthToken() {
-		return lrepository.AppContext().GetCookies().DeleteAuthToken()
+	if lctx.GetCookies().HasAuthToken() {
+		return lctx.GetCookies().DeleteAuthToken()
 	}
 	return nil
 }

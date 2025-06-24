@@ -56,7 +56,7 @@ func (s *Scheduler) Run() {
 	}
 }
 
-func (s *Scheduler) NewTaskReporter(repo *repository.Repository, taskType, taskName, repoName string) *reporting.Reporter {
+func (s *Scheduler) NewTaskReporter(ctx *appcontext.AppContext, repo *repository.Repository, taskType, taskName, repoName string) *reporting.Reporter {
 	doReport := true
 	authToken, err := s.ctx.GetAuthToken(repo.Configuration().RepositoryID)
 	if err != nil || authToken == "" {
@@ -68,7 +68,7 @@ func (s *Scheduler) NewTaskReporter(repo *repository.Repository, taskType, taskN
 			doReport = false
 		}
 	}
-	reporter := reporting.NewReporter(doReport, repo, s.ctx.GetLogger())
+	reporter := reporting.NewReporter(ctx, doReport, repo, s.ctx.GetLogger())
 	reporter.TaskStart(taskType, taskName)
 	reporter.WithRepositoryName(repoName)
 	reporter.WithRepository(repo)

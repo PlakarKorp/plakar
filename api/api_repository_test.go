@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/PlakarKorp/kloset/caching"
-	"github.com/PlakarKorp/kloset/cookies"
 	"github.com/PlakarKorp/kloset/hashing"
 	"github.com/PlakarKorp/kloset/logging"
 	"github.com/PlakarKorp/kloset/repository"
@@ -50,8 +49,6 @@ func _Test_RepositoryConfiguration(t *testing.T) {
 	repo, err := repository.New(ctx.GetInner(), nil, lstore, wrappedConfig)
 	require.NoError(t, err, "creating repository")
 
-	cookies := cookies.NewManager("/tmp/test_plakar")
-	ctx.SetCookies(cookies)
 	ctx.Client = "plakar-test/1.0.0"
 
 	var noToken string
@@ -327,9 +324,6 @@ func _Test_RepositorySnapshots(t *testing.T) {
 			defer cache.Close()
 			ctx.SetCache(cache)
 			ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
-
-			cookies := cookies.NewManager("/tmp/test_plakar")
-			ctx.SetCookies(cookies)
 			ctx.Client = "plakar-test/1.0.0"
 
 			lstore, err := storage.Create(ctx.GetInner(), map[string]string{"location": c.location}, wrappedConfig)
@@ -430,9 +424,6 @@ func _Test_RepositorySnapshotsErrors(t *testing.T) {
 			defer cache.Close()
 			ctx.SetCache(cache)
 			ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
-
-			cookies := cookies.NewManager("/tmp/test_plakar")
-			ctx.SetCookies(cookies)
 			ctx.Client = "plakar-test/1.0.0"
 
 			lstore, err := storage.Create(ctx.GetInner(), map[string]string{"location": c.location}, wrappedConfig)
@@ -508,9 +499,6 @@ func _Test_RepositoryStates(t *testing.T) {
 			defer cache.Close()
 			ctx.SetCache(cache)
 			ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
-
-			cookies := cookies.NewManager("/tmp/test_plakar")
-			ctx.SetCookies(cookies)
 			ctx.Client = "plakar-test/1.0.0"
 
 			lstore, err := storage.Create(ctx.GetInner(), map[string]string{"location": c.location}, wrappedConfig)
@@ -580,9 +568,6 @@ func _Test_RepositoryState(t *testing.T) {
 			defer cache.Close()
 			ctx.SetCache(cache)
 			ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
-
-			cookies := cookies.NewManager("/tmp/test_plakar")
-			ctx.SetCookies(cookies)
 			ctx.Client = "plakar-test/1.0.0"
 
 			lstore, err := storage.Create(ctx.GetInner(), map[string]string{"location": c.location}, wrappedConfig)
@@ -657,9 +642,6 @@ func Test_RepositoryStateErrors(t *testing.T) {
 			defer cache.Close()
 			ctx.SetCache(cache)
 			ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
-
-			cookies := cookies.NewManager("/tmp/test_plakar")
-			ctx.SetCookies(cookies)
 			ctx.Client = "plakar-test/1.0.0"
 
 			lstore, err := storage.Create(ctx.GetInner(), map[string]string{"location": c.location}, wrappedConfig)

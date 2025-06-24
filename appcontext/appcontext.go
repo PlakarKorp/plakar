@@ -3,12 +3,18 @@ package appcontext
 import (
 	"github.com/PlakarKorp/kloset/kcontext"
 	"github.com/PlakarKorp/kloset/snapshot/importer"
+	"github.com/PlakarKorp/plakar/cookies"
+
+	"github.com/google/uuid"
 )
 
 type AppContext struct {
 	*kcontext.KContext
+
+	cookies *cookies.Manager `msgpack:"-"`
+
 	ConfigDir string
-	secret []byte
+	secret    []byte
 }
 
 func NewAppContext() *AppContext {
@@ -46,5 +52,21 @@ func (ctx *AppContext) ImporterOpts() *importer.Options {
 		Stdin:           ctx.Stdin,
 		Stdout:          ctx.Stdout,
 		Stderr:          ctx.Stderr,
+	}
+}
+
+func (c *AppContext) SetCookies(cacheManager *cookies.Manager) {
+	c.cookies = cacheManager
+}
+
+func (c *AppContext) GetCookies() *cookies.Manager {
+	return c.cookies
+}
+
+func (c *AppContext) GetAuthToken(repository uuid.UUID) (string, error) {
+	if authToken, err := c.cookies.GetAuthToken(); err != nil {
+		return "", err
+	} else {
+		return authToken, nil
 	}
 }

@@ -44,7 +44,7 @@ func servicesProxy(w http.ResponseWriter, r *http.Request) error {
 		lrepository.AppContext().OperatingSystem,
 		lrepository.AppContext().Architecture)
 
-	authToken, _ := lrepository.AppContext().GetAuthToken(lrepository.Configuration().RepositoryID)
+	authToken, _ := lctx.GetAuthToken(lrepository.Configuration().RepositoryID)
 	if authToken != "" {
 		req.Header.Add("Authorization", "Bearer "+authToken)
 	}
@@ -75,7 +75,7 @@ type AlertServiceConfiguration struct {
 }
 
 func servicesGetAlertingServiceConfiguration(w http.ResponseWriter, r *http.Request) error {
-	authToken, _ := lrepository.AppContext().GetAuthToken(lrepository.Configuration().RepositoryID)
+	authToken, _ := lctx.GetAuthToken(lrepository.Configuration().RepositoryID)
 
 	if authToken == "" {
 		w.WriteHeader(http.StatusUnauthorized)
@@ -113,7 +113,7 @@ func servicesGetAlertingServiceConfiguration(w http.ResponseWriter, r *http.Requ
 }
 
 func servicesSetAlertingServiceConfiguration(w http.ResponseWriter, r *http.Request) error {
-	authToken, _ := lrepository.AppContext().GetAuthToken(lrepository.Configuration().RepositoryID)
+	authToken, _ := lctx.GetAuthToken(lrepository.Configuration().RepositoryID)
 
 	if authToken == "" {
 		w.WriteHeader(http.StatusUnauthorized)

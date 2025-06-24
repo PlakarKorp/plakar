@@ -9,6 +9,7 @@ import (
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
+	"github.com/PlakarKorp/plakar/appcontext"
 )
 
 const PLAKAR_API_URL = "https://api.plakar.io/v1/reporting/reports"
@@ -26,7 +27,7 @@ type Reporter struct {
 	currentSnapshot   *ReportSnapshot
 }
 
-func NewReporter(reporting bool, repository *repository.Repository, logger *logging.Logger) *Reporter {
+func NewReporter(ctx *appcontext.AppContext, reporting bool, repository *repository.Repository, logger *logging.Logger) *Reporter {
 	if logger == nil {
 		logger = logging.NewLogger(os.Stdout, os.Stderr)
 	}
@@ -44,8 +45,7 @@ func NewReporter(reporting bool, repository *repository.Repository, logger *logg
 
 		var token string
 
-		cookies := repository.AppContext().GetCookies()
-		token, err := cookies.GetAuthToken()
+		token, err := ctx.GetCookies().GetAuthToken()
 		if err != nil {
 			logger.Warn("cannot get auth token")
 		}

@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/PlakarKorp/kloset/caching"
-	"github.com/PlakarKorp/kloset/cookies"
 	"github.com/PlakarKorp/kloset/hashing"
 	"github.com/PlakarKorp/kloset/logging"
 	"github.com/PlakarKorp/kloset/repository"
@@ -150,9 +149,6 @@ func _TestSnapshotHeader(t *testing.T) {
 			defer cache.Close()
 			ctx.SetCache(cache)
 			ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
-
-			cookies := cookies.NewManager("/tmp/test_plakar")
-			ctx.SetCookies(cookies)
 			ctx.Client = "plakar-test/1.0.0"
 
 			lstore, err := storage.Create(ctx.GetInner(), map[string]string{"location": c.location}, wrappedConfig)
@@ -227,9 +223,6 @@ func TestSnapshotHeaderErrors(t *testing.T) {
 			defer cache.Close()
 			ctx.SetCache(cache)
 			ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
-
-			cookies := cookies.NewManager("/tmp/test_plakar")
-			ctx.SetCookies(cookies)
 			ctx.Client = "plakar-test/1.0.0"
 
 			lstore, err := storage.Create(ctx.GetInner(), map[string]string{"location": c.location}, wrappedConfig)
@@ -289,9 +282,6 @@ func _TestSnapshotSign(t *testing.T) {
 			defer cache.Close()
 			ctx.SetCache(cache)
 			ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
-
-			cookies := cookies.NewManager("/tmp/test_plakar")
-			ctx.SetCookies(cookies)
 			ctx.Client = "plakar-test/1.0.0"
 
 			lstore, err := storage.Create(ctx.GetInner(), map[string]string{"location": c.location}, wrappedConfig)
