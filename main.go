@@ -166,7 +166,6 @@ func EntryPoint() int {
 
 	ctx.Client = "plakar/" + utils.GetVersion()
 	ctx.CWD = cwd
-	ctx.KeyringDir = filepath.Join(opt_userDefault.HomeDir, ".plakar-keyring")
 
 	_, envAgentLess := os.LookupEnv("PLAKAR_AGENTLESS")
 	if envAgentLess {
@@ -256,7 +255,6 @@ func EntryPoint() int {
 
 	ctx.OperatingSystem = runtime.GOOS
 	ctx.Architecture = runtime.GOARCH
-	ctx.NumCPU = opt_cpuCount
 	ctx.Username = opt_username
 	ctx.Hostname = opt_hostname
 	ctx.CommandLine = strings.Join(os.Args, " ")
@@ -264,7 +262,7 @@ func EntryPoint() int {
 	ctx.KeyFromFile = secretFromKeyfile
 	ctx.HomeDir = opt_userDefault.HomeDir
 	ctx.ProcessID = os.Getpid()
-	ctx.MaxConcurrency = ctx.NumCPU*8 + 1
+	ctx.MaxConcurrency = opt_cpuCount*8 + 1
 
 	if flag.NArg() == 0 {
 		fmt.Fprintf(os.Stderr, "%s: a subcommand must be provided\n", filepath.Base(flag.CommandLine.Name()))
