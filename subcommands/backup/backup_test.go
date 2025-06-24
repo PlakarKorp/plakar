@@ -102,8 +102,6 @@ func TestExecuteCmdCreateDefault(t *testing.T) {
 	repo, tmpBackupDir, ctx := generateFixtures(t, bufOut, bufErr)
 
 	ctx.MaxConcurrency = 1
-	// override the homedir to avoid having test overwriting existing home configuration
-	ctx.HomeDir = repo.Location()
 	args := []string{tmpBackupDir}
 
 	subcommand := &Backup{}
@@ -141,8 +139,6 @@ func TestExecuteCmdCreateDefaultWithExcludes(t *testing.T) {
 	repo, tmpBackupDir, ctx := generateFixtures(t, bufOut, bufErr)
 
 	ctx.MaxConcurrency = 1
-	// override the homedir to avoid having test overwriting existing home configuration
-	ctx.HomeDir = repo.Location()
 	args := []string{"-excludes", tmpBackupDir + "/subdir/to_exclude", tmpBackupDir}
 
 	subcommand := &Backup{}

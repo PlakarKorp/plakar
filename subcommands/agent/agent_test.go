@@ -116,9 +116,6 @@ func TestCmdAgentForegroundInit(t *testing.T) {
 
 	ctx2.MaxConcurrency = 1
 
-	// override the homedir to avoid having test overwriting existing home configuration
-	ctx2.HomeDir = repo.Location()
-
 	retval, err := client.SendCommand(ctx2, []string{"ls"}, &ls.Ls{LocateOptions: utils.NewDefaultLocateOptions(), SubcommandBase: subcommands.SubcommandBase{Flags: subcommands.AgentSupport}}, map[string]string{"location": repo.Location()})
 	require.NoError(t, err)
 	require.Equal(t, 0, retval)

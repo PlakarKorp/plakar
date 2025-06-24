@@ -30,8 +30,6 @@ func TestConfigEmpty(t *testing.T) {
 	ctx.Config = cfg
 	ctx.Stdout = bufOut
 	ctx.Stderr = bufErr
-	// override the homedir to avoid having test overwriting existing home configuration
-	ctx.HomeDir = tmpDir
 	repo := &repository.Repository{}
 	args := []string{}
 

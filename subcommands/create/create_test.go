@@ -29,8 +29,6 @@ func TestExecuteCmdCreateDefaultWithHashing(t *testing.T) {
 	repo, err := repository.Inexistent(ctx.GetInner(), map[string]string{"location": tmpRepoDirRoot + "/repo"})
 	require.NoError(t, err)
 
-	// override the homedir to avoid having test overwriting existing home configuration
-	ctx.HomeDir = tmpRepoDirRoot
 	args := []string{"--no-encryption", "--hashing", "SHA256"}
 
 	subcommand := &Create{}
@@ -57,8 +55,6 @@ func TestExecuteCmdCreateDefaultWithoutCompression(t *testing.T) {
 
 	repo, err := repository.Inexistent(ctx.GetInner(), map[string]string{"location": tmpRepoDirRoot + "/repo"})
 	require.NoError(t, err)
-	// override the homedir to avoid having test overwriting existing home configuration
-	ctx.HomeDir = tmpRepoDirRoot
 	args := []string{"--no-encryption", "--no-compression"}
 
 	subcommand := &Create{}
@@ -85,8 +81,6 @@ func TestExecuteCmdCreateDefaultWithoutEncryption(t *testing.T) {
 
 	repo, err := repository.Inexistent(ctx.GetInner(), map[string]string{"location": tmpRepoDirRoot + "/repo"})
 	require.NoError(t, err)
-	// override the homedir to avoid having test overwriting existing home configuration
-	ctx.HomeDir = tmpRepoDirRoot
 	args := []string{"--no-encryption"}
 
 	subcommand := &Create{}
@@ -127,8 +121,6 @@ func _TestExecuteCmdCreateDefaultWeakPassword(t *testing.T) {
 
 	repo, err := repository.Inexistent(ctx.GetInner(), map[string]string{"location": tmpRepoDirRoot + "/repo"})
 	require.NoError(t, err)
-	// override the homedir to avoid having test overwriting existing home configuration
-	ctx.HomeDir = tmpRepoDirRoot
 	args := []string{}
 
 	subcommand := &Create{}
@@ -175,8 +167,6 @@ func TestExecuteCmdCreateDefaultWithKeyfile(t *testing.T) {
 
 	repo, err := repository.Inexistent(ctx.GetInner(), map[string]string{"location": tmpRepoDirRoot + "/repo"})
 	require.NoError(t, err)
-	// override the homedir to avoid having test overwriting existing home configuration
-	ctx.HomeDir = tmpRepoDirRoot
 	ctx.KeyFromFile = "aZeRtY123456$#@!@"
 	args := []string{}
 
@@ -204,8 +194,6 @@ func TestExecuteCmdCreateDefaultWithEnvPassphrase(t *testing.T) {
 
 	t.Setenv("PLAKAR_PASSPHRASE", "")
 
-	// override the homedir to avoid having test overwriting existing home configuration
-	ctx.HomeDir = tmpRepoDirRoot
 	args := []string{}
 
 	subcommand := &Create{}
