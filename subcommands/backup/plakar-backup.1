@@ -1,4 +1,4 @@
-.Dd April 4, 2025
+.Dd June 27, 2025
 .Dt PLAKAR-BACKUP 1
 .Os
 .Sh NAME
@@ -7,6 +7,7 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl concurrency Ar number
+.Op Fl dry-run
 .Op Fl exclude Ar pattern
 .Op Fl excludes Ar file
 .Op Fl check
@@ -35,6 +36,8 @@ The options are as follows:
 Set the maximum number of parallel tasks for faster processing.
 Defaults to
 .Dv 8 * CPU count + 1 .
+.It Fl dry-run
+Don't actually create a snapshot, just output the list of files.
 .It Fl exclude Ar pattern
 Specify individual glob exclusion patterns to ignore files or
 directories in the backup.

@@ -72,6 +72,7 @@ func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags.BoolVar(&cmd.Silent, "silent", false, "suppress ALL output")
 	flags.BoolVar(&cmd.OptCheck, "check", false, "check the snapshot after creating it")
 	flags.Var(utils.NewOptsFlag(cmd.Opts), "o", "specify extra importer options")
+	flags.BoolVar(&cmd.DryRun, "dry-run", false, "do not actually perform a backup, just list the files")
 	//flags.BoolVar(&opt_stdio, "stdio", false, "output one line per file to stdout instead of the default interactive output")
 	flags.Parse(args)
 
@@ -123,6 +124,7 @@ type Backup struct {
 	Path        string
 	OptCheck    bool
 	Opts        map[string]string
+	DryRun      bool
 }
 
 func (cmd *Backup) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
@@ -131,17 +133,6 @@ func (cmd *Backup) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 }
 
 func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Repository) (int, error, objects.MAC, error) {
-	snap, err := snapshot.Create(repo, repository.DefaultType)
-	if err != nil {
-		ctx.GetLogger().Error("%s", err)
-		return 1, err, objects.MAC{}, nil
-	}
-	defer snap.Close()
-
-	if cmd.Job != "" {
-		snap.Header.Job = cmd.Job
-	}
-
 	var tags []string
 	if cmd.Tags == "" {
 		tags = []string{}
@@ -199,6 +190,24 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		return 1, fmt.Errorf("failed to create an importer for %s: %s", scanDir, err), objects.MAC{}, nil
 	}
 	defer imp.Close()
+
+	if cmd.DryRun {
+		if err := dryrun(ctx, imp, excludes); err != nil {
+			return 1, err, objects.MAC{}, nil
+		}
+		return 0, nil, objects.MAC{}, nil
+	}
+
+	snap, err := snapshot.Create(repo, repository.DefaultType)
+	if err != nil {
+		ctx.GetLogger().Error("%s", err)
+		return 1, err, objects.MAC{}, nil
+	}
+	defer snap.Close()
+
+	if cmd.Job != "" {
+		snap.Header.Job = cmd.Job
+	}
 
 	if cmd.Silent {
 		if err := snap.Backup(imp, opts); err != nil {
@@ -260,4 +269,51 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		warning = fmt.Errorf("%d errors during backup", totalErrors)
 	}
 	return 0, nil, snap.Header.Identifier, warning
+}
+
+func dryrun(ctx *appcontext.AppContext, imp importer.Importer, excludes []glob.Glob) error {
+	scanner, err := imp.Scan()
+	if err != nil {
+		return fmt.Errorf("failed to scan: %w", err)
+	}
+
+	errors := false
+	for record := range scanner {
+		var pathname string
+		switch {
+		case record.Record != nil:
+			pathname = record.Record.Pathname
+		case record.Error != nil:
+			pathname = record.Error.Pathname
+		}
+
+		skip := false
+		for _, exclude := range excludes {
+			if exclude.Match(pathname) {
+				skip = true
+				break
+			}
+		}
+		if skip {
+			if record.Record != nil {
+				record.Record.Close()
+			}
+			continue
+		}
+
+		switch {
+		case record.Error != nil:
+			errors = true
+			fmt.Fprintf(ctx.Stderr, "%s: %s\n",
+				record.Error.Pathname, record.Error.Err)
+		case record.Record != nil:
+			fmt.Fprintln(ctx.Stdout, record.Record.Pathname)
+			record.Record.Close()
+		}
+	}
+
+	if errors {
+		return fmt.Errorf("failed to scan some files")
+	}
+	return nil
 }

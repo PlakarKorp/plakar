@@ -59,7 +59,7 @@ func RunCommand(ctx *appcontext.AppContext, cmd subcommands.Subcommand, repo *re
 	if _, ok := cmd.(*backup.Backup); ok {
 		cmd := cmd.(*backup.Backup)
 		status, err, snapshotID, warning = cmd.DoBackup(ctx, repo)
-		if err == nil {
+		if !cmd.DryRun && err == nil {
 			reporter.WithSnapshotID(snapshotID)
 		}
 	} else {

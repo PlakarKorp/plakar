@@ -8,6 +8,7 @@ PLAKAR-BACKUP(1) - General Commands Manual
 
 **plakar backup**
 \[**-concurrency**&nbsp;*number*]
+\[**-dry-run**]
 \[**-exclude**&nbsp;*pattern*]
 \[**-excludes**&nbsp;*file*]
 \[**-check**]
@@ -39,6 +40,10 @@ The options are as follows:
 > Set the maximum number of parallel tasks for faster processing.
 > Defaults to
 > `8 * CPU count + 1`.
+
+**-dry-run**
+
+> Don't actually create a snapshot, just output the list of files.
 
 **-exclude** *pattern*
 
@@ -102,4 +107,4 @@ The **plakar backup** utility exits&#160;0 on success, and&#160;&gt;0 if an erro
 plakar(1),
 plakar-config(1)
 
-Plakar - April 4, 2025
+Plakar - June 27, 2025
