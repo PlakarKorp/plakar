@@ -109,6 +109,10 @@ func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
 	cmd.Excludes = excludes
 	cmd.Path = flags.Arg(0)
 
+	if cmd.Path == "" {
+		cmd.Path = "fs:" + ctx.CWD
+	}
+
 	return nil
 }
 
