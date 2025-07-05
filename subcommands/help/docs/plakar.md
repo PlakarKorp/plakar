@@ -244,7 +244,10 @@ Create an encrypted Kloset store at the default location:
 
 Create an encrypted Kloset store on AWS S3:
 
-	$ plakar store add mys3bucket location=s3://s3.eu-west-3.amazonaws.com/backups access_key="access_key" secret_access_key="secret_key"
+	$ plakar store add mys3bucket \
+	    location=s3://s3.eu-west-3.amazonaws.com/backups \
+	    access_key="access_key" \
+	    secret_access_key="secret_key"
 	$ plakar at @mys3bucket create
 
 Create a snapshot of the current directory on the @mys3bucket Kloset store:
