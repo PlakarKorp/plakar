@@ -38,20 +38,24 @@ func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &Backup{} }, subcommands.AgentSupport, "backup")
 }
 
-type excludeFlags []string
+type flagList []string
 
-func (e *excludeFlags) String() string {
+// Called by the flag package to print the default / help.
+func (e *flagList) String() string {
 	return strings.Join(*e, ",")
 }
 
-func (e *excludeFlags) Set(value string) error {
+// Called once per flag occurrence to set the value.
+func (e *flagList) Set(value string) error {
 	*e = append(*e, value)
 	return nil
 }
 
 func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
 	var opt_excludes string
-	var opt_exclude excludeFlags
+	var opt_exclude flagList
+	var opt_tags flagList
+
 	excludes := []string{}
 
 	cmd.Opts = make(map[string]string)
@@ -65,7 +69,7 @@ func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
 	}
 
 	flags.Uint64Var(&cmd.Concurrency, "concurrency", uint64(ctx.MaxConcurrency), "maximum number of parallel tasks")
-	flags.StringVar(&cmd.Tags, "tag", "", "tag to assign to this snapshot")
+	flags.Var(&opt_tags, "tag", "tags to apply to the snapshot, can be specified multiple times to add several tags")
 	flags.StringVar(&opt_excludes, "excludes", "", "path to a file containing newline-separated regex patterns, treated as -exclude")
 	flags.Var(&opt_exclude, "exclude", "glob pattern to exclude files, can be specified multiple times to add several exclusion patterns")
 	flags.BoolVar(&cmd.Quiet, "quiet", false, "suppress output")
@@ -108,6 +112,7 @@ func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
 	cmd.RepositorySecret = ctx.GetSecret()
 	cmd.Excludes = excludes
 	cmd.Path = flags.Arg(0)
+	cmd.Tags = opt_tags
 
 	return nil
 }
@@ -117,7 +122,7 @@ type Backup struct {
 
 	Job         string
 	Concurrency uint64
-	Tags        string
+	Tags        []string
 	Excludes    []string
 	Silent      bool
 	Quiet       bool
@@ -133,12 +138,6 @@ func (cmd *Backup) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 }
 
 func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Repository) (int, error, objects.MAC, error) {
-	var tags []string
-	if cmd.Tags == "" {
-		tags = []string{}
-	} else {
-		tags = []string{cmd.Tags}
-	}
 
 	excludes := []glob.Glob{}
 	for _, item := range cmd.Excludes {
@@ -152,7 +151,7 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 	opts := &snapshot.BackupOptions{
 		MaxConcurrency: cmd.Concurrency,
 		Name:           "default",
-		Tags:           tags,
+		Tags:           cmd.Tags,
 		Excludes:       excludes,
 	}
 
