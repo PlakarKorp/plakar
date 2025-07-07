@@ -74,7 +74,7 @@ The options are as follows:
 
 **-tag** *tag*
 
-> Specify a tag to assign to the snapshot for easier identification.
+> Comma-separated list of tags to apply to the snapshot.
 
 **-scan**
 
@@ -85,9 +85,9 @@ The options are as follows:
 
 # EXAMPLES
 
-Create a snapshot of the current directory with a tag:
+Create a snapshot of the current directory with two tags:
 
-	$ plakar backup -tag daily-backup
+	$ plakar backup -tag daily-backup,production
 
 Backup a specific directory with exclusion patterns from a file:
 

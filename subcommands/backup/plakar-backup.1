@@ -56,7 +56,7 @@ Suppress output to standard input, only logging errors and warnings.
 .It Fl silent
 Suppress all output.
 .It Fl tag Ar tag
-Specify a tag to assign to the snapshot for easier identification.
+Comma-separated list of tags to apply to the snapshot.
 .It Fl scan
 Do not write a snapshot; instead, perform a dry run by outputting the list of
 files and directories that would be included in the backup.
@@ -64,9 +64,9 @@ Respects all exclude patterns and other options, but makes no changes to the
 Kloset store.
 .El
 .Sh EXAMPLES
-Create a snapshot of the current directory with a tag:
+Create a snapshot of the current directory with two tags:
 .Bd -literal -offset indent
-$ plakar backup -tag daily-backup
+$ plakar backup -tag daily-backup,production
 .Ed
 .Pp
 Backup a specific directory with exclusion patterns from a file:
