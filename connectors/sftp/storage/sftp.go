@@ -25,6 +25,7 @@ import (
 	"io"
 	"io/fs"
 	"net/url"
+	"os"
 	"path"
 	"strings"
 
@@ -198,6 +199,8 @@ func (s *Store) PutPackfile(mac objects.MAC, rd io.Reader) (int64, error) {
 }
 
 func (s *Store) Close() error {
+	hit, miss, sz := s.packfiles.fileCache.Stats()
+	fmt.Fprintf(os.Stderr, "Ended with %d hit and %d miss for a size of %d\n", hit, miss, sz)
 	return nil
 }
 

@@ -17,26 +17,42 @@
 package sftp
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"io"
+	"os"
 	"path"
 	"sync"
 
+	"github.com/PlakarKorp/kloset/caching/lru"
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/pkg/sftp"
 	"golang.org/x/sync/errgroup"
 )
 
+type fileHandle struct {
+	file *sftp.File
+	stat os.FileInfo
+
+	mtx sync.Mutex
+}
+
 type Buckets struct {
 	client *sftp.Client
 	path   string
+
+	fileCache *lru.Cache[objects.MAC, *fileHandle]
 }
 
 func NewBuckets(sftpClient *sftp.Client, path string) Buckets {
 	return Buckets{
 		client: sftpClient,
 		path:   path,
+		fileCache: lru.New(10000, func(_ objects.MAC, h *fileHandle) error {
+			h.file.Close()
+			return nil
+		}),
 	}
 }
 
@@ -107,6 +123,29 @@ func (buckets *Buckets) Path(mac objects.MAC) string {
 		fmt.Sprintf("%064x", mac))
 }
 
+// Returns the file out of the cache
+func (buckets *Buckets) openFile(mac objects.MAC) (*fileHandle, error) {
+	var fh *fileHandle
+	fh, ok := buckets.fileCache.Get(mac)
+
+	if !ok {
+		fp, err := buckets.client.Open(buckets.Path(mac))
+		if err != nil {
+			return nil, err
+		}
+
+		st, err := fp.Stat()
+		if err != nil {
+			return nil, err
+		}
+
+		fh = &fileHandle{fp, st, sync.Mutex{}}
+		buckets.fileCache.Put(mac, fh)
+	}
+
+	return fh, nil
+}
+
 func (buckets *Buckets) Get(mac objects.MAC) (io.Reader, error) {
 	fp, err := buckets.client.Open(buckets.Path(mac))
 	if err != nil {
@@ -116,11 +155,32 @@ func (buckets *Buckets) Get(mac objects.MAC) (io.Reader, error) {
 }
 
 func (buckets *Buckets) GetBlob(mac objects.MAC, offset uint64, length uint32) (io.Reader, error) {
-	fp, err := buckets.client.Open(buckets.Path(mac))
+	fh, err := buckets.openFile(mac)
+	fh.mtx.Lock()
+	defer fh.mtx.Unlock()
+
 	if err != nil {
 		return nil, err
 	}
-	return ClosingLimitedReaderFromOffset(fp, int64(offset), int64(length))
+
+	if _, err := fh.file.Seek(int64(offset), io.SeekStart); err != nil {
+		return nil, err
+	}
+
+	if fh.stat.Size() == 0 {
+		return bytes.NewBuffer([]byte{}), nil
+	}
+
+	if int64(length) > (fh.stat.Size() - int64(offset)) {
+		return nil, fmt.Errorf("invalid length")
+	}
+
+	ret := make([]byte, length)
+	if _, err := io.ReadFull(fh.file, ret); err != nil {
+		return nil, err
+	}
+
+	return bytes.NewBuffer(ret), nil
 }
 
 func (buckets *Buckets) Remove(mac objects.MAC) error {
