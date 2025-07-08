@@ -37,17 +37,34 @@ func (s *ScheduledJob) Execute(ctx *appcontext.AppContext) {
 
 	delay := time.Since(s.scheduled)
 	if delay > 5*time.Second {
-		// This might happen if the machie was suspended.
+		// This might happen if the machine was suspended.
 		ctx.GetLogger().Warn("job %q: overdue by %s", s.job.Name, delay)
 	}
 
 	s.job.mu.Unlock()
 	s.job.lastRun = s.scheduled
 	s.job.lastActualRun = time.Now()
+
 	go func() {
 		ctx.GetLogger().Info("job %q: running", s.job.Name)
-		nctx := appcontext.NewAppContextFrom(ctx)
-		s.job.Task.Run(nctx, s.job.Name)
+
+		tctx := TaskContext{
+			JobName:    s.job.Name,
+			AppContext: appcontext.NewAppContextFrom(ctx),
+			Done:       make(chan struct{}),
+		}
+		events := tctx.AppContext.Events().Listen()
+		go func() {
+			for event := range events {
+				s.job.Task.Event(&tctx, event)
+			}
+			close(tctx.Done)
+		}()
+
+		s.job.Task.Run(&tctx)
+
+		tctx.Clear()
+
 		ctx.GetLogger().Info("job %q: done", s.job.Name)
 		s.job.isRunning = false // lock is not needed here
 	}()

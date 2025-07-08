@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/kloset/events"
 	"github.com/PlakarKorp/plakar/subcommands/backup"
 )
 
@@ -14,35 +14,34 @@ type BackupTask struct {
 	Cmd       backup.Backup
 }
 
-func (task *BackupTask) Run(ctx *appcontext.AppContext, jobName string) {
-	repo, store, err := task.LoadRepository(ctx)
+func (task *BackupTask) Run(ctx *TaskContext) {
+	err := task.LoadRepository(ctx)
 	if err != nil {
 		ctx.GetLogger().Error("Error loading repository: %s", err)
 		return
 	}
-	defer store.Close()
-	defer repo.Close()
 
-	reporter := task.NewReporter(ctx, repo, jobName)
-
-	task.Cmd.Job = jobName
-	retval, err, snapId, reportWarning := task.Cmd.DoBackup(ctx, repo)
+	task.Cmd.Job = ctx.JobName
+	retval, err, snapId, reportWarning := task.Cmd.DoBackup(ctx.AppContext, ctx.Repository)
 	if err != nil || retval != 0 {
 		ctx.GetLogger().Error("Error creating backup: %s", err)
-		reporter.TaskFailed(1, "Error creating backup: retval=%d, err=%s", retval, err)
+		ctx.Reporter.TaskFailed(1, "Error creating backup: retval=%d, err=%s", retval, err)
 		return
 	}
 
-	reporter.WithSnapshotID(snapId)
+	ctx.Reporter.WithSnapshotID(snapId)
 	if reportWarning != nil {
-		reporter.TaskWarning("Warning during backup: %s", reportWarning)
+		ctx.Reporter.TaskWarning("Warning during backup: %s", reportWarning)
 	} else {
-		reporter.TaskDone()
+		ctx.Reporter.TaskDone()
 	}
 
 	if task.Retention != 0 {
-		runRmTask(ctx, task.Repository, repo, jobName, task.Retention)
+		runRmTask(ctx, task.Repository, task.Retention)
 	}
+}
+
+func (task BackupTask) Event(ctx *TaskContext, event events.Event) {
 }
 
 func (task *BackupTask) String() string {

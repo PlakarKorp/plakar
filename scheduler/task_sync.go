@@ -3,7 +3,7 @@ package scheduler
 import (
 	"fmt"
 
-	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/kloset/events"
 	"github.com/PlakarKorp/plakar/subcommands/sync"
 )
 
@@ -13,29 +13,27 @@ type SyncTask struct {
 	Cmd    sync.Sync
 }
 
-func (task *SyncTask) Run(ctx *appcontext.AppContext, jobName string) {
-
-	repo, store, err := task.LoadRepository(ctx)
+func (task *SyncTask) Run(ctx *TaskContext) {
+	err := task.LoadRepository(ctx)
 	if err != nil {
 		ctx.GetLogger().Error("Error loading repository: %s", err)
 		return
 	}
-	defer store.Close()
-	defer repo.Close()
-
-	reporter := task.NewReporter(ctx, repo, jobName)
 
 	task.Cmd.PeerRepositoryLocation = task.Kloset // XXX
 
-	retval, err := task.Cmd.Execute(ctx, repo)
+	retval, err := task.Cmd.Execute(ctx.AppContext, ctx.Repository)
 	if err != nil || retval != 0 {
 		ctx.GetLogger().Error("sync: %s", err)
-		reporter.TaskFailed(1, "Error executing sync: retval=%d, err=%s", retval, err)
+		ctx.Reporter.TaskFailed(1, "Error executing sync: retval=%d, err=%s", retval, err)
 		return
 	}
 
 	ctx.GetLogger().Info("sync: synchronization succeeded")
-	reporter.TaskDone()
+	ctx.Reporter.TaskDone()
+}
+
+func (task *SyncTask) Event(ctx *TaskContext, event events.Event) {
 }
 
 func (task *SyncTask) String() string {

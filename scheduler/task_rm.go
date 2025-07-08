@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/PlakarKorp/kloset/repository"
-	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/kloset/events"
 	"github.com/PlakarKorp/plakar/subcommands/rm"
 	"github.com/PlakarKorp/plakar/utils"
 )
@@ -16,42 +15,41 @@ type RmTask struct {
 	Retention time.Duration
 }
 
-func (task *RmTask) Run(ctx *appcontext.AppContext, jobName string) {
-	repo, store, err := task.LoadRepository(ctx)
+func (task *RmTask) Run(ctx *TaskContext) {
+	err := task.LoadRepository(ctx)
 	if err != nil {
 		ctx.GetLogger().Error("Error loading repository: %s", err)
 		return
 	}
-	defer store.Close()
-	defer repo.Close()
 
-	task.Run2(ctx, jobName, repo)
+	task.Run2(ctx)
 }
 
-func (task *RmTask) Run2(ctx *appcontext.AppContext, jobName string, repo *repository.Repository) {
-
-	reporter := task.NewReporter(ctx, repo, jobName)
+func (task *RmTask) Run2(ctx *TaskContext) {
 
 	if task.Cmd.LocateOptions == nil {
 		task.Cmd.LocateOptions = utils.NewDefaultLocateOptions()
 	}
-	task.Cmd.LocateOptions.Job = jobName
+	task.Cmd.LocateOptions.Job = ctx.JobName
 	task.Cmd.LocateOptions.Before = time.Now().Add(-task.Retention)
 
-	if retval, err := task.Cmd.Execute(ctx, repo); err != nil || retval != 0 {
+	if retval, err := task.Cmd.Execute(ctx.AppContext, ctx.Repository); err != nil || retval != 0 {
 		ctx.GetLogger().Error("Error removing snapshots: %s", err)
-		reporter.TaskFailed(1, "Error removing snapshots: retval=%d, err=%s", retval, err)
+		ctx.Reporter.TaskFailed(1, "Error removing snapshots: retval=%d, err=%s", retval, err)
 		return
 	}
 
-	reporter.TaskDone()
+	ctx.Reporter.TaskDone()
+}
+
+func (task *RmTask) Event(ctx *TaskContext, event events.Event) {
 }
 
 func (task *RmTask) String() string {
 	return fmt.Sprintf("rm on %s", task.Repository)
 }
 
-func runRmTask(ctx *appcontext.AppContext, repoName string, repo *repository.Repository, jobName string, duration time.Duration) {
+func runRmTask(ctx *TaskContext, repoName string, duration time.Duration) {
 	task := &RmTask{
 		TaskBase: TaskBase{
 			Repository: repoName,
@@ -59,5 +57,5 @@ func runRmTask(ctx *appcontext.AppContext, repoName string, repo *repository.Rep
 		},
 		Retention: duration,
 	}
-	task.Run2(ctx, jobName, repo)
+	task.Run2(ctx)
 }

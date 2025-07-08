@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"github.com/PlakarKorp/kloset/encryption"
+	"github.com/PlakarKorp/kloset/events"
+	"github.com/PlakarKorp/kloset/logging"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/storage"
 	"github.com/PlakarKorp/kloset/versioning"
@@ -14,7 +16,8 @@ import (
 )
 
 type Task interface {
-	Run(ctx *appcontext.AppContext, jobName string)
+	Run(ctx *TaskContext)
+	Event(ctx *TaskContext, event events.Event)
 	String() string
 }
 
@@ -24,49 +27,50 @@ type TaskBase struct {
 	Reporting  bool
 }
 
-func (t *TaskBase) NewReporter(ctx *appcontext.AppContext, repo *repository.Repository, taskName string) *reporting.Reporter {
-	doReport := false
-	if t.Reporting {
-		doReport = true
-		authToken, err := ctx.GetAuthToken(repo.Configuration().RepositoryID)
-		if err != nil || authToken == "" {
-			doReport = false
-		} else {
-			sc := services.NewServiceConnector(ctx, authToken)
-			enabled, err := sc.GetServiceStatus("alerting")
-			if err != nil || !enabled {
-				doReport = false
-			}
-		}
-	}
-
-	reporter := reporting.NewReporter(ctx, doReport, repo, ctx.GetLogger())
-	reporter.TaskStart(strings.ToLower(t.Type), taskName)
-	reporter.WithRepositoryName(t.Repository)
-	reporter.WithRepository(repo)
-	return reporter
+type TaskContext struct {
+	JobName    string
+	AppContext *appcontext.AppContext
+	Store      storage.Store
+	Repository *repository.Repository
+	Reporter   *reporting.Reporter
+	Done       chan struct{}
 }
 
-func (t *TaskBase) LoadRepository(ctx *appcontext.AppContext) (*repository.Repository, storage.Store, error) {
-	storeConfig, err := ctx.Config.GetRepository(t.Repository)
+func (ctx *TaskContext) GetLogger() *logging.Logger {
+	return ctx.AppContext.GetLogger()
+}
+
+func (ctx *TaskContext) Clear() {
+	if ctx.Repository != nil {
+		_ = ctx.Repository.Close()
+		ctx.Repository = nil
+	}
+	if ctx.Store != nil {
+		_ = ctx.Store.Close()
+		ctx.Store = nil
+	}
+}
+
+func (task *TaskBase) LoadRepository(ctx *TaskContext) error {
+	storeConfig, err := ctx.AppContext.Config.GetRepository(task.Repository)
 	if err != nil {
-		return nil, nil, fmt.Errorf("unable to get repository configuration: %w", err)
+		return fmt.Errorf("unable to get repository configuration: %w", err)
 	}
 
-	store, config, err := storage.Open(ctx.GetInner(), storeConfig)
+	store, config, err := storage.Open(ctx.AppContext.GetInner(), storeConfig)
 	if err != nil {
-		return nil, nil, fmt.Errorf("unable to open storage: %w", err)
+		return fmt.Errorf("unable to open storage: %w", err)
 	}
 
 	repoConfig, err := storage.NewConfigurationFromWrappedBytes(config)
 	if err != nil {
 		store.Close()
-		return nil, nil, fmt.Errorf("unable to read repository configuration: %w", err)
+		return fmt.Errorf("unable to read repository configuration: %w", err)
 	}
 
 	if repoConfig.Version != versioning.FromString(storage.VERSION) {
 		store.Close()
-		return nil, nil, fmt.Errorf("incompatible repository version: %s != %s", repoConfig.Version, storage.VERSION)
+		return fmt.Errorf("incompatible repository version: %s != %s", repoConfig.Version, storage.VERSION)
 	}
 
 	var key []byte
@@ -74,18 +78,46 @@ func (t *TaskBase) LoadRepository(ctx *appcontext.AppContext) (*repository.Repos
 		key, err = encryption.DeriveKey(repoConfig.Encryption.KDFParams, []byte(passphrase))
 		if err != nil {
 			store.Close()
-			return nil, nil, fmt.Errorf("error deriving key: %w", err)
+			return fmt.Errorf("error deriving key: %w", err)
 		}
 		if !encryption.VerifyCanary(repoConfig.Encryption, key) {
 			store.Close()
-			return nil, nil, fmt.Errorf("invalid passphrase")
+			return fmt.Errorf("invalid passphrase")
 		}
 	}
 
-	repo, err := repository.New(ctx.GetInner(), key, store, config)
+	repo, err := repository.New(ctx.AppContext.GetInner(), key, store, config)
 	if err != nil {
 		store.Close()
-		return nil, store, fmt.Errorf("unable to open repository: %w", err)
+		return fmt.Errorf("unable to open repository: %w", err)
 	}
-	return repo, store, nil
+
+	ctx.Repository = repo
+	ctx.Store = store
+	ctx.Reporter = task.NewReporter(ctx)
+
+	return nil
+}
+
+func (t *TaskBase) NewReporter(ctx *TaskContext) *reporting.Reporter {
+	doReport := false
+	if t.Reporting {
+		doReport = true
+		authToken, err := ctx.AppContext.GetAuthToken(ctx.Repository.Configuration().RepositoryID)
+		if err != nil || authToken == "" {
+			doReport = false
+		} else {
+			sc := services.NewServiceConnector(ctx.AppContext, authToken)
+			enabled, err := sc.GetServiceStatus("alerting")
+			if err != nil || !enabled {
+				doReport = false
+			}
+		}
+	}
+
+	reporter := reporting.NewReporter(ctx.AppContext, doReport, ctx.Repository, ctx.GetLogger())
+	reporter.TaskStart(strings.ToLower(t.Type), ctx.JobName)
+	reporter.WithRepositoryName(t.Repository)
+	reporter.WithRepository(ctx.Repository)
+	return reporter
 }
