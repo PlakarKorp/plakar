@@ -31,6 +31,14 @@ type ClosingFileReader struct {
 	fileClosed bool
 }
 
+type ClosingLimitedFileReader struct {
+	reader     io.Reader
+	file       *sftp.File
+	fileClosed bool
+	read       int64
+	N          int64
+}
+
 func (cr *ClosingFileReader) Read(p []byte) (int, error) {
 	if cr.fileClosed {
 		return 0, io.EOF
@@ -45,6 +53,25 @@ func (cr *ClosingFileReader) Read(p []byte) (int, error) {
 			return n, fmt.Errorf("error closing file: %w", closeErr)
 		}
 	}
+
+	return n, err
+}
+
+func (cr *ClosingLimitedFileReader) Read(p []byte) (int, error) {
+	if cr.fileClosed {
+		return 0, io.EOF
+	}
+
+	n, err := cr.reader.Read(p)
+	cr.read += int64(n)
+	if cr.read == cr.N {
+		closeErr := cr.file.Close()
+		cr.fileClosed = true
+		if closeErr != nil {
+			return n, fmt.Errorf("error closing file: %w", closeErr)
+		}
+	}
+
 	return n, err
 }
 
@@ -74,12 +101,13 @@ func ClosingLimitedReaderFromOffset(file *sftp.File, offset, length int64) (io.R
 		return nil, fmt.Errorf("invalid length")
 	}
 
-	return &ClosingFileReader{
+	return &ClosingLimitedFileReader{
 		reader: &io.LimitedReader{
 			R: file,
 			N: length,
 		},
 		file: file,
+		N:    length,
 	}, nil
 }
 
