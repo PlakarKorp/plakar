@@ -32,15 +32,12 @@ type Client struct {
 }
 
 var (
-	ErrWrongVersion = errors.New("agent has a different version, did you restart after update?")
+	ErrWrongVersion = errors.New("agent is running with a different version of plakar")
 )
 
 func ExecuteRPC(ctx *appcontext.AppContext, name []string, cmd subcommands.Subcommand, storeConfig map[string]string) (int, error) {
 	client, err := NewClient(filepath.Join(ctx.CacheDir, "agent.sock"), cmd.GetFlags()&subcommands.IgnoreVersion != 0)
 	if err != nil {
-		if errors.Is(err, ErrWrongVersion) {
-			ctx.GetLogger().Warn("%v", err)
-		}
 		return 1, err
 	}
 	defer client.Close()

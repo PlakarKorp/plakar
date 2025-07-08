@@ -20,8 +20,8 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/repository"
+	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/services"
 	"github.com/PlakarKorp/plakar/subcommands"
 )
@@ -52,16 +52,16 @@ func (cmd *Services) Parse(ctx *appcontext.AppContext, args []string) error {
 		return fmt.Errorf("invalid action: %s, should be enable, disable, or status", action)
 	}
 
-	cmd.action = action
-	cmd.parameter = parameter
+	cmd.Action = action
+	cmd.Parameter = parameter
 	return nil
 }
 
 type Services struct {
 	subcommands.SubcommandBase
 
-	action    string
-	parameter string
+	Action    string
+	Parameter string
 }
 
 func (cmd *Services) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
@@ -70,10 +70,10 @@ func (cmd *Services) Execute(ctx *appcontext.AppContext, repo *repository.Reposi
 	} else if authToken == "" {
 		return 1, fmt.Errorf("access to services requires login, please run `plakar login`")
 	} else {
-		switch cmd.action {
+		switch cmd.Action {
 		case "status":
 			sc := services.NewServiceConnector(ctx, authToken)
-			status, err := sc.GetServiceStatus(cmd.parameter)
+			status, err := sc.GetServiceStatus(cmd.Parameter)
 			if err != nil {
 				return 1, err
 			}
@@ -83,7 +83,7 @@ func (cmd *Services) Execute(ctx *appcontext.AppContext, repo *repository.Reposi
 				fmt.Fprintf(ctx.Stdout, "status: disabled\n")
 			}
 
-			config, err := sc.GetServiceConfiguration(cmd.parameter)
+			config, err := sc.GetServiceConfiguration(cmd.Parameter)
 			if err != nil {
 				return 1, err
 			}
@@ -99,7 +99,7 @@ func (cmd *Services) Execute(ctx *appcontext.AppContext, repo *repository.Reposi
 
 		case "enable":
 			sc := services.NewServiceConnector(ctx, authToken)
-			err := sc.SetServiceStatus(cmd.parameter, true)
+			err := sc.SetServiceStatus(cmd.Parameter, true)
 			if err != nil {
 				return 1, err
 			}
@@ -107,7 +107,7 @@ func (cmd *Services) Execute(ctx *appcontext.AppContext, repo *repository.Reposi
 
 		case "disable":
 			sc := services.NewServiceConnector(ctx, authToken)
-			err := sc.SetServiceStatus(cmd.parameter, false)
+			err := sc.SetServiceStatus(cmd.Parameter, false)
 			if err != nil {
 				return 1, err
 			}

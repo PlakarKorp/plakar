@@ -2,11 +2,11 @@ PLAKAR-CAT(1) - General Commands Manual
 
 # NAME
 
-**plakar cat** - Display file contents from a Plakar snapshot
+**plakar-cat** - Display file contents from a Plakar snapshot
 
 # SYNOPSIS
 
-**plakar cat**
+**plakar&nbsp;cat**
 \[**-no-decompress**]
 \[**-highlight**]
 *snapshotID*:*path&nbsp;...*
@@ -45,7 +45,7 @@ Display a file with syntax highlighting:
 
 # DIAGNOSTICS
 
-The **plakar cat** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
+The **plakar-cat** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
 
 0
 
@@ -61,4 +61,4 @@ The **plakar cat** utility exits&#160;0 on success, and&#160;&gt;0 if an error o
 plakar(1),
 plakar-backup(1)
 
-Plakar - March 3, 2025
+Plakar - July 3, 2025

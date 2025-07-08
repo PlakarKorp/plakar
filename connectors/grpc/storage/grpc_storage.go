@@ -24,6 +24,7 @@ import (
 
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/storage"
+	"google.golang.org/grpc"
 
 	grpc_storage "github.com/PlakarKorp/plakar/connectors/grpc/storage/pkg"
 )
@@ -35,11 +36,21 @@ type GrpcStorage struct {
 
 const bufferSize = 16 * 1024
 
-func NewGrpcStorage(client grpc_storage.StoreClient, ctx context.Context) *GrpcStorage {
-	return &GrpcStorage{
-		GrpcClient: client,
+func NewStorage(ctx context.Context, client grpc.ClientConnInterface, proto string, config map[string]string) (storage.Store, error) {
+	storage := &GrpcStorage{
+		GrpcClient: grpc_storage.NewStoreClient(client),
 		Ctx:        ctx,
 	}
+
+	_, err := storage.GrpcClient.Init(ctx, &grpc_storage.InitRequest{
+		Proto:  proto,
+		Config: config,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return storage, nil
 }
 
 func (s *GrpcStorage) Create(ctx context.Context, config []byte) error {

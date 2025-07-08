@@ -2,11 +2,11 @@ PLAKAR-CHECK(1) - General Commands Manual
 
 # NAME
 
-**plakar check** - Check data integrity in a Plakar repository
+**plakar-check** - Check data integrity in a Plakar repository
 
 # SYNOPSIS
 
-**plakar check**
+**plakar&nbsp;check**
 \[**-concurrency**&nbsp;*number*]
 \[**-name**&nbsp;*name*]
 \[**-category**&nbsp;*category*]
@@ -121,7 +121,7 @@ Perform a fast check on specific paths of two snapshot:
 
 # DIAGNOSTICS
 
-The **plakar check** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
+The **plakar-check** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
 
 0
 
@@ -136,4 +136,4 @@ The **plakar check** utility exits&#160;0 on success, and&#160;&gt;0 if an error
 
 plakar(1)
 
-Plakar - March 3, 2025
+Plakar - July 3, 2025

@@ -1,11 +1,11 @@
-.Dd June 26, 2025
+.Dd July 3, 2025
 .Dt PLAKAR-PTAR 1
 .Os
 .Sh NAME
-.Nm plakar ptar
+.Nm plakar-ptar
 .Nd generate a self-contained Kloset archive (.ptar)
 .Sh SYNOPSIS
-.Nm
+.Nm plakar ptar
 .Op Fl plaintext
 .Op Fl overwrite
 .Op Fl k Ar location
@@ -13,7 +13,7 @@
 .Op Ar path ...
 .Sh DESCRIPTION
 The
-.Nm
+.Nm plakar ptar
 command creates a single portable archive
 (a
 .Sq .ptar
@@ -35,7 +35,7 @@ The destination archive name is mandatory and supplied with
 Unless the
 .Fl overwrite
 flag is given,
-.Nm
+.Nm plakar ptar
 refuses to replace an existing archive.
 .Pp
 The options are as follows:
@@ -43,7 +43,7 @@ The options are as follows:
 .It Fl plaintext
 Disable transparent encryption of the archive.
 If omitted,
-.Nm
+.Nm plakar ptar
 encrypts repository data using a key derived from the passphrase
 specified via
 .Ev PLAKAR_PASSPHRASE

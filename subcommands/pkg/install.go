@@ -20,7 +20,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 
@@ -73,9 +72,12 @@ func (cmd *PkgInstall) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 func (cmd *PkgInstall) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (int, error) {
-	// XXX using cookies dir because we always use the agent dir,
-	// regardless of mode.
-	cachedir := filepath.Join(ctx.GetCookies().GetDir(), "plugins")
+	cachedir, err := utils.GetCacheDir("plakar")
+	if err != nil {
+		return 1, err
+	}
+
+	cachedir = filepath.Join(cachedir, "plugins")
 
 	dataDir, err := utils.GetDataDir("plakar")
 	if err != nil {
@@ -89,13 +91,15 @@ func (cmd *PkgInstall) Execute(ctx *appcontext.AppContext, _ *repository.Reposit
 	}
 
 	for _, plugin := range cmd.Args {
-		if err := install(pluginDir, plugin); err != nil {
+		path, err := install(pluginDir, plugin)
+		if err != nil {
 			return 1, fmt.Errorf("failed to install %s: %w",
 				filepath.Base(plugin), err)
 		}
 
-		err := plugins.Load(ctx, pluginDir, cachedir, filepath.Base(plugin))
+		err = plugins.Load(ctx, pluginDir, cachedir, filepath.Base(plugin))
 		if err != nil {
+			os.Remove(path)
 			return 1, fmt.Errorf("failed to load %s: %w",
 				filepath.Base(plugin), err)
 		}
@@ -104,30 +108,28 @@ func (cmd *PkgInstall) Execute(ctx *appcontext.AppContext, _ *repository.Reposit
 	return 0, nil
 }
 
-func install(plugdir, plugin string) error {
+func install(plugdir, plugin string) (string, error) {
 	dst := filepath.Join(plugdir, filepath.Base(plugin))
-	log.Println("about to install", plugin, "in", dst)
-
 	if err := os.Link(plugin, dst); err == nil {
-		return nil
+		return dst, nil
 	}
 
 	fp, err := os.Open(plugin)
 	if err != nil {
-		return err
+		return dst, err
 	}
 	defer fp.Close()
 
 	// maybe a different filesystem
 	tmp, err := os.CreateTemp(plugdir, "pkg-install-*")
 	if err != nil {
-		return err
+		return dst, err
 	}
 	defer os.Remove(tmp.Name())
 
 	if _, err := io.Copy(tmp, fp); err != nil {
-		return err
+		return dst, err
 	}
 
-	return os.Rename(tmp.Name(), dst)
+	return dst, os.Rename(tmp.Name(), dst)
 }

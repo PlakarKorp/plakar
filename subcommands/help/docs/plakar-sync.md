@@ -2,11 +2,11 @@ PLAKAR-SYNC(1) - General Commands Manual
 
 # NAME
 
-**plakar sync** - Synchronize snapshots between Plakar repositories
+**plakar-sync** - Synchronize snapshots between Plakar repositories
 
 # SYNOPSIS
 
-**plakar sync**
+**plakar&nbsp;sync**
 \[**-name**&nbsp;*name*]
 \[**-category**&nbsp;*category*]
 \[**-environment**&nbsp;*environment*]
@@ -121,7 +121,7 @@ Bi-directional synchronization with peer repository of recent snapshots:
 
 # DIAGNOSTICS
 
-The **plakar sync** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
+The **plakar-sync** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
 
 0
 
@@ -136,4 +136,4 @@ The **plakar sync** utility exits&#160;0 on success, and&#160;&gt;0 if an error 
 
 plakar(1)
 
-Plakar - April 18, 2025
+Plakar - July 3, 2025

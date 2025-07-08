@@ -50,7 +50,7 @@ func (e *excludeFlags) Set(value string) error {
 }
 
 func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
-	var opt_excludes string
+	var opt_exclude_file string
 	var opt_exclude excludeFlags
 	excludes := []string{}
 
@@ -66,7 +66,7 @@ func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
 
 	flags.Uint64Var(&cmd.Concurrency, "concurrency", uint64(ctx.MaxConcurrency), "maximum number of parallel tasks")
 	flags.StringVar(&cmd.Tags, "tag", "", "tag to assign to this snapshot")
-	flags.StringVar(&opt_excludes, "excludes", "", "path to a file containing newline-separated regex patterns, treated as -exclude")
+	flags.StringVar(&opt_exclude_file, "exclude-file", "", "path to a file containing newline-separated regex patterns, treated as -exclude")
 	flags.Var(&opt_exclude, "exclude", "glob pattern to exclude files, can be specified multiple times to add several exclusion patterns")
 	flags.BoolVar(&cmd.Quiet, "quiet", false, "suppress output")
 	flags.BoolVar(&cmd.Silent, "silent", false, "suppress ALL output")
@@ -83,8 +83,8 @@ func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
 		excludes = append(excludes, item)
 	}
 
-	if opt_excludes != "" {
-		fp, err := os.Open(opt_excludes)
+	if opt_exclude_file != "" {
+		fp, err := os.Open(opt_exclude_file)
 		if err != nil {
 			return fmt.Errorf("unable to open excludes file: %w", err)
 		}
@@ -108,6 +108,10 @@ func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
 	cmd.RepositorySecret = ctx.GetSecret()
 	cmd.Excludes = excludes
 	cmd.Path = flags.Arg(0)
+
+	if cmd.Path == "" {
+		cmd.Path = "fs:" + ctx.CWD
+	}
 
 	return nil
 }

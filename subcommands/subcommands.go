@@ -3,11 +3,10 @@ package subcommands
 import (
 	"fmt"
 	"slices"
-	"sort"
 	"strings"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/repository"
+	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/vmihailenco/msgpack/v5"
 )
 
@@ -27,6 +26,8 @@ type Subcommand interface {
 	GetRepositorySecret() []byte
 	GetFlags() CommandFlags
 	setFlags(CommandFlags)
+	GetCWD() string
+	SetCWD(string)
 
 	GetLogInfo() bool
 	SetLogInfo(bool)
@@ -37,6 +38,7 @@ type Subcommand interface {
 type SubcommandBase struct {
 	RepositorySecret []byte
 	Flags            CommandFlags
+	CWD              string
 
 	// XXX - rework that post-release
 	LogInfo   bool
@@ -49,6 +51,14 @@ func (cmd *SubcommandBase) setFlags(flags CommandFlags) {
 
 func (cmd *SubcommandBase) GetFlags() CommandFlags {
 	return cmd.Flags
+}
+
+func (cmd *SubcommandBase) GetCWD() string {
+	return cmd.CWD
+}
+
+func (cmd *SubcommandBase) SetCWD(cwd string) {
+	cmd.CWD = cwd
 }
 
 func (cmd *SubcommandBase) GetLogInfo() bool {
@@ -113,12 +123,28 @@ func Lookup(arguments []string) (Subcommand, []string, []string) {
 	return nil, nil, arguments
 }
 
-func List() []string {
-	var list []string
+func List() [][]string {
+	var list [][]string
+	slices.SortFunc(subcommands, func(a, b subcmd) int {
+		var i int
+		for {
+			n := strings.Compare(a.args[i], b.args[i])
+			if n != 0 {
+				return n
+			}
+
+			i++
+			if i == len(a.args) {
+				return -1
+			}
+			if i == len(b.args) {
+				return +1
+			}
+		}
+	})
 	for _, command := range subcommands {
-		list = append(list, strings.Join(command.args, " "))
+		list = append(list, command.args)
 	}
-	sort.Strings(list)
 	return list
 }
 

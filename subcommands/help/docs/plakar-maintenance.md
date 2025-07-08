@@ -2,11 +2,11 @@ PLAKAR-MAINTENANCE(1) - General Commands Manual
 
 # NAME
 
-**plakar maintenance** - Remove unused data from a Plakar repository
+**plakar-maintenance** - Remove unused data from a Plakar repository
 
 # SYNOPSIS
 
-**plakar maintenance**
+**plakar&nbsp;maintenance**
 
 # DESCRIPTION
 
@@ -21,7 +21,7 @@ changes.
 
 # DIAGNOSTICS
 
-The **plakar maintenance** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
+The **plakar-maintenance** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
 
 0
 
@@ -36,4 +36,4 @@ The **plakar maintenance** utility exits&#160;0 on success, and&#160;&gt;0 if an
 
 plakar(1)
 
-Plakar - February 1, 2025
+Plakar - July 3, 2025

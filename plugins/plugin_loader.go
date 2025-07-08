@@ -19,11 +19,8 @@ import (
 	"github.com/PlakarKorp/plakar/appcontext"
 	fsexporter "github.com/PlakarKorp/plakar/connectors/fs/exporter"
 	grpc_exporter "github.com/PlakarKorp/plakar/connectors/grpc/exporter"
-	grpc_exporter_pkg "github.com/PlakarKorp/plakar/connectors/grpc/exporter/pkg"
 	grpc_importer "github.com/PlakarKorp/plakar/connectors/grpc/importer"
-	grpc_importer_pkg "github.com/PlakarKorp/plakar/connectors/grpc/importer/pkg"
 	grpc_storage "github.com/PlakarKorp/plakar/connectors/grpc/storage"
-	grpc_storage_pkg "github.com/PlakarKorp/plakar/connectors/grpc/storage/pkg"
 	"github.com/PlakarKorp/plakar/utils"
 	"gopkg.in/yaml.v3"
 )
@@ -34,8 +31,9 @@ type Manifest struct {
 	Connectors []struct {
 		Type          string   `yaml:"type"`
 		Protocols     []string `yaml:"protocols"`
-		LocationFlags []string `yaml:"locationFlags"`
+		LocationFlags []string `yaml:"location_flags"`
 		Executable    string   `yaml:"executable"`
+		ExtraFiles    []string `yaml:"extra_files"`
 		Homepage      string   `yaml:"homepage"`
 		License       string   `yaml:"license"`
 	} `yaml:"connectors"`
@@ -47,17 +45,15 @@ func ValidateName(name string) bool {
 	return re.MatchString(name)
 }
 
-func LoadDir(ctx *appcontext.AppContext, pluginsDir, cacheDir string) error {
-	if err := os.MkdirAll(cacheDir, 0755); err != nil {
-		return err
-	}
+func ListDir(ctx *appcontext.AppContext, pluginsDir string) ([]string, error) {
+	var names []string
 
 	dirEntries, err := os.ReadDir(pluginsDir)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			return nil
+			return names, nil
 		}
-		return err
+		return names, err
 	}
 
 	for _, entry := range dirEntries {
@@ -69,10 +65,23 @@ func LoadDir(ctx *appcontext.AppContext, pluginsDir, cacheDir string) error {
 			continue
 		}
 
-		if err := Load(ctx, pluginsDir, cacheDir, entry.Name()); err != nil {
+		names = append(names, entry.Name())
+	}
+	return names, nil
+}
+
+func LoadDir(ctx *appcontext.AppContext, pluginsDir, cacheDir string) error {
+	names, err := ListDir(ctx, pluginsDir)
+	if err != nil {
+		return err
+	}
+
+	for _, name := range names {
+		if err := Load(ctx, pluginsDir, cacheDir, name); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -121,41 +130,31 @@ func Load(ctx *appcontext.AppContext, pluginsDir, cacheDir, name string) error {
 			switch conn.Type {
 			case "importer":
 				importer.Register(proto, flags, func(ctx context.Context, o *importer.Options, s string, config map[string]string) (importer.Importer, error) {
-					client, err := connectPlugin(exe, config)
+					client, err := connectPlugin(exe)
 					if err != nil {
 						return nil, fmt.Errorf("failed to connect to plugin: %w", err)
 					}
 
-					return &grpc_importer.GrpcImporter{
-						GrpcClientScan:   grpc_importer_pkg.NewImporterClient(client),
-						GrpcClientReader: grpc_importer_pkg.NewImporterClient(client),
-						Ctx:              ctx,
-					}, nil
+					return grpc_importer.NewImporter(ctx, client, o, s, config)
 				})
 			case "exporter":
 				exporter.Register(proto, flags, func(ctx context.Context, o *exporter.Options, s string, config map[string]string) (exporter.Exporter, error) {
-					client, err := connectPlugin(exe, config)
+					client, err := connectPlugin(exe)
 					if err != nil {
 						return nil, fmt.Errorf("failed to connect to plugin: %w", err)
 					}
 
-					return &grpc_exporter.GrpcExporter{
-						GrpcClient: grpc_exporter_pkg.NewExporterClient(client),
-						Ctx:        ctx,
-					}, nil
+					return grpc_exporter.NewExporter(ctx, client, o, s, config)
 				})
 			case "storage":
-				storage.Register(func(ctx context.Context, s string, config map[string]string) (storage.Store, error) {
-					client, err := connectPlugin(exe, config)
+				storage.Register(proto, flags, func(ctx context.Context, s string, config map[string]string) (storage.Store, error) {
+					client, err := connectPlugin(exe)
 					if err != nil {
 						return nil, fmt.Errorf("failed to connect to plugin: %w", err)
 					}
 
-					return &grpc_storage.GrpcStorage{
-						GrpcClient: grpc_storage_pkg.NewStoreClient(client),
-						Ctx:        ctx,
-					}, nil
-				}, flags, proto)
+					return grpc_storage.NewStorage(ctx, client, s, config)
+				})
 			default:
 				return fmt.Errorf("unknown plugin type: %s", conn.Type)
 			}

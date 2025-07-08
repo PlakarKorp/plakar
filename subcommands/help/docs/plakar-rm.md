@@ -2,11 +2,11 @@ PLAKAR-RM(1) - General Commands Manual
 
 # NAME
 
-**plakar rm** - Remove snapshots from a Plakar repository
+**plakar-rm** - Remove snapshots from a Plakar repository
 
 # SYNOPSIS
 
-**plakar rm**
+**plakar&nbsp;rm**
 \[**-name**&nbsp;*name*]
 \[**-category**&nbsp;*category*]
 \[**-environment**&nbsp;*environment*]
@@ -106,7 +106,7 @@ Remove snapshots older than 1 year with a specific tag:
 
 # DIAGNOSTICS
 
-The **plakar rm** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
+The **plakar-rm** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
 
 0
 
@@ -122,4 +122,4 @@ The **plakar rm** utility exits&#160;0 on success, and&#160;&gt;0 if an error oc
 plakar(1),
 plakar-backup(1)
 
-Plakar - March 3, 2025
+Plakar - July 3, 2025

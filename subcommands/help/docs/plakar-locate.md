@@ -2,11 +2,11 @@ PLAKAR-LOCATE(1) - General Commands Manual
 
 # NAME
 
-**plakar locate** - Find filenames in a Plakar snapshot
+**plakar-locate** - Find filenames in a Plakar snapshot
 
 # SYNOPSIS
 
-**plakar locate**
+**plakar&nbsp;locate**
 \[**-name**&nbsp;*name*]
 \[**-category**&nbsp;*category*]
 \[**-environment**&nbsp;*environment*]
@@ -99,7 +99,7 @@ Search for files ending in
 
 # DIAGNOSTICS
 
-The **plakar locate** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
+The **plakar-locate** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
 
 0
 
@@ -120,4 +120,4 @@ plakar-backup(1)
 The patterns may have to be quoted to avoid the shell attempting to
 expand them.
 
-Plakar - February 1, 2025
+Plakar - July 3, 2025

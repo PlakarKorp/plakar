@@ -2,11 +2,11 @@ PLAKAR-MOUNT(1) - General Commands Manual
 
 # NAME
 
-**plakar mount** - Mount Plakar snapshots as read-only filesystem
+**plakar-mount** - Mount Plakar snapshots as read-only filesystem
 
 # SYNOPSIS
 
-**plakar mount**
+**plakar&nbsp;mount**
 *mountpoint*
 
 # DESCRIPTION
@@ -29,7 +29,7 @@ Mount a snapshot to the specified directory:
 
 # DIAGNOSTICS
 
-The **plakar mount** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
+The **plakar-mount** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
 
 0
 
@@ -44,4 +44,4 @@ The **plakar mount** utility exits&#160;0 on success, and&#160;&gt;0 if an error
 
 plakar(1)
 
-Plakar - March 3, 2025
+Plakar - July 3, 2025

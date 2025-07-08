@@ -416,6 +416,7 @@ func handleClient(ctx *appcontext.AppContext, wg *sync.WaitGroup, conn net.Conn)
 		clientContext.GetLogger().EnableInfo()
 	}
 	clientContext.GetLogger().EnableTracing(subcommand.GetLogTraces())
+	clientContext.CWD = subcommand.GetCWD()
 
 	ctx.GetLogger().Info("%s at %s", strings.Join(name, " "), storeConfig["location"])
 

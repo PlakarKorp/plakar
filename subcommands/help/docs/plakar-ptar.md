@@ -2,11 +2,11 @@ PLAKAR-PTAR(1) - General Commands Manual
 
 # NAME
 
-**plakar ptar** - generate a self-contained Kloset archive (.ptar)
+**plakar-ptar** - generate a self-contained Kloset archive (.ptar)
 
 # SYNOPSIS
 
-**plakar ptar**
+**plakar&nbsp;ptar**
 \[**-plaintext**]
 \[**-overwrite**]
 \[**-k**&nbsp;*location*]
@@ -82,7 +82,7 @@ The options are as follows:
 
 # DIAGNOSTICS
 
-The **plakar ptar** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
+The **plakar-ptar** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
 
 0
 
@@ -100,4 +100,4 @@ plakar(1),
 plakar-backup(1),
 plakar-create(1)
 
-Plakar - June 26, 2025
+Plakar - July 3, 2025

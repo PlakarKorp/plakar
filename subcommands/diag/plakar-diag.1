@@ -1,15 +1,15 @@
-.Dd February 3, 2025
+.Dd July 3, 2025
 .Dt PLAKAR-DIAG 1
 .Os
 .Sh NAME
-.Nm plakar diag
+.Nm plakar-diag
 .Nd Display detailed information about Plakar internal structures
 .Sh SYNOPSIS
-.Nm
+.Nm plakar diag
 .Op Cm contenttype | errors | locks | object | packfile | snapshot | state | vfs | xattr
 .Sh DESCRIPTION
 The
-.Nm
+.Nm plakar diag
 command provides detailed information about various internal data structures.
 The type of information displayed depends on the specified argument.
 Without any arguments, display information about the repository.
@@ -74,4 +74,4 @@ failure to retrieve the requested data.
 .El
 .Sh SEE ALSO
 .Xr plakar 1 ,
-.Xr plakar-snapshot 1
+.Xr plakar-backup 1

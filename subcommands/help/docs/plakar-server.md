@@ -2,11 +2,11 @@ PLAKAR-SERVER(1) - General Commands Manual
 
 # NAME
 
-**plakar server** - Start a Plakar server
+**plakar-server** - Start a Plakar server
 
 # SYNOPSIS
 
-**plakar server**
+**plakar&nbsp;server**
 \[**-allow-delete**]
 \[**-listen**&nbsp;*address*]
 
@@ -34,7 +34,7 @@ The options are as follows:
 
 # DIAGNOSTICS
 
-The **plakar server** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
+The **plakar-server** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
 
 0
 
@@ -49,4 +49,4 @@ The **plakar server** utility exits&#160;0 on success, and&#160;&gt;0 if an erro
 
 plakar(1)
 
-Plakar - March 3, 2025
+Plakar - July 3, 2025

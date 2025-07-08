@@ -45,7 +45,7 @@ type Store struct {
 }
 
 func init() {
-	storage.Register(NewStore, 0, "sftp")
+	storage.Register("sftp", 0, NewStore)
 }
 
 func NewStore(ctx context.Context, proto string, storeConfig map[string]string) (storage.Store, error) {

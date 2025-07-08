@@ -2,11 +2,11 @@ PLAKAR-DIAG(1) - General Commands Manual
 
 # NAME
 
-**plakar diag** - Display detailed information about Plakar internal structures
+**plakar-diag** - Display detailed information about Plakar internal structures
 
 # SYNOPSIS
 
-**plakar diag**
+**plakar&nbsp;diag**
 \[**contenttype**&nbsp;|&nbsp;**errors**&nbsp;|&nbsp;**locks**&nbsp;|&nbsp;**object**&nbsp;|&nbsp;**packfile**&nbsp;|&nbsp;**snapshot**&nbsp;|&nbsp;**state**&nbsp;|&nbsp;**vfs**&nbsp;|&nbsp;**xattr**]
 
 # DESCRIPTION
@@ -80,7 +80,7 @@ Display filesystem details for a path within a snapshot:
 
 # DIAGNOSTICS
 
-The **plakar diag** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
+The **plakar-diag** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
 
 0
 
@@ -94,6 +94,6 @@ The **plakar diag** utility exits&#160;0 on success, and&#160;&gt;0 if an error 
 # SEE ALSO
 
 plakar(1),
-plakar-snapshot(1)
+plakar-backup(1)
 
-Plakar - February 3, 2025
+Plakar - July 3, 2025

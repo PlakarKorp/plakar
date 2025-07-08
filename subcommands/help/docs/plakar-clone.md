@@ -2,11 +2,11 @@ PLAKAR-CLONE(1) - General Commands Manual
 
 # NAME
 
-**plakar clone** - Clone a Plakar repository to a new location
+**plakar-clone** - Clone a Plakar repository to a new location
 
 # SYNOPSIS
 
-**plakar clone**
+**plakar&nbsp;clone**
 **to**
 *path*
 
@@ -27,7 +27,7 @@ Clone a repository to a new location:
 
 # DIAGNOSTICS
 
-The **plakar clone** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
+The **plakar-clone** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
 
 0
 
@@ -43,4 +43,4 @@ The **plakar clone** utility exits&#160;0 on success, and&#160;&gt;0 if an error
 plakar(1),
 plakar-create(1)
 
-Plakar - February 1, 2025
+Plakar - July 3, 2025

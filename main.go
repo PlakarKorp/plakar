@@ -148,9 +148,7 @@ func EntryPoint() int {
 		flag.PrintDefaults()
 
 		fmt.Fprintf(flag.CommandLine.Output(), "\nCOMMANDS:\n")
-		for _, k := range subcommands.List() {
-			fmt.Fprintf(flag.CommandLine.Output(), "  %s\n", k)
-		}
+		listcmds(flag.CommandLine.Output(), "  ")
 		fmt.Fprintf(flag.CommandLine.Output(), "\nFor more information on a command, use '%s help COMMAND'.\n", flag.CommandLine.Name())
 	}
 	flag.Parse()
@@ -267,10 +265,7 @@ func EntryPoint() int {
 
 	if flag.NArg() == 0 {
 		fmt.Fprintf(os.Stderr, "%s: a subcommand must be provided\n", filepath.Base(flag.CommandLine.Name()))
-		for _, k := range subcommands.List() {
-			fmt.Fprintf(os.Stderr, "  %s\n", k)
-		}
-
+		listcmds(os.Stderr, "  ")
 		return 1
 	}
 
@@ -398,6 +393,8 @@ func EntryPoint() int {
 		return 1
 	}
 
+	cmd.SetCWD(ctx.CWD)
+
 	c := make(chan os.Signal, 1)
 	go func() {
 		<-c
@@ -419,6 +416,10 @@ func EntryPoint() int {
 
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), utils.SanitizeText(err.Error()))
+		if errors.Is(err, agent.ErrWrongVersion) {
+			fmt.Fprintln(os.Stderr, "To restart the agent with the current CLI version, run:")
+			fmt.Fprintln(os.Stderr, "\t$ plakar agent restart")
+		}
 	}
 
 	if repo != nil {
@@ -611,6 +612,51 @@ func setupEncryption(ctx *appcontext.AppContext, config *storage.Configuration, 
 	}
 
 	return ErrCantUnlock
+}
+
+func listcmds(out io.Writer, prefix string) {
+	var last string
+	var subs []string
+
+	flush := func() {
+		pre, post := " ", ""
+		if len(subs) > 1 && subs[0] == "" {
+			pre, post = " [", "]"
+			subs = subs[1:]
+		}
+		subcmds := strings.Join(subs, " | ")
+		fmt.Fprint(out, prefix, last, pre, subcmds, post, "\n")
+	}
+
+	all := subcommands.List()
+	for _, cmd := range all {
+		if len(cmd) == 0 {
+			continue
+		}
+
+		if last == "" {
+			goto next
+		}
+
+		if last == cmd[0] {
+			if len(subs) > 0 && subs[len(subs)-1] != cmd[1] {
+				subs = append(subs, cmd[1])
+			}
+			continue
+		}
+
+		flush()
+
+	next:
+		subs = subs[:0]
+		last = cmd[0]
+		if len(cmd) > 1 {
+			subs = append(subs, cmd[1])
+		} else {
+			subs = append(subs, "")
+		}
+	}
+	flush()
 }
 
 func main() {

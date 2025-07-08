@@ -1,21 +1,21 @@
-.Dd February 1, 2025
+.Dd July 3, 2025
 .Dt PLAKAR-AGENT 1
 .Os
 .Sh NAME
-.Nm plakar agent
+.Nm plakar-agent
 .Nd Run the Plakar agent
 .Sh SYNOPSIS
-.Nm
+.Nm plakar agent
 .Op Fl foreground
 .Op Fl log Ar filename
 .Op Cm stop
 .Sh DESCRIPTION
 The
-.Nm
+.Nm plakar agent
 command starts the Plakar agent which will execute subsequent
 .Xr plakar 1
 commands on their behalfs for faster processing.
-.Nm
+.Nm plakar agent
 continues running indefinitely.
 .Pp
 The options are as follows:
@@ -31,7 +31,7 @@ Redirect all output to
 With the
 .Cm stop
 argument,
-.Nm
+.Nm plakar agent
 will be stopped.
 .Sh DIAGNOSTICS
 .Ex -std

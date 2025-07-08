@@ -2,11 +2,11 @@ PLAKAR-STORE(1) - General Commands Manual
 
 # NAME
 
-**plakar store** - Manage Plakar store configurations
+**plakar-store** - Manage Plakar store configurations
 
 # SYNOPSIS
 
-**plakar store**
+**plakar&nbsp;store**
 \[subcommand&nbsp;...]
 
 # DESCRIPTION
@@ -75,10 +75,10 @@ The subcommands are as follows:
 
 # DIAGNOSTICS
 
-The **plakar store** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
+The **plakar-store** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
 
 # SEE ALSO
 
 plakar(1)
 
-Plakar - February 27, 2025
+Plakar - July 3, 2025

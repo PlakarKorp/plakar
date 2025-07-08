@@ -1,11 +1,11 @@
-.Dd March 3, 2025
+.Dd July 3, 2025
 .Dt PLAKAR-CHECK 1
 .Os
 .Sh NAME
-.Nm plakar check
+.Nm plakar-check
 .Nd Check data integrity in a Plakar repository
 .Sh SYNOPSIS
-.Nm
+.Nm plakar check
 .Op Fl concurrency Ar number
 .Op Fl name Ar name
 .Op Fl category Ar category
@@ -22,7 +22,7 @@
 .Op Ar snapshotID : Ns Ar path ...
 .Sh DESCRIPTION
 The
-.Nm
+.Nm plakar check
 command verifies the integrity of data in a Plakar repository.
 It checks the given paths inside the snapshots for consistency and
 validates file macs to ensure no corruption has occurred, or all

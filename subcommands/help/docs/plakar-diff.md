@@ -2,11 +2,11 @@ PLAKAR-DIFF(1) - General Commands Manual
 
 # NAME
 
-**plakar diff** - Show differences between files in a Plakar snapshots
+**plakar-diff** - Show differences between files in a Plakar snapshots
 
 # SYNOPSIS
 
-**plakar diff**
+**plakar&nbsp;diff**
 \[**-highlight**]
 *snapshotID1*\[:*path1*]
 *snapshotID2*\[:*path2*]
@@ -44,7 +44,7 @@ across snapshots with highlighting:
 
 # DIAGNOSTICS
 
-The **plakar diff** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
+The **plakar-diff** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
 
 0
 
@@ -60,4 +60,4 @@ The **plakar diff** utility exits&#160;0 on success, and&#160;&gt;0 if an error 
 plakar(1),
 plakar-backup(1)
 
-Plakar - March 3, 2025
+Plakar - July 3, 2025

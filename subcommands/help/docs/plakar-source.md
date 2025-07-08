@@ -2,11 +2,11 @@ PLAKAR-SOURCE(1) - General Commands Manual
 
 # NAME
 
-**plakar source** - Manage Plakar backup source configuration
+**plakar-source** - Manage Plakar backup source configuration
 
 # SYNOPSIS
 
-**plakar source**
+**plakar&nbsp;source**
 \[subcommand&nbsp;...]
 
 # DESCRIPTION
@@ -76,10 +76,10 @@ The subcommands are as follows:
 
 # DIAGNOSTICS
 
-The **plakar source** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
+The **plakar-source** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
 
 # SEE ALSO
 
 plakar(1)
 
-Plakar - February 27, 2025
+Plakar - July 3, 2025

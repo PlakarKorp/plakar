@@ -14,8 +14,8 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-func connectPlugin(pluginPath string, config map[string]string) (grpc.ClientConnInterface, error) {
-	fd, err := forkChild(pluginPath, config)
+func connectPlugin(pluginPath string) (grpc.ClientConnInterface, error) {
+	fd, err := forkChild(pluginPath)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +38,7 @@ func connectPlugin(pluginPath string, config map[string]string) (grpc.ClientConn
 	return clientConn, nil
 }
 
-func forkChild(pluginPath string, config map[string]string) (int, error) {
+func forkChild(pluginPath string) (int, error) {
 	sp, err := syscall.Socketpair(syscall.AF_UNIX, syscall.SOCK_STREAM, 0)
 	if err != nil {
 		return -1, fmt.Errorf("failed to create socketpair: %w", err)
@@ -46,7 +46,7 @@ func forkChild(pluginPath string, config map[string]string) (int, error) {
 
 	childFile := os.NewFile(uintptr(sp[0]), "child-conn")
 
-	cmd := exec.Command(pluginPath, fmt.Sprintf("%v", config))
+	cmd := exec.Command(pluginPath)
 	cmd.Stdin = childFile
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

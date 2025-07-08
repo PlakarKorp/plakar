@@ -5,12 +5,27 @@ package exporter;
 import "google/protobuf/timestamp.proto";
 
 service Exporter {
+  rpc Init(InitRequest) returns (InitResponse);
   rpc Root(RootRequest) returns (RootResponse);
   rpc CreateDirectory(CreateDirectoryRequest) returns (CreateDirectoryResponse);
   rpc StoreFile(stream StoreFileRequest) returns (StoreFileResponse);
   rpc SetPermissions(SetPermissionsRequest) returns (SetPermissionsResponse);
   rpc Close(CloseRequest) returns (CloseResponse);
 }
+
+message Options {
+  int64 maxconcurrency = 1;
+
+  // TODO: stdin/out/err are missing
+}
+
+message InitRequest {
+  Options options = 1;
+  string proto = 2;
+  map<string, string> config = 3;
+}
+
+message InitResponse {}
 
 message RootRequest {}
 

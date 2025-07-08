@@ -139,7 +139,7 @@ func TestExecuteCmdCreateDefaultWithExcludes(t *testing.T) {
 	repo, tmpBackupDir, ctx := generateFixtures(t, bufOut, bufErr)
 
 	ctx.MaxConcurrency = 1
-	args := []string{"-excludes", tmpBackupDir + "/subdir/to_exclude", tmpBackupDir}
+	args := []string{"-exclude-file", tmpBackupDir + "/subdir/to_exclude", tmpBackupDir}
 
 	subcommand := &Backup{}
 	err := subcommand.Parse(ctx, args)

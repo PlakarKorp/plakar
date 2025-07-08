@@ -2,11 +2,11 @@ PLAKAR-UI(1) - General Commands Manual
 
 # NAME
 
-**plakar ui** - Serve the Plakar web user interface
+**plakar-ui** - Serve the Plakar web user interface
 
 # SYNOPSIS
 
-**plakar ui**
+**plakar&nbsp;ui**
 \[**-addr**&nbsp;*address*]
 \[**-cors**]
 \[**-no-auth**]
@@ -52,7 +52,7 @@ Using a custom address and disable automatic browser execution:
 
 # DIAGNOSTICS
 
-The **plakar ui** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
+The **plakar-ui** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
 
 0
 
@@ -67,4 +67,4 @@ The **plakar ui** utility exits&#160;0 on success, and&#160;&gt;0 if an error oc
 
 plakar(1)
 
-Plakar - March 3, 2024
+Plakar - July 3, 2025

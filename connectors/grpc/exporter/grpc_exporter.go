@@ -5,7 +5,9 @@ import (
 	"io"
 
 	"github.com/PlakarKorp/kloset/objects"
+	"github.com/PlakarKorp/kloset/snapshot/exporter"
 	grpc_exporter "github.com/PlakarKorp/plakar/connectors/grpc/exporter/pkg"
+	"google.golang.org/grpc"
 
 	// google being google I guess.  No idea why this is actually
 	// required, but otherwise it breaks the workspace setup
@@ -16,8 +18,28 @@ import (
 )
 
 type GrpcExporter struct {
-	GrpcClient 	grpc_exporter.ExporterClient
-	Ctx 		context.Context
+	GrpcClient grpc_exporter.ExporterClient
+	Ctx        context.Context
+}
+
+func NewExporter(ctx context.Context, client grpc.ClientConnInterface, opts *exporter.Options, proto string, config map[string]string) (exporter.Exporter, error) {
+	exporter := &GrpcExporter{
+		GrpcClient: grpc_exporter.NewExporterClient(client),
+		Ctx:        ctx,
+	}
+
+	_, err := exporter.GrpcClient.Init(ctx, &grpc_exporter.InitRequest{
+		Options: &grpc_exporter.Options{
+			Maxconcurrency: int64(opts.MaxConcurrency),
+		},
+		Proto:  proto,
+		Config: config,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return exporter, nil
 }
 
 func (g *GrpcExporter) Close() error {
@@ -45,17 +67,17 @@ func (g *GrpcExporter) SetPermissions(pathname string, fileinfo *objects.FileInf
 	_, err := g.GrpcClient.SetPermissions(g.Ctx, &grpc_exporter.SetPermissionsRequest{
 		Pathname: pathname,
 		FileInfo: &grpc_exporter.FileInfo{
-			Name: 		fileinfo.Lname,
-			Mode:	 	uint32(fileinfo.Lmode),
-			ModTime: 	timestamppb.New(fileinfo.LmodTime),
-			Dev: 		fileinfo.Ldev,
-			Ino: 		fileinfo.Lino,
-			Uid: 		fileinfo.Luid,
-			Gid: 		fileinfo.Lgid,
-			Nlink: 		uint32(fileinfo.Lnlink),
-			Username: 	fileinfo.Lusername,
-			Groupname: 	fileinfo.Lgroupname,
-			Flags: 		fileinfo.Flags,
+			Name:      fileinfo.Lname,
+			Mode:      uint32(fileinfo.Lmode),
+			ModTime:   timestamppb.New(fileinfo.LmodTime),
+			Dev:       fileinfo.Ldev,
+			Ino:       fileinfo.Lino,
+			Uid:       fileinfo.Luid,
+			Gid:       fileinfo.Lgid,
+			Nlink:     uint32(fileinfo.Lnlink),
+			Username:  fileinfo.Lusername,
+			Groupname: fileinfo.Lgroupname,
+			Flags:     fileinfo.Flags,
 		},
 	})
 	return err
@@ -87,7 +109,7 @@ func (g *GrpcExporter) StoreFile(pathname string, fp io.Reader, size int64) erro
 		if err != nil {
 			return err
 		}
-		
+
 		if err := stream.Send(&grpc_exporter.StoreFileRequest{
 			Type: &grpc_exporter.StoreFileRequest_Data{
 				Data: &grpc_exporter.Data{

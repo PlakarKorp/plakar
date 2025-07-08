@@ -9,29 +9,26 @@ PLAKAR(1) - General Commands Manual
 **plakar**
 \[**-config**&nbsp;*path*]
 \[**-cpu**&nbsp;*number*]
-\[**-hostname**&nbsp;*name*]
 \[**-keyfile**&nbsp;*path*]
 \[**-no-agent**]
 \[**-quiet**]
-\[**-trace**&nbsp;*what*]
-\[**-username**&nbsp;*name*]
-\[**at**&nbsp;*repository*]
+\[**-trace**&nbsp;*subsystems*]
+\[**at**&nbsp;*kloset*]
 *subcommand&nbsp;...*
 
 # DESCRIPTION
 
 **plakar**
 is a tool to create distributed, versioned backups with compression,
-encryption and data deduplication.
+encryption, and data deduplication.
 
 By default,
 **plakar**
-operates on the repository at
+operates on the Kloset store at
 *~/.plakar*.
 This can be changed either by using the
 **at**
-keyword or by setting a default repository using
-plakar-config(1).
+option.
 
 The following options are available:
 
@@ -42,22 +39,20 @@ The following options are available:
 
 **-cpu** *number*
 
-> Limit the number of parallelism that
+> Limit the number of parallel workers
 > **plakar**
 > uses to
 > *number*.
 > By default it's the number of online CPUs.
 
-**-hostname** *name*
-
-> Change the hostname used for backups.
-> Defaults to the current hostname.
-
 **-keyfile** *path*
 
-> Use the passphrase from the key file at
+> Read the passphrase from the key file at
 > *path*
-> instead of prompting to unlock.
+> instead of prompting.
+> Overrides the
+> `PLAKAR_PASSPHRASE`
+> environment variable.
 
 **-no-agent**
 
@@ -67,78 +62,74 @@ The following options are available:
 
 > Disable all output except for errors.
 
-**-trace** *what*
+**-trace** *subsystems*
 
 > Display trace logs.
-> *what*
+> *subsystems*
 > is a comma-separated series of keywords to enable the trace logs for
 > different subsystems:
 > **all**, **trace**, **repository**, **snapshot** and **server**.
 
-**-username** *name*
+**at** *kloset*
 
-> Change the username used for backups.
-> Defaults to the current user name.
-
-**at** *repository*
-
-> Operate on the given
-> *repository*.
+> Operates on the given
+> *kloset*
+> store.
 > It could be a path, an URI, or a label in the form
 > "@*name*"
 > to reference a configuration created with
-> plakar-config(1).
+> plakar-store(1).
 
 The following commands are available:
 
 **agent**
 
-> Run the plakar agent, documented in
+> Run the plakar agent and configure scheduled tasks, documented in
 > plakar-agent(1).
 
 **archive**
 
-> Create an archive from a Plakar snapshot, documented in
+> Create an archive from a Kloset snapshot, documented in
 > plakar-archive(1).
 
 **backup**
 
-> Create a new snapshot, documented in
+> Create a new Kloset snapshot, documented in
 > plakar-backup(1).
 
 **cat**
 
-> Display file contents from a Plakar snapshot, documented in
+> Display file contents from a Kloset snapshot, documented in
 > plakar-cat(1).
 
 **check**
 
-> Check data integrity in a Plakar repository, documented in
+> Check data integrity in a Kloset store, documented in
 > plakar-check(1).
 
 **clone**
 
-> Clone a Plakar repository to a new location, documented in
+> Clone a Kloset store to a new location, documented in
 > plakar-clone(1).
 
 **create**
 
-> Create a new Plakar repository, documented in
+> Create a new Kloset store, documented in
 > plakar-create(1).
 
 **destination**
 
-> Manage Plakar restore destination configuration, documented in
+> Manage configurations for the destinations of integrations, documented in
 > plakar-destination(1).
 
 **diff**
 
-> Show differences between files in a Plakar snapshot, documented in
+> Show differences between files in a Kloset snapshot, documented in
 > plakar-diff(1).
 
 **digest**
 
-> Compute digests for files in a Plakar snapshot, documented in
+> Compute digests for files in a Kloset snapshot, documented in
 > plakar-digest(1).
 
 **help**
@@ -152,32 +143,37 @@ The following commands are available:
 
 **locate**
 
-> Find filenames in a Plakar snapshot, documented in
+> Find filenames in a Kloset snapshot, documented in
 > plakar-locate(1).
 
 **ls**
 
-> List snapshots and their contents in a Plakar repository, documented in
+> List snapshots and their contents in a Kloset store, documented in
 > plakar-ls(1).
 
 **maintenance**
 
-> Remove unused data from a Plakar repository, documented in
+> Remove unused data from a Kloset store, documented in
 > plakar-maintenance(1).
 
 **mount**
 
-> Mount Plakar snapshots as read-only filesystem, documented in
+> Mount Kloset snapshots as a read-only filesystem, documented in
 > plakar-mount(1).
+
+**ptar**
+
+> Create a .ptar archive, documented in
+> plakar-ptar(1).
 
 **restore**
 
-> Restore files from a Plakar snapshot, documented in
+> Restore files from a Kloset snapshot, documented in
 > plakar-restore(1).
 
 **rm**
 
-> Remove snapshots from a Plakar repository, documented in
+> Remove snapshots from a Kloset store, documented in
 > plakar-rm(1).
 
 **server**
@@ -187,17 +183,17 @@ The following commands are available:
 
 **source**
 
-> Manage Plakar backup source configuration, documented in
+> Manage configurations for the sources of integrations, documented in
 > plakar-source(1).
 
 **store**
 
-> Manage Plakar store configurations, documented in
+> Manage configurations for storage connectors, documented in
 > plakar-store(1).
 
 **sync**
 
-> Synchronize sanpshots between Plakar repositories, documented in
+> Synchronize snapshots between Kloset stores, documented in
 > plakar-sync(1).
 
 **ui**
@@ -214,15 +210,17 @@ The following commands are available:
 
 `PLAKAR_PASSPHRASE`
 
-> Passphrase to unlock the repository, overrides the one from the configuration.
+> Passphrase to unlock the Kloset store; overrides the one from the configuration.
 > If set,
 > **plakar**
 > won't prompt to unlock.
+> The option
+> **keyfile**
+> overrides this environment variable.
 
 `PLAKAR_REPOSITORY`
 
-> Path to the default repository, overrides the configuration set with
-> **plakar config repository default**.
+> Reference to the Kloset store.
 
 # FILES
 
@@ -230,41 +228,30 @@ The following commands are available:
 
 > Plakar cache directories.
 
-*~/.config/plakar/plakar.yml*
+*~/.config/plakar/klosets.yml ~/.config/plakar/sources.yml ~/.config/plakar/destinations.yml*
 
-> Default configuration file.
+> Default configuration files.
 
 *~/.plakar*
 
-> Default repository location.
+> Default Kloset store location.
 
 # EXAMPLES
 
-Create an encrypted repository at the default location:
+Create an encrypted Kloset store at the default location:
 
 	$ plakar create
 
-Create an encrypted repository on AWS S3:
+Create an encrypted Kloset store on AWS S3:
 
-	$ plakar config repository create mys3bucket
-	$ plakar config repository set mys3bucket location \
-		s3://s3.eu-west-3.amazonaws.com/backups
-	$ plakar config repository set mys3bucket access_key "access_key"
-	$ plakar config repository set mys3bucket secret_access_key "secret_key"
+	$ plakar store add mys3bucket location=s3://s3.eu-west-3.amazonaws.com/backups access_key="access_key" secret_access_key="secret_key"
 	$ plakar at @mys3bucket create
 
-Set the
-"mys3bucket"
-repository just created as the default one used by
-**plakar**:
+Create a snapshot of the current directory on the @mys3bucket Kloset store:
 
-	$ plakar config repository default mys3bucket
+	$ plakar at @mys3bucket backup
 
-Create a snapshot of the current directory:
-
-	$ plakar backup
-
-List the snapshots:
+List the snapshots of the default Kloset store:
 
 	$ plakar ls
 
@@ -275,8 +262,8 @@ in the current directory from the snapshot with id
 
 	$ plakar restore -to . abcd:notes.md
 
-Remove snapshots older than a 30 days:
+Remove snapshots older than 30 days:
 
 	$ plakar rm -before 30d
 
-Plakar - March 3, 2025
+Plakar - July 2, 2025

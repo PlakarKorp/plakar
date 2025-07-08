@@ -41,7 +41,7 @@ type Store struct {
 }
 
 func init() {
-	storage.Register(NewStore, location.FLAG_LOCALFS, "fs")
+	storage.Register("fs", location.FLAG_LOCALFS, NewStore)
 }
 
 func NewStore(ctx context.Context, proto string, storeConfig map[string]string) (storage.Store, error) {

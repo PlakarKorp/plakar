@@ -1,8 +1,8 @@
 package restore
 
 import (
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/events"
+	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -17,6 +17,9 @@ func eventsProcessorStdio(ctx *appcontext.AppContext, quiet bool) chan struct{} 
 		for event := range ctx.Events().Listen() {
 			switch event := event.(type) {
 			case events.PathError:
+				ctx.GetLogger().Warn("%x: KO %s %s: %s", event.SnapshotID[:4], crossMark, event.Pathname, event.Message)
+
+			case events.DirectoryError:
 				ctx.GetLogger().Warn("%x: KO %s %s: %s", event.SnapshotID[:4], crossMark, event.Pathname, event.Message)
 
 			case events.FileError:

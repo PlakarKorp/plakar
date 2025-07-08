@@ -8,6 +8,8 @@ message MAC {
 }
 
 service Store {
+    rpc Init(InitRequest) returns (InitResponse);
+
     rpc Create(CreateRequest) returns (CreateResponse);
     rpc Open(OpenRequest) returns (OpenResponse);
     rpc Close(CloseRequest) returns (CloseResponse);
@@ -32,6 +34,13 @@ service Store {
     rpc GetLock(GetLockRequest) returns (stream GetLockResponse);
     rpc DeleteLock(DeleteLockRequest) returns (DeleteLockResponse);
 }
+
+message InitRequest {
+    string proto = 1;
+    map<string, string> config = 2;
+}
+
+message InitResponse {}
 
 message CreateRequest {
     bytes config = 1;

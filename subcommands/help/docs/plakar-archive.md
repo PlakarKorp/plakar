@@ -2,11 +2,11 @@ PLAKAR-ARCHIVE(1) - General Commands Manual
 
 # NAME
 
-**plakar archive** - Create an archive from a Plakar snapshot
+**plakar-archive** - Create an archive from a Plakar snapshot
 
 # SYNOPSIS
 
-**plakar archive**
+**plakar&nbsp;archive**
 \[**-format**&nbsp;*type*]
 \[**-output**&nbsp;*archive*]
 \[**-rebase**]
@@ -72,7 +72,7 @@ Archive with rebasing to remove directory structure:
 
 # DIAGNOSTICS
 
-The **plakar archive** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
+The **plakar-archive** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
 
 0
 
@@ -88,4 +88,4 @@ The **plakar archive** utility exits&#160;0 on success, and&#160;&gt;0 if an err
 plakar(1),
 plakar-backup(1)
 
-Plakar - February 3, 2025
+Plakar - July 3, 2025

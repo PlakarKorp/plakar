@@ -1,14 +1,14 @@
-.Dd June 27, 2025
+.Dd July 3, 2025
 .Dt PLAKAR-BACKUP 1
 .Os
 .Sh NAME
-.Nm plakar backup
+.Nm plakar-backup
 .Nd Create a new snapshot in a Plakar repository
 .Sh SYNOPSIS
-.Nm
+.Nm plakar backup
 .Op Fl concurrency Ar number
 .Op Fl exclude Ar pattern
-.Op Fl excludes Ar file
+.Op Fl exclude-file Ar file
 .Op Fl check
 .Op Fl o Ar option
 .Op Fl quiet
@@ -17,7 +17,7 @@
 .Op Ar place
 .Sh DESCRIPTION
 The
-.Nm
+.Nm plakar backup
 command creates a new snapshot of
 .Ar place ,
 or the current directory.
@@ -27,8 +27,8 @@ based on patterns provided through options.
 .Ar place
 can be either a path, an URI, or a label on the form
 .Dq @ Ns Ar name
-to reference a remote configured with
-.Xr plakar-config 1 .
+to reference a source configured with
+.Xr plakar-source 1 .
 .Pp
 The options are as follows:
 .Bl -tag -width Ds
@@ -40,7 +40,7 @@ Defaults to
 Specify individual glob exclusion patterns to ignore files or
 directories in the backup.
 This option can be repeated.
-.It Fl excludes Ar file
+.It Fl exclude-file Ar file
 Specify a file containing glob exclusion patterns, one per line, to
 ignore files or directories in the backup.
 .It Fl check
@@ -65,7 +65,7 @@ $ plakar backup -tag daily-backup
 .Pp
 Backup a specific directory with exclusion patterns from a file:
 .Bd -literal -offset indent
-$ plakar backup -excludes ~/my-excludes-file /var/www
+$ plakar backup -exclude-file ~/my-excludes-file /var/www
 .Ed
 .Pp
 Backup a directory with specific file exclusions:
@@ -83,4 +83,4 @@ with exclusion patterns.
 .El
 .Sh SEE ALSO
 .Xr plakar 1 ,
-.Xr plakar-config 1
+.Xr plakar-source 1

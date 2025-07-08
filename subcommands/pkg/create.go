@@ -47,15 +47,17 @@ func init() {
 
 type PkgCreate struct {
 	subcommands.SubcommandBase
-	Out      string
-	Args     []string
-	Manifest plugins.Manifest
+
+	Base         string
+	Out          string
+	Manifest     plugins.Manifest
+	ManifestPath string
 }
 
 func (cmd *PkgCreate) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags := flag.NewFlagSet("pkg create", flag.ExitOnError)
 	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s [-out plugin] manifest.yaml file ...",
+		fmt.Fprintf(flags.Output(), "Usage: %s [-out plugin] manifest.yaml",
 			flags.Name())
 		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
 		flag.PrintDefaults()
@@ -64,19 +66,27 @@ func (cmd *PkgCreate) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags.StringVar(&cmd.Out, "out", "", "Plugin file to create")
 	flags.Parse(args)
 
-	if flags.NArg() < 2 {
-		return fmt.Errorf("not enough arguments")
+	if flags.NArg() != 1 {
+		return fmt.Errorf("wrong usage")
 	}
 
-	cmd.Args = flags.Args()
-	fp, err := os.Open(cmd.Args[0])
+	manifest := flags.Arg(0)
+	if !filepath.IsAbs(manifest) {
+		manifest = filepath.Join(ctx.CWD, manifest)
+	} else {
+		manifest = filepath.Clean(manifest)
+	}
+	cmd.Base = filepath.Dir(manifest)
+	cmd.ManifestPath = manifest
+
+	fp, err := os.Open(manifest)
 	if err != nil {
-		return fmt.Errorf("can't open %s: %w", cmd.Args[0], err)
+		return fmt.Errorf("can't open %s: %w", manifest, err)
 	}
 	defer fp.Close()
 
 	if err := yaml.NewDecoder(fp).Decode(&cmd.Manifest); err != nil {
-		return fmt.Errorf("failed to parse the manifest %s: %w", cmd.Args[0], err)
+		return fmt.Errorf("failed to parse the manifest %s: %w", manifest, err)
 	}
 
 	if cmd.Out == "" {
@@ -127,7 +137,9 @@ func (cmd *PkgCreate) Execute(ctx *appcontext.AppContext, _ *repository.Reposito
 
 	repoWriter := repo.NewRepositoryWriter(scanCache, identifier, repository.PtarType)
 	imp := &pkgerImporter{
-		files: cmd.Args,
+		manifestPath: cmd.ManifestPath,
+		manifest:     &cmd.Manifest,
+		cwd:          cmd.Base,
 	}
 
 	snap, err := snapshot.CreateWithRepositoryWriter(repoWriter)
@@ -141,7 +153,10 @@ func (cmd *PkgCreate) Execute(ctx *appcontext.AppContext, _ *repository.Reposito
 		NoCommit:       true,
 	}
 
+	ep := startEventsProcessorStdio(ctx, false)
 	err = snap.Backup(imp, backupOptions)
+	ep.Close()
+
 	if err != nil {
 		return 1, fmt.Errorf("failed to populate the snapshot: %w", err)
 	}
@@ -155,6 +170,10 @@ func (cmd *PkgCreate) Execute(ctx *appcontext.AppContext, _ *repository.Reposito
 
 	if err := st.Close(); err != nil {
 		return 1, fmt.Errorf("failed to close the storage: %w", err)
+	}
+
+	if snap.Header.GetSource(0).Summary.Below.Errors != 0 {
+		return 1, fmt.Errorf("failed to package all the files")
 	}
 
 	return 0, nil

@@ -5,11 +5,32 @@ package importer;
 import "google/protobuf/timestamp.proto";
 
 service Importer {
+  rpc Init(InitRequest) returns (InitResponse);
   rpc Info(InfoRequest) returns (InfoResponse);
   rpc Scan(ScanRequest) returns (stream ScanResponse);
   rpc OpenReader(OpenReaderRequest) returns (stream OpenReaderResponse);
   rpc CloseReader(CloseReaderRequest) returns (CloseReaderResponse);
   rpc Close(CloseRequest) returns (CloseResponse);
+}
+
+message Options {
+  string hostname = 1;
+  string os = 2;
+  string arch = 3;
+  string cwd = 4;
+  int64 maxconcurrency = 5;
+
+  // TODO: stdin/out/err are missing
+}
+
+message InitRequest {
+  Options options = 1;
+  string proto = 2;
+  map<string, string> config = 3;
+}
+
+message InitResponse {
+  optional string error = 1;
 }
 
 message InfoRequest {

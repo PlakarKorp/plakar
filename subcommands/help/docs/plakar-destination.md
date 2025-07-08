@@ -2,11 +2,11 @@ PLAKAR-DESTINATION(1) - General Commands Manual
 
 # NAME
 
-**plakar destination** - Manage Plakar restore destination configuration
+**plakar-destination** - Manage Plakar restore destination configuration
 
 # SYNOPSIS
 
-**plakar destination**
+**plakar&nbsp;destination**
 \[subcommand&nbsp;...]
 
 # DESCRIPTION
@@ -76,10 +76,10 @@ The subcommands are as follows:
 
 # DIAGNOSTICS
 
-The **plakar destination** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
+The **plakar-destination** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
 
 # SEE ALSO
 
 plakar(1)
 
-Plakar - February 27, 2025
+Plakar - July 3, 2025

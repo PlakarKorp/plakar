@@ -2,11 +2,11 @@ PLAKAR-INFO(1) - General Commands Manual
 
 # NAME
 
-**plakar info** - Display detailed information about internal structures
+**plakar-info** - Display detailed information about internal structures
 
 # SYNOPSIS
 
-**plakar info**
+**plakar&nbsp;info**
 \[*snapshot*\[:*/path/to/file*]]
 
 # DESCRIPTION
@@ -34,7 +34,7 @@ Show detailed information for a file within a snapshot:
 
 # DIAGNOSTICS
 
-The **plakar info** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
+The **plakar-info** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
 
 0
 
@@ -48,6 +48,6 @@ The **plakar info** utility exits&#160;0 on success, and&#160;&gt;0 if an error 
 # SEE ALSO
 
 plakar(1),
-plakar-snapshot(1)
+plakar-backup(1)
 
-Plakar - March 3, 2025
+Plakar - July 3, 2025

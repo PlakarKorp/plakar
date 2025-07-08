@@ -2,11 +2,11 @@ PLAKAR-AGENT(1) - General Commands Manual
 
 # NAME
 
-**plakar agent** - Run the Plakar agent
+**plakar-agent** - Run the Plakar agent
 
 # SYNOPSIS
 
-**plakar agent**
+**plakar&nbsp;agent**
 \[**-foreground**]
 \[**-log**&nbsp;*filename*]
 \[**stop**]
@@ -41,7 +41,7 @@ will be stopped.
 
 # DIAGNOSTICS
 
-The **plakar agent** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
+The **plakar-agent** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
 
 0
 
@@ -56,4 +56,4 @@ The **plakar agent** utility exits&#160;0 on success, and&#160;&gt;0 if an error
 
 plakar(1)
 
-Plakar - February 1, 2025
+Plakar - July 3, 2025

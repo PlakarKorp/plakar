@@ -2,11 +2,11 @@ PLAKAR-RESTORE(1) - General Commands Manual
 
 # NAME
 
-**plakar restore** - Restore files from a Plakar snapshot
+**plakar-restore** - Restore files from a Plakar snapshot
 
 # SYNOPSIS
 
-**plakar restore**
+**plakar&nbsp;restore**
 \[**-name**&nbsp;*name*]
 \[**-category**&nbsp;*category*]
 \[**-environment**&nbsp;*environment*]
@@ -111,7 +111,7 @@ Restore with rebase option, placing files directly in the target directory:
 
 # DIAGNOSTICS
 
-The **plakar restore** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
+The **plakar-restore** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
 
 0
 
@@ -127,4 +127,4 @@ The **plakar restore** utility exits&#160;0 on success, and&#160;&gt;0 if an err
 plakar(1),
 plakar-backup(1)
 
-Plakar - February 3, 2025
+Plakar - July 3, 2025

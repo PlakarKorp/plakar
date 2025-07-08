@@ -1,18 +1,18 @@
-.Dd March 3, 2024
+.Dd July 3, 2025
 .Dt PLAKAR-UI 1
 .Os
 .Sh NAME
-.Nm plakar ui
+.Nm plakar-ui
 .Nd Serve the Plakar web user interface
 .Sh SYNOPSIS
-.Nm
+.Nm plakar ui
 .Op Fl addr Ar address
 .Op Fl cors
 .Op Fl no-auth
 .Op Fl no-spawn
 .Sh DESCRIPTION
 The
-.Nm
+.Nm plakar ui
 command serves the Plakar webapp user interface.
 By default, this command opens the default web browser to use the interface.
 .Pp
@@ -22,7 +22,7 @@ The options are as follows:
 Specify the address and port for the UI to listen on separated by a colon,
 .Pq e.g. localhost:8080 .
 If omitted,
-.Nm
+.Nm plakar ui
 listen on localhost on a random port.
 .It Fl cors
 Set the

@@ -2,11 +2,11 @@ PLAKAR-LS(1) - General Commands Manual
 
 # NAME
 
-**plakar ls** - List snapshots and their contents in a Plakar repository
+**plakar-ls** - List snapshots and their contents in a Plakar repository
 
 # SYNOPSIS
 
-**plakar ls**
+**plakar&nbsp;ls**
 \[**-uuid**]
 \[**-name**&nbsp;*name*]
 \[**-category**&nbsp;*category*]
@@ -116,7 +116,7 @@ Recursively list contents of a specific snapshot:
 
 # DIAGNOSTICS
 
-The **plakar ls** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
+The **plakar-ls** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
 
 0
 
@@ -131,4 +131,4 @@ The **plakar ls** utility exits&#160;0 on success, and&#160;&gt;0 if an error oc
 
 plakar(1)
 
-Plakar - February 3, 2025
+Plakar - July 3, 2025

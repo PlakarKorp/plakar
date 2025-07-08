@@ -68,7 +68,7 @@ func (cmd *Ptar) Parse(ctx *appcontext.AppContext, args []string) error {
 
 	flags := flag.NewFlagSet("ptar", flag.ExitOnError)
 	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: plakar %s [OPTIONS] file.ptar\n", flags.Name())
+		fmt.Fprintf(flags.Output(), "Usage: plakar %s [OPTIONS] -o out.ptar path...\n", flags.Name())
 		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
 		flags.PrintDefaults()
 	}

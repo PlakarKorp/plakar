@@ -1,0 +1,31 @@
+name: check manpage formatting
+
+on:
+  push:
+    branches:
+    paths:
+      - '**.[1-9]'
+  pull_request:
+    paths:
+      - '**.[1-9]'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: install mandoc
+        run: sudo apt install -y mandoc
+
+      - name: lint
+        run: |
+          dir=$(mktemp -d)
+          find . -type f -iname \*.[1-9] -exec cp {} "$dir" \;
+          cd "$dir"
+          mandoc -Tlint -Wstyle -l *
+          rm -rf "$dir"

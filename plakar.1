@@ -1,4 +1,4 @@
-.Dd March 3, 2025
+.Dd July 2, 2025
 .Dt PLAKAR 1
 .Os
 .Sh NAME
@@ -8,27 +8,24 @@
 .Nm
 .Op Fl config Ar path
 .Op Fl cpu Ar number
-.Op Fl hostname Ar name
 .Op Fl keyfile Ar path
 .Op Fl no-agent
 .Op Fl quiet
-.Op Fl trace Ar what
-.Op Fl username Ar name
-.Op Cm at Ar repository
+.Op Fl trace Ar subsystems
+.Op Cm at Ar kloset
 .Ar subcommand ...
 .Sh DESCRIPTION
 .Nm
 is a tool to create distributed, versioned backups with compression,
-encryption and data deduplication.
+encryption, and data deduplication.
 .Pp
 By default,
 .Nm
-operates on the repository at
+operates on the Kloset store at
 .Pa ~/.plakar .
 This can be changed either by using the
 .Cm at
-keyword or by setting a default repository using
-.Xr plakar-config 1 .
+option.
 .Pp
 The following options are available:
 .Bl -tag -width Ds
@@ -36,72 +33,70 @@ The following options are available:
 Use the configuration at
 .Ar path .
 .It Fl cpu Ar number
-Limit the number of parallelism that
+Limit the number of parallel workers
 .Nm
 uses to
 .Ar number .
 By default it's the number of online CPUs.
-.It Fl hostname Ar name
-Change the hostname used for backups.
-Defaults to the current hostname.
 .It Fl keyfile Ar path
-Use the passphrase from the key file at
+Read the passphrase from the key file at
 .Ar path
-instead of prompting to unlock.
+instead of prompting.
+Overrides the
+.Ev PLAKAR_PASSPHRASE
+environment variable.
 .It Fl no-agent
 Run without attempting to connect to the agent.
 .It Fl quiet
 Disable all output except for errors.
-.It Fl trace Ar what
+.It Fl trace Ar subsystems
 Display trace logs.
-.Ar what
+.Ar subsystems
 is a comma-separated series of keywords to enable the trace logs for
 different subsystems:
 .Cm all , trace , repository , snapshot No and Cm server .
-.It Fl username Ar name
-Change the username used for backups.
-Defaults to the current user name.
-.It Cm at Ar repository
-Operate on the given
-.Ar repository .
+.It Cm at Ar kloset
+Operates on the given
+.Ar kloset
+store.
 It could be a path, an URI, or a label in the form
 .Dq @ Ns Ar name
 to reference a configuration created with
-.Xr plakar-config 1 .
+.Xr plakar-store 1 .
 .El
 .Pp
 The following commands are available:
 .Pp
 .Bl -tag -width maintenance -compact
 .It Cm agent
-Run the plakar agent, documented in
+Run the plakar agent and configure scheduled tasks, documented in
 .Xr plakar-agent 1 .
 .It Cm archive
-Create an archive from a Plakar snapshot, documented in
+Create an archive from a Kloset snapshot, documented in
 .Xr plakar-archive 1 .
 .It Cm backup
-Create a new snapshot, documented in
+Create a new Kloset snapshot, documented in
 .Xr plakar-backup 1 .
 .It Cm cat
-Display file contents from a Plakar snapshot, documented in
+Display file contents from a Kloset snapshot, documented in
 .Xr plakar-cat 1 .
 .It Cm check
-Check data integrity in a Plakar repository, documented in
+Check data integrity in a Kloset store, documented in
 .Xr plakar-check 1 .
 .It Cm clone
-Clone a Plakar repository to a new location, documented in
+Clone a Kloset store to a new location, documented in
 .Xr plakar-clone 1 .
 .It Cm create
-Create a new Plakar repository, documented in
+Create a new Kloset store, documented in
 .Xr plakar-create 1 .
 .It Cm destination
-Manage Plakar restore destination configuration, documented in
+Manage configurations for the destinations of integrations, documented in
 .Xr plakar-destination 1 .
 .It Cm diff
-Show differences between files in a Plakar snapshot, documented in
+Show differences between files in a Kloset snapshot, documented in
 .Xr plakar-diff 1 .
 .It Cm digest
-Compute digests for files in a Plakar snapshot, documented in
+Compute digests for files in a Kloset snapshot, documented in
 .Xr plakar-digest 1 .
 .It Cm help
 Show this manpage and the ones for the subcommands.
@@ -109,34 +104,37 @@ Show this manpage and the ones for the subcommands.
 Display detailed information about internal structures, documented in
 .Xr plakar-info 1 .
 .It Cm locate
-Find filenames in a Plakar snapshot, documented in
+Find filenames in a Kloset snapshot, documented in
 .Xr plakar-locate 1 .
 .It Cm ls
-List snapshots and their contents in a Plakar repository, documented in
+List snapshots and their contents in a Kloset store, documented in
 .Xr plakar-ls 1 .
 .It Cm maintenance
-Remove unused data from a Plakar repository, documented in
+Remove unused data from a Kloset store, documented in
 .Xr plakar-maintenance 1 .
 .It Cm mount
-Mount Plakar snapshots as read-only filesystem, documented in
+Mount Kloset snapshots as a read-only filesystem, documented in
 .Xr plakar-mount 1 .
+.It Cm ptar
+Create a .ptar archive, documented in
+.Xr plakar-ptar 1 .
 .It Cm restore
-Restore files from a Plakar snapshot, documented in
+Restore files from a Kloset snapshot, documented in
 .Xr plakar-restore 1 .
 .It Cm rm
-Remove snapshots from a Plakar repository, documented in
+Remove snapshots from a Kloset store, documented in
 .Xr plakar-rm 1 .
 .It Cm server
 Start a Plakar server, documented in
 .Xr plakar-server 1 .
 .It Cm source
-Manage Plakar backup source configuration, documented in
+Manage configurations for the sources of integrations, documented in
 .Xr plakar-source 1 .
 .It Cm store
-Manage Plakar store configurations, documented in
+Manage configurations for storage connectors, documented in
 .Xr plakar-store 1 .
 .It Cm sync
-Synchronize sanpshots between Plakar repositories, documented in
+Synchronize snapshots between Kloset stores, documented in
 .Xr plakar-sync 1 .
 .It Cm ui
 Serve the Plakar web user interface, documented in
@@ -148,53 +146,43 @@ Display the current Plakar version, documented in
 .Sh ENVIRONMENT
 .Bl -tag -width Ds
 .It Ev PLAKAR_PASSPHRASE
-Passphrase to unlock the repository, overrides the one from the configuration.
+Passphrase to unlock the Kloset store; overrides the one from the configuration.
 If set,
 .Nm
 won't prompt to unlock.
+The option
+.Cm keyfile
+overrides this environment variable.
 .It Ev PLAKAR_REPOSITORY
-Path to the default repository, overrides the configuration set with
-.Cm plakar config repository default .
+Reference to the Kloset store.
 .El
 .Sh FILES
 .Bl -tag -width Ds
 .It Pa ~/.cache/plakar and Pa ~/.cache/plakar-agentless
 Plakar cache directories.
-.It Pa ~/.config/plakar/plakar.yml
-Default configuration file.
+.It Pa ~/.config/plakar/klosets.yml ~/.config/plakar/sources.yml ~/.config/plakar/destinations.yml
+Default configuration files.
 .It Pa ~/.plakar
-Default repository location.
+Default Kloset store location.
 .El
 .Sh EXAMPLES
-Create an encrypted repository at the default location:
+Create an encrypted Kloset store at the default location:
 .Bd -literal -offset indent
 $ plakar create
 .Ed
 .Pp
-Create an encrypted repository on AWS S3:
+Create an encrypted Kloset store on AWS S3:
 .Bd -literal -offset indent
-$ plakar config repository create mys3bucket
-$ plakar config repository set mys3bucket location \e
-	s3://s3.eu-west-3.amazonaws.com/backups
-$ plakar config repository set mys3bucket access_key "access_key"
-$ plakar config repository set mys3bucket secret_access_key "secret_key"
+$ plakar store add mys3bucket location=s3://s3.eu-west-3.amazonaws.com/backups access_key="access_key" secret_access_key="secret_key"
 $ plakar at @mys3bucket create
 .Ed
 .Pp
-Set the
-.Dq mys3bucket
-repository just created as the default one used by
-.Nm :
+Create a snapshot of the current directory on the @mys3bucket Kloset store:
 .Bd -literal -offset indent
-$ plakar config repository default mys3bucket
+$ plakar at @mys3bucket backup
 .Ed
 .Pp
-Create a snapshot of the current directory:
-.Bd -literal -offset indent
-$ plakar backup
-.Ed
-.Pp
-List the snapshots:
+List the snapshots of the default Kloset store:
 .Bd -literal -offset indent
 $ plakar ls
 .Ed
@@ -207,7 +195,7 @@ in the current directory from the snapshot with id
 $ plakar restore -to . abcd:notes.md
 .Ed
 .Pp
-Remove snapshots older than a 30 days:
+Remove snapshots older than 30 days:
 .Bd -literal -offset indent
 $ plakar rm -before 30d
 .Ed

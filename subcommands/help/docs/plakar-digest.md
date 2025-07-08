@@ -2,11 +2,11 @@ PLAKAR-DIGEST(1) - General Commands Manual
 
 # NAME
 
-**plakar digest** - Compute digests for files in a Plakar snapshot
+**plakar-digest** - Compute digests for files in a Plakar snapshot
 
 # SYNOPSIS
 
-**plakar digest**
+**plakar&nbsp;digest**
 \[**-hashing**&nbsp;*algorithm*]
 *snapshotID*\[:*path*]
 \[...]
@@ -48,7 +48,7 @@ Use BLAKE3 as the digest algorithm:
 
 # DIAGNOSTICS
 
-The **plakar digest** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
+The **plakar-digest** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
 
 0
 
@@ -63,4 +63,4 @@ The **plakar digest** utility exits&#160;0 on success, and&#160;&gt;0 if an erro
 
 plakar(1)
 
-Plakar - March 3, 2025
+Plakar - July 3, 2025
