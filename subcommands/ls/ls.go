@@ -24,11 +24,11 @@ import (
 	"os/user"
 	"time"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/kloset/snapshot/vfs"
+	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
 	"github.com/dustin/go-humanize"
@@ -181,13 +181,19 @@ func (cmd *Ls) list_snapshot(ctx *appcontext.AppContext, repo *repository.Reposi
 			entryname = d.Name()
 		}
 
-		fmt.Fprintf(ctx.Stdout, "%s %s % 8s % 8s % 8s %s\n",
+		var linkTarget string
+		if sb.Mode()&fs.ModeSymlink != 0 {
+			linkTarget = fmt.Sprintf(" -> %s", utils.SanitizeText(d.SymlinkTarget))
+		}
+
+		fmt.Fprintf(ctx.Stdout, "%s %s % 8s % 8s % 8s %s%s\n",
 			sb.ModTime().UTC().Format(time.RFC3339),
 			sb.Mode(),
 			username,
 			groupname,
 			humanize.Bytes(uint64(sb.Size())),
-			utils.SanitizeText(entryname))
+			utils.SanitizeText(entryname),
+			linkTarget)
 
 		if !recursive && pathname != path && sb.IsDir() {
 			return fs.SkipDir

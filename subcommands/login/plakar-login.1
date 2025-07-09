@@ -1,0 +1,57 @@
+.Dd July 8, 2025
+.Dt PLAKAR-LOGIN 1
+.Os
+.Sh NAME
+.Nm plakar-login
+.Nd Authenticate to Plakar services
+.Sh SYNOPSIS
+.Nm plakar login
+.Op Fl email Ar email
+.Op Fl github
+.Op Fl no-spawn
+.Sh DESCRIPTION
+The
+.Nm plakar login
+command initiates an authentication flow with the Plakar platform.
+Login is optional for most
+.Nm plakar
+commands but required to enable certain services, such as alerting.
+See also
+.Xr plakar-services 1 .
+.Pp
+Only one authentication method may be specified per invocation: the
+.Fl email
+and
+.Fl github
+options are mutually exclusive.
+If neither is provided,
+.Fl github
+is assumed.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl email Ar email
+Send a login link to the specified email address.
+Clicking the link in the received email will authenticate
+.Nm plakar .
+.It Fl github
+Use GitHub OAuth to authenticate.
+A browser will be spawned to initiate the OAuth flow unless
+.Fl no-spawn
+is specified.
+.It Fl no-spawn
+Do not automatically open a browser window for authentication flows.
+.El
+.Sh EXAMPLES
+Start a login via email:
+.Bd -literal -offset indent
+$ plakar login -email user@example.com
+.Ed
+.Pp
+Authenticate via GitHub (default, opens browser):
+.Bd -literal -offset indent
+$ plakar login
+.Ed
+.Sh SEE ALSO
+.Xr plakar 1 ,
+.Xr plakar-services 1

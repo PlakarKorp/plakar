@@ -2,7 +2,7 @@ PLAKAR-BACKUP(1) - General Commands Manual
 
 # NAME
 
-**plakar-backup** - Create a new snapshot in a Plakar repository
+**plakar-backup** - Create a new snapshot in a Kloset store
 
 # SYNOPSIS
 
@@ -13,6 +13,7 @@ PLAKAR-BACKUP(1) - General Commands Manual
 \[**-check**]
 \[**-o**&nbsp;*option*]
 \[**-quiet**]
+\[**-silent**]
 \[**-tag**&nbsp;*tag*]
 \[**-scan**]
 \[*place*]
@@ -28,9 +29,9 @@ Snapshots can be filtered to exclude specific files or directories
 based on patterns provided through options.
 
 *place*
-can be either a path, an URI, or a label on the form
+can be either a path, an URI, or a label with the form
 "@*name*"
-to reference a source configured with
+to reference a source connector configured with
 plakar-source(1).
 
 The options are as follows:
@@ -58,28 +59,35 @@ The options are as follows:
 
 **-o** *option*
 
-> Can be used to pass extra arguments to the importer.
+> Can be used to pass extra arguments to the source connector.
 > The given
 > *option*
-> takes precence over the configuration file.
+> takes precedence over the configuration file.
 
 **-quiet**
 
 > Suppress output to standard input, only logging errors and warnings.
 
+**-silent**
+
+> Suppress all output.
+
 **-tag** *tag*
 
-> Specify a tag to assign to the snapshot for easier identification.
+> Comma-separated list of tags to apply to the snapshot.
 
 **-scan**
 
-> Don't actually create a snapshot, just output the list of files.
+> Do not write a snapshot; instead, perform a dry run by outputting the list of
+> files and directories that would be included in the backup.
+> Respects all exclude patterns and other options, but makes no changes to the
+> Kloset store.
 
 # EXAMPLES
 
-Create a snapshot of the current directory with a tag:
+Create a snapshot of the current directory with two tags:
 
-	$ plakar backup -tag daily-backup
+	$ plakar backup -tag daily-backup,production
 
 Backup a specific directory with exclusion patterns from a file:
 
@@ -95,11 +103,15 @@ The **plakar-backup** utility exits&#160;0 on success, and&#160;&gt;0 if an erro
 
 0
 
-> Command completed successfully, snapshot created.
+> Command completed successfully; a snapshot was created, but some items may have
+> been skipped (for example, files without sufficient permissions).
+> Run
+> plakar-info(1)
+> on the new snapshot to view any errors.
 
 &gt;0
 
-> An error occurred, such as failure to access the repository or issues
+> An error occurred, such as failure to access the Kloset store or issues
 > with exclusion patterns.
 
 # SEE ALSO

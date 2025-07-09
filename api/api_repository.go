@@ -9,8 +9,10 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/PlakarKorp/kloset/objects"
+	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/kloset/snapshot/header"
 	"github.com/PlakarKorp/kloset/snapshot/vfs"
@@ -18,10 +20,11 @@ import (
 )
 
 type RepositoryInfoSnapshots struct {
-	Total       int     `json:"total"`
-	StorageSize int64   `json:"storage_size"`
-	LogicalSize int64   `json:"logical_size"`
-	Efficiency  float64 `json:"efficiency"`
+	Total           int     `json:"total"`
+	StorageSize     int64   `json:"storage_size"`
+	LogicalSize     int64   `json:"logical_size"`
+	Efficiency      float64 `json:"efficiency"`
+	SnapshotsPerDay []int   `json:"snapshots_per_day"`
 }
 
 type RepositoryInfoResponse struct {
@@ -30,11 +33,36 @@ type RepositoryInfoResponse struct {
 	Configuration storage.Configuration   `json:"configuration"`
 }
 
+func getNSnapshotsPerDay(repo *repository.Repository, ndays int) ([]int, error) {
+	nSnapshotsPerDay := make([]int, ndays)
+	for snapshotID := range repo.ListSnapshots() {
+		snap, err := snapshot.Load(repo, snapshotID)
+		if err != nil {
+			continue
+		}
+		if !snap.Header.Timestamp.Before(repo.Configuration().Timestamp.AddDate(0, 0, -ndays)) {
+			dayIndex := time.Since(snap.Header.Timestamp).Hours() / 24
+			if dayIndex < float64(ndays) {
+				nSnapshotsPerDay[(ndays-1)-int(dayIndex)]++
+			}
+		}
+		snap.Close()
+	}
+
+	return nSnapshotsPerDay, nil
+}
+
 func repositoryInfo(w http.ResponseWriter, r *http.Request) error {
 	configuration := lrepository.Configuration()
+
 	nSnapshots, logicalSize, err := snapshot.LogicalSize(lrepository)
 	if err != nil {
 		return fmt.Errorf("unable to calculate logical size: %w", err)
+	}
+
+	nSnapshotsPerDay, err := getNSnapshotsPerDay(lrepository, 30)
+	if err != nil {
+		return fmt.Errorf("unable to calculate snapshots per day: %w", err)
 	}
 
 	efficiency := float64(0)
@@ -59,10 +87,11 @@ func repositoryInfo(w http.ResponseWriter, r *http.Request) error {
 	return json.NewEncoder(w).Encode(Item[RepositoryInfoResponse]{Item: RepositoryInfoResponse{
 		Location: lrepository.Location(),
 		Snapshots: RepositoryInfoSnapshots{
-			Total:       nSnapshots,
-			StorageSize: int64(lrepository.StorageSize()),
-			LogicalSize: logicalSize,
-			Efficiency:  efficiency,
+			Total:           nSnapshots,
+			StorageSize:     int64(lrepository.StorageSize()),
+			LogicalSize:     logicalSize,
+			Efficiency:      efficiency,
+			SnapshotsPerDay: nSnapshotsPerDay,
 		},
 		Configuration: configuration,
 	}})
@@ -81,6 +110,21 @@ func repositorySnapshots(w http.ResponseWriter, r *http.Request) error {
 	importerType, _, err := QueryParamToString(r, "importer")
 	if err != nil {
 		return err
+	}
+
+	var sinceTime time.Time
+	since, _, err := QueryParamToString(r, "since")
+	if err != nil {
+		return err
+	} else {
+		sinceTime, err = time.Parse(time.RFC3339, since)
+		if err != nil && since != "" {
+			return &ApiError{
+				HttpCode: http.StatusBadRequest,
+				ErrCode:  "invalid_argument",
+				Message:  "Invalid 'since' parameter format. Expected RFC3339 format.",
+			}
+		}
 	}
 
 	sortKeys, err := QueryParamToSortKeys(r, "sort", "Timestamp")
@@ -104,6 +148,11 @@ func repositorySnapshots(w http.ResponseWriter, r *http.Request) error {
 		}
 
 		if importerType != "" && strings.ToLower(snap.Header.GetSource(0).Importer.Type) != strings.ToLower(importerType) {
+			snap.Close()
+			continue
+		}
+
+		if since != "" && snap.Header.Timestamp.Before(sinceTime) {
 			snap.Close()
 			continue
 		}

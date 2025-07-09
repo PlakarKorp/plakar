@@ -29,6 +29,7 @@ import (
 	"strings"
 
 	"github.com/PlakarKorp/kloset/objects"
+	"github.com/PlakarKorp/kloset/reading"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/storage"
 	plakarsftp "github.com/PlakarKorp/plakar/sftp"
@@ -249,7 +250,7 @@ func (s *Store) GetLock(lockID objects.MAC) (io.Reader, error) {
 		return nil, err
 	}
 
-	return ClosingReader(fp)
+	return reading.ClosingReader(fp), nil
 }
 
 func (s *Store) DeleteLock(lockID objects.MAC) error {

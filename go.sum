@@ -5,8 +5,8 @@ github.com/NickBall/go-aes-key-wrap v0.0.0-20170929221519-1c3aa3e4dfc5 h1:5BIUS5
 github.com/NickBall/go-aes-key-wrap v0.0.0-20170929221519-1c3aa3e4dfc5/go.mod h1:w5D10RxC0NmPYxmQ438CC1S07zaC1zpvuNW7s5sUk2Q=
 github.com/PlakarKorp/go-cdc-chunkers v0.0.12-0.20250627142555-5621f83a0b1c h1:CtJpbefCRA4iiHCa7SWagnZvEWN92QZ699aDx3wixXg=
 github.com/PlakarKorp/go-cdc-chunkers v0.0.12-0.20250627142555-5621f83a0b1c/go.mod h1:BfBmO/foiZaqX+Iet67EHnLcLeq9ymOnYJqWzR4b/o8=
-github.com/PlakarKorp/kloset v1.0.1-beta.2.0.20250707151343-0124b9e453b9 h1:Eu7aKNlAcbv4k/o82khfn7eA+KfqKNwj9o2YuuiUYs8=
-github.com/PlakarKorp/kloset v1.0.1-beta.2.0.20250707151343-0124b9e453b9/go.mod h1:OZxzmmicf2543Y4znwG05uQmjPouVOekhfAZOtY9Gyk=
+github.com/PlakarKorp/kloset v1.0.1-beta.2.0.20250708200005-9fa0c7fa1fc0 h1:1FlKt+WOk472txujTaaiwVUBTvmtOuj4EllhXu5NwTM=
+github.com/PlakarKorp/kloset v1.0.1-beta.2.0.20250708200005-9fa0c7fa1fc0/go.mod h1:OZxzmmicf2543Y4znwG05uQmjPouVOekhfAZOtY9Gyk=
 github.com/aclements/go-perfevent v0.0.0-20240301234650-f7843625020f h1:JjxwchlOepwsUWcQwD2mLUAGE9aCp0/ehy6yCHFBOvo=
 github.com/aclements/go-perfevent v0.0.0-20240301234650-f7843625020f/go.mod h1:tMDTce/yLLN/SK8gMOxQfnyeMeCg8KGzp0D1cbECEeo=
 github.com/alecthomas/assert/v2 v2.11.0 h1:2Q9r3ki8+JYXvGsDyBXwH3LcJ+WK5D0gc5E8vS6K3D0=

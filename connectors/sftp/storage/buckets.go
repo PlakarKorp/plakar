@@ -24,6 +24,7 @@ import (
 	"sync"
 
 	"github.com/PlakarKorp/kloset/objects"
+	"github.com/PlakarKorp/kloset/reading"
 	"github.com/pkg/sftp"
 	"golang.org/x/sync/errgroup"
 )
@@ -112,7 +113,7 @@ func (buckets *Buckets) Get(mac objects.MAC) (io.Reader, error) {
 	if err != nil {
 		return nil, err
 	}
-	return ClosingReader(fp)
+	return reading.ClosingReader(fp), nil
 }
 
 func (buckets *Buckets) GetBlob(mac objects.MAC, offset uint64, length uint32) (io.Reader, error) {

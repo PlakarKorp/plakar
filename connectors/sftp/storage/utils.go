@@ -22,39 +22,9 @@ import (
 	"io"
 	"path"
 
+	"github.com/PlakarKorp/kloset/reading"
 	"github.com/pkg/sftp"
 )
-
-type ClosingFileReader struct {
-	reader     io.Reader
-	file       *sftp.File
-	fileClosed bool
-}
-
-func (cr *ClosingFileReader) Read(p []byte) (int, error) {
-	if cr.fileClosed {
-		return 0, io.EOF
-	}
-
-	n, err := cr.reader.Read(p)
-	if err == io.EOF {
-		// Close the file when EOF is reached
-		closeErr := cr.file.Close()
-		cr.fileClosed = true
-		if closeErr != nil {
-			return n, fmt.Errorf("error closing file: %w", closeErr)
-		}
-	}
-	return n, err
-}
-
-func ClosingReader(file *sftp.File) (io.Reader, error) {
-	return &ClosingFileReader{
-		reader:     file,
-		file:       file,
-		fileClosed: false,
-	}, nil
-}
 
 func ClosingLimitedReaderFromOffset(file *sftp.File, offset, length int64) (io.Reader, error) {
 	if _, err := file.Seek(offset, io.SeekStart); err != nil {
@@ -74,13 +44,7 @@ func ClosingLimitedReaderFromOffset(file *sftp.File, offset, length int64) (io.R
 		return nil, fmt.Errorf("invalid length")
 	}
 
-	return &ClosingFileReader{
-		reader: &io.LimitedReader{
-			R: file,
-			N: length,
-		},
-		file: file,
-	}, nil
+	return reading.ClosingLimitedReader(file, length), nil
 }
 
 func WriteToFileAtomic(sftpClient *sftp.Client, filename string, rd io.Reader) (int64, error) {

@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/PlakarKorp/kloset/objects"
+	"github.com/PlakarKorp/kloset/reading"
 )
 
 type Buckets struct {
@@ -117,7 +118,7 @@ func (buckets *Buckets) Get(mac objects.MAC) (io.Reader, error) {
 	if err != nil {
 		return nil, err
 	}
-	return ClosingReader(fp)
+	return reading.ClosingReader(fp), nil
 }
 
 func (buckets *Buckets) GetBlob(mac objects.MAC, offset uint64, length uint32) (io.Reader, error) {

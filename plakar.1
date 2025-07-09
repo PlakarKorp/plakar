@@ -1,4 +1,4 @@
-.Dd July 2, 2025
+.Dd July 8, 2025
 .Dt PLAKAR 1
 .Os
 .Sh NAME
@@ -90,7 +90,7 @@ Clone a Kloset store to a new location, documented in
 Create a new Kloset store, documented in
 .Xr plakar-create 1 .
 .It Cm destination
-Manage configurations for the destinations of integrations, documented in
+Manage configurations for the destination connectors, documented in
 .Xr plakar-destination 1 .
 .It Cm diff
 Show differences between files in a Kloset snapshot, documented in
@@ -128,7 +128,7 @@ Remove snapshots from a Kloset store, documented in
 Start a Plakar server, documented in
 .Xr plakar-server 1 .
 .It Cm source
-Manage configurations for the sources of integrations, documented in
+Manage configurations for the source connectors, documented in
 .Xr plakar-source 1 .
 .It Cm store
 Manage configurations for storage connectors, documented in
@@ -173,7 +173,10 @@ $ plakar create
 .Pp
 Create an encrypted Kloset store on AWS S3:
 .Bd -literal -offset indent
-$ plakar store add mys3bucket location=s3://s3.eu-west-3.amazonaws.com/backups access_key="access_key" secret_access_key="secret_key"
+$ plakar store add mys3bucket \\
+    location=s3://s3.eu-west-3.amazonaws.com/backups \e
+    access_key="access_key" \\
+    secret_access_key="secret_key"
 $ plakar at @mys3bucket create
 .Ed
 .Pp

@@ -22,38 +22,9 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/PlakarKorp/kloset/reading"
 )
-
-type ClosingFileReader struct {
-	reader     io.Reader
-	file       *os.File
-	fileClosed bool
-}
-
-func (cr *ClosingFileReader) Read(p []byte) (int, error) {
-	if cr.fileClosed {
-		return 0, io.EOF
-	}
-
-	n, err := cr.reader.Read(p)
-	if err == io.EOF {
-		// Close the file when EOF is reached
-		closeErr := cr.file.Close()
-		cr.fileClosed = true
-		if closeErr != nil {
-			return n, fmt.Errorf("error closing file: %w", closeErr)
-		}
-	}
-	return n, err
-}
-
-func ClosingReader(file *os.File) (io.Reader, error) {
-	return &ClosingFileReader{
-		reader:     file,
-		file:       file,
-		fileClosed: false,
-	}, nil
-}
 
 func ClosingLimitedReaderFromOffset(file *os.File, offset, length int64) (io.Reader, error) {
 	if _, err := file.Seek(offset, io.SeekStart); err != nil {
@@ -73,13 +44,7 @@ func ClosingLimitedReaderFromOffset(file *os.File, offset, length int64) (io.Rea
 		return nil, fmt.Errorf("invalid length")
 	}
 
-	return &ClosingFileReader{
-		reader: &io.LimitedReader{
-			R: file,
-			N: length,
-		},
-		file: file,
-	}, nil
+	return reading.ClosingLimitedReader(file, length), nil
 }
 
 func WriteToFileAtomic(filename string, rd io.Reader) (int64, error) {
