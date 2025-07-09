@@ -12,21 +12,16 @@ type RestoreTask struct {
 	Cmd restore.Restore
 }
 
-func (task *RestoreTask) Run(ctx *TaskContext) {
-	err := task.LoadRepository(ctx)
-	if err != nil {
-		ctx.GetLogger().Error("Error loading repository: %s", err)
-		return
-	}
+func (task *RestoreTask) Base() *TaskBase {
+	return &task.TaskBase
+}
 
+func (task *RestoreTask) Run(ctx *TaskContext) {
 	retval, err := task.Cmd.Execute(ctx.AppContext, ctx.Repository)
 	if err != nil || retval != 0 {
 		ctx.GetLogger().Error("Error executing restore: %s", err)
-		ctx.Reporter.TaskFailed(1, "Error executing restore: retval=%d, err=%s", retval, err)
-		return
+		ctx.ReportFailure("Error executing restore: retval=%d, err=%s", retval, err)
 	}
-
-	ctx.Reporter.TaskDone()
 }
 
 func (task *RestoreTask) Event(ctx *TaskContext, event events.Event) {

@@ -15,18 +15,11 @@ type RmTask struct {
 	Retention time.Duration
 }
 
-func (task *RmTask) Run(ctx *TaskContext) {
-	err := task.LoadRepository(ctx)
-	if err != nil {
-		ctx.GetLogger().Error("Error loading repository: %s", err)
-		return
-	}
-
-	task.Run2(ctx)
+func (task *RmTask) Base() *TaskBase {
+	return &task.TaskBase
 }
 
-func (task *RmTask) Run2(ctx *TaskContext) {
-
+func (task *RmTask) Run(ctx *TaskContext) {
 	if task.Cmd.LocateOptions == nil {
 		task.Cmd.LocateOptions = utils.NewDefaultLocateOptions()
 	}
@@ -35,11 +28,8 @@ func (task *RmTask) Run2(ctx *TaskContext) {
 
 	if retval, err := task.Cmd.Execute(ctx.AppContext, ctx.Repository); err != nil || retval != 0 {
 		ctx.GetLogger().Error("Error removing snapshots: %s", err)
-		ctx.Reporter.TaskFailed(1, "Error removing snapshots: retval=%d, err=%s", retval, err)
-		return
+		ctx.ReportFailure("Error removing snapshots: retval=%d, err=%s", retval, err)
 	}
-
-	ctx.Reporter.TaskDone()
 }
 
 func (task *RmTask) Event(ctx *TaskContext, event events.Event) {
@@ -57,5 +47,5 @@ func runRmTask(ctx *TaskContext, repoName string, duration time.Duration) {
 		},
 		Retention: duration,
 	}
-	task.Run2(ctx)
+	task.Run(ctx)
 }

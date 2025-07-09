@@ -48,24 +48,28 @@ func (s *ScheduledJob) Execute(ctx *appcontext.AppContext) {
 	go func() {
 		ctx.GetLogger().Info("job %q: running", s.job.Name)
 
-		tctx := TaskContext{
+		taskCtx := TaskContext{
 			JobName:    s.job.Name,
 			AppContext: appcontext.NewAppContextFrom(ctx),
 			Done:       make(chan struct{}),
 		}
-		events := tctx.AppContext.Events().Listen()
-		go func() {
-			for event := range events {
-				s.job.Task.Event(&tctx, event)
-			}
-			close(tctx.Done)
-		}()
 
-		s.job.Task.Run(&tctx)
+		//events := taskCtx.AppContext.Events().Listen()
+		//go func() {
+		//	for event := range events {
+		//		s.job.Task.Event(&taskCtx, event)
+		//	}
+		//	close(taskCtx.Done)
+		//}()
 
-		tctx.Clear()
+		err := taskCtx.Prepare(s.job.Task)
+		if err == nil {
+			s.job.Task.Run(&taskCtx)
+		}
+		taskCtx.Finalize()
 
 		ctx.GetLogger().Info("job %q: done", s.job.Name)
-		s.job.isRunning = false // lock is not needed here
+		// lock is not needed here
+		s.job.isRunning = false
 	}()
 }

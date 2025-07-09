@@ -16,6 +16,7 @@ import (
 )
 
 type Task interface {
+	Base() *TaskBase
 	Run(ctx *TaskContext)
 	Event(ctx *TaskContext, event events.Event)
 	String() string
@@ -32,15 +33,51 @@ type TaskContext struct {
 	AppContext *appcontext.AppContext
 	Store      storage.Store
 	Repository *repository.Repository
-	Reporter   *reporting.Reporter
 	Done       chan struct{}
+
+	reporter     *reporting.Reporter
+	taskStatus   reporting.TaskStatus
+	taskErrorMsg string
 }
 
 func (ctx *TaskContext) GetLogger() *logging.Logger {
 	return ctx.AppContext.GetLogger()
 }
 
-func (ctx *TaskContext) Clear() {
+func (ctx *TaskContext) ReportWarning(format string, args ...any) {
+	if ctx.taskStatus == "" {
+		ctx.taskStatus = reporting.StatusWarning
+		if len(args) == 0 {
+			ctx.taskErrorMsg = format
+		} else {
+			ctx.taskErrorMsg = fmt.Sprintf(format, args...)
+		}
+	}
+}
+
+func (ctx *TaskContext) ReportFailure(format string, args ...any) {
+	if ctx.taskStatus != reporting.StatusFailed {
+		ctx.taskStatus = reporting.StatusFailed
+		if len(args) == 0 {
+			ctx.taskErrorMsg = format
+		} else {
+			ctx.taskErrorMsg = fmt.Sprintf(format, args...)
+		}
+	}
+}
+
+func (ctx *TaskContext) Prepare(task Task) error {
+	err := ctx.loadRepository(task.Base())
+	if err != nil {
+		ctx.GetLogger().Error("Error loading repository: %s", err)
+		return err
+	}
+
+	ctx.reporter = ctx.newReporter(task.Base())
+	return nil
+}
+
+func (ctx *TaskContext) Finalize() {
 	if ctx.Repository != nil {
 		_ = ctx.Repository.Close()
 		ctx.Repository = nil
@@ -49,9 +86,20 @@ func (ctx *TaskContext) Clear() {
 		_ = ctx.Store.Close()
 		ctx.Store = nil
 	}
+
+	if ctx.reporter != nil {
+		switch ctx.taskStatus {
+		case reporting.StatusWarning:
+			ctx.reporter.TaskWarning(ctx.taskErrorMsg)
+		case reporting.StatusFailed:
+			ctx.reporter.TaskFailed(1, ctx.taskErrorMsg)
+		default:
+			ctx.reporter.TaskDone()
+		}
+	}
 }
 
-func (task *TaskBase) LoadRepository(ctx *TaskContext) error {
+func (ctx *TaskContext) loadRepository(task *TaskBase) error {
 	storeConfig, err := ctx.AppContext.Config.GetRepository(task.Repository)
 	if err != nil {
 		return fmt.Errorf("unable to get repository configuration: %w", err)
@@ -94,14 +142,12 @@ func (task *TaskBase) LoadRepository(ctx *TaskContext) error {
 
 	ctx.Repository = repo
 	ctx.Store = store
-	ctx.Reporter = task.NewReporter(ctx)
-
 	return nil
 }
 
-func (t *TaskBase) NewReporter(ctx *TaskContext) *reporting.Reporter {
+func (ctx *TaskContext) newReporter(task *TaskBase) *reporting.Reporter {
 	doReport := false
-	if t.Reporting {
+	if task.Reporting {
 		doReport = true
 		authToken, err := ctx.AppContext.GetAuthToken(ctx.Repository.Configuration().RepositoryID)
 		if err != nil || authToken == "" {
@@ -116,8 +162,8 @@ func (t *TaskBase) NewReporter(ctx *TaskContext) *reporting.Reporter {
 	}
 
 	reporter := reporting.NewReporter(ctx.AppContext, doReport, ctx.Repository, ctx.GetLogger())
-	reporter.TaskStart(strings.ToLower(t.Type), ctx.JobName)
-	reporter.WithRepositoryName(t.Repository)
+	reporter.TaskStart(strings.ToLower(task.Type), ctx.JobName)
+	reporter.WithRepositoryName(task.Repository)
 	reporter.WithRepository(ctx.Repository)
 	return reporter
 }

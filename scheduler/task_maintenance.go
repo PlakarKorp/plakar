@@ -13,22 +13,18 @@ type MaintenanceTask struct {
 	Cmd       maintenance.Maintenance
 }
 
-func (task *MaintenanceTask) Run(ctx *TaskContext) {
-	err := task.LoadRepository(ctx)
-	if err != nil {
-		ctx.GetLogger().Error("Error loading repository: %s", err)
-		return
-	}
+func (task *MaintenanceTask) Base() *TaskBase {
+	return &task.TaskBase
+}
 
+func (task *MaintenanceTask) Run(ctx *TaskContext) {
 	retval, err := task.Cmd.Execute(ctx.AppContext, ctx.Repository)
 	if err != nil || retval != 0 {
 		ctx.GetLogger().Error("Error executing maintenance: %s", err)
-		ctx.Reporter.TaskFailed(1, "Error executing maintenance: retval=%d, err=%s", retval, err)
+		ctx.ReportFailure("Error executing maintenance: retval=%d, err=%s", retval, err)
 		return
 	}
-
 	ctx.GetLogger().Info("maintenance of repository %s succeeded", task.Repository)
-	ctx.Reporter.TaskDone()
 
 	if task.Retention != 0 {
 		runRmTask(ctx, task.Repository, task.Retention)

@@ -14,26 +14,22 @@ type BackupTask struct {
 	Cmd       backup.Backup
 }
 
-func (task *BackupTask) Run(ctx *TaskContext) {
-	err := task.LoadRepository(ctx)
-	if err != nil {
-		ctx.GetLogger().Error("Error loading repository: %s", err)
-		return
-	}
+func (task *BackupTask) Base() *TaskBase {
+	return &task.TaskBase
+}
 
+func (task *BackupTask) Run(ctx *TaskContext) {
 	task.Cmd.Job = ctx.JobName
 	retval, err, snapId, reportWarning := task.Cmd.DoBackup(ctx.AppContext, ctx.Repository)
 	if err != nil || retval != 0 {
 		ctx.GetLogger().Error("Error creating backup: %s", err)
-		ctx.Reporter.TaskFailed(1, "Error creating backup: retval=%d, err=%s", retval, err)
+		ctx.ReportFailure("Error creating backup: retval=%d, err=%s", retval, err)
 		return
 	}
-
-	ctx.Reporter.WithSnapshotID(snapId)
+	// XXX use events
+	ctx.reporter.WithSnapshotID(snapId)
 	if reportWarning != nil {
-		ctx.Reporter.TaskWarning("Warning during backup: %s", reportWarning)
-	} else {
-		ctx.Reporter.TaskDone()
+		ctx.ReportWarning("Warning during backup: %s", reportWarning)
 	}
 
 	if task.Retention != 0 {
