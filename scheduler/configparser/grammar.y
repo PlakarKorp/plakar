@@ -64,6 +64,7 @@ func Parser(lexer yyLexer) *ConfigParser {
 
 %type <b>         on_off
 %type <strings>   source_list
+%type <strings>   string_list
 %type <s>         repository
 %type <s>         source
 %type <s>         destination
@@ -135,7 +136,7 @@ backup_opts:
 ;
 
 backup_opt:
-  TAG STRING {
+  TAG string_list {
     task := Parser(yylex).currentTask.(*scheduler.BackupTask)
     task.Cmd.Tags = $2
   }
@@ -209,6 +210,11 @@ weekday_list:
 time_list:
   time { $$ = append(make([]scheduler.Time, 0, 1), $1) }
 | time_list ',' time { $$ = append($1, $3) }
+;
+
+string_list:
+  STRING { $$ = append(make([]string, 0, 1), $1) }
+| string_list ',' STRING { $$ = append($1, $3) }
 ;
 
 size:
