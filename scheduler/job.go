@@ -51,16 +51,7 @@ func (s *ScheduledJob) Execute(ctx *appcontext.AppContext) {
 		taskCtx := TaskContext{
 			JobName:    s.job.Name,
 			AppContext: appcontext.NewAppContextFrom(ctx),
-			Done:       make(chan struct{}),
 		}
-
-		//events := taskCtx.AppContext.Events().Listen()
-		//go func() {
-		//	for event := range events {
-		//		s.job.Task.Event(&taskCtx, event)
-		//	}
-		//	close(taskCtx.Done)
-		//}()
 
 		err := taskCtx.Prepare(s.job.Task)
 		if err == nil {

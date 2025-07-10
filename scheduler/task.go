@@ -7,6 +7,7 @@ import (
 	"github.com/PlakarKorp/kloset/encryption"
 	"github.com/PlakarKorp/kloset/events"
 	"github.com/PlakarKorp/kloset/logging"
+	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/storage"
 	"github.com/PlakarKorp/kloset/versioning"
@@ -33,11 +34,11 @@ type TaskContext struct {
 	AppContext *appcontext.AppContext
 	Store      storage.Store
 	Repository *repository.Repository
-	Done       chan struct{}
 
 	reporter     *reporting.Reporter
 	taskStatus   reporting.TaskStatus
 	taskErrorMsg string
+	snapshotId   objects.MAC
 }
 
 func (ctx *TaskContext) GetLogger() *logging.Logger {
@@ -74,6 +75,13 @@ func (ctx *TaskContext) Prepare(task Task) error {
 	}
 
 	ctx.reporter = ctx.newReporter(task.Base())
+
+	go func(events <-chan any) {
+		for event := range events {
+			task.Event(ctx, event)
+		}
+	}(ctx.AppContext.Events().Listen())
+
 	return nil
 }
 
@@ -87,6 +95,11 @@ func (ctx *TaskContext) Finalize() {
 		ctx.Store = nil
 	}
 
+	var null objects.MAC
+	if ctx.snapshotId != null {
+		ctx.reporter.WithSnapshotID(ctx.snapshotId)
+	}
+
 	if ctx.reporter != nil {
 		switch ctx.taskStatus {
 		case reporting.StatusWarning:
@@ -97,6 +110,8 @@ func (ctx *TaskContext) Finalize() {
 			ctx.reporter.TaskDone()
 		}
 	}
+
+	ctx.AppContext.Close()
 }
 
 func (ctx *TaskContext) loadRepository(task *TaskBase) error {
