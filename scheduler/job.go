@@ -12,55 +12,59 @@ type Job struct {
 	Task      Task
 	Schedules []Schedule
 
-	isRunning     bool
 	lastRun       time.Time
 	lastActualRun time.Time
 
-	mu sync.Mutex
+	isRunning bool
+	runLock   sync.Mutex
 }
 
-type ScheduledJob struct {
-	event     *Event[*ScheduledJob]
-	scheduled time.Time
-	job       *Job
+func (job *Job) Start() bool {
+	job.runLock.Lock()
+	if job.isRunning {
+		job.runLock.Unlock()
+		return false
+	}
+	job.isRunning = true
+	job.runLock.Unlock()
+	return true
 }
 
-func (s *ScheduledJob) Execute(ctx *appcontext.AppContext) {
-	s.job.mu.Lock()
+func (job *Job) Done() {
+	job.isRunning = false
+}
 
-	// Do not execute a job if the previous invocation is sill running.
-	if s.job.isRunning {
-		s.job.mu.Unlock()
-		ctx.GetLogger().Warn("job %q: still running", s.job.Name)
+func (job *Job) Execute(ctx *appcontext.AppContext, scheduledAt time.Time) {
+	if !job.Start() {
+		ctx.GetLogger().Warn("job %q: still running", job.Name)
 		return
 	}
 
-	delay := time.Since(s.scheduled)
+	delay := time.Since(scheduledAt)
 	if delay > 5*time.Second {
-		// This might happen if the machine was suspended.
-		ctx.GetLogger().Warn("job %q: overdue by %s", s.job.Name, delay)
+		// This might happen if the machine/process was suspended.
+		ctx.GetLogger().Warn("job %q: overdue by %s", job.Name, delay)
 	}
 
-	s.job.mu.Unlock()
-	s.job.lastRun = s.scheduled
-	s.job.lastActualRun = time.Now()
+	job.lastRun = scheduledAt
+	job.lastActualRun = time.Now()
 
 	go func() {
-		ctx.GetLogger().Info("job %q: running", s.job.Name)
+		defer job.Done()
+
+		ctx.GetLogger().Info("job %q: running", job.Name)
 
 		taskCtx := TaskContext{
-			JobName:    s.job.Name,
+			JobName:    job.Name,
 			AppContext: appcontext.NewAppContextFrom(ctx),
 		}
 
-		err := taskCtx.Prepare(s.job.Task)
+		err := taskCtx.Prepare(job.Task)
 		if err == nil {
-			s.job.Task.Run(&taskCtx)
+			job.Task.Run(&taskCtx)
 		}
 		taskCtx.Finalize()
 
-		ctx.GetLogger().Info("job %q: done", s.job.Name)
-		// lock is not needed here
-		s.job.isRunning = false
+		ctx.GetLogger().Info("job %q: done", job.Name)
 	}()
 }

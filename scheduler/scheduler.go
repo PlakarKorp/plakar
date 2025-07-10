@@ -13,6 +13,12 @@ type Schedule interface {
 	String() string
 }
 
+type ScheduledJob struct {
+	event     *Event[*ScheduledJob]
+	scheduled time.Time
+	job       *Job
+}
+
 type AgentScheduler struct {
 	config *Configuration
 	ctx    *appcontext.AppContext
@@ -61,8 +67,8 @@ func (s *AgentScheduler) Run() {
 				s.sched.Stop()
 			case <-stopped:
 				goto out
-			case job := <-runq:
-				job.Execute(s.ctx)
+			case schedJob := <-runq:
+				schedJob.job.Execute(s.ctx, schedJob.scheduled)
 			}
 		}
 	out:
