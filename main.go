@@ -60,6 +60,7 @@ import (
 	_ "github.com/PlakarKorp/plakar/subcommands/services"
 	_ "github.com/PlakarKorp/plakar/subcommands/ui"
 	_ "github.com/PlakarKorp/plakar/subcommands/version"
+	_ "github.com/PlakarKorp/plakar/subcommands/webdav"
 
 	_ "github.com/PlakarKorp/plakar/connectors/fs"
 	_ "github.com/PlakarKorp/plakar/connectors/ftp"
