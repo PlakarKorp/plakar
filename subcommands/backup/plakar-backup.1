@@ -1,4 +1,4 @@
-.Dd July 3, 2025
+.Dd July 11, 2025
 .Dt PLAKAR-BACKUP 1
 .Os
 .Sh NAME
@@ -6,15 +6,16 @@
 .Nd Create a new snapshot in a Kloset store
 .Sh SYNOPSIS
 .Nm plakar backup
-.Op Fl concurrency Ar number
-.Op Fl exclude Ar pattern
-.Op Fl exclude-file Ar file
-.Op Fl check
-.Op Fl o Ar option
-.Op Fl quiet
-.Op Fl silent
-.Op Fl tag Ar tag
-.Op Fl scan
+.Op Fl \-concurrency Ar number
+.Op Fl x | \-exclude Ar pattern
+.Op Fl \-exclude-file Ar file
+.Op Fl c | \-check
+.Op Fl o | \-option Ar option
+.Op Fl q | \-quiet
+.Op Fl s | \-silent
+.Op Fl t | \-tag Ar tag
+.Op Fl n | \-scan
+.Op Fl h | \-help
 .Op Ar place
 .Sh DESCRIPTION
 The
@@ -33,50 +34,52 @@ to reference a source connector configured with
 .Pp
 The options are as follows:
 .Bl -tag -width Ds
-.It Fl concurrency Ar number
+.It Fl \-concurrency Ar number
 Set the maximum number of parallel tasks for faster processing.
 Defaults to
 .Dv 8 * CPU count + 1 .
-.It Fl exclude Ar pattern
+.It Fl x , \-exclude Ar pattern
 Specify individual glob exclusion patterns to ignore files or
 directories in the backup.
 This option can be repeated.
-.It Fl exclude-file Ar file
+.It Fl \-exclude-file Ar file
 Specify a file containing glob exclusion patterns, one per line, to
 ignore files or directories in the backup.
-.It Fl check
+.It Fl c , \-check
 Perform a full check on the backup after success.
-.It Fl o Ar option
+.It Fl o , \-option Ar option
 Can be used to pass extra arguments to the source connector.
 The given
 .Ar option
 takes precedence over the configuration file.
-.It Fl quiet
+.It Fl q , \-quiet
 Suppress output to standard input, only logging errors and warnings.
-.It Fl silent
+.It Fl s , \-silent
 Suppress all output.
-.It Fl tag Ar tag
+.It Fl t , \-tag Ar tag
 Comma-separated list of tags to apply to the snapshot.
-.It Fl scan
+.It Fl n , \-scan
 Do not write a snapshot; instead, perform a dry run by outputting the list of
 files and directories that would be included in the backup.
 Respects all exclude patterns and other options, but makes no changes to the
 Kloset store.
+.It Fl h , \-help
+Displays help/usage.
 .El
 .Sh EXAMPLES
 Create a snapshot of the current directory with two tags:
 .Bd -literal -offset indent
-$ plakar backup -tag daily-backup,production
+$ plakar backup --tag daily-backup,production
 .Ed
 .Pp
 Backup a specific directory with exclusion patterns from a file:
 .Bd -literal -offset indent
-$ plakar backup -exclude-file ~/my-excludes-file /var/www
+$ plakar backup --exclude-file ~/my-excludes-file /var/www
 .Ed
 .Pp
 Backup a directory with specific file exclusions:
 .Bd -literal -offset indent
-$ plakar backup -exclude "*.tmp" -exclude "*.log" /var/www
+$ plakar backup --exclude "*.tmp" --exclude "*.log" /var/www
 .Ed
 .Sh DIAGNOSTICS
 .Ex -std

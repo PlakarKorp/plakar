@@ -7,15 +7,15 @@ PLAKAR-BACKUP(1) - General Commands Manual
 # SYNOPSIS
 
 **plakar&nbsp;backup**
-\[**-concurrency**&nbsp;*number*]
-\[**-exclude**&nbsp;*pattern*]
-\[**-exclude-file**&nbsp;*file*]
-\[**-check**]
-\[**-o**&nbsp;*option*]
-\[**-quiet**]
-\[**-silent**]
-\[**-tag**&nbsp;*tag*]
-\[**-scan**]
+\[**--concurrency**&nbsp;*number*]
+\[**-x&nbsp;|&nbsp;--exclude**&nbsp;*pattern*]
+\[**--exclude-file**&nbsp;*file*]
+\[**-c&nbsp;|&nbsp;--check**]
+\[**-o&nbsp;|&nbsp;--option**&nbsp;*option*]
+\[**-q&nbsp;|&nbsp;--quiet**]
+\[**-s&nbsp;|&nbsp;--silent**]
+\[**-t&nbsp;|&nbsp;--tag**&nbsp;*tag*]
+\[**-n&nbsp;|&nbsp;--scan**]
 \[*place*]
 
 # DESCRIPTION
@@ -36,47 +36,47 @@ plakar-source(1).
 
 The options are as follows:
 
-**-concurrency** *number*
+**--concurrency** *number*
 
 > Set the maximum number of parallel tasks for faster processing.
 > Defaults to
 > `8 * CPU count + 1`.
 
-**-exclude** *pattern*
+**-x, --exclude** *pattern*
 
 > Specify individual glob exclusion patterns to ignore files or
 > directories in the backup.
 > This option can be repeated.
 
-**-exclude-file** *file*
+**--exclude-file** *file*
 
 > Specify a file containing glob exclusion patterns, one per line, to
 > ignore files or directories in the backup.
 
-**-check**
+**-c, --check**
 
 > Perform a full check on the backup after success.
 
-**-o** *option*
+**-o, --option** *option*
 
 > Can be used to pass extra arguments to the source connector.
 > The given
 > *option*
 > takes precedence over the configuration file.
 
-**-quiet**
+**-q, --quiet**
 
 > Suppress output to standard input, only logging errors and warnings.
 
-**-silent**
+**-s, --silent**
 
 > Suppress all output.
 
-**-tag** *tag*
+**-t, --tag** *tag*
 
 > Comma-separated list of tags to apply to the snapshot.
 
-**-scan**
+**-n, --scan**
 
 > Do not write a snapshot; instead, perform a dry run by outputting the list of
 > files and directories that would be included in the backup.
@@ -87,15 +87,15 @@ The options are as follows:
 
 Create a snapshot of the current directory with two tags:
 
-	$ plakar backup -tag daily-backup,production
+	$ plakar backup --tag daily-backup,production
 
 Backup a specific directory with exclusion patterns from a file:
 
-	$ plakar backup -exclude-file ~/my-excludes-file /var/www
+	$ plakar backup --exclude-file ~/my-excludes-file /var/www
 
 Backup a directory with specific file exclusions:
 
-	$ plakar backup -exclude "*.tmp" -exclude "*.log" /var/www
+	$ plakar backup --exclude "*.tmp" -exclude "*.log" /var/www
 
 # DIAGNOSTICS
 

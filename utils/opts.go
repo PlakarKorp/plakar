@@ -39,3 +39,8 @@ func (o *OptsFlag) Set(s string) error {
 	o.opts[k] = v
 	return nil
 }
+
+// Type is only used in help text
+func (o *OptsFlag) Type() string {
+	return "option=value"
+}
