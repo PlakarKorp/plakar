@@ -29,17 +29,17 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &PkgLs{} },
+	subcommands.Register(func() subcommands.Subcommand { return &Pkg{} },
 		subcommands.BeforeRepositoryOpen,
-		"pkg", "ls")
+		"pkg")
 }
 
-type PkgLs struct {
+type Pkg struct {
 	subcommands.SubcommandBase
 }
 
-func (cmd *PkgLs) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("pkg ls", flag.ExitOnError)
+func (cmd *Pkg) Parse(ctx *appcontext.AppContext, args []string) error {
+	flags := flag.NewFlagSet("pkg", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s",
 			flags.Name())
@@ -56,8 +56,7 @@ func (cmd *PkgLs) Parse(ctx *appcontext.AppContext, args []string) error {
 	return nil
 }
 
-func (cmd *PkgLs) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (int, error) {
-
+func (cmd *Pkg) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (int, error) {
 	dataDir, err := utils.GetDataDir("plakar")
 	if err != nil {
 		return 1, err

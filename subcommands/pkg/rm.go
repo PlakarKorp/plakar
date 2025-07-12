@@ -31,18 +31,18 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &PkgUninstall{} },
+	subcommands.Register(func() subcommands.Subcommand { return &PkgRm{} },
 		subcommands.BeforeRepositoryOpen,
-		"pkg", "uninstall")
+		"pkg", "rm")
 }
 
-type PkgUninstall struct {
+type PkgRm struct {
 	subcommands.SubcommandBase
 	Args []string
 }
 
-func (cmd *PkgUninstall) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("pkg uninstall", flag.ExitOnError)
+func (cmd *PkgRm) Parse(ctx *appcontext.AppContext, args []string) error {
+	flags := flag.NewFlagSet("pkg rm", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s",
 			flags.Name())
@@ -57,7 +57,7 @@ func (cmd *PkgUninstall) Parse(ctx *appcontext.AppContext, args []string) error 
 	return nil
 }
 
-func (cmd *PkgUninstall) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (int, error) {
+func (cmd *PkgRm) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (int, error) {
 	cachedir, err := utils.GetCacheDir("plakar")
 	if err != nil {
 		return 1, err

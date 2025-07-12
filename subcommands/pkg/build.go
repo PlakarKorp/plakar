@@ -95,8 +95,8 @@ func (cmd *PkgBuild) Execute(ctx *appcontext.AppContext, repo *repository.Reposi
 		return 1, err
 	}
 
-	if err := fetch(datadir, recipe); err != nil {
-		return 1, fmt.Errorf("failed to fetch %s: %w", recipe.Repository, err)
+	if err := clone(datadir, recipe); err != nil {
+		return 1, fmt.Errorf("failed to clone %s: %w", recipe.Repository, err)
 	}
 
 	make := exec.Command("make", "-C", datadir)
@@ -116,7 +116,7 @@ func (cmd *PkgBuild) Execute(ctx *appcontext.AppContext, repo *repository.Reposi
 	return create.Execute(ctx, repo)
 }
 
-func fetch(destdir string, recipe *Recipe) error {
+func clone(destdir string, recipe *Recipe) error {
 	git := exec.Command("git", "clone", "--depth=1", "--branch", recipe.Version,
 		recipe.Repository, destdir)
 	if err := git.Run(); err != nil {
