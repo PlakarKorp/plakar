@@ -10,7 +10,7 @@ require (
 	github.com/charmbracelet/glamour v0.9.1
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/cockroachdb/pebble/v2 v2.0.6
-	github.com/creack/pty v1.1.9
+	github.com/creack/pty v1.1.24
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/dustin/go-humanize v1.0.1
 	github.com/go-playground/validator/v10 v10.25.0
