@@ -1,0 +1,84 @@
+.Dd July 11, 2025
+.Dt PLAKAR-PKG-MANIFEST.YAML 5
+.Os
+.Sh NAME
+.Nm manifest.yaml
+.Nd Manifest for plugin assemblation
+.Sh DESCRIPTION
+The
+.Nm manifest.yaml
+file format describes how to package a plugin.
+No build or compilation is done, so all executables and other files
+have to be prepared beforehand.
+It must have a top-level YAML object with the following fields:
+.Bl -tag -width repository
+.It Ic name
+The name of the plugins
+.It Ic version
+The plugin version, which doubles as the git tag as well.
+It must follow semantic versioning and have a
+.Sq v
+prefix, e.g.
+.Sq v1.2.3 .
+.It Ic connectors
+A YAML array of objects with the following properties:
+.Bl -tag -width location_flags
+.It Ic type
+The connector type, one of
+.Ic importer ,
+.Ic exporter ,
+or
+.Ic store .
+.It Ic protocols
+An array of YAML strings containing all the protocols that the
+connector supports.
+.It Ic location_flags
+An optional array of YAML strings describing some properties of the
+connector.
+These properties are:
+.Bl -tag -width localfs
+.It Ic localfs
+Whether paths given to this connector have to be made absolute.
+.It Ic file
+Whether this store backend handles a Kloset in a sigle file, for
+e.g. a ptar file.
+.El
+.It Ic executable
+Path to the plugin executable.
+.It Ic extra_file
+An optional array of YAML string.
+These are extra files that need to be included in the package.
+.It Ic homepage
+The plugin homepage.
+.It Ic license
+The plugin license.
+.El
+.El
+.Sh EXAMPLES
+A sample manifest for the
+.Dq fs
+plugin is as follows:
+.Bd -literal -offset indent
+# manifest.yaml
+name: fs
+description: file storage but as external plugin
+version: 1.0.0
+connectors:
+- type: importer
+  executable: fs-importer
+  homepage: https://github.com/PlakarKorp/integration-fs
+  license: ISC
+  protocols: [fs]
+- type: exporter
+  executable: fs-exporter
+  homepage: https://github.com/PlakarKorp/integration-fs
+  license: ISC
+  protocols: [fs]
+- type: storage
+  executable: fs-store
+  homepage: https://github.com/PlakarKorp/integration-fs
+  license: ISC
+  protocols: [fs]
+.Ed
+.Sh SEE ALSO
+.Xr plakar-pkg-create 1

@@ -52,21 +52,19 @@ func getNSnapshotsPerDay(repo *repository.Repository, ndays int) ([]int, error) 
 	return nSnapshotsPerDay, nil
 }
 
-func repositoryInfo(w http.ResponseWriter, r *http.Request) error {
-	configuration := lrepository.Configuration()
-
-	nSnapshots, logicalSize, err := snapshot.LogicalSize(lrepository)
+func (ui *uiserver) repositoryInfo(w http.ResponseWriter, r *http.Request) error {
+	nSnapshots, logicalSize, err := snapshot.LogicalSize(ui.repository)
 	if err != nil {
 		return fmt.Errorf("unable to calculate logical size: %w", err)
 	}
 
-	nSnapshotsPerDay, err := getNSnapshotsPerDay(lrepository, 30)
+	nSnapshotsPerDay, err := getNSnapshotsPerDay(ui.repository, 30)
 	if err != nil {
 		return fmt.Errorf("unable to calculate snapshots per day: %w", err)
 	}
 
 	efficiency := float64(0)
-	storageSize := lrepository.StorageSize()
+	storageSize := ui.repository.StorageSize()
 	if storageSize == -1 || logicalSize == 0 {
 		efficiency = -1
 	} else {
@@ -85,19 +83,19 @@ func repositoryInfo(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	return json.NewEncoder(w).Encode(Item[RepositoryInfoResponse]{Item: RepositoryInfoResponse{
-		Location: lrepository.Location(),
+		Location: ui.repository.Location(),
 		Snapshots: RepositoryInfoSnapshots{
 			Total:           nSnapshots,
-			StorageSize:     int64(lrepository.StorageSize()),
+			StorageSize:     int64(ui.repository.StorageSize()),
 			LogicalSize:     logicalSize,
 			Efficiency:      efficiency,
 			SnapshotsPerDay: nSnapshotsPerDay,
 		},
-		Configuration: configuration,
+		Configuration: ui.config,
 	}})
 }
 
-func repositorySnapshots(w http.ResponseWriter, r *http.Request) error {
+func (ui *uiserver) repositorySnapshots(w http.ResponseWriter, r *http.Request) error {
 	offset, err := QueryParamToUint32(r, "offset", 0, 0)
 	if err != nil {
 		return err
@@ -132,9 +130,9 @@ func repositorySnapshots(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	lrepository.RebuildState()
+	ui.repository.RebuildState()
 
-	snapshotIDs, err := lrepository.GetSnapshots()
+	snapshotIDs, err := ui.repository.GetSnapshots()
 	if err != nil {
 		return err
 	}
@@ -142,7 +140,7 @@ func repositorySnapshots(w http.ResponseWriter, r *http.Request) error {
 	totalSnapshots := int(0)
 	headers := make([]header.Header, 0, len(snapshotIDs))
 	for _, snapshotID := range snapshotIDs {
-		snap, err := snapshot.Load(lrepository, snapshotID)
+		snap, err := snapshot.Load(ui.repository, snapshotID)
 		if err != nil {
 			return err
 		}
@@ -186,8 +184,8 @@ func repositorySnapshots(w http.ResponseWriter, r *http.Request) error {
 	return json.NewEncoder(w).Encode(items)
 }
 
-func repositoryStates(w http.ResponseWriter, r *http.Request) error {
-	states, err := lrepository.GetStates()
+func (ui *uiserver) repositoryStates(w http.ResponseWriter, r *http.Request) error {
+	states, err := ui.repository.GetStates()
 	if err != nil {
 		return err
 	}
@@ -203,13 +201,13 @@ func repositoryStates(w http.ResponseWriter, r *http.Request) error {
 	return json.NewEncoder(w).Encode(items)
 }
 
-func repositoryState(w http.ResponseWriter, r *http.Request) error {
+func (ui *uiserver) repositoryState(w http.ResponseWriter, r *http.Request) error {
 	stateBytes32, err := PathParamToID(r, "state")
 	if err != nil {
 		return err
 	}
 
-	_, rd, err := lrepository.GetState(stateBytes32)
+	_, rd, err := ui.repository.GetState(stateBytes32)
 	if err != nil {
 		return err
 	}
@@ -220,17 +218,17 @@ func repositoryState(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func repositoryImporterTypes(w http.ResponseWriter, r *http.Request) error {
-	lrepository.RebuildState()
+func (ui *uiserver) repositoryImporterTypes(w http.ResponseWriter, r *http.Request) error {
+	ui.repository.RebuildState()
 
-	snapshotIDs, err := lrepository.GetSnapshots()
+	snapshotIDs, err := ui.repository.GetSnapshots()
 	if err != nil {
 		return err
 	}
 
 	importerTypesMap := make(map[string]struct{})
 	for _, snapshotID := range snapshotIDs {
-		snap, err := snapshot.Load(lrepository, snapshotID)
+		snap, err := snapshot.Load(ui.repository, snapshotID)
 		if err != nil {
 			return err
 		}
@@ -265,7 +263,7 @@ type TimelineLocation struct {
 	Entry    vfs.Entry     `json:"vfs_entry"`
 }
 
-func repositoryLocatePathname(w http.ResponseWriter, r *http.Request) error {
+func (ui *uiserver) repositoryLocatePathname(w http.ResponseWriter, r *http.Request) error {
 	offset, err := QueryParamToUint32(r, "offset", 0, 0)
 	if err != nil {
 		return err
@@ -285,6 +283,11 @@ func repositoryLocatePathname(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
+	importerDirectory, _, err := QueryParamToString(r, "importerDirectory")
+	if err != nil {
+		return err
+	}
+
 	resource, _, err := QueryParamToString(r, "resource")
 	if err != nil {
 		return err
@@ -295,9 +298,9 @@ func repositoryLocatePathname(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	lrepository.RebuildState()
+	ui.repository.RebuildState()
 
-	snapshotIDs, err := lrepository.GetSnapshots()
+	snapshotIDs, err := ui.repository.GetSnapshots()
 	if err != nil {
 		return err
 	}
@@ -305,7 +308,7 @@ func repositoryLocatePathname(w http.ResponseWriter, r *http.Request) error {
 	totalSnapshots := int(0)
 	locations := make([]TimelineLocation, 0, len(snapshotIDs))
 	for _, snapshotID := range snapshotIDs {
-		snap, err := snapshot.Load(lrepository, snapshotID)
+		snap, err := snapshot.Load(ui.repository, snapshotID)
 		if err != nil {
 			return err
 		}
@@ -316,6 +319,11 @@ func repositoryLocatePathname(w http.ResponseWriter, r *http.Request) error {
 		}
 
 		if importerOrigin != "" && !strings.EqualFold(snap.Header.GetSource(0).Importer.Origin, importerOrigin) {
+			snap.Close()
+			continue
+		}
+
+		if importerDirectory != "" && !strings.EqualFold(snap.Header.GetSource(0).Importer.Directory, importerDirectory) {
 			snap.Close()
 			continue
 		}

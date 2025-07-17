@@ -56,7 +56,7 @@ func destination_config(ctx *appcontext.AppContext, args []string) error {
 		if len(args) < 2 {
 			return fmt.Errorf(usage)
 		}
-		name, location := args[0], args[1]
+		name, location := args[0], normalizeLocation(args[1])
 		if ctx.Config.HasDestination(name) {
 			return fmt.Errorf("destination %q already exists", name)
 		}

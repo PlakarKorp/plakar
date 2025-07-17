@@ -14,7 +14,7 @@ import (
 
 var SERVICES_ENDPOINT = "https://api.plakar.io"
 
-func servicesProxy(w http.ResponseWriter, r *http.Request) error {
+func (ui *uiserver) servicesProxy(w http.ResponseWriter, r *http.Request) error {
 	// Define target service base URL
 	serviceEndpoint := os.Getenv("PLAKAR_SERVICE_ENDPOINT")
 	if serviceEndpoint == "" {
@@ -40,11 +40,11 @@ func servicesProxy(w http.ResponseWriter, r *http.Request) error {
 
 	// Copy headers from original request
 	client := fmt.Sprintf("%s (%s/%s)",
-		lrepository.AppContext().Client,
-		lrepository.AppContext().OperatingSystem,
-		lrepository.AppContext().Architecture)
+		ui.ctx.Client,
+		ui.ctx.OperatingSystem,
+		ui.ctx.Architecture)
 
-	authToken, _ := lctx.GetAuthToken(lrepository.Configuration().RepositoryID)
+	authToken, _ := ui.ctx.GetAuthToken(ui.config.RepositoryID)
 	if authToken != "" {
 		req.Header.Add("Authorization", "Bearer "+authToken)
 	}
@@ -74,8 +74,8 @@ type AlertServiceConfiguration struct {
 	EmailReport bool `json:"email_report"`
 }
 
-func servicesGetAlertingServiceConfiguration(w http.ResponseWriter, r *http.Request) error {
-	authToken, _ := lctx.GetAuthToken(lrepository.Configuration().RepositoryID)
+func (ui *uiserver) servicesGetAlertingServiceConfiguration(w http.ResponseWriter, r *http.Request) error {
+	authToken, _ := ui.ctx.GetAuthToken(ui.config.RepositoryID)
 
 	if authToken == "" {
 		w.WriteHeader(http.StatusUnauthorized)
@@ -86,7 +86,7 @@ func servicesGetAlertingServiceConfiguration(w http.ResponseWriter, r *http.Requ
 		return nil
 	}
 
-	sc := services.NewServiceConnector(lctx, authToken)
+	sc := services.NewServiceConnector(ui.ctx, authToken)
 	enabled, err := sc.GetServiceStatus("alerting")
 	if err != nil {
 		return err
@@ -112,8 +112,8 @@ func servicesGetAlertingServiceConfiguration(w http.ResponseWriter, r *http.Requ
 	return json.NewEncoder(w).Encode(alertConfig)
 }
 
-func servicesSetAlertingServiceConfiguration(w http.ResponseWriter, r *http.Request) error {
-	authToken, _ := lctx.GetAuthToken(lrepository.Configuration().RepositoryID)
+func (ui *uiserver) servicesSetAlertingServiceConfiguration(w http.ResponseWriter, r *http.Request) error {
+	authToken, _ := ui.ctx.GetAuthToken(ui.config.RepositoryID)
 
 	if authToken == "" {
 		w.WriteHeader(http.StatusUnauthorized)
@@ -129,7 +129,7 @@ func servicesSetAlertingServiceConfiguration(w http.ResponseWriter, r *http.Requ
 		return err
 	}
 
-	sc := services.NewServiceConnector(lctx, authToken)
+	sc := services.NewServiceConnector(ui.ctx, authToken)
 
 	err := sc.SetServiceStatus("alerting", alertConfig.Enabled)
 	if err != nil {

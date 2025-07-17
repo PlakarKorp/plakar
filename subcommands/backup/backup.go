@@ -98,6 +98,10 @@ func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
 	//flags.BoolVar(&opt_stdio, "stdio", false, "output one line per file to stdout instead of the default interactive output")
 	flags.Parse(args)
 
+	if flags.NArg() > 1 {
+		return fmt.Errorf("Too many arguments")
+	}
+
 	for _, item := range opt_exclude {
 		if _, err := glob.Compile(item); err != nil {
 			return fmt.Errorf("failed to compile exclude pattern: %s", item)
@@ -160,21 +164,11 @@ func (cmd *Backup) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 }
 
 func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Repository) (int, error, objects.MAC, error) {
-
-	excludes := []glob.Glob{}
-	for _, item := range cmd.Excludes {
-		g, err := glob.Compile(item)
-		if err != nil {
-			return 1, fmt.Errorf("failed to compile exclude pattern: %s", item), objects.MAC{}, nil
-		}
-		excludes = append(excludes, g)
-	}
-
 	opts := &snapshot.BackupOptions{
 		MaxConcurrency: cmd.Concurrency,
 		Name:           "default",
 		Tags:           cmd.Tags,
-		Excludes:       excludes,
+		Excludes:       cmd.Excludes,
 	}
 
 	scanDir := "fs:" + ctx.CWD
@@ -213,7 +207,7 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 	defer imp.Close()
 
 	if cmd.DryRun {
-		if err := dryrun(ctx, imp, excludes); err != nil {
+		if err := dryrun(ctx, imp, cmd.Excludes); err != nil {
 			return 1, err, objects.MAC{}, nil
 		}
 		return 0, nil, objects.MAC{}, nil
@@ -292,10 +286,19 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 	return 0, nil, snap.Header.Identifier, warning
 }
 
-func dryrun(ctx *appcontext.AppContext, imp importer.Importer, excludes []glob.Glob) error {
+func dryrun(ctx *appcontext.AppContext, imp importer.Importer, excludePatterns []string) error {
 	scanner, err := imp.Scan()
 	if err != nil {
 		return fmt.Errorf("failed to scan: %w", err)
+	}
+
+	excludes := []glob.Glob{}
+	for _, item := range excludePatterns {
+		g, err := glob.Compile(item)
+		if err != nil {
+			return fmt.Errorf("failed to compile exclude pattern: %s", item)
+		}
+		excludes = append(excludes, g)
 	}
 
 	errors := false

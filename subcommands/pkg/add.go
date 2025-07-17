@@ -20,8 +20,12 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net/http"
+	"net/url"
 	"os"
+	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
@@ -30,21 +34,17 @@ import (
 	"github.com/PlakarKorp/plakar/utils"
 )
 
-func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &PkgInstall{} },
-		subcommands.BeforeRepositoryOpen,
-		"pkg", "install")
-}
+var baseURL, _ = url.Parse("https://plugins.plakar.io/pkg/plakar/")
 
-type PkgInstall struct {
+type PkgAdd struct {
 	subcommands.SubcommandBase
 	Out      string
 	Args     []string
 	Manifest plugins.Manifest
 }
 
-func (cmd *PkgInstall) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("pkg install", flag.ExitOnError)
+func (cmd *PkgAdd) Parse(ctx *appcontext.AppContext, args []string) error {
+	flags := flag.NewFlagSet("pkg add", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s plugin.ptar ...",
 			flags.Name())
@@ -63,15 +63,22 @@ func (cmd *PkgInstall) Parse(ctx *appcontext.AppContext, args []string) error {
 		if !plugins.ValidateName(filepath.Base(name)) {
 			return fmt.Errorf("bad plugin file name: %s", name)
 		}
-		if !filepath.IsAbs(name) {
-			cmd.Args[i] = filepath.Join(ctx.CWD, name)
+
+		if !filepath.IsAbs(name) && !strings.HasPrefix(name, "./") {
+			u := *baseURL
+			u.Path = path.Join(u.Path, name)
+			name = u.String()
+		} else if !filepath.IsAbs(name) {
+			name = filepath.Join(ctx.CWD, name)
 		}
+
+		cmd.Args[i] = name
 	}
 
 	return nil
 }
 
-func (cmd *PkgInstall) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (int, error) {
+func (cmd *PkgAdd) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (int, error) {
 	cachedir, err := utils.GetCacheDir("plakar")
 	if err != nil {
 		return 1, err
@@ -91,7 +98,7 @@ func (cmd *PkgInstall) Execute(ctx *appcontext.AppContext, _ *repository.Reposit
 	}
 
 	for _, plugin := range cmd.Args {
-		path, err := install(pluginDir, plugin)
+		path, err := install(ctx, pluginDir, plugin)
 		if err != nil {
 			return 1, fmt.Errorf("failed to install %s: %w",
 				filepath.Base(plugin), err)
@@ -108,8 +115,27 @@ func (cmd *PkgInstall) Execute(ctx *appcontext.AppContext, _ *repository.Reposit
 	return 0, nil
 }
 
-func install(plugdir, plugin string) (string, error) {
-	dst := filepath.Join(plugdir, filepath.Base(plugin))
+func install(ctx *appcontext.AppContext, plugdir, plugin string) (string, error) {
+	var name string
+	var err error
+	if strings.HasPrefix(plugin, "https://") {
+		u, err := url.Parse(plugin)
+		if err != nil {
+			return "", err
+		}
+
+		plugin, err = fetch(ctx, plugdir, plugin)
+		if err != nil {
+			return "", err
+		}
+
+		name = path.Base(u.Path)
+		defer os.Remove(plugin)
+	} else {
+		name = filepath.Base(plugin)
+	}
+
+	dst := filepath.Join(plugdir, name)
 	if err := os.Link(plugin, dst); err == nil {
 		return dst, nil
 	}
@@ -121,7 +147,7 @@ func install(plugdir, plugin string) (string, error) {
 	defer fp.Close()
 
 	// maybe a different filesystem
-	tmp, err := os.CreateTemp(plugdir, "pkg-install-*")
+	tmp, err := os.CreateTemp(plugdir, "pkg-add-*")
 	if err != nil {
 		return dst, err
 	}
@@ -132,4 +158,27 @@ func install(plugdir, plugin string) (string, error) {
 	}
 
 	return dst, os.Rename(tmp.Name(), dst)
+}
+
+func fetch(ctx *appcontext.AppContext, plugdir, plugin string) (string, error) {
+	fp, err := os.CreateTemp(plugdir, "fetch-plugin-*")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp file: %w", err)
+	}
+	defer fp.Close()
+
+	ctx.GetLogger().Info("fetching %s", plugin)
+	req, err := http.Get(plugin)
+	if err != nil {
+		defer os.Remove(fp.Name())
+		return "", fmt.Errorf("failed to fetch %s: %w", plugin, err)
+	}
+	defer req.Body.Close()
+
+	if _, err := io.Copy(fp, req.Body); err != nil {
+		defer os.Remove(fp.Name())
+		return "", fmt.Errorf("failed to download the plugin: %w", err)
+	}
+
+	return fp.Name(), nil
 }

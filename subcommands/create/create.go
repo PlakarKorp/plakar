@@ -74,20 +74,15 @@ func (cmd *Create) Parse(ctx *appcontext.AppContext, args []string) error {
 	if !cmd.NoEncryption {
 		var passphrase []byte
 
-		envPassphrase, ok := os.LookupEnv("PLAKAR_PASSPHRASE")
 		if ctx.KeyFromFile == "" {
-			if ok {
-				passphrase = []byte(envPassphrase)
-			} else {
-				for attempt := 0; attempt < 3; attempt++ {
-					tmp, err := utils.GetPassphraseConfirm("repository", minEntropBits)
-					if err != nil {
-						fmt.Fprintf(os.Stderr, "%s\n", err)
-						continue
-					}
-					passphrase = tmp
-					break
+			for range 3 {
+				tmp, err := utils.GetPassphraseConfirm("repository", minEntropBits)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "%s\n", err)
+					continue
 				}
+				passphrase = tmp
+				break
 			}
 		} else {
 			passphrase = []byte(ctx.KeyFromFile)

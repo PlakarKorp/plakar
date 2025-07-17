@@ -1,0 +1,28 @@
+.Dd July 11, 2025
+.Dt PLAKAR-PKG 1
+.Os
+.Sh NAME
+.Nm plakar-pkg
+.Nd List installed Plakar plugins
+.Sh SYNOPSIS
+.Nm plakar pkg
+.Sh DESCRIPTION
+The
+.Nm plakar pkg
+lists the currently installed plugins.
+.Sh FILES
+.Bl -tag -width Ds
+.It Pa ~/.cache/plakar/plugins/
+Plugin cache directory.
+Respects
+.Ev XDG_CACHE_HOME
+if set.
+.It Pa ~/.local/share/plakar/plugins
+Plugin directory.
+Respects
+.Ev XDG_DATA_HOME
+if set.
+.El
+.Sh SEE ALSO
+.Xr plakar-pkg-add 1 ,
+.Xr plakar-pkg-rm 1

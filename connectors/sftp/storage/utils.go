@@ -59,7 +59,7 @@ func WriteToFileAtomicTempDir(sftpClient *sftp.Client, filename string, rd io.Re
 	}
 
 	var nbytes int64
-	if nbytes, err = io.Copy(f, rd); err != nil {
+	if nbytes, err = f.ReadFromWithConcurrency(rd, 0); err != nil {
 		f.Close()
 		sftpClient.Remove(f.Name())
 		return 0, err

@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"runtime"
 	"time"
 
 	"github.com/PlakarKorp/plakar/appcontext"
@@ -244,4 +245,38 @@ func (flow *loginFlow) handleEmailResponseUI(resp *http.Response) (string, error
 
 func (flow *loginFlow) Close() error {
 	return nil
+}
+
+func DeriveToken(ctx *appcontext.AppContext) (string, error) {
+	token, err := ctx.GetCookies().GetAuthToken()
+	if err != nil {
+		return "", err
+	}
+
+	url := "https://api.plakar.io/v1/account/derive-token"
+	req, err := http.NewRequest("POST", url, nil)
+	if err != nil {
+		return "", err
+	}
+
+	req.Header.Set("User-Agent", fmt.Sprintf("plakar/%s (%s/%s)", VERSION, runtime.GOOS, runtime.GOARCH))
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+
+	client := http.Client{}
+	res, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("request failed with status %s", res.Status)
+	}
+
+	var tokenResponse TokenResponse
+	if err := json.NewDecoder(res.Body).Decode(&tokenResponse); err != nil {
+		return "", fmt.Errorf("failed to decode response JSON: %v", err)
+	}
+
+	return tokenResponse.Token, nil
 }

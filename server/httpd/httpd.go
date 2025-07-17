@@ -13,18 +13,20 @@ import (
 	"github.com/PlakarKorp/plakar/network"
 )
 
-var store storage.Store
-var ctx context.Context
-var lNoDelete bool
+type server struct {
+	store    storage.Store
+	ctx      context.Context
+	noDelete bool
+}
 
-func openRepository(w http.ResponseWriter, r *http.Request) {
+func (s *server) openRepository(w http.ResponseWriter, r *http.Request) {
 	var reqOpen network.ReqOpen
 	if err := json.NewDecoder(r.Body).Decode(&reqOpen); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	serializedConfig, err := store.Open(ctx)
+	serializedConfig, err := s.store.Open(s.ctx)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -40,7 +42,7 @@ func openRepository(w http.ResponseWriter, r *http.Request) {
 }
 
 // states
-func getStates(w http.ResponseWriter, r *http.Request) {
+func (s *server) getStates(w http.ResponseWriter, r *http.Request) {
 	var reqGetIndexes network.ReqGetStates
 	if err := json.NewDecoder(r.Body).Decode(&reqGetIndexes); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -48,7 +50,7 @@ func getStates(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var resGetStates network.ResGetStates
-	indexes, err := store.GetStates()
+	indexes, err := s.store.GetStates()
 	if err != nil {
 		resGetStates.Err = err.Error()
 	} else {
@@ -60,7 +62,7 @@ func getStates(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func putState(w http.ResponseWriter, r *http.Request) {
+func (s *server) putState(w http.ResponseWriter, r *http.Request) {
 	var reqPutState network.ReqPutState
 	if err := json.NewDecoder(r.Body).Decode(&reqPutState); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -69,7 +71,7 @@ func putState(w http.ResponseWriter, r *http.Request) {
 
 	var resPutIndex network.ResPutState
 	data := reqPutState.Data
-	_, err := store.PutState(reqPutState.MAC, bytes.NewBuffer(data))
+	_, err := s.store.PutState(reqPutState.MAC, bytes.NewBuffer(data))
 	if err != nil {
 		resPutIndex.Err = err.Error()
 	}
@@ -79,7 +81,7 @@ func putState(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getState(w http.ResponseWriter, r *http.Request) {
+func (s *server) getState(w http.ResponseWriter, r *http.Request) {
 	var reqGetState network.ReqGetState
 	if err := json.NewDecoder(r.Body).Decode(&reqGetState); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -87,7 +89,7 @@ func getState(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var resGetState network.ResGetState
-	rd, err := store.GetState(reqGetState.MAC)
+	rd, err := s.store.GetState(reqGetState.MAC)
 	if err != nil {
 		resGetState.Err = err.Error()
 	} else {
@@ -104,8 +106,8 @@ func getState(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func deleteState(w http.ResponseWriter, r *http.Request) {
-	if lNoDelete {
+func (s *server) deleteState(w http.ResponseWriter, r *http.Request) {
+	if s.noDelete {
 		http.Error(w, fmt.Errorf("not allowed to delete").Error(), http.StatusForbidden)
 		return
 	}
@@ -117,7 +119,7 @@ func deleteState(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var resDeleteState network.ResDeleteState
-	err := store.DeleteState(reqDeleteState.MAC)
+	err := s.store.DeleteState(reqDeleteState.MAC)
 	if err != nil {
 		resDeleteState.Err = err.Error()
 	}
@@ -128,7 +130,7 @@ func deleteState(w http.ResponseWriter, r *http.Request) {
 }
 
 // packfiles
-func getPackfiles(w http.ResponseWriter, r *http.Request) {
+func (s *server) getPackfiles(w http.ResponseWriter, r *http.Request) {
 	var reqGetPackfiles network.ReqGetPackfiles
 	if err := json.NewDecoder(r.Body).Decode(&reqGetPackfiles); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -136,7 +138,7 @@ func getPackfiles(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var resGetPackfiles network.ResGetPackfiles
-	packfiles, err := store.GetPackfiles()
+	packfiles, err := s.store.GetPackfiles()
 	if err != nil {
 		resGetPackfiles.Err = err.Error()
 	} else {
@@ -148,7 +150,7 @@ func getPackfiles(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func putPackfile(w http.ResponseWriter, r *http.Request) {
+func (s *server) putPackfile(w http.ResponseWriter, r *http.Request) {
 	var reqPutPackfile network.ReqPutPackfile
 	if err := json.NewDecoder(r.Body).Decode(&reqPutPackfile); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -156,7 +158,7 @@ func putPackfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var resPutPackfile network.ResPutPackfile
-	_, err := store.PutPackfile(reqPutPackfile.MAC, bytes.NewBuffer(reqPutPackfile.Data))
+	_, err := s.store.PutPackfile(reqPutPackfile.MAC, bytes.NewBuffer(reqPutPackfile.Data))
 	if err != nil {
 		resPutPackfile.Err = err.Error()
 	}
@@ -166,7 +168,7 @@ func putPackfile(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getPackfile(w http.ResponseWriter, r *http.Request) {
+func (s *server) getPackfile(w http.ResponseWriter, r *http.Request) {
 	var reqGetPackfile network.ReqGetPackfile
 	if err := json.NewDecoder(r.Body).Decode(&reqGetPackfile); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -174,7 +176,7 @@ func getPackfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var resGetPackfile network.ResGetPackfile
-	rd, err := store.GetPackfile(reqGetPackfile.MAC)
+	rd, err := s.store.GetPackfile(reqGetPackfile.MAC)
 	if err != nil {
 		resGetPackfile.Err = err.Error()
 	} else {
@@ -191,7 +193,7 @@ func getPackfile(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func GetPackfileBlob(w http.ResponseWriter, r *http.Request) {
+func (s *server) GetPackfileBlob(w http.ResponseWriter, r *http.Request) {
 	var reqGetPackfileBlob network.ReqGetPackfileBlob
 	if err := json.NewDecoder(r.Body).Decode(&reqGetPackfileBlob); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -199,7 +201,7 @@ func GetPackfileBlob(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var resGetPackfileBlob network.ResGetPackfileBlob
-	rd, err := store.GetPackfileBlob(reqGetPackfileBlob.MAC, reqGetPackfileBlob.Offset, reqGetPackfileBlob.Length)
+	rd, err := s.store.GetPackfileBlob(reqGetPackfileBlob.MAC, reqGetPackfileBlob.Offset, reqGetPackfileBlob.Length)
 	if err != nil {
 		resGetPackfileBlob.Err = err.Error()
 	} else {
@@ -216,8 +218,8 @@ func GetPackfileBlob(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func deletePackfile(w http.ResponseWriter, r *http.Request) {
-	if lNoDelete {
+func (s *server) deletePackfile(w http.ResponseWriter, r *http.Request) {
+	if s.noDelete {
 		http.Error(w, fmt.Errorf("not allowed to delete").Error(), http.StatusForbidden)
 		return
 	}
@@ -229,7 +231,7 @@ func deletePackfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var resDeletePackfile network.ResDeletePackfile
-	err := store.DeletePackfile(reqDeletePackfile.MAC)
+	err := s.store.DeletePackfile(reqDeletePackfile.MAC)
 	if err != nil {
 		resDeletePackfile.Err = err.Error()
 	}
@@ -239,14 +241,14 @@ func deletePackfile(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getLocks(w http.ResponseWriter, r *http.Request) {
+func (s *server) getLocks(w http.ResponseWriter, r *http.Request) {
 	var req network.ReqGetLocks
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	locks, err := store.GetLocks()
+	locks, err := s.store.GetLocks()
 	res := network.ResGetLocks{
 		Locks: locks,
 	}
@@ -259,7 +261,7 @@ func getLocks(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func putLock(w http.ResponseWriter, r *http.Request) {
+func (s *server) putLock(w http.ResponseWriter, r *http.Request) {
 	var req network.ReqPutLock
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -267,7 +269,7 @@ func putLock(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var res network.ResPutLock
-	if _, err := store.PutLock(req.Mac, bytes.NewReader(req.Data)); err != nil {
+	if _, err := s.store.PutLock(req.Mac, bytes.NewReader(req.Data)); err != nil {
 		res.Err = err.Error()
 	}
 
@@ -277,7 +279,7 @@ func putLock(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getLock(w http.ResponseWriter, r *http.Request) {
+func (s *server) getLock(w http.ResponseWriter, r *http.Request) {
 	var req network.ReqGetLock
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -285,7 +287,7 @@ func getLock(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var res network.ResGetLock
-	rd, err := store.GetLock(req.Mac)
+	rd, err := s.store.GetLock(req.Mac)
 	if err != nil {
 		res.Err = err.Error()
 	} else {
@@ -303,7 +305,7 @@ func getLock(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func deleteLock(w http.ResponseWriter, r *http.Request) {
+func (s *server) deleteLock(w http.ResponseWriter, r *http.Request) {
 	var req network.ReqDeleteLock
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -311,7 +313,7 @@ func deleteLock(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var res network.ResDeleteLock
-	if err := store.DeleteLock(req.Mac); err != nil {
+	if err := s.store.DeleteLock(req.Mac); err != nil {
 		res.Err = err.Error()
 	}
 
@@ -321,30 +323,32 @@ func deleteLock(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func Server(repo *repository.Repository, addr string, noDelete bool) error {
-	lNoDelete = noDelete
-	store = repo.Store()
-	ctx = repo.AppContext()
+func Server(ctx context.Context, repo *repository.Repository, addr string, noDelete bool) error {
+	s := server{
+		store:    repo.Store(),
+		ctx:      ctx,
+		noDelete: noDelete,
+	}
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /", openRepository)
+	mux.HandleFunc("GET /", s.openRepository)
 
-	mux.HandleFunc("GET /states", getStates)
-	mux.HandleFunc("PUT /state", putState)
-	mux.HandleFunc("GET /state", getState)
-	mux.HandleFunc("DELETE /state", deleteState)
+	mux.HandleFunc("GET /states", s.getStates)
+	mux.HandleFunc("PUT /state", s.putState)
+	mux.HandleFunc("GET /state", s.getState)
+	mux.HandleFunc("DELETE /state", s.deleteState)
 
-	mux.HandleFunc("GET /packfiles", getPackfiles)
-	mux.HandleFunc("PUT /packfile", putPackfile)
-	mux.HandleFunc("GET /packfile", getPackfile)
-	mux.HandleFunc("GET /packfile/blob", GetPackfileBlob)
-	mux.HandleFunc("DELETE /packfile", deletePackfile)
+	mux.HandleFunc("GET /packfiles", s.getPackfiles)
+	mux.HandleFunc("PUT /packfile", s.putPackfile)
+	mux.HandleFunc("GET /packfile", s.getPackfile)
+	mux.HandleFunc("GET /packfile/blob", s.GetPackfileBlob)
+	mux.HandleFunc("DELETE /packfile", s.deletePackfile)
 
-	mux.HandleFunc("GET /locks", getLocks)
-	mux.HandleFunc("PUT /lock", putLock)
-	mux.HandleFunc("GET /lock", getLock)
-	mux.HandleFunc("DELETE /lock", deleteLock)
+	mux.HandleFunc("GET /locks", s.getLocks)
+	mux.HandleFunc("PUT /lock", s.putLock)
+	mux.HandleFunc("GET /lock", s.getLock)
+	mux.HandleFunc("DELETE /lock", s.deleteLock)
 
 	server := &http.Server{Addr: addr, Handler: mux}
 	go func() {

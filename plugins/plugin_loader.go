@@ -7,7 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"regexp"
+	"runtime"
 	"strings"
 
 	"github.com/PlakarKorp/kloset/location"
@@ -39,10 +39,36 @@ type Manifest struct {
 	} `yaml:"connectors"`
 }
 
-var re = regexp.MustCompile(`^([a-z0-9][a-zA-Z0-9\+.\-]*)-(v[0-9]+\.[0-9]+\.[0-9]+)\.ptar$`)
+func ParseName(name string) (string, string, string, string, error) {
+	if !strings.HasSuffix(name, ".ptar") {
+		return "", "", "", "", fmt.Errorf("plugin name %q does not end with .ptar", name)
+	}
+
+	baseName := strings.TrimSuffix(name, ".ptar")
+	atoms := strings.Split(baseName, "_")
+	if len(atoms) != 4 {
+		return "", "", "", "", fmt.Errorf("plugin name %q does not contain all atoms (name, version, OS, architecture)", name)
+	}
+
+	return atoms[0], atoms[1], atoms[2], atoms[3], nil
+}
 
 func ValidateName(name string) bool {
-	return re.MatchString(name)
+	pluginName, pluginVersion, osName, archName, err := ParseName(name)
+	if err != nil {
+		return false
+	}
+
+	_, _ = pluginName, pluginVersion
+
+	if osName != runtime.GOOS {
+		return false
+	}
+	if archName != runtime.GOARCH {
+		return false
+	}
+
+	return true
 }
 
 func ListDir(ctx *appcontext.AppContext, pluginsDir string) ([]string, error) {
@@ -58,10 +84,6 @@ func ListDir(ctx *appcontext.AppContext, pluginsDir string) ([]string, error) {
 
 	for _, entry := range dirEntries {
 		if !entry.Type().IsRegular() {
-			continue
-		}
-
-		if !re.MatchString(entry.Name()) {
 			continue
 		}
 

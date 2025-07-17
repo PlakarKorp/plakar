@@ -74,7 +74,7 @@ import (
 
 var ErrCantUnlock = errors.New("failed to unlock repository")
 
-func EntryPoint() int {
+func entryPoint() int {
 	// default values
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -148,7 +148,7 @@ func EntryPoint() int {
 		flag.PrintDefaults()
 
 		fmt.Fprintf(flag.CommandLine.Output(), "\nCOMMANDS:\n")
-		listcmds(flag.CommandLine.Output(), "  ")
+		listCmds(flag.CommandLine.Output(), "  ")
 		fmt.Fprintf(flag.CommandLine.Output(), "\nFor more information on a command, use '%s help COMMAND'.\n", flag.CommandLine.Name())
 	}
 	flag.Parse()
@@ -216,7 +216,7 @@ func EntryPoint() int {
 		return 1
 	}
 
-	checkupdate(ctx, opt_disableSecurityCheck)
+	checkUpdate(ctx, opt_disableSecurityCheck)
 
 	// setup from default + override
 	if opt_cpuCount <= 0 {
@@ -265,7 +265,7 @@ func EntryPoint() int {
 
 	if flag.NArg() == 0 {
 		fmt.Fprintf(os.Stderr, "%s: a subcommand must be provided\n", filepath.Base(flag.CommandLine.Name()))
-		listcmds(os.Stderr, "  ")
+		listCmds(os.Stderr, "  ")
 		return 1
 	}
 
@@ -329,7 +329,16 @@ func EntryPoint() int {
 		return 1
 	}
 
-	// these commands need to be ran before the repository is opened
+	// try to get the passphrase from env and store config so that it's
+	// available to subcommands like create.
+	passphrase, err := getPassphraseFromEnv(ctx, storeConfig)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
+		return 1
+	}
+	if passphrase != "" {
+		ctx.KeyFromFile = passphrase
+	}
 
 	var store storage.Store
 	var repo *repository.Repository
@@ -367,7 +376,7 @@ func EntryPoint() int {
 			return 1
 		}
 
-		if err := setupEncryption(ctx, repoConfig, storeConfig); err != nil {
+		if err := setupEncryption(ctx, repoConfig); err != nil {
 			fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
 			return 1
 		}
@@ -458,7 +467,7 @@ func EntryPoint() int {
 	return status
 }
 
-func checkupdate(ctx *appcontext.AppContext, disableSecurityCheck bool) {
+func checkUpdate(ctx *appcontext.AppContext, disableSecurityCheck bool) {
 	if ctx.GetCookies().IsFirstRun() {
 		ctx.GetCookies().SetFirstRun()
 		if disableSecurityCheck {
@@ -509,13 +518,13 @@ func checkupdate(ctx *appcontext.AppContext, disableSecurityCheck bool) {
 		concerns, rus.Latest, rus.FoundCount)
 }
 
-func getpassphrase(ctx *appcontext.AppContext, params map[string]string) ([]byte, error) {
+func getPassphraseFromEnv(ctx *appcontext.AppContext, params map[string]string) (string, error) {
 	if ctx.KeyFromFile != "" {
-		return []byte(ctx.KeyFromFile), nil
+		return ctx.KeyFromFile, nil
 	}
 
 	if pass, ok := params["passphrase"]; ok {
-		return []byte(pass), nil
+		return pass, nil
 	}
 
 	if cmd, ok := params["passphrase_cmd"]; ok {
@@ -529,11 +538,11 @@ func getpassphrase(ctx *appcontext.AppContext, params map[string]string) ([]byte
 
 		stdout, err := c.StdoutPipe()
 		if err != nil {
-			return nil, err
+			return "", err
 		}
 
 		if err := c.Start(); err != nil {
-			return nil, err
+			return "", err
 		}
 
 		var pass string
@@ -548,38 +557,34 @@ func getpassphrase(ctx *appcontext.AppContext, params map[string]string) ([]byte
 		io.Copy(io.Discard, stdout)
 
 		if err := c.Wait(); err != nil {
-			return nil, err
+			return "", err
 		}
 
 		if err := scan.Err(); err != nil {
-			return nil, err
+			return "", err
 		}
 
 		if lines != 1 {
-			return nil, fmt.Errorf("passphrase_cmd returned too many lines")
+			return "", fmt.Errorf("passphrase_cmd returned too many lines")
 		}
 
-		return []byte(pass), nil
+		return pass, nil
 	}
 
 	if pass, ok := os.LookupEnv("PLAKAR_PASSPHRASE"); ok {
-		return []byte(pass), nil
+		return pass, nil
 	}
 
-	return nil, nil
+	return "", nil
 }
 
-func setupEncryption(ctx *appcontext.AppContext, config *storage.Configuration, params map[string]string) error {
+func setupEncryption(ctx *appcontext.AppContext, config *storage.Configuration) error {
 	if config.Encryption == nil {
 		return nil
 	}
 
-	secret, err := getpassphrase(ctx, params)
-	if err != nil {
-		return err
-	}
-
-	if secret != nil {
+	if ctx.KeyFromFile != "" {
+		secret := []byte(ctx.KeyFromFile)
 		key, err := encryption.DeriveKey(config.Encryption.KDFParams,
 			secret)
 		if err != nil {
@@ -595,13 +600,13 @@ func setupEncryption(ctx *appcontext.AppContext, config *storage.Configuration, 
 
 	// fall back to prompting
 	for range 3 {
-		passphrase, err := utils.GetPassphrase("repository")
+		secret, err := utils.GetPassphrase("repository")
 		if err != nil {
 			return err
 		}
 
 		key, err := encryption.DeriveKey(config.Encryption.KDFParams,
-			passphrase)
+			secret)
 		if err != nil {
 			return err
 		}
@@ -614,7 +619,7 @@ func setupEncryption(ctx *appcontext.AppContext, config *storage.Configuration, 
 	return ErrCantUnlock
 }
 
-func listcmds(out io.Writer, prefix string) {
+func listCmds(out io.Writer, prefix string) {
 	var last string
 	var subs []string
 
@@ -660,5 +665,5 @@ func listcmds(out io.Writer, prefix string) {
 }
 
 func main() {
-	os.Exit(EntryPoint())
+	os.Exit(entryPoint())
 }

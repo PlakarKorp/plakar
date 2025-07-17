@@ -101,6 +101,14 @@ func (cl *configHandler) load(filename string, dst any) error {
 	}
 	defer f.Close()
 
+	info, err := f.Stat()
+	if err != nil {
+		return fmt.Errorf("failed to get config file info: %w", err)
+	}
+	if info.Size() == 0 {
+		return nil
+	}
+
 	err = yaml.NewDecoder(f).Decode(dst)
 	if err != nil {
 		return fmt.Errorf("failed to parse config file: %w", err)

@@ -14,64 +14,44 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-package pkg
+package login
 
 import (
 	"flag"
 	"fmt"
-	"path/filepath"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/plugins"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &PkgLs{} },
-		subcommands.BeforeRepositoryOpen,
-		"pkg", "ls")
+	subcommands.Register(func() subcommands.Subcommand { return &TokenCreate{} }, subcommands.AgentSupport, "token", "create")
 }
 
-type PkgLs struct {
-	subcommands.SubcommandBase
-}
-
-func (cmd *PkgLs) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("pkg ls", flag.ExitOnError)
+func (cmd *TokenCreate) Parse(ctx *appcontext.AppContext, args []string) error {
+	flags := flag.NewFlagSet("token-create", flag.ExitOnError)
 	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s",
-			flags.Name())
+		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS]\n", flags.Name())
 		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
-		flag.PrintDefaults()
+		flags.PrintDefaults()
 	}
 
 	flags.Parse(args)
-
-	if flags.NArg() != 0 {
-		return fmt.Errorf("too many arguments")
-	}
-
 	return nil
 }
 
-func (cmd *PkgLs) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (int, error) {
+type TokenCreate struct {
+	subcommands.SubcommandBase
+}
 
-	dataDir, err := utils.GetDataDir("plakar")
+func (cmd *TokenCreate) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+	token, err := utils.DeriveToken(ctx)
 	if err != nil {
 		return 1, err
 	}
 
-	pluginsDir := filepath.Join(dataDir, "plugins")
-	names, err := plugins.ListDir(ctx, pluginsDir)
-	if err != nil {
-		return 1, err
-	}
-
-	for _, name := range names {
-		fmt.Fprintln(ctx.Stdout, name)
-	}
-
+	fmt.Fprintln(ctx.Stdout, token)
 	return 0, nil
 }
