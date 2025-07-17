@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/PlakarKorp/kloset/caching"
+	"github.com/PlakarKorp/kloset/caching/pebble"
 	"github.com/PlakarKorp/kloset/hashing"
 	"github.com/PlakarKorp/kloset/logging"
 	"github.com/PlakarKorp/kloset/repository"
@@ -310,6 +311,11 @@ func _TestSnapshotPathParam(t *testing.T) {
 
 	for _, c := range testCases {
 		t.Run(c.name, func(t *testing.T) {
+			tmpCacheDir, err := os.MkdirTemp("", "tmp_cache")
+			require.NoError(t, err)
+			t.Cleanup(func() {
+				os.RemoveAll(tmpCacheDir)
+			})
 
 			serializedConfig, err := c.config.ToBytes()
 			require.NoError(t, err)
@@ -324,7 +330,7 @@ func _TestSnapshotPathParam(t *testing.T) {
 			lstore, err := storage.Create(ctx.GetInner(), map[string]string{"location": c.location}, wrappedConfig)
 			require.NoError(t, err, "creating storage")
 
-			cache := caching.NewManager("mock:///tmp/test_plakar")
+			cache := caching.NewManager(pebble.Constructor(tmpCacheDir))
 			defer cache.Close()
 			ctx.SetCache(cache)
 			ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
