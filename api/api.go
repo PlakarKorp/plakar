@@ -174,6 +174,12 @@ func SetupRoutes(server *http.ServeMux, repo *repository.Repository, ctx *appcon
 	server.Handle("GET /api/proxy/v1/account/services/alerting", authToken(JSONAPIView(ui.servicesGetAlertingServiceConfiguration)))
 	server.Handle("PUT /api/proxy/v1/account/services/alerting", authToken(JSONAPIView(ui.servicesSetAlertingServiceConfiguration)))
 	server.Handle("GET /api/proxy/v1/reporting/reports", authToken(JSONAPIView(ui.servicesProxy)))
+	server.Handle("GET /api/proxy/v1/integration", authToken(JSONAPIView(ui.servicesGetIntegration)))
+	server.Handle("GET /api/proxy/v1/integration/{id}", authToken(JSONAPIView(ui.servicesGetIntegrationId)))
+	server.Handle("GET /api/proxy/v1/integration/{id}/{path...}", authToken(JSONAPIView(ui.servicesGetIntegrationPath)))
+
+	server.Handle("POST /api/integrations", authToken(JSONAPIView(ui.integrationsInstall)))
+	server.Handle("DELETE /api/integration/{pkg}", authToken(JSONAPIView(ui.integrationsUninstall)))
 
 	server.Handle("GET /api/repository/info", authToken(JSONAPIView(ui.repositoryInfo)))
 	server.Handle("GET /api/repository/snapshots", authToken(JSONAPIView(ui.repositorySnapshots)))

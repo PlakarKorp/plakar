@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/PlakarKorp/plakar/plugins"
 	"github.com/PlakarKorp/plakar/services"
 )
 
@@ -146,4 +147,74 @@ func (ui *uiserver) servicesSetAlertingServiceConfiguration(w http.ResponseWrite
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	return json.NewEncoder(w).Encode(alertConfig)
+}
+
+func (ui *uiserver) servicesGetIntegration(w http.ResponseWriter, r *http.Request) error {
+	offset, err := QueryParamToInt64(r, "offset", 0, 0)
+	if err != nil {
+		return err
+	}
+
+	limit, err := QueryParamToInt64(r, "limit", 1, 50)
+	if err != nil {
+		return err
+	}
+
+	filterType, _, err := QueryParamToString(r, "type")
+	if err != nil {
+		return err
+	}
+
+	filterTag, _, err := QueryParamToString(r, "tag")
+	if err != nil {
+		return err
+	}
+
+	filterStatus, _, err := QueryParamToString(r, "status")
+	if err != nil {
+		return err
+	}
+
+	var res Items[plugins.IntegrationInfo]
+	res.Items = make([]plugins.IntegrationInfo, 0)
+
+	var i int64
+
+	for itg, err := range plugins.IterIntegrations(ui.ctx, filterType, filterTag) {
+		if err != nil {
+			return err
+		}
+		if filterStatus != "" && itg.Installation.Status != filterStatus {
+			continue
+		}
+		res.Total += 1
+		i += 1
+		if i > offset {
+			if i <= offset+limit {
+				r := *itg
+				res.Items = append(res.Items, r)
+			}
+		}
+	}
+
+	return json.NewEncoder(w).Encode(res)
+}
+
+func (ui *uiserver) servicesGetIntegrationId(w http.ResponseWriter, r *http.Request) error {
+	id := r.PathValue("id")
+
+	for itg, err := range plugins.IterIntegrations(ui.ctx, "", "") {
+		if err != nil {
+			return err
+		}
+		if itg.Id == id {
+			return json.NewEncoder(w).Encode(itg)
+		}
+	}
+
+	return fmt.Errorf("Not found")
+}
+
+func (ui *uiserver) servicesGetIntegrationPath(w http.ResponseWriter, r *http.Request) error {
+	return fmt.Errorf("Not implemented")
 }
