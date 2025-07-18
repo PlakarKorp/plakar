@@ -10,29 +10,45 @@ import (
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/services"
 )
 
 const PLAKAR_API_URL = "https://api.plakar.io/v1/reporting/reports"
 
 type Emitter interface {
-	Emit(report Report, logger *logging.Logger)
+	Emit(report *Report, logger *logging.Logger)
 }
 
 type Reporter struct {
-	repository        *repository.Repository
-	logger            *logging.Logger
-	emitter           Emitter
-	currentTask       *ReportTask
-	currentRepository *ReportRepository
-	currentSnapshot   *ReportSnapshot
+	logger  *logging.Logger
+	emitter Emitter
+	reports chan *Report
+	stop    chan any
+	done    chan any
 }
 
-func NewReporter(ctx *appcontext.AppContext, reporting bool, repository *repository.Repository, logger *logging.Logger) *Reporter {
-	if logger == nil {
-		logger = logging.NewLogger(os.Stdout, os.Stderr)
+func ReportingEnabled(ctx *appcontext.AppContext) bool {
+	authToken, err := ctx.GetCookies().GetAuthToken()
+	if err != nil || authToken == "" {
+		return false
 	}
 
+	sc := services.NewServiceConnector(ctx, authToken)
+	enabled, err := sc.GetServiceStatus("alerting")
+	if err != nil || !enabled {
+		return false
+	}
+
+	return true
+}
+
+func NewReporter(ctx *appcontext.AppContext, reporting bool) *Reporter {
+	logger := ctx.GetLogger()
 	var emitter Emitter
+
+	if reporting {
+		reporting = ReportingEnabled(ctx)
+	}
 
 	if !reporting {
 		emitter = &NullEmitter{}
@@ -57,90 +73,120 @@ func NewReporter(ctx *appcontext.AppContext, reporting bool, repository *reposit
 		}
 	}
 
-	return &Reporter{
-		repository: repository,
-		logger:     logger,
-		emitter:    emitter,
+	r := &Reporter{
+		logger:  logger,
+		emitter: emitter,
+		reports: make(chan *Report, 100),
+		stop:    make(chan any),
+		done:    make(chan any),
+	}
+
+	go func() {
+		var rp *Report
+		for {
+			select {
+			case <-r.stop:
+				goto done
+			case rp = <-r.reports:
+				emitter.Emit(rp, r.logger)
+			}
+		}
+	done:
+		close(r.reports)
+		// drain remaining reports
+		for rp = range r.reports {
+			emitter.Emit(rp, r.logger)
+		}
+		close(r.done)
+	}()
+
+	return r
+}
+
+func (reporter *Reporter) StopAndWait() {
+	close(reporter.stop)
+	for _ = range reporter.done {
 	}
 }
 
-func (reporter *Reporter) TaskStart(kind string, name string) {
-	if reporter.currentTask != nil {
-		reporter.logger.Warn("already in a task")
-	}
+func (reporter *Reporter) NewReport() *Report {
+	return NewReport(reporter.logger, reporter.reports)
+}
 
-	reporter.currentTask = &ReportTask{
+func NewReport(logger *logging.Logger, reporter chan *Report) *Report {
+	report := &Report{
+		logger:   logger,
+		reporter: reporter,
+	}
+	return report
+}
+
+func (report *Report) TaskStart(kind string, name string) {
+	if report.Task != nil {
+		report.logger.Warn("already in a task")
+	}
+	report.Task = &ReportTask{
 		StartTime: time.Now(),
 		Type:      kind,
 		Name:      name,
 	}
 }
 
-func (reporter *Reporter) WithRepositoryName(name string) {
-	if reporter.currentRepository != nil {
-		reporter.logger.Warn("already has a repository")
+func (report *Report) WithRepositoryName(name string) {
+	if report.Repository != nil {
+		report.logger.Warn("already has a repository")
 	}
-	reporter.currentRepository = &ReportRepository{
+	report.Repository = &ReportRepository{
 		Name: name,
 	}
 }
 
-func (reporter *Reporter) WithRepository(repository *repository.Repository) {
-	reporter.repository = repository
+func (report *Report) WithRepository(repository *repository.Repository) {
+	report.repo = repository
 	configuration := repository.Configuration()
-	reporter.currentRepository.Storage = configuration
+	report.Repository.Storage = configuration
 }
 
-func (reporter *Reporter) WithSnapshotID(snapshotId objects.MAC) {
-	snap, err := snapshot.Load(reporter.repository, snapshotId)
+func (report *Report) WithSnapshotID(snapshotId objects.MAC) {
+	snap, err := snapshot.Load(report.repo, snapshotId)
 	if err != nil {
-		reporter.logger.Warn("failed to load snapshot: %s", err)
+		report.logger.Warn("failed to load snapshot: %s", err)
 		return
 	}
-	reporter.WithSnapshot(snap)
+	report.WithSnapshot(snap)
 	snap.Close()
 }
 
-func (reporter *Reporter) WithSnapshot(snapshot *snapshot.Snapshot) {
-	if reporter.currentSnapshot != nil {
-		reporter.logger.Warn("already has a snapshot")
+func (report *Report) WithSnapshot(snapshot *snapshot.Snapshot) {
+	if report.Snapshot != nil {
+		report.logger.Warn("already has a snapshot")
 	}
-	reporter.currentSnapshot = &ReportSnapshot{
+	report.Snapshot = &ReportSnapshot{
 		Header: *snapshot.Header,
 	}
 }
 
-func (reporter *Reporter) TaskDone() {
-	reporter.taskEnd(StatusOK, 0, "")
+func (report *Report) TaskDone() {
+	report.taskEnd(StatusOK, 0, "")
 }
 
-func (reporter *Reporter) TaskWarning(errorMessage string, args ...interface{}) {
-	reporter.taskEnd(StatusWarning, 0, errorMessage, args...)
+func (report *Report) TaskWarning(errorMessage string, args ...interface{}) {
+	report.taskEnd(StatusWarning, 0, errorMessage, args...)
 }
 
-func (reporter *Reporter) TaskFailed(errorCode TaskErrorCode, errorMessage string, args ...interface{}) {
-	reporter.taskEnd(StatusFailed, errorCode, errorMessage, args...)
+func (report *Report) TaskFailed(errorCode TaskErrorCode, errorMessage string, args ...interface{}) {
+	report.taskEnd(StatusFailed, errorCode, errorMessage, args...)
 }
 
-func (reporter *Reporter) taskEnd(status TaskStatus, errorCode TaskErrorCode, errorMessage string, args ...interface{}) {
-	reporter.currentTask.Status = status
-	reporter.currentTask.ErrorCode = errorCode
+func (report *Report) taskEnd(status TaskStatus, errorCode TaskErrorCode, errorMessage string, args ...interface{}) {
+	report.Task.Status = status
+	report.Task.ErrorCode = errorCode
 	if len(args) == 0 {
-		reporter.currentTask.ErrorMessage = errorMessage
+		report.Task.ErrorMessage = errorMessage
 	} else {
-		reporter.currentTask.ErrorMessage = fmt.Sprintf(errorMessage, args...)
+		report.Task.ErrorMessage = fmt.Sprintf(errorMessage, args...)
 	}
-	reporter.currentTask.Duration = time.Since(reporter.currentTask.StartTime)
-
-	report := Report{
-		Timestamp:  time.Now(),
-		Task:       reporter.currentTask,
-		Repository: reporter.currentRepository,
-		Snapshot:   reporter.currentSnapshot,
-	}
-
-	reporter.currentTask = nil
-	reporter.currentRepository = nil
-	reporter.currentSnapshot = nil
-	go reporter.emitter.Emit(report, reporter.logger)
+	report.Task.Duration = time.Since(report.Task.StartTime)
+	report.Timestamp = time.Now()
+	report.reporter <- report
 }

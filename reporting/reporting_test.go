@@ -2,10 +2,15 @@ package reporting
 
 import (
 	"testing"
+
+	"github.com/PlakarKorp/plakar/appcontext"
 )
 
 func TestEmit(t *testing.T) {
-	reporter := NewReporter(nil, false, nil, nil)
-	reporter.TaskStart("blah", "baz")
-	reporter.TaskDone()
+	ctx := appcontext.NewAppContext()
+	reporter := NewReporter(ctx, false)
+	report := reporter.NewReport()
+	report.TaskStart("blah", "baz")
+	report.TaskDone()
+	reporter.StopAndWait()
 }

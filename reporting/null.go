@@ -7,5 +7,5 @@ import (
 type NullEmitter struct {
 }
 
-func (emitter *NullEmitter) Emit(report Report, logger *logging.Logger) {
+func (emitter *NullEmitter) Emit(report *Report, logger *logging.Logger) {
 }

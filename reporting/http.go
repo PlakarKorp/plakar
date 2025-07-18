@@ -18,7 +18,7 @@ type HttpEmitter struct {
 	retry uint8
 }
 
-func (emitter *HttpEmitter) Emit(report Report, logger *logging.Logger) {
+func (emitter *HttpEmitter) Emit(report *Report, logger *logging.Logger) {
 	data, err := json.Marshal(report)
 	if err != nil {
 		logger.Error("failed to encode report: %s", err)
@@ -31,8 +31,8 @@ func (emitter *HttpEmitter) Emit(report Report, logger *logging.Logger) {
 		if err == nil {
 			return
 		}
-		time.Sleep(backoffUnit << i)
 		logger.Warn("failed to emit report: %s", err)
+		time.Sleep(backoffUnit << i)
 	}
 	logger.Error("failed to emit report after %d attempts", emitter.retry)
 }
