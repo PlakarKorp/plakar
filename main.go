@@ -25,6 +25,7 @@ import (
 	"github.com/PlakarKorp/kloset/versioning"
 	"github.com/PlakarKorp/plakar/agent"
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/cached"
 	"github.com/PlakarKorp/plakar/cookies"
 	"github.com/PlakarKorp/plakar/plugins"
 	"github.com/PlakarKorp/plakar/subcommands"
@@ -53,6 +54,7 @@ import (
 	_ "github.com/PlakarKorp/plakar/subcommands/maintenance"
 	_ "github.com/PlakarKorp/plakar/subcommands/mount"
 	_ "github.com/PlakarKorp/plakar/subcommands/pkg"
+	_ "github.com/PlakarKorp/plakar/subcommands/private/cached"
 	_ "github.com/PlakarKorp/plakar/subcommands/prune"
 	_ "github.com/PlakarKorp/plakar/subcommands/ptar"
 	_ "github.com/PlakarKorp/plakar/subcommands/restore"
@@ -319,6 +321,17 @@ func entryPoint() int {
 		fmt.Fprintf(os.Stderr, "command not found: %s\n", args[0])
 		return 1
 	}
+
+	func() {
+		if name[0] == "private-cached" {
+			return
+		}
+		client, err := cached.NewClient("/tmp/cached.sock")
+		if err != nil {
+			log.Fatal("failed to connect:", err)
+		}
+		client.Close()
+	}()
 
 	// try to get the passphrase from env and store config so that it's
 	// available to subcommands like create.
