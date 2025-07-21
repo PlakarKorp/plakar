@@ -19,9 +19,7 @@ package pkg
 import (
 	"flag"
 	"fmt"
-	"os"
 	"path/filepath"
-	"slices"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
@@ -31,18 +29,33 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &PkgUninstall{} },
+	subcommands.Register(func() subcommands.Subcommand { return &PkgAdd{} },
 		subcommands.BeforeRepositoryOpen,
-		"pkg", "uninstall")
+		"pkg", "add")
+
+	subcommands.Register(func() subcommands.Subcommand { return &PkgRm{} },
+		subcommands.BeforeRepositoryOpen,
+		"pkg", "rm")
+
+	subcommands.Register(func() subcommands.Subcommand { return &PkgCreate{} },
+		subcommands.BeforeRepositoryOpen,
+		"pkg", "create")
+
+	subcommands.Register(func() subcommands.Subcommand { return &PkgBuild{} },
+		subcommands.BeforeRepositoryOpen,
+		"pkg", "build")
+
+	subcommands.Register(func() subcommands.Subcommand { return &Pkg{} },
+		subcommands.BeforeRepositoryOpen,
+		"pkg")
 }
 
-type PkgUninstall struct {
+type Pkg struct {
 	subcommands.SubcommandBase
-	Args []string
 }
 
-func (cmd *PkgUninstall) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("pkg uninstall", flag.ExitOnError)
+func (cmd *Pkg) Parse(ctx *appcontext.AppContext, args []string) error {
+	flags := flag.NewFlagSet("pkg", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s",
 			flags.Name())
@@ -52,18 +65,14 @@ func (cmd *PkgUninstall) Parse(ctx *appcontext.AppContext, args []string) error 
 
 	flags.Parse(args)
 
-	cmd.Args = flags.Args()
+	if flags.NArg() != 0 {
+		return fmt.Errorf("too many arguments")
+	}
 
 	return nil
 }
 
-func (cmd *PkgUninstall) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (int, error) {
-	cachedir, err := utils.GetCacheDir("plakar")
-	if err != nil {
-		return 1, err
-	}
-	cachedir = filepath.Join(cachedir, "plugins")
-
+func (cmd *Pkg) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (int, error) {
 	dataDir, err := utils.GetDataDir("plakar")
 	if err != nil {
 		return 1, err
@@ -75,20 +84,8 @@ func (cmd *PkgUninstall) Execute(ctx *appcontext.AppContext, _ *repository.Repos
 		return 1, err
 	}
 
-	for _, name := range cmd.Args {
-		if !slices.Contains(names, name) {
-			return 1, fmt.Errorf("plugin %q is not installed", name)
-		}
-		err := os.Remove(filepath.Join(pluginsDir, name))
-		if err != nil {
-			return 1, fmt.Errorf("failed to remove %q: %w", name, err)
-		}
-		extlen := len(filepath.Ext(name))
-		pluginCache := filepath.Join(cachedir, name[:len(name)-extlen])
-		err = os.RemoveAll(pluginCache)
-		if err != nil {
-			return 1, fmt.Errorf("failed to remove cache for %q: %w", name, err)
-		}
+	for _, name := range names {
+		fmt.Fprintln(ctx.Stdout, name)
 	}
 
 	return 0, nil

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"io"
 	"net/http"
 	"path"
@@ -55,13 +56,13 @@ func loadsnap(repo *repository.Repository, id [32]byte) (*snapshot.Snapshot, err
 	return snap, nil
 }
 
-func snapshotHeader(w http.ResponseWriter, r *http.Request) error {
+func (ui *uiserver) snapshotHeader(w http.ResponseWriter, r *http.Request) error {
 	snapshotID32, err := PathParamToID(r, "snapshot")
 	if err != nil {
 		return err
 	}
 
-	snap, err := loadsnap(lrepository, snapshotID32)
+	snap, err := loadsnap(ui.repository, snapshotID32)
 	if err != nil {
 		return err
 	}
@@ -69,8 +70,8 @@ func snapshotHeader(w http.ResponseWriter, r *http.Request) error {
 	return json.NewEncoder(w).Encode(Item[*header.Header]{Item: snap.Header})
 }
 
-func snapshotReader(w http.ResponseWriter, r *http.Request) error {
-	snapshotID32, path, err := SnapshotPathParam(r, lrepository, "snapshot_path")
+func (ui *uiserver) snapshotReader(w http.ResponseWriter, r *http.Request) error {
+	snapshotID32, path, err := SnapshotPathParam(r, ui.repository, "snapshot_path")
 	if err != nil {
 		return err
 	}
@@ -83,7 +84,7 @@ func snapshotReader(w http.ResponseWriter, r *http.Request) error {
 
 	render := r.URL.Query().Get("render")
 	switch render {
-	case "code", "text", "auto":
+	case "code", "text", "text_styled", "auto":
 		// valid values
 	case "":
 		render = "auto"
@@ -91,7 +92,7 @@ func snapshotReader(w http.ResponseWriter, r *http.Request) error {
 		return parameterError("render", InvalidArgument, errors.New("valid values are code, text, auto"))
 	}
 
-	snap, err := loadsnap(lrepository, snapshotID32)
+	snap, err := loadsnap(ui.repository, snapshotID32)
 	if err != nil {
 		return err
 	}
@@ -117,65 +118,110 @@ func snapshotReader(w http.ResponseWriter, r *http.Request) error {
 		w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(filepath.Base(path)))
 	}
 
-	if render != "code" {
-		if render == "text" {
-			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		}
+	switch render {
+	case "text":
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		http.ServeContent(w, r, filepath.Base(path), entry.Stat().ModTime(), file.(io.ReadSeeker))
 		return nil
-	}
+	case "text_styled":
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
-	lexer := lexers.Match(path)
-	if lexer == nil {
-		lexer = lexers.Get(entry.ResolvedObject.ContentType)
-	}
-	if lexer == nil {
-		lexer = lexers.Fallback // Fallback if no lexer is found
-	}
-	formatter := formatters.Get("html")
-	style := styles.Get("dracula")
+		if _, err := w.Write([]byte(`<!DOCTYPE html>
+		<html>
+			<head>
+			<meta charset="utf-8">
+			<style>
+				body {
+					background-color: #282a36;
+					color: #fff;
+					font-family: monospace;
+				}
+			</style>
+		</head>
+		<body>
+			<pre>`)); err != nil {
+			return err
+		}
 
-	w.Header().Set("Content-Type", "text/html")
-	if _, err := w.Write([]byte("<!DOCTYPE html>")); err != nil {
-		return err
-	}
-
-	reader := bufio.NewReader(file)
-	buffer := make([]byte, 4096) // Fixed-size buffer for chunked reading
-	for {
-		n, err := reader.Read(buffer) // Read up to the size of the buffer
-		if n > 0 {
-			chunk := string(buffer[:n])
-
-			// Tokenize the chunk and apply syntax highlighting
-			iterator, errTokenize := lexer.Tokenise(nil, chunk)
-			if errTokenize != nil {
+		reader := bufio.NewReader(file)
+		buf := make([]byte, 4096)
+		for {
+			n, err := reader.Read(buf)
+			if n > 0 {
+				escaped := html.EscapeString(string(buf[:n])) // Prevent HTML injection
+				if _, err := w.Write([]byte(escaped)); err != nil {
+					return err
+				}
+			}
+			if err == io.EOF {
 				break
 			}
+			if err != nil {
+				return err
+			}
+		}
 
-			errFormat := formatter.Format(w, style, iterator)
-			if errFormat != nil {
+		if _, err := w.Write([]byte("</pre></body></html>")); err != nil {
+			return err
+		}
+		return nil
+	case "auto":
+		http.ServeContent(w, r, filepath.Base(path), entry.Stat().ModTime(), file.(io.ReadSeeker))
+		return nil
+	default: // "code"
+		lexer := lexers.Match(path)
+		if lexer == nil {
+			lexer = lexers.Get(entry.ResolvedObject.ContentType)
+		}
+		if lexer == nil {
+			lexer = lexers.Fallback // Fallback if no lexer is found
+		}
+		formatter := formatters.Get("html")
+		style := styles.Get("dracula")
+
+		w.Header().Set("Content-Type", "text/html")
+		if _, err := w.Write([]byte("<!DOCTYPE html>")); err != nil {
+			return err
+		}
+
+		reader := bufio.NewReader(file)
+		buffer := make([]byte, 4096) // Fixed-size buffer for chunked reading
+		for {
+			n, err := reader.Read(buffer) // Read up to the size of the buffer
+			if n > 0 {
+				chunk := string(buffer[:n])
+
+				// Tokenize the chunk and apply syntax highlighting
+				iterator, errTokenize := lexer.Tokenise(nil, chunk)
+				if errTokenize != nil {
+					break
+				}
+
+				errFormat := formatter.Format(w, style, iterator)
+				if errFormat != nil {
+					break
+				}
+			}
+
+			// Check for end of file (EOF)
+			if err == io.EOF {
+				break
+			} else if err != nil {
 				break
 			}
 		}
 
-		// Check for end of file (EOF)
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			break
-		}
+		return nil
 	}
-
-	return nil
 }
 
 type SnapshotReaderURLSigner struct {
+	ui    *uiserver
 	token string
 }
 
-func NewSnapshotReaderURLSigner(token string) SnapshotReaderURLSigner {
-	return SnapshotReaderURLSigner{token}
+func NewSnapshotReaderURLSigner(ui *uiserver, token string) SnapshotReaderURLSigner {
+	return SnapshotReaderURLSigner{ui, token}
 }
 
 type SnapshotSignedURLClaims struct {
@@ -185,7 +231,7 @@ type SnapshotSignedURLClaims struct {
 }
 
 func (signer SnapshotReaderURLSigner) Sign(w http.ResponseWriter, r *http.Request) error {
-	snapshotID32, path, err := SnapshotPathParam(r, lrepository, "snapshot_path")
+	snapshotID32, path, err := SnapshotPathParam(r, signer.ui.repository, "snapshot_path")
 	if err != nil {
 		return err
 	}
@@ -245,7 +291,7 @@ func (signer SnapshotReaderURLSigner) VerifyMiddleware(next http.Handler) http.H
 			return
 		}
 
-		snapshotID32, path, err := SnapshotPathParam(r, lrepository, "snapshot_path")
+		snapshotID32, path, err := SnapshotPathParam(r, signer.ui.repository, "snapshot_path")
 		if err != nil {
 			handleError(w, r, parameterError("snapshot_path", InvalidArgument, err))
 			return
@@ -270,13 +316,13 @@ func (signer SnapshotReaderURLSigner) VerifyMiddleware(next http.Handler) http.H
 	})
 }
 
-func snapshotVFSBrowse(w http.ResponseWriter, r *http.Request) error {
-	snapshotID32, path, err := SnapshotPathParam(r, lrepository, "snapshot_path")
+func (ui *uiserver) snapshotVFSBrowse(w http.ResponseWriter, r *http.Request) error {
+	snapshotID32, path, err := SnapshotPathParam(r, ui.repository, "snapshot_path")
 	if err != nil {
 		return err
 	}
 
-	snap, err := loadsnap(lrepository, snapshotID32)
+	snap, err := loadsnap(ui.repository, snapshotID32)
 	if err != nil {
 		return err
 	}
@@ -297,8 +343,8 @@ func snapshotVFSBrowse(w http.ResponseWriter, r *http.Request) error {
 	return json.NewEncoder(w).Encode(Item[*vfs.Entry]{Item: entry})
 }
 
-func snapshotVFSChildren(w http.ResponseWriter, r *http.Request) error {
-	snapshotID32, entrypath, err := SnapshotPathParam(r, lrepository, "snapshot_path")
+func (ui *uiserver) snapshotVFSChildren(w http.ResponseWriter, r *http.Request) error {
+	snapshotID32, entrypath, err := SnapshotPathParam(r, ui.repository, "snapshot_path")
 	if err != nil {
 		return err
 	}
@@ -323,7 +369,7 @@ func snapshotVFSChildren(w http.ResponseWriter, r *http.Request) error {
 	}
 	_ = sortKeys
 
-	snap, err := loadsnap(lrepository, snapshotID32)
+	snap, err := loadsnap(ui.repository, snapshotID32)
 	if err != nil {
 		return err
 	}
@@ -406,8 +452,8 @@ func snapshotVFSChildren(w http.ResponseWriter, r *http.Request) error {
 	return json.NewEncoder(w).Encode(items)
 }
 
-func snapshotVFSChunks(w http.ResponseWriter, r *http.Request) error {
-	snapshotID32, entrypath, err := SnapshotPathParam(r, lrepository, "snapshot_path")
+func (ui *uiserver) snapshotVFSChunks(w http.ResponseWriter, r *http.Request) error {
+	snapshotID32, entrypath, err := SnapshotPathParam(r, ui.repository, "snapshot_path")
 	if err != nil {
 		return err
 	}
@@ -422,7 +468,7 @@ func snapshotVFSChunks(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	snap, err := loadsnap(lrepository, snapshotID32)
+	snap, err := loadsnap(ui.repository, snapshotID32)
 	if err != nil {
 		return err
 	}
@@ -452,8 +498,8 @@ func snapshotVFSChunks(w http.ResponseWriter, r *http.Request) error {
 	return json.NewEncoder(w).Encode(items)
 }
 
-func snapshotVFSSearch(w http.ResponseWriter, r *http.Request) error {
-	snapshotID32, path, err := SnapshotPathParam(r, lrepository, "snapshot_path")
+func (ui *uiserver) snapshotVFSSearch(w http.ResponseWriter, r *http.Request) error {
+	snapshotID32, path, err := SnapshotPathParam(r, ui.repository, "snapshot_path")
 	if err != nil {
 		return err
 	}
@@ -486,7 +532,7 @@ func snapshotVFSSearch(w http.ResponseWriter, r *http.Request) error {
 		pattern = str
 	}
 
-	snap, err := loadsnap(lrepository, snapshotID32)
+	snap, err := loadsnap(ui.repository, snapshotID32)
 	if err != nil {
 		return err
 	}
@@ -537,8 +583,8 @@ func snapshotVFSSearch(w http.ResponseWriter, r *http.Request) error {
 	return json.NewEncoder(w).Encode(items)
 }
 
-func snapshotVFSErrors(w http.ResponseWriter, r *http.Request) error {
-	snapshotID32, path, err := SnapshotPathParam(r, lrepository, "snapshot_path")
+func (ui *uiserver) snapshotVFSErrors(w http.ResponseWriter, r *http.Request) error {
+	snapshotID32, path, err := SnapshotPathParam(r, ui.repository, "snapshot_path")
 	if err != nil {
 		return err
 	}
@@ -561,7 +607,7 @@ func snapshotVFSErrors(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	snap, err := loadsnap(lrepository, snapshotID32)
+	snap, err := loadsnap(ui.repository, snapshotID32)
 	if err != nil {
 		return err
 	}
@@ -611,8 +657,8 @@ type DownloadQuery struct {
 	Rebase bool           `json:"rebase,omitempty"`
 }
 
-func snapshotVFSDownloader(w http.ResponseWriter, r *http.Request) error {
-	snapshotID32, _, err := SnapshotPathParam(r, lrepository, "snapshot_path")
+func (ui *uiserver) snapshotVFSDownloader(w http.ResponseWriter, r *http.Request) error {
+	snapshotID32, _, err := SnapshotPathParam(r, ui.repository, "snapshot_path")
 	if err != nil {
 		return err
 	}
@@ -622,7 +668,7 @@ func snapshotVFSDownloader(w http.ResponseWriter, r *http.Request) error {
 		return parameterError("BODY", InvalidArgument, err)
 	}
 
-	if _, err = loadsnap(lrepository, snapshotID32); err != nil {
+	if _, err = loadsnap(ui.repository, snapshotID32); err != nil {
 		return nil
 	}
 
@@ -651,7 +697,7 @@ func snapshotVFSDownloader(w http.ResponseWriter, r *http.Request) error {
 	}
 }
 
-func snapshotVFSDownloaderSigned(w http.ResponseWriter, r *http.Request) error {
+func (ui *uiserver) snapshotVFSDownloaderSigned(w http.ResponseWriter, r *http.Request) error {
 	id := r.PathValue("id")
 
 	link, ok := downloadSignedUrls.Get(id)
@@ -663,7 +709,7 @@ func snapshotVFSDownloaderSigned(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 
-	snap, err := loadsnap(lrepository, link.snapshotID)
+	snap, err := loadsnap(ui.repository, link.snapshotID)
 	if err != nil {
 		return err
 	}

@@ -25,6 +25,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/PlakarKorp/kloset/hashing"
 	"github.com/PlakarKorp/kloset/objects"
@@ -38,12 +39,6 @@ import (
 	"github.com/PlakarKorp/plakar/subcommands"
 	"gopkg.in/yaml.v3"
 )
-
-func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &PkgCreate{} },
-		subcommands.BeforeRepositoryOpen,
-		"pkg", "create")
-}
 
 type PkgCreate struct {
 	subcommands.SubcommandBase
@@ -90,7 +85,7 @@ func (cmd *PkgCreate) Parse(ctx *appcontext.AppContext, args []string) error {
 	}
 
 	if cmd.Out == "" {
-		p := fmt.Sprintf("%s-v%s.ptar", cmd.Manifest.Name, cmd.Manifest.Version)
+		p := fmt.Sprintf("%s_v%s_%s_%s.ptar", cmd.Manifest.Name, cmd.Manifest.Version, runtime.GOOS, runtime.GOARCH)
 		cmd.Out = filepath.Join(ctx.CWD, p)
 	}
 
@@ -176,5 +171,6 @@ func (cmd *PkgCreate) Execute(ctx *appcontext.AppContext, _ *repository.Reposito
 		return 1, fmt.Errorf("failed to package all the files")
 	}
 
+	fmt.Fprintf(ctx.Stdout, "Plugin created successfully: %s\n", cmd.Out)
 	return 0, nil
 }

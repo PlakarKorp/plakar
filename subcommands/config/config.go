@@ -17,6 +17,8 @@
 package config
 
 import (
+	"strings"
+
 	"github.com/PlakarKorp/plakar/subcommands"
 )
 
@@ -27,4 +29,8 @@ func init() {
 		subcommands.BeforeRepositoryOpen, "source")
 	subcommands.Register(func() subcommands.Subcommand { return &ConfigDestinationCmd{} },
 		subcommands.BeforeRepositoryOpen, "destination")
+}
+
+func normalizeLocation(location string) string {
+	return strings.TrimPrefix(location, "location=")
 }

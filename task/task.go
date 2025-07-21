@@ -35,7 +35,7 @@ func RunCommand(ctx *appcontext.AppContext, cmd subcommands.Subcommand, repo *re
 
 	var doReport bool
 	if repo != nil && taskKind != "" {
-		authToken, err := ctx.GetAuthToken(repo.Configuration().RepositoryID)
+		authToken, err := ctx.GetCookies().GetAuthToken()
 		if err == nil && authToken != "" {
 			sc := services.NewServiceConnector(ctx, authToken)
 			enabled, err := sc.GetServiceStatus("alerting")

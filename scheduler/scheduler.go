@@ -58,7 +58,7 @@ func (s *Scheduler) Run() {
 
 func (s *Scheduler) NewTaskReporter(ctx *appcontext.AppContext, repo *repository.Repository, taskType, taskName, repoName string) *reporting.Reporter {
 	doReport := true
-	authToken, err := s.ctx.GetAuthToken(repo.Configuration().RepositoryID)
+	authToken, err := s.ctx.GetCookies().GetAuthToken()
 	if err != nil || authToken == "" {
 		doReport = false
 	} else {

@@ -45,6 +45,9 @@ func (cl *configHandler) Load() (*config.Config, error) {
 
 	for k, v := range cfg.Repositories {
 		if _, ok := v[".isDefault"]; ok {
+			if cfg.DefaultRepository != "" {
+				return nil, fmt.Errorf("multiple default store")
+			}
 			cfg.DefaultRepository = k
 			delete(v, ".isDefault")
 		}
@@ -100,6 +103,14 @@ func (cl *configHandler) load(filename string, dst any) error {
 		return fmt.Errorf("error reading config file: %w", err)
 	}
 	defer f.Close()
+
+	info, err := f.Stat()
+	if err != nil {
+		return fmt.Errorf("failed to get config file info: %w", err)
+	}
+	if info.Size() == 0 {
+		return nil
+	}
 
 	err = yaml.NewDecoder(f).Decode(dst)
 	if err != nil {

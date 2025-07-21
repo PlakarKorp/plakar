@@ -166,6 +166,31 @@ The following commands are available:
 > Create a .ptar archive, documented in
 > plakar-ptar(1).
 
+**pkg**
+
+> List installed plugins, documented in
+> plakar-pkg(1).
+
+**pkg add**
+
+> Install a plugin, documented in
+> plakar-pkg-add(1).
+
+**pkg build**
+
+> Build a plugin from source, documented in
+> plakar-pkg-build(1).
+
+**pkg create**
+
+> Package a plugin, documented in
+> plakar-pkg-create(1).
+
+**pkg rm**
+
+> Unistall a plugin, documented in
+> plakar-pkg-rm(1).
+
 **restore**
 
 > Restore files from a Kloset snapshot, documented in
@@ -269,4 +294,4 @@ Remove snapshots older than 30 days:
 
 	$ plakar rm -before 30d
 
-Plakar - July 2, 2025
+Plakar - July 8, 2025

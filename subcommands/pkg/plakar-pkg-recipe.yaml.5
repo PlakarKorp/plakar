@@ -1,0 +1,35 @@
+.Dd July 11, 2025
+.Dt PLAKAR-PKG-RECIPE.YAML 5
+.Os
+.Sh NAME
+.Nm recipe.yaml
+.Nd Recipe to build Plakar plugins from source
+.Sh DESCRIPTION
+The
+.Nm recipe.yaml
+file format describes how to fetch and build Plakar plugins.
+It must have a top-level YAML object with the following fields:
+.Bl -tag -width repository
+.It Ic name
+The name of the plugins
+.It Ic version
+The plugin version, which doubles as the git tag as well.
+It must follow semantic versioning and have a
+.Sq v
+prefix, e.g.
+.Sq v1.2.3 .
+.It Ic repository
+URL to the git repository holding the plugin.
+.El
+.Sh EXAMPLES
+A sample recipe to build the
+.Dq fs
+plugin is as follows:
+.Bd -literal -offset indent
+# recipe.yaml
+name: fs
+version: v1.0.0
+repository: https://github.com/PlakarKorp/integrations-fs
+.Ed
+.Sh SEE ALSO
+.Xr plakar-pkg-build 1

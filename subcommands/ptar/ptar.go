@@ -87,7 +87,7 @@ func (cmd *Ptar) Parse(ctx *appcontext.AppContext, args []string) error {
 	}
 
 	if len(cmd.SyncTargets) == 0 && flags.NArg() == 0 {
-		return fmt.Errorf("%s: at least one -k option or path must be specified", flag.CommandLine.Name())
+		cmd.BackupTargets = []string{ctx.CWD}
 	}
 
 	if len(flags.Args()) > 0 {

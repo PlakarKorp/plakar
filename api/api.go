@@ -15,10 +15,17 @@ import (
 	"github.com/PlakarKorp/plakar/utils"
 )
 
-var lstore storage.Store
-var lconfig storage.Configuration
-var lctx *appcontext.AppContext // XXX: Adding this for transition, it needs to go away. Some places we only have Repository and out of AppContext we only get a KContext, except sometimes you truly need an AppContext.
-var lrepository *repository.Repository
+type uiserver struct {
+	store      storage.Store
+	config     storage.Configuration
+	repository *repository.Repository
+
+	// XXX: Adding this for transition, it needs to go away. Some
+	// places we only have Repository and out of AppContext we
+	// only get a KContext, except sometimes you truly need an
+	// AppContext.
+	ctx *appcontext.AppContext
+}
 
 type Item[T any] struct {
 	Item T `json:"item"`
@@ -114,10 +121,10 @@ func TokenAuthMiddleware(token string) func(http.Handler) http.Handler {
 	}
 }
 
-func apiInfo(w http.ResponseWriter, r *http.Request) error {
+func (ui *uiserver) apiInfo(w http.ResponseWriter, r *http.Request) error {
 	authenticated := false
-	configuration := lrepository.Configuration()
-	if authToken, err := lctx.GetCookies().GetAuthToken(); err == nil && authToken != "" {
+	configuration := ui.config
+	if authToken, err := ui.ctx.GetCookies().GetAuthToken(); err == nil && authToken != "" {
 		authenticated = true
 	}
 
@@ -130,19 +137,21 @@ func apiInfo(w http.ResponseWriter, r *http.Request) error {
 		RepositoryId:  configuration.RepositoryID.String(),
 		Authenticated: authenticated,
 		Version:       utils.GetVersion(),
-		Browsable:     lrepository.Store().Mode()&storage.ModeRead != 0,
+		Browsable:     ui.store.Mode()&storage.ModeRead != 0,
 	}
 	return json.NewEncoder(w).Encode(res)
 }
 
 func SetupRoutes(server *http.ServeMux, repo *repository.Repository, ctx *appcontext.AppContext, token string) {
-	lstore = repo.Store()
-	lconfig = repo.Configuration()
-	lrepository = repo
-	lctx = ctx
+	ui := uiserver{
+		store:      repo.Store(),
+		config:     repo.Configuration(),
+		repository: repo,
+		ctx:        ctx,
+	}
 
 	authToken := TokenAuthMiddleware(token)
-	urlSigner := NewSnapshotReaderURLSigner(token)
+	urlSigner := NewSnapshotReaderURLSigner(&ui, token)
 
 	// Catch all API endpoint, called if no more specific API endpoint is found
 	server.Handle("/api/", JSONAPIView(func(w http.ResponseWriter, r *http.Request) error {
@@ -153,36 +162,36 @@ func SetupRoutes(server *http.ServeMux, repo *repository.Repository, ctx *appcon
 		}
 	}))
 
-	server.Handle("GET /api/info", authToken(JSONAPIView(apiInfo)))
+	server.Handle("GET /api/info", authToken(JSONAPIView(ui.apiInfo)))
 
-	server.Handle("POST /api/authentication/login/github", authToken(JSONAPIView(servicesLoginGithub)))
-	server.Handle("POST /api/authentication/login/email", authToken(JSONAPIView(servicesLoginEmail)))
-	server.Handle("POST /api/authentication/logout", authToken(JSONAPIView(servicesLogout)))
+	server.Handle("POST /api/authentication/login/github", authToken(JSONAPIView(ui.servicesLoginGithub)))
+	server.Handle("POST /api/authentication/login/email", authToken(JSONAPIView(ui.servicesLoginEmail)))
+	server.Handle("POST /api/authentication/logout", authToken(JSONAPIView(ui.servicesLogout)))
 
-	server.Handle("GET /api/proxy/v1/account/me", authToken(JSONAPIView(servicesProxy)))
-	server.Handle("GET /api/proxy/v1/account/notifications", authToken(JSONAPIView(servicesProxy)))
-	server.Handle("POST /api/proxy/v1/account/notifications/set-status", authToken(JSONAPIView(servicesProxy)))
-	server.Handle("GET /api/proxy/v1/account/services/alerting", authToken(JSONAPIView(servicesGetAlertingServiceConfiguration)))
-	server.Handle("PUT /api/proxy/v1/account/services/alerting", authToken(JSONAPIView(servicesSetAlertingServiceConfiguration)))
-	server.Handle("GET /api/proxy/v1/reporting/reports", authToken(JSONAPIView(servicesProxy)))
+	server.Handle("GET /api/proxy/v1/account/me", authToken(JSONAPIView(ui.servicesProxy)))
+	server.Handle("GET /api/proxy/v1/account/notifications", authToken(JSONAPIView(ui.servicesProxy)))
+	server.Handle("POST /api/proxy/v1/account/notifications/set-status", authToken(JSONAPIView(ui.servicesProxy)))
+	server.Handle("GET /api/proxy/v1/account/services/alerting", authToken(JSONAPIView(ui.servicesGetAlertingServiceConfiguration)))
+	server.Handle("PUT /api/proxy/v1/account/services/alerting", authToken(JSONAPIView(ui.servicesSetAlertingServiceConfiguration)))
+	server.Handle("GET /api/proxy/v1/reporting/reports", authToken(JSONAPIView(ui.servicesProxy)))
 
-	server.Handle("GET /api/repository/info", authToken(JSONAPIView(repositoryInfo)))
-	server.Handle("GET /api/repository/snapshots", authToken(JSONAPIView(repositorySnapshots)))
-	server.Handle("GET /api/repository/locate-pathname", authToken(JSONAPIView(repositoryLocatePathname)))
-	server.Handle("GET /api/repository/importer-types", authToken(JSONAPIView(repositoryImporterTypes)))
-	server.Handle("GET /api/repository/states", authToken(JSONAPIView(repositoryStates)))
-	server.Handle("GET /api/repository/state/{state}", authToken(JSONAPIView(repositoryState)))
+	server.Handle("GET /api/repository/info", authToken(JSONAPIView(ui.repositoryInfo)))
+	server.Handle("GET /api/repository/snapshots", authToken(JSONAPIView(ui.repositorySnapshots)))
+	server.Handle("GET /api/repository/locate-pathname", authToken(JSONAPIView(ui.repositoryLocatePathname)))
+	server.Handle("GET /api/repository/importer-types", authToken(JSONAPIView(ui.repositoryImporterTypes)))
+	server.Handle("GET /api/repository/states", authToken(JSONAPIView(ui.repositoryStates)))
+	server.Handle("GET /api/repository/state/{state}", authToken(JSONAPIView(ui.repositoryState)))
 
-	server.Handle("GET /api/snapshot/{snapshot}", authToken(JSONAPIView(snapshotHeader)))
-	server.Handle("GET /api/snapshot/reader/{snapshot_path...}", urlSigner.VerifyMiddleware(APIView(snapshotReader)))
+	server.Handle("GET /api/snapshot/{snapshot}", authToken(JSONAPIView(ui.snapshotHeader)))
+	server.Handle("GET /api/snapshot/reader/{snapshot_path...}", urlSigner.VerifyMiddleware(APIView(ui.snapshotReader)))
 	server.Handle("POST /api/snapshot/reader-sign-url/{snapshot_path...}", authToken(JSONAPIView(urlSigner.Sign)))
 
-	server.Handle("GET /api/snapshot/vfs/{snapshot_path...}", authToken(JSONAPIView(snapshotVFSBrowse)))
-	server.Handle("GET /api/snapshot/vfs/children/{snapshot_path...}", authToken(JSONAPIView(snapshotVFSChildren)))
-	server.Handle("GET /api/snapshot/vfs/chunks/{snapshot_path...}", authToken(JSONAPIView(snapshotVFSChunks)))
-	server.Handle("GET /api/snapshot/vfs/search/{snapshot_path...}", authToken(JSONAPIView(snapshotVFSSearch)))
-	server.Handle("GET /api/snapshot/vfs/errors/{snapshot_path...}", authToken(JSONAPIView(snapshotVFSErrors)))
+	server.Handle("GET /api/snapshot/vfs/{snapshot_path...}", authToken(JSONAPIView(ui.snapshotVFSBrowse)))
+	server.Handle("GET /api/snapshot/vfs/children/{snapshot_path...}", authToken(JSONAPIView(ui.snapshotVFSChildren)))
+	server.Handle("GET /api/snapshot/vfs/chunks/{snapshot_path...}", authToken(JSONAPIView(ui.snapshotVFSChunks)))
+	server.Handle("GET /api/snapshot/vfs/search/{snapshot_path...}", authToken(JSONAPIView(ui.snapshotVFSSearch)))
+	server.Handle("GET /api/snapshot/vfs/errors/{snapshot_path...}", authToken(JSONAPIView(ui.snapshotVFSErrors)))
 
-	server.Handle("POST /api/snapshot/vfs/downloader/{snapshot_path...}", authToken(JSONAPIView(snapshotVFSDownloader)))
-	server.Handle("GET /api/snapshot/vfs/downloader-sign-url/{id}", JSONAPIView(snapshotVFSDownloaderSigned))
+	server.Handle("POST /api/snapshot/vfs/downloader/{snapshot_path...}", authToken(JSONAPIView(ui.snapshotVFSDownloader)))
+	server.Handle("GET /api/snapshot/vfs/downloader-sign-url/{id}", JSONAPIView(ui.snapshotVFSDownloaderSigned))
 }

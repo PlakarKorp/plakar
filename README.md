@@ -1,4 +1,52 @@
-# plakar - Effortless backup
+<div align="center">
+
+<img src="./docs/assets/Plakar_Logo_Simple_Pirmary.png" alt="Plakar Backup & Restore Solution" width="200"/>
+
+# plakar - Effortless backup & more
+
+[![Join our Discord community](https://img.shields.io/badge/Discord-Join%20Us-purple?logo=discord&logoColor=white&style=for-the-badge)](https://discord.gg/A2yvjS6r2C)
+
+
+[Deutsch](https://www.readme-i18n.com/PlakarKorp/plakar?lang=de) |
+[Español](https://www.readme-i18n.com/PlakarKorp/plakar?lang=es) |
+[français](https://www.readme-i18n.com/PlakarKorp/plakar?lang=fr) |
+[日本語](https://www.readme-i18n.com/PlakarKorp/plakar?lang=ja) |
+[한국어](https://www.readme-i18n.com/PlakarKorp/plakar?lang=ko) |
+[Português](https://www.readme-i18n.com/PlakarKorp/plakar?lang=pt) |
+[Русский](https://www.readme-i18n.com/PlakarKorp/plakar?lang=ru) |
+[中文](https://www.readme-i18n.com/PlakarKorp/plakar?lang=zh)
+
+</div>
+
+
+
+
+## ⚙️ Requirement
+
+`plakar` requires Go 1.23.3 or higher,
+it may work on older versions but hasn't been tested.
+
+On systems that package older versions,
+such as Debian or Ubuntu,
+it is preferable to install the latest version from the official website:
+
+```sh
+# Remove old version
+sudo apt remove golang-go
+
+# Install latest Go
+wget https://go.dev/dl/go1.23.4.linux-amd64.tar.gz
+sudo rm -rf /usr/local/go
+sudo tar -C /usr/local -xzf go1.23.4.linux-amd64.tar.gz
+export PATH=$PATH:/usr/local/go/bin
+```
+
+## 📦 Installing the CLI
+
+```
+go install github.com/PlakarKorp/plakar@latest
+```
+
 
 ## 🔄 Latest Releases
 
@@ -32,7 +80,7 @@ Plakar's main strengths:
 - **Horizontally scalable**: Support high concurrency and multiple backups type in a single Kloset.
 - **Browsable**: Browse, sort, search, and compare backups using the Plakar UI.
 - **Fast**: backup, check, sync and restore are  operations are optimized for large-scale data.
-- **Efficient**: more restore points, less storage, thanks to Kloset's unmatched deduplication and compression.
+- **Efficient**: more restore points, less storage, thanks to Kloset's unmatched [deduplication](https://www.plakar.io/posts/2025-07-11/introducing-go-cdc-chunkers-chunk-and-deduplicate-everything/) and compression.
 - **Open Source and actively maintained**: open source forever and now maintained by [Plakar Korp](https://www.plakar.io)
 
 Simplicity and efficiency are plakar's main priorities.
@@ -64,18 +112,6 @@ Navigate the contents of each snapshot to inspect, compare, or selectively resto
 ![Snapshot browser](https://www.plakar.io/readme/snapshot-browser.png)
 
 
-## ⚙️ Requirement
-
-`plakar` requires Go 1.23.3 or higher,
-it may work on older versions but hasn't been tested.
-
-
-## 📦 Installing the CLI
-
-```
-go install github.com/PlakarKorp/plakar@latest
-```
-
 ## 🚀 Quickstart
 
 plakar quickstart: https://docs.plakar.io/en/quickstart/
@@ -101,6 +137,14 @@ $ plakar at /var/backups sync to @s3                        # Synchronise a back
 - **Lock-free maintenance**: Perform garbage collection without interrupting backup or restore operations.
 - **Integrations**: back up and restore from and to any source (file systems, object stores, SaaS applications...) with the right integration.
 
+## 🗄️ Plakar archive format : ptar
+
+[ptar](https://www.plakar.io/posts/2025-06-27/it-doesnt-make-sense-to-wrap-modern-data-in-a-1979-format-introducing-.ptar/) is Plakar’s lightweight, high-performance archive format for secure and efficient backup snapshots.
+
+[Kapsul](https://www.plakar.io/posts/2025-07-07/kapsul-a-tool-to-create-and-manage-deduplicated-compressed-and-encrypted-ptar-vaults/) is a companion tool that lets you run most plakar sub-commands directly on a .ptar archive without extracting it.
+It mounts the archive in memory as a read-only Plakar repository, enabling transparent and efficient inspection, restoration, and diffing of snapshots.
+
+For installation, usage examples, and full documentation, see the [Kapsul repository](https://github.com/PlakarKorp/kapsul).
 
 ## 📚 Documentation
 

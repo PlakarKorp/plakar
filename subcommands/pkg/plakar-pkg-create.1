@@ -1,0 +1,25 @@
+.Dd July 11, 2025
+.Dt PLAKAR-PKG-CREATE 1
+.Os
+.Sh NAME
+.Nm plakar-pkg-create
+.Nd Create Plakar plugins
+.Sh SYNOPSIS
+.Nm plakar pkg build Ar manifest.yaml
+.Sh DESCRIPTION
+The
+.Nm plakar pkg create
+assembles a plugin using the provided
+.Xr plakar-pkg-manifest.yaml 5 .
+.Pp
+All the files needed for the plugin need to be already available,
+i.e. executables must be already be built.
+.Pp
+All external files must reside in the same directory as the
+.Ar manifest.yaml
+or in subdirectories.
+.Sh SEE ALSO
+.Xr plakar-pkg 1 ,
+.Xr plakar-pkg-add 1 ,
+.Xr plakar-pkg-rm 1 ,
+.Xr plakar-pkg-manifest.yaml 5

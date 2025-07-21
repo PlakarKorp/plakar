@@ -20,8 +20,8 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/repository"
+	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/server/httpd"
 	"github.com/PlakarKorp/plakar/subcommands"
 )
@@ -62,6 +62,6 @@ type Server struct {
 }
 
 func (cmd *Server) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	httpd.Server(repo, cmd.ListenAddr, cmd.NoDelete)
+	httpd.Server(ctx, repo, cmd.ListenAddr, cmd.NoDelete)
 	return 0, nil
 }

@@ -19,7 +19,9 @@ package pkg
 import (
 	"flag"
 	"fmt"
+	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
@@ -28,18 +30,13 @@ import (
 	"github.com/PlakarKorp/plakar/utils"
 )
 
-func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &PkgLs{} },
-		subcommands.BeforeRepositoryOpen,
-		"pkg", "ls")
-}
-
-type PkgLs struct {
+type PkgRm struct {
 	subcommands.SubcommandBase
+	Args []string
 }
 
-func (cmd *PkgLs) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("pkg ls", flag.ExitOnError)
+func (cmd *PkgRm) Parse(ctx *appcontext.AppContext, args []string) error {
+	flags := flag.NewFlagSet("pkg rm", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s",
 			flags.Name())
@@ -49,14 +46,17 @@ func (cmd *PkgLs) Parse(ctx *appcontext.AppContext, args []string) error {
 
 	flags.Parse(args)
 
-	if flags.NArg() != 0 {
-		return fmt.Errorf("too many arguments")
-	}
+	cmd.Args = flags.Args()
 
 	return nil
 }
 
-func (cmd *PkgLs) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (int, error) {
+func (cmd *PkgRm) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (int, error) {
+	cachedir, err := utils.GetCacheDir("plakar")
+	if err != nil {
+		return 1, err
+	}
+	cachedir = filepath.Join(cachedir, "plugins")
 
 	dataDir, err := utils.GetDataDir("plakar")
 	if err != nil {
@@ -69,8 +69,20 @@ func (cmd *PkgLs) Execute(ctx *appcontext.AppContext, _ *repository.Repository) 
 		return 1, err
 	}
 
-	for _, name := range names {
-		fmt.Fprintln(ctx.Stdout, name)
+	for _, name := range cmd.Args {
+		if !slices.Contains(names, name) {
+			return 1, fmt.Errorf("plugin %q is not installed", name)
+		}
+		err := os.Remove(filepath.Join(pluginsDir, name))
+		if err != nil {
+			return 1, fmt.Errorf("failed to remove %q: %w", name, err)
+		}
+		extlen := len(filepath.Ext(name))
+		pluginCache := filepath.Join(cachedir, name[:len(name)-extlen])
+		err = os.RemoveAll(pluginCache)
+		if err != nil {
+			return 1, fmt.Errorf("failed to remove cache for %q: %w", name, err)
+		}
 	}
 
 	return 0, nil

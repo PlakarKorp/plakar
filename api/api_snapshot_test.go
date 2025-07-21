@@ -299,7 +299,7 @@ func _TestSnapshotSign(t *testing.T) {
 			require.NoError(t, err, "creating request")
 
 			w := httptest.NewRecorder()
-			urlSigner := NewSnapshotReaderURLSigner(token)
+			urlSigner := NewSnapshotReaderURLSigner(nil, token)
 			urlSigner.Sign(w, req)
 
 			response := w.Result()
