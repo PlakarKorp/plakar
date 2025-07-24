@@ -33,8 +33,8 @@ import (
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"go.yaml.in/yaml/v3"
 	"golang.org/x/mod/semver"
-	"gopkg.in/yaml.v3"
 )
 
 var recipeURL, _ = url.Parse("https://plugins.plakar.io/recipe/")

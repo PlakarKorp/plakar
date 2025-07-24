@@ -40,6 +40,10 @@ The subcommands are as follows:
 > *name*
 > is properly configured.
 
+**import**
+
+> Ingest a destination configuration from stdin.
+
 **ls**
 
 > Display the current destinations configuration.
@@ -66,6 +70,11 @@ The subcommands are as follows:
 > for the destination identified by
 > *name*.
 > Multiple option/value pairs can be specified.
+
+**show** \[name ...]
+
+> Display the current destinations configuration.
+> This is the default if no subcommand is specified.
 
 **unset** *name* \[option ...]
 

@@ -1,12 +1,17 @@
 package utils
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
+	"gopkg.in/ini.v1"
+
 	"github.com/PlakarKorp/kloset/config"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 type configHandler struct {
@@ -45,6 +50,9 @@ func (cl *configHandler) Load() (*config.Config, error) {
 
 	for k, v := range cfg.Repositories {
 		if _, ok := v[".isDefault"]; ok {
+			if cfg.DefaultRepository != "" {
+				return nil, fmt.Errorf("multiple default store")
+			}
 			cfg.DefaultRepository = k
 			delete(v, ".isDefault")
 		}
@@ -150,4 +158,102 @@ func LoadConfig(configDir string) (*config.Config, error) {
 
 func SaveConfig(configDir string, cfg *config.Config) error {
 	return newConfigHandler(configDir).Save(cfg)
+}
+
+// toString converts various primitive types to string.
+func toString(v interface{}) string {
+	switch t := v.(type) {
+	case string:
+		return t
+	case int, int64, float64, bool:
+		return fmt.Sprintf("%v", t)
+	default:
+		return ""
+	}
+}
+
+func LoadINI(rd io.Reader) (map[string]map[string]string, error) {
+	cfg, err := ini.Load(rd)
+	if err != nil {
+		return nil, err
+	}
+
+	keysMap := make(map[string]struct{})
+	result := make(map[string]map[string]string)
+	for _, section := range cfg.Sections() {
+		name := section.Name()
+		if name == ini.DefaultSection {
+			continue
+		}
+		keysMap[name] = struct{}{}
+		result[name] = make(map[string]string)
+		for _, key := range section.Keys() {
+			result[name][key.Name()] = key.Value()
+		}
+	}
+	return result, nil
+}
+
+func LoadYAML(rd io.Reader) (map[string]map[string]string, error) {
+	var raw map[string]interface{}
+	decoder := yaml.NewDecoder(rd)
+	if err := decoder.Decode(&raw); err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]map[string]string)
+	for section, value := range raw {
+		sectionMap, ok := value.(map[string]interface{})
+		if !ok {
+			continue // skip non-object top-level keys
+		}
+		result[section] = make(map[string]string)
+		for k, v := range sectionMap {
+			result[section][k] = toString(v)
+		}
+	}
+
+	return result, nil
+}
+
+// LoadJSON loads a JSON object and returns a nested map[string]map[string]string.
+func LoadJSON(rd io.Reader) (map[string]map[string]string, error) {
+	var raw map[string]map[string]string
+	decoder := json.NewDecoder(rd)
+	if err := decoder.Decode(&raw); err != nil {
+		return nil, err
+	}
+
+	fmt.Println(raw)
+
+	return raw, nil
+}
+
+func GetConf(rd io.Reader) (map[string]map[string]string, error) {
+	data, err := io.ReadAll(rd)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read config data: %w", err)
+	}
+
+	var configMap map[string]map[string]string
+	if configMap, err = LoadYAML(bytes.NewReader(data)); err == nil {
+	} else if configMap, err = LoadJSON(bytes.NewReader(data)); err == nil {
+	} else if configMap, err = LoadINI(bytes.NewReader(data)); err != nil {
+		return nil, fmt.Errorf("failed to parse config data: %w", err)
+	}
+
+	providerSpecialCases := map[string]string{
+		"drive":         "googledrive://",
+		"google photos": "googlephotos://",
+	}
+	for _, section := range configMap {
+		if section["type"] != "" {
+			if specialCase, ok := providerSpecialCases[section["type"]]; ok {
+				section["location"] = specialCase
+			} else {
+				section["location"] += section["type"] + "://"
+			}
+		}
+	}
+	return configMap, nil
 }

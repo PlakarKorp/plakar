@@ -54,7 +54,7 @@ func QueryParamToUint32(r *http.Request, param string, min, def uint32) (uint32,
 
 	n, err := strconv.ParseInt(str, 10, 32)
 	if err != nil {
-		return 0, err
+		return 0, parameterError(param, BadNumber, err)
 	}
 
 	if n < 0 || uint32(n) < min {
@@ -72,7 +72,7 @@ func QueryParamToInt64(r *http.Request, param string, min, def int64) (int64, er
 
 	n, err := strconv.ParseInt(str, 10, 64)
 	if err != nil {
-		return 0, err
+		return 0, parameterError(param, BadNumber, err)
 	}
 
 	if n < min {

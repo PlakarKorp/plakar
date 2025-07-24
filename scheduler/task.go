@@ -164,7 +164,7 @@ func (ctx *TaskContext) newReporter(task *TaskBase) *reporting.Reporter {
 	doReport := false
 	if task.Reporting {
 		doReport = true
-		authToken, err := ctx.AppContext.GetAuthToken(ctx.Repository.Configuration().RepositoryID)
+		authToken, err := ctx.AppContext.GetCookies().GetAuthToken()
 		if err != nil || authToken == "" {
 			doReport = false
 		} else {

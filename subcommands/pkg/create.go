@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"os"
 	"path/filepath"
 	"runtime"
 
@@ -37,7 +36,6 @@ import (
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/plugins"
 	"github.com/PlakarKorp/plakar/subcommands"
-	"gopkg.in/yaml.v3"
 )
 
 type PkgCreate struct {
@@ -74,18 +72,12 @@ func (cmd *PkgCreate) Parse(ctx *appcontext.AppContext, args []string) error {
 	cmd.Base = filepath.Dir(manifest)
 	cmd.ManifestPath = manifest
 
-	fp, err := os.Open(manifest)
-	if err != nil {
-		return fmt.Errorf("can't open %s: %w", manifest, err)
-	}
-	defer fp.Close()
-
-	if err := yaml.NewDecoder(fp).Decode(&cmd.Manifest); err != nil {
+	if err := plugins.ParseManifestFile(manifest, &cmd.Manifest); err != nil {
 		return fmt.Errorf("failed to parse the manifest %s: %w", manifest, err)
 	}
 
 	if cmd.Out == "" {
-		p := fmt.Sprintf("%s_v%s_%s_%s.ptar", cmd.Manifest.Name, cmd.Manifest.Version, runtime.GOOS, runtime.GOARCH)
+		p := fmt.Sprintf("%s_%s_%s_%s.ptar", cmd.Manifest.Name, cmd.Manifest.Version, runtime.GOOS, runtime.GOARCH)
 		cmd.Out = filepath.Join(ctx.CWD, p)
 	}
 

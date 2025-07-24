@@ -39,10 +39,9 @@ The subcommands are as follows:
 > *name*
 > is properly configured.
 
-**ls**
+**import**
 
-> Display the current stores configuration.
-> This is the default if no subcommand is specified.
+> Ingest a store configuration from stdin.
 
 **ping** *name*
 
@@ -65,6 +64,11 @@ The subcommands are as follows:
 > for the store identified by
 > *name*.
 > Multiple option/value pairs can be specified.
+
+**show** \[name ...]
+
+> Display the current stores configuration.
+> This is the default if no subcommand is specified.
 
 **unset** *name* \[option ...]
 

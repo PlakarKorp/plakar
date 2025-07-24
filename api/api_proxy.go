@@ -44,7 +44,7 @@ func (ui *uiserver) servicesProxy(w http.ResponseWriter, r *http.Request) error 
 		ui.ctx.OperatingSystem,
 		ui.ctx.Architecture)
 
-	authToken, _ := ui.ctx.GetAuthToken(ui.config.RepositoryID)
+	authToken, _ := ui.ctx.GetCookies().GetAuthToken()
 	if authToken != "" {
 		req.Header.Add("Authorization", "Bearer "+authToken)
 	}
@@ -75,7 +75,7 @@ type AlertServiceConfiguration struct {
 }
 
 func (ui *uiserver) servicesGetAlertingServiceConfiguration(w http.ResponseWriter, r *http.Request) error {
-	authToken, _ := ui.ctx.GetAuthToken(ui.config.RepositoryID)
+	authToken, _ := ui.ctx.GetCookies().GetAuthToken()
 
 	if authToken == "" {
 		w.WriteHeader(http.StatusUnauthorized)
@@ -113,7 +113,7 @@ func (ui *uiserver) servicesGetAlertingServiceConfiguration(w http.ResponseWrite
 }
 
 func (ui *uiserver) servicesSetAlertingServiceConfiguration(w http.ResponseWriter, r *http.Request) error {
-	authToken, _ := ui.ctx.GetAuthToken(ui.config.RepositoryID)
+	authToken, _ := ui.ctx.GetCookies().GetAuthToken()
 
 	if authToken == "" {
 		w.WriteHeader(http.StatusUnauthorized)

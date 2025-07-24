@@ -32,9 +32,8 @@ parameters.
 Check wether the store identified by
 .Ar name
 is properly configured.
-.It Cm ls
-Display the current stores configuration.
-This is the default if no subcommand is specified.
+.It Cm import
+Ingest a store configuration from stdin.
 .It Cm ping Ar name
 Try to connect to the store identified by
 .Ar name
@@ -51,6 +50,9 @@ to
 for the store identified by
 .Ar name .
 Multiple option/value pairs can be specified.
+.It Cm show Op name ...
+Display the current stores configuration.
+This is the default if no subcommand is specified.
 .It Cm unset Ar name Op option ...
 Remove the
 .Ar option

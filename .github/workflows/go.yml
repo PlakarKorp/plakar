@@ -8,6 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     strategy:
@@ -25,4 +26,4 @@ jobs:
       run: go build -v ./...
 
     - name: Test
-      run: go test -v -timeout 1m ./...
+      run: timeout -s QUIT 5m go test -v -timeout 1m ./...

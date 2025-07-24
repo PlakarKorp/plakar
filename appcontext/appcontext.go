@@ -4,8 +4,6 @@ import (
 	"github.com/PlakarKorp/kloset/kcontext"
 	"github.com/PlakarKorp/kloset/snapshot/importer"
 	"github.com/PlakarKorp/plakar/cookies"
-
-	"github.com/google/uuid"
 )
 
 type AppContext struct {
@@ -64,12 +62,4 @@ func (c *AppContext) SetCookies(cacheManager *cookies.Manager) {
 
 func (c *AppContext) GetCookies() *cookies.Manager {
 	return c.cookies
-}
-
-func (c *AppContext) GetAuthToken(repository uuid.UUID) (string, error) {
-	if authToken, err := c.cookies.GetAuthToken(); err != nil {
-		return "", err
-	} else {
-		return authToken, nil
-	}
 }

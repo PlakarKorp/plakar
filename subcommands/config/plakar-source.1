@@ -33,6 +33,8 @@ parameters.
 Check wether the importer for the source identified by
 .Ar name
 is properly configured.
+.It Cm import
+Ingest a source configuration from stdin.
 .It Cm ls
 Display the current sources configuration.
 This is the default if no subcommand is specified.
@@ -52,6 +54,9 @@ to
 for the source identified by
 .Ar name .
 Multiple option/value pairs can be specified.
+.It Cm show Op name ...
+Display the current sources configuration.
+This is the default if no subcommand is specified.
 .It Cm unset Ar name Op option ...
 Remove the
 .Ar option

@@ -24,6 +24,7 @@ func TestConfigEmpty(t *testing.T) {
 
 	configPath := filepath.Join(tmpDir, "config.yaml")
 	cfg, err := utils.LoadOldConfigIfExists(configPath)
+
 	require.NoError(t, err)
 	ctx := appcontext.NewAppContext()
 	ctx.ConfigDir = tmpDir
@@ -43,7 +44,7 @@ func TestConfigEmpty(t *testing.T) {
 	require.Equal(t, 0, status)
 
 	output := bufOut.String()
-	expectedOutput := "{}\n"
+	expectedOutput := ""
 	require.Equal(t, expectedOutput, output)
 
 	bufOut.Reset()
@@ -94,35 +95,35 @@ func TestCmdRemote(t *testing.T) {
 	ctx.Stderr = bufErr
 
 	args := []string{}
-	err = source_config(ctx, args)
+	err = configure(ctx, "source", args)
 	require.NoError(t, err)
 
 	args = []string{"unknown"}
-	err = source_config(ctx, args)
-	require.EqualError(t, err, "usage: plakar source [add|check|ls|ping|rm|set|unset]")
+	err = configure(ctx, "source", args)
+	require.EqualError(t, err, "usage: plakar source [add|check|import|ls|ping|rm|set|show|unset]")
 
 	args = []string{"add", "my-remote", "invalid://my-remote"}
-	err = source_config(ctx, args)
+	err = configure(ctx, "source", args)
 	require.NoError(t, err)
 
 	args = []string{"add", "my-remote2", "invalid://my-remote2"}
-	err = source_config(ctx, args)
+	err = configure(ctx, "source", args)
 	require.NoError(t, err)
 
 	args = []string{"set", "my-remote", "option=value"}
-	err = source_config(ctx, args)
+	err = configure(ctx, "source", args)
 	require.NoError(t, err)
 
 	args = []string{"set", "my-remote2", "option2=value2"}
-	err = source_config(ctx, args)
+	err = configure(ctx, "source", args)
 	require.NoError(t, err)
 
 	args = []string{"unset", "my-remote2", "option2"}
-	err = source_config(ctx, args)
+	err = configure(ctx, "source", args)
 	require.NoError(t, err)
 
 	args = []string{"check", "my-remote"}
-	err = source_config(ctx, args)
+	err = configure(ctx, "source", args)
 	require.EqualError(t, err, "unsupported importer protocol")
 }
 
@@ -146,38 +147,34 @@ func TestCmdRepository(t *testing.T) {
 	ctx.Stderr = bufErr
 
 	args := []string{"unknown"}
-	err = cmd_store_config(ctx, args)
-	require.EqualError(t, err, "usage: plakar store [add|check|ls|ping|rm|set|unset]")
+	err = configure(ctx, "store", args)
+	require.EqualError(t, err, "usage: plakar store [add|check|import|ls|ping|rm|set|show|unset]")
 
 	args = []string{"add", "my-repo", "fs:/tmp/my-repo"}
-	err = cmd_store_config(ctx, args)
+	err = configure(ctx, "store", args)
 	require.NoError(t, err)
 
 	args = []string{"set", "my-repo", "location=invalid://place"}
-	err = cmd_store_config(ctx, args)
-	require.NoError(t, err)
-
-	args = []string{"default", "my-repo"}
-	err = cmd_store_config(ctx, args)
+	err = configure(ctx, "store", args)
 	require.NoError(t, err)
 
 	args = []string{"add", "my-repo2", "invalid://place2"}
-	err = cmd_store_config(ctx, args)
+	err = configure(ctx, "store", args)
 	require.NoError(t, err)
 
 	args = []string{"set", "my-repo", "option=value"}
-	err = cmd_store_config(ctx, args)
+	err = configure(ctx, "store", args)
 	require.NoError(t, err)
 
 	args = []string{"set", "my-repo2", "option2=value2"}
-	err = cmd_store_config(ctx, args)
+	err = configure(ctx, "store", args)
 	require.NoError(t, err)
 
 	args = []string{"unset", "my-repo2", "option2"}
-	err = cmd_store_config(ctx, args)
+	err = configure(ctx, "store", args)
 	require.NoError(t, err)
 
 	args = []string{"check", "my-repo2"}
-	err = cmd_store_config(ctx, args)
+	err = configure(ctx, "store", args)
 	require.EqualError(t, err, "backend 'invalid' does not exist")
 }

@@ -40,6 +40,10 @@ The subcommands are as follows:
 > *name*
 > is properly configured.
 
+**import**
+
+> Ingest a source configuration from stdin.
+
 **ls**
 
 > Display the current sources configuration.
@@ -66,6 +70,11 @@ The subcommands are as follows:
 > for the source identified by
 > *name*.
 > Multiple option/value pairs can be specified.
+
+**show** \[name ...]
+
+> Display the current sources configuration.
+> This is the default if no subcommand is specified.
 
 **unset** *name* \[option ...]
 

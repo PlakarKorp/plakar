@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"io"
 	"net/http"
 	"path"
@@ -83,7 +84,7 @@ func (ui *uiserver) snapshotReader(w http.ResponseWriter, r *http.Request) error
 
 	render := r.URL.Query().Get("render")
 	switch render {
-	case "code", "text", "auto":
+	case "code", "text", "text_styled", "auto":
 		// valid values
 	case "":
 		render = "auto"
@@ -117,57 +118,101 @@ func (ui *uiserver) snapshotReader(w http.ResponseWriter, r *http.Request) error
 		w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(filepath.Base(path)))
 	}
 
-	if render != "code" {
-		if render == "text" {
-			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		}
+	switch render {
+	case "text":
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		http.ServeContent(w, r, filepath.Base(path), entry.Stat().ModTime(), file.(io.ReadSeeker))
 		return nil
-	}
+	case "text_styled":
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
-	lexer := lexers.Match(path)
-	if lexer == nil {
-		lexer = lexers.Get(entry.ResolvedObject.ContentType)
-	}
-	if lexer == nil {
-		lexer = lexers.Fallback // Fallback if no lexer is found
-	}
-	formatter := formatters.Get("html")
-	style := styles.Get("dracula")
+		if _, err := w.Write([]byte(`<!DOCTYPE html>
+		<html>
+			<head>
+			<meta charset="utf-8">
+			<style>
+				body {
+					background-color: #282a36;
+					color: #fff;
+					font-family: monospace;
+				}
+			</style>
+		</head>
+		<body>
+			<pre>`)); err != nil {
+			return err
+		}
 
-	w.Header().Set("Content-Type", "text/html")
-	if _, err := w.Write([]byte("<!DOCTYPE html>")); err != nil {
-		return err
-	}
-
-	reader := bufio.NewReader(file)
-	buffer := make([]byte, 4096) // Fixed-size buffer for chunked reading
-	for {
-		n, err := reader.Read(buffer) // Read up to the size of the buffer
-		if n > 0 {
-			chunk := string(buffer[:n])
-
-			// Tokenize the chunk and apply syntax highlighting
-			iterator, errTokenize := lexer.Tokenise(nil, chunk)
-			if errTokenize != nil {
+		reader := bufio.NewReader(file)
+		buf := make([]byte, 4096)
+		for {
+			n, err := reader.Read(buf)
+			if n > 0 {
+				escaped := html.EscapeString(string(buf[:n])) // Prevent HTML injection
+				if _, err := w.Write([]byte(escaped)); err != nil {
+					return err
+				}
+			}
+			if err == io.EOF {
 				break
 			}
+			if err != nil {
+				return err
+			}
+		}
 
-			errFormat := formatter.Format(w, style, iterator)
-			if errFormat != nil {
+		if _, err := w.Write([]byte("</pre></body></html>")); err != nil {
+			return err
+		}
+		return nil
+	case "auto":
+		http.ServeContent(w, r, filepath.Base(path), entry.Stat().ModTime(), file.(io.ReadSeeker))
+		return nil
+	default: // "code"
+		lexer := lexers.Match(path)
+		if lexer == nil {
+			lexer = lexers.Get(entry.ResolvedObject.ContentType)
+		}
+		if lexer == nil {
+			lexer = lexers.Fallback // Fallback if no lexer is found
+		}
+		formatter := formatters.Get("html")
+		style := styles.Get("dracula")
+
+		w.Header().Set("Content-Type", "text/html")
+		if _, err := w.Write([]byte("<!DOCTYPE html>")); err != nil {
+			return err
+		}
+
+		reader := bufio.NewReader(file)
+		buffer := make([]byte, 4096) // Fixed-size buffer for chunked reading
+		for {
+			n, err := reader.Read(buffer) // Read up to the size of the buffer
+			if n > 0 {
+				chunk := string(buffer[:n])
+
+				// Tokenize the chunk and apply syntax highlighting
+				iterator, errTokenize := lexer.Tokenise(nil, chunk)
+				if errTokenize != nil {
+					break
+				}
+
+				errFormat := formatter.Format(w, style, iterator)
+				if errFormat != nil {
+					break
+				}
+			}
+
+			// Check for end of file (EOF)
+			if err == io.EOF {
+				break
+			} else if err != nil {
 				break
 			}
 		}
 
-		// Check for end of file (EOF)
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			break
-		}
+		return nil
 	}
-
-	return nil
 }
 
 type SnapshotReaderURLSigner struct {
@@ -464,14 +509,14 @@ func (ui *uiserver) snapshotVFSSearch(w http.ResponseWriter, r *http.Request) er
 	if str := r.URL.Query().Get("offset"); str != "" {
 		o, err := strconv.ParseInt(str, 10, 32)
 		if err != nil {
-			return err
+			return parameterError("offset", BadNumber, err)
 		}
 		offset = int(o)
 	}
 	if str := r.URL.Query().Get("limit"); str != "" {
 		o, err := strconv.ParseInt(str, 10, 32)
 		if err != nil {
-			return err
+			return parameterError("limit", BadNumber, err)
 		}
 		limit = int(o)
 		if limit <= 0 {
