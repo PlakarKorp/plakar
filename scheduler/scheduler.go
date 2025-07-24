@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/reporting"
 )
 
 type Schedule interface {
@@ -20,10 +21,11 @@ type ScheduledJob struct {
 }
 
 type AgentScheduler struct {
-	config *Configuration
-	ctx    *appcontext.AppContext
-	wg     sync.WaitGroup
-	sched  *Scheduler[*ScheduledJob]
+	config   *Configuration
+	ctx      *appcontext.AppContext
+	wg       sync.WaitGroup
+	sched    *Scheduler[*ScheduledJob]
+	reporter *reporting.Reporter
 }
 
 func NewAgentScheduler(ctx *appcontext.AppContext, config *Configuration) *AgentScheduler {
@@ -35,6 +37,8 @@ func NewAgentScheduler(ctx *appcontext.AppContext, config *Configuration) *Agent
 }
 
 func (s *AgentScheduler) Run() {
+	s.reporter = reporting.NewReporter(s.ctx)
+
 	runq := make(chan *ScheduledJob, 1000)
 	s.sched = NewScheduler(runq)
 
@@ -72,6 +76,7 @@ func (s *AgentScheduler) Run() {
 			}
 		}
 	out:
+		// XXX flush reports
 	}()
 }
 

@@ -5,7 +5,6 @@ import (
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/reporting"
-	"github.com/PlakarKorp/plakar/services"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/subcommands/backup"
 	"github.com/PlakarKorp/plakar/subcommands/check"
@@ -16,6 +15,8 @@ import (
 )
 
 func RunCommand(ctx *appcontext.AppContext, cmd subcommands.Subcommand, repo *repository.Repository, taskName string) (int, error) {
+	reporter := reporting.NewReporter(ctx)
+	report := reporter.NewReport()
 
 	var taskKind string
 	switch cmd.(type) {
@@ -31,25 +32,14 @@ func RunCommand(ctx *appcontext.AppContext, cmd subcommands.Subcommand, repo *re
 		taskKind = "rm"
 	case *maintenance.Maintenance:
 		taskKind = "maintenance"
+	default:
+		report.SetIgnore()
 	}
 
-	var doReport bool
-	if repo != nil && taskKind != "" {
-		authToken, err := ctx.GetCookies().GetAuthToken()
-		if err == nil && authToken != "" {
-			sc := services.NewServiceConnector(ctx, authToken)
-			enabled, err := sc.GetServiceStatus("alerting")
-			if err == nil && enabled {
-				doReport = true
-			}
-		}
-	}
-
-	reporter := reporting.NewReporter(ctx, doReport, repo, ctx.GetLogger())
-	reporter.TaskStart(taskKind, taskName)
+	report.TaskStart(taskKind, taskName)
 	if repo != nil {
-		reporter.WithRepositoryName(repo.Location())
-		reporter.WithRepository(repo)
+		report.WithRepositoryName(repo.Location())
+		report.WithRepository(repo)
 	}
 
 	var err error
@@ -60,7 +50,7 @@ func RunCommand(ctx *appcontext.AppContext, cmd subcommands.Subcommand, repo *re
 		cmd := cmd.(*backup.Backup)
 		status, err, snapshotID, warning = cmd.DoBackup(ctx, repo)
 		if !cmd.DryRun && err == nil {
-			reporter.WithSnapshotID(snapshotID)
+			report.WithSnapshotID(snapshotID)
 		}
 	} else {
 		status, err = cmd.Execute(ctx, repo)
@@ -68,13 +58,15 @@ func RunCommand(ctx *appcontext.AppContext, cmd subcommands.Subcommand, repo *re
 
 	if status == 0 {
 		if warning != nil {
-			reporter.TaskWarning("warning: %s", warning)
+			report.TaskWarning("warning: %s", warning)
 		} else {
-			reporter.TaskDone()
+			report.TaskDone()
 		}
 	} else if err != nil {
-		reporter.TaskFailed(0, "error: %s", err)
+		report.TaskFailed(0, "error: %s", err)
 	}
+
+	reporter.StopAndWait()
 
 	return status, err
 }

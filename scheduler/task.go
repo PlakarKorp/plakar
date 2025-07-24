@@ -13,7 +13,6 @@ import (
 	"github.com/PlakarKorp/kloset/versioning"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/reporting"
-	"github.com/PlakarKorp/plakar/services"
 )
 
 type Task interface {
@@ -36,6 +35,7 @@ type TaskContext struct {
 	Repository *repository.Repository
 
 	reporter     *reporting.Reporter
+	report       *reporting.Report
 	taskStatus   reporting.TaskStatus
 	taskErrorMsg string
 	snapshotId   objects.MAC
@@ -68,13 +68,15 @@ func (ctx *TaskContext) ReportFailure(format string, args ...any) {
 }
 
 func (ctx *TaskContext) Prepare(task Task) error {
+	ctx.report.TaskStart(strings.ToLower(task.Base().Type), ctx.JobName)
+	ctx.report.WithRepositoryName(task.Base().Repository)
+
 	err := ctx.loadRepository(task.Base())
 	if err != nil {
 		ctx.GetLogger().Error("Error loading repository: %s", err)
 		return err
 	}
-
-	ctx.reporter = ctx.newReporter(task.Base())
+	ctx.report.WithRepository(ctx.Repository)
 
 	go func(events <-chan any) {
 		for event := range events {
@@ -97,17 +99,17 @@ func (ctx *TaskContext) Finalize() {
 
 	var null objects.MAC
 	if ctx.snapshotId != null {
-		ctx.reporter.WithSnapshotID(ctx.snapshotId)
+		ctx.report.WithSnapshotID(ctx.snapshotId)
 	}
 
 	if ctx.reporter != nil {
 		switch ctx.taskStatus {
 		case reporting.StatusWarning:
-			ctx.reporter.TaskWarning(ctx.taskErrorMsg)
+			ctx.report.TaskWarning(ctx.taskErrorMsg)
 		case reporting.StatusFailed:
-			ctx.reporter.TaskFailed(1, ctx.taskErrorMsg)
+			ctx.report.TaskFailed(1, ctx.taskErrorMsg)
 		default:
-			ctx.reporter.TaskDone()
+			ctx.report.TaskDone()
 		}
 	}
 
@@ -158,27 +160,4 @@ func (ctx *TaskContext) loadRepository(task *TaskBase) error {
 	ctx.Repository = repo
 	ctx.Store = store
 	return nil
-}
-
-func (ctx *TaskContext) newReporter(task *TaskBase) *reporting.Reporter {
-	doReport := false
-	if task.Reporting {
-		doReport = true
-		authToken, err := ctx.AppContext.GetCookies().GetAuthToken()
-		if err != nil || authToken == "" {
-			doReport = false
-		} else {
-			sc := services.NewServiceConnector(ctx.AppContext, authToken)
-			enabled, err := sc.GetServiceStatus("alerting")
-			if err != nil || !enabled {
-				doReport = false
-			}
-		}
-	}
-
-	reporter := reporting.NewReporter(ctx.AppContext, doReport, ctx.Repository, ctx.GetLogger())
-	reporter.TaskStart(strings.ToLower(task.Type), ctx.JobName)
-	reporter.WithRepositoryName(task.Repository)
-	reporter.WithRepository(ctx.Repository)
-	return reporter
 }
