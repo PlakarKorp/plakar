@@ -4,16 +4,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/reporting"
-	"github.com/PlakarKorp/plakar/services"
 )
 
 type Scheduler struct {
-	config *Configuration
-	ctx    *appcontext.AppContext
-	wg     sync.WaitGroup
+	config   *Configuration
+	ctx      *appcontext.AppContext
+	wg       sync.WaitGroup
+	reporter *reporting.Reporter
 }
 
 func stringToDuration(s string) (time.Duration, error) {
@@ -33,6 +32,8 @@ func NewScheduler(ctx *appcontext.AppContext, config *Configuration) *Scheduler 
 }
 
 func (s *Scheduler) Run() {
+	s.reporter = reporting.NewReporter(s.ctx)
+
 	for _, cleanupCfg := range s.config.Agent.Maintenance {
 		go s.maintenanceTask(cleanupCfg)
 	}
@@ -54,23 +55,7 @@ func (s *Scheduler) Run() {
 			go s.syncTask(tasksetCfg, syncCfg)
 		}
 	}
-}
 
-func (s *Scheduler) NewTaskReporter(ctx *appcontext.AppContext, repo *repository.Repository, taskType, taskName, repoName string) *reporting.Reporter {
-	doReport := true
-	authToken, err := s.ctx.GetCookies().GetAuthToken()
-	if err != nil || authToken == "" {
-		doReport = false
-	} else {
-		sc := services.NewServiceConnector(s.ctx, authToken)
-		enabled, err := sc.GetServiceStatus("alerting")
-		if err != nil || !enabled {
-			doReport = false
-		}
-	}
-	reporter := reporting.NewReporter(ctx, doReport, repo, s.ctx.GetLogger())
-	reporter.TaskStart(taskType, taskName)
-	reporter.WithRepositoryName(repoName)
-	reporter.WithRepository(repo)
-	return reporter
+	<-s.ctx.Done()
+	s.reporter.StopAndWait()
 }

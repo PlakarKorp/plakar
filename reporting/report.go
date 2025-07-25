@@ -3,6 +3,8 @@ package reporting
 import (
 	"time"
 
+	"github.com/PlakarKorp/kloset/logging"
+	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot/header"
 	"github.com/PlakarKorp/kloset/storage"
 )
@@ -40,4 +42,9 @@ type Report struct {
 	Task       *ReportTask       `json:"report_task,omitempty"`
 	Repository *ReportRepository `json:"report_repository,omitempty"`
 	Snapshot   *ReportSnapshot   `json:"report_snapshot,omitempty"`
+
+	repo     *repository.Repository `json:"-"`
+	logger   *logging.Logger        `json:"-"`
+	reporter chan *Report           `json:"-"`
+	ignore   bool                   `json:"-"`
 }
