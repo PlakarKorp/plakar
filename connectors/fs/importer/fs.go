@@ -32,6 +32,7 @@ import (
 )
 
 type FSImporter struct {
+	fsType   string
 	ctx      context.Context
 	opts     *importer.Options
 	rootDir  string
@@ -43,15 +44,27 @@ type FSImporter struct {
 
 	nocrossfs bool
 	devno     uint64
+
+	snapshotter Snapshotter
 }
 
 func init() {
 	importer.Register("fs", location.FLAG_LOCALFS, NewFSImporter)
+	importer.Register("btrfs", location.FLAG_LOCALFS, NewBTRFSImporter)
+}
+
+func NewBTRFSImporter(appCtx context.Context, opts *importer.Options, name string, config map[string]string) (importer.Importer, error) {
+	rootDir := strings.TrimPrefix(config["location"], "btrfs://")
+	return fsImporter("btrfs", rootDir, appCtx, opts, name, config, &BtrfsSnapshotter{})
 }
 
 func NewFSImporter(appCtx context.Context, opts *importer.Options, name string, config map[string]string) (importer.Importer, error) {
+	rootDir := strings.TrimPrefix(config["location"], "fs://")
+	return fsImporter("fs", rootDir, appCtx, opts, name, config, &NOOPSnapshotter{})
+}
+
+func fsImporter(fsType string, rootDir string, appCtx context.Context, opts *importer.Options, name string, config map[string]string, snapshotter Snapshotter) (importer.Importer, error) {
 	location := config["location"]
-	rootDir := strings.TrimPrefix(location, "fs://")
 
 	if !filepath.IsAbs(rootDir) {
 		return nil, fmt.Errorf("not an absolute path %s", location)
@@ -66,15 +79,22 @@ func NewFSImporter(appCtx context.Context, opts *importer.Options, name string, 
 		return nil, err
 	}
 
+	rootDir, err = snapshotter.Create(rootDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create snapshot for %s: %w", rootDir, err)
+	}
+
 	return &FSImporter{
-		ctx:       appCtx,
-		opts:      opts,
-		rootDir:   rootDir,
-		realpath:  realpath,
-		uidToName: make(map[uint64]string),
-		gidToName: make(map[uint64]string),
-		nocrossfs: nocrossfs,
-		devno:     devno,
+		fsType:      fsType,
+		ctx:         appCtx,
+		opts:        opts,
+		rootDir:     rootDir,
+		realpath:    realpath,
+		uidToName:   make(map[uint64]string),
+		gidToName:   make(map[uint64]string),
+		nocrossfs:   nocrossfs,
+		devno:       devno,
+		snapshotter: snapshotter,
 	}, nil
 }
 
@@ -83,7 +103,7 @@ func (p *FSImporter) Origin() string {
 }
 
 func (p *FSImporter) Type() string {
-	return "fs"
+	return p.fsType
 }
 
 func (p *FSImporter) Scan() (<-chan *importer.ScanResult, error) {
@@ -201,7 +221,7 @@ func realpathFollow(path string) (resolved string, dev uint64, err error) {
 }
 
 func (p *FSImporter) Close() error {
-	return nil
+	return p.snapshotter.Delete(p.rootDir)
 }
 
 func (p *FSImporter) Root() string {
