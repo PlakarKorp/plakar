@@ -29,7 +29,6 @@ import (
 	"strings"
 
 	"github.com/PlakarKorp/kloset/objects"
-	"github.com/PlakarKorp/kloset/reading"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/storage"
 	plakarsftp "github.com/PlakarKorp/plakar/sftp"
@@ -159,7 +158,7 @@ func (s *Store) GetPackfiles() ([]objects.MAC, error) {
 	return s.packfiles.List()
 }
 
-func (s *Store) GetPackfile(mac objects.MAC) (io.Reader, error) {
+func (s *Store) GetPackfile(mac objects.MAC) (io.ReadCloser, error) {
 	fp, err := s.packfiles.Get(mac)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -171,7 +170,7 @@ func (s *Store) GetPackfile(mac objects.MAC) (io.Reader, error) {
 	return fp, nil
 }
 
-func (s *Store) GetPackfileBlob(mac objects.MAC, offset uint64, length uint32) (io.Reader, error) {
+func (s *Store) GetPackfileBlob(mac objects.MAC, offset uint64, length uint32) (io.ReadCloser, error) {
 	res, err := s.packfiles.GetBlob(mac, offset, length)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -211,7 +210,7 @@ func (s *Store) PutState(mac objects.MAC, rd io.Reader) (int64, error) {
 	return s.states.Put(mac, rd)
 }
 
-func (s *Store) GetState(mac objects.MAC) (io.Reader, error) {
+func (s *Store) GetState(mac objects.MAC) (io.ReadCloser, error) {
 	return s.states.Get(mac)
 }
 
@@ -244,13 +243,13 @@ func (s *Store) PutLock(lockID objects.MAC, rd io.Reader) (int64, error) {
 	return WriteToFileAtomicTempDir(s.client, path.Join(s.Path("locks"), hex.EncodeToString(lockID[:])), rd, s.Path(""))
 }
 
-func (s *Store) GetLock(lockID objects.MAC) (io.Reader, error) {
+func (s *Store) GetLock(lockID objects.MAC) (io.ReadCloser, error) {
 	fp, err := s.client.Open(path.Join(s.Path("locks"), hex.EncodeToString(lockID[:])))
 	if err != nil {
 		return nil, err
 	}
 
-	return reading.ClosingReader(fp), nil
+	return fp, nil
 }
 
 func (s *Store) DeleteLock(lockID objects.MAC) error {

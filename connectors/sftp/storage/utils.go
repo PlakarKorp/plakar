@@ -17,35 +17,12 @@
 package sftp
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"path"
 
-	"github.com/PlakarKorp/kloset/reading"
 	"github.com/pkg/sftp"
 )
-
-func ClosingLimitedReaderFromOffset(file *sftp.File, offset, length int64) (io.Reader, error) {
-	if _, err := file.Seek(offset, io.SeekStart); err != nil {
-		return nil, err
-	}
-
-	st, err := file.Stat()
-	if err != nil {
-		return nil, err
-	}
-
-	if st.Size() == 0 {
-		return bytes.NewBuffer([]byte{}), nil
-	}
-
-	if length > (st.Size() - offset) {
-		return nil, fmt.Errorf("invalid length")
-	}
-
-	return reading.ClosingLimitedReader(file, length), nil
-}
 
 func WriteToFileAtomic(sftpClient *sftp.Client, filename string, rd io.Reader) (int64, error) {
 	return WriteToFileAtomicTempDir(sftpClient, filename, rd, path.Dir(filename))

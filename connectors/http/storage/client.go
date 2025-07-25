@@ -145,7 +145,7 @@ func (s *Store) PutState(MAC objects.MAC, rd io.Reader) (int64, error) {
 	return int64(len(data)), nil
 }
 
-func (s *Store) GetState(MAC objects.MAC) (io.Reader, error) {
+func (s *Store) GetState(MAC objects.MAC) (io.ReadCloser, error) {
 	r, err := s.sendRequest("GET", "/state", network.ReqGetState{
 		MAC: MAC,
 	})
@@ -160,7 +160,7 @@ func (s *Store) GetState(MAC objects.MAC) (io.Reader, error) {
 	if resGetState.Err != "" {
 		return nil, fmt.Errorf("%s", resGetState.Err)
 	}
-	return bytes.NewBuffer(resGetState.Data), nil
+	return io.NopCloser(bytes.NewBuffer(resGetState.Data)), nil
 }
 
 func (s *Store) DeleteState(MAC objects.MAC) error {
@@ -226,7 +226,7 @@ func (s *Store) PutPackfile(MAC objects.MAC, rd io.Reader) (int64, error) {
 	return int64(len(data)), nil
 }
 
-func (s *Store) GetPackfile(MAC objects.MAC) (io.Reader, error) {
+func (s *Store) GetPackfile(MAC objects.MAC) (io.ReadCloser, error) {
 	r, err := s.sendRequest("GET", "/packfile", network.ReqGetPackfile{
 		MAC: MAC,
 	})
@@ -241,10 +241,10 @@ func (s *Store) GetPackfile(MAC objects.MAC) (io.Reader, error) {
 	if resGetPackfile.Err != "" {
 		return nil, fmt.Errorf("%s", resGetPackfile.Err)
 	}
-	return bytes.NewBuffer(resGetPackfile.Data), nil
+	return io.NopCloser(bytes.NewBuffer(resGetPackfile.Data)), nil
 }
 
-func (s *Store) GetPackfileBlob(MAC objects.MAC, offset uint64, length uint32) (io.Reader, error) {
+func (s *Store) GetPackfileBlob(MAC objects.MAC, offset uint64, length uint32) (io.ReadCloser, error) {
 	r, err := s.sendRequest("GET", "/packfile/blob", network.ReqGetPackfileBlob{
 		MAC:    MAC,
 		Offset: offset,
@@ -261,7 +261,7 @@ func (s *Store) GetPackfileBlob(MAC objects.MAC, offset uint64, length uint32) (
 	if resGetPackfileBlob.Err != "" {
 		return nil, fmt.Errorf("%s", resGetPackfileBlob.Err)
 	}
-	return bytes.NewBuffer(resGetPackfileBlob.Data), nil
+	return io.NopCloser(bytes.NewBuffer(resGetPackfileBlob.Data)), nil
 }
 
 func (s *Store) DeletePackfile(MAC objects.MAC) error {
@@ -324,7 +324,7 @@ func (s *Store) PutLock(lockID objects.MAC, rd io.Reader) (int64, error) {
 	return int64(len(data)), nil
 }
 
-func (s *Store) GetLock(lockID objects.MAC) (io.Reader, error) {
+func (s *Store) GetLock(lockID objects.MAC) (io.ReadCloser, error) {
 	req := network.ReqGetLock{
 		Mac: lockID,
 	}
@@ -342,7 +342,7 @@ func (s *Store) GetLock(lockID objects.MAC) (io.Reader, error) {
 		return nil, fmt.Errorf("%s", res.Err)
 	}
 
-	return bytes.NewReader(res.Data), nil
+	return io.NopCloser(bytes.NewReader(res.Data)), nil
 }
 
 func (s *Store) DeleteLock(lockID objects.MAC) error {

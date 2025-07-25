@@ -93,6 +93,8 @@ func (s *server) getState(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		resGetState.Err = err.Error()
 	} else {
+		defer rd.Close()
+
 		data, err := io.ReadAll(rd)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -180,6 +182,7 @@ func (s *server) getPackfile(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		resGetPackfile.Err = err.Error()
 	} else {
+		defer rd.Close()
 		data, err := io.ReadAll(rd)
 		if err != nil {
 			resGetPackfile.Err = err.Error()
@@ -206,6 +209,8 @@ func (s *server) GetPackfileBlob(w http.ResponseWriter, r *http.Request) {
 		resGetPackfileBlob.Err = err.Error()
 	} else {
 		data, err := io.ReadAll(rd)
+		rd.Close()
+
 		if err != nil {
 			resGetPackfileBlob.Err = err.Error()
 		} else {
@@ -291,6 +296,7 @@ func (s *server) getLock(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		res.Err = err.Error()
 	} else {
+		defer rd.Close()
 		data, err := io.ReadAll(rd)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)

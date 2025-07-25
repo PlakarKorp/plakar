@@ -224,13 +224,13 @@ func (s *Store) PutState(mac objects.MAC, rd io.Reader) (int64, error) {
 	return int64(len(data)), nil
 }
 
-func (s *Store) GetState(mac objects.MAC) (io.Reader, error) {
+func (s *Store) GetState(mac objects.MAC) (io.ReadCloser, error) {
 	var data []byte
 	err := s.conn.QueryRow(`SELECT data FROM states WHERE mac=?`, mac[:]).Scan(&data)
 	if err != nil {
 		return nil, err
 	}
-	return bytes.NewBuffer(data), nil
+	return io.NopCloser(bytes.NewBuffer(data)), nil
 }
 
 func (s *Store) DeleteState(mac objects.MAC) error {
@@ -300,16 +300,16 @@ func (s *Store) PutPackfile(mac objects.MAC, rd io.Reader) (int64, error) {
 	return int64(len(data)), nil
 }
 
-func (s *Store) GetPackfile(mac objects.MAC) (io.Reader, error) {
+func (s *Store) GetPackfile(mac objects.MAC) (io.ReadCloser, error) {
 	var data []byte
 	err := s.conn.QueryRow(`SELECT data FROM packfiles WHERE mac=?`, mac[:]).Scan(&data)
 	if err != nil {
 		return nil, err
 	}
-	return bytes.NewReader(data), nil
+	return io.NopCloser(bytes.NewReader(data)), nil
 }
 
-func (s *Store) GetPackfileBlob(mac objects.MAC, offset uint64, length uint32) (io.Reader, error) {
+func (s *Store) GetPackfileBlob(mac objects.MAC, offset uint64, length uint32) (io.ReadCloser, error) {
 	var data []byte
 	err := s.conn.QueryRow(`SELECT substr(data, ?, ?) FROM packfiles WHERE mac=?`, offset+1, length, mac[:]).Scan(&data)
 	if err != nil {
@@ -318,7 +318,7 @@ func (s *Store) GetPackfileBlob(mac objects.MAC, offset uint64, length uint32) (
 		}
 		return nil, err
 	}
-	return bytes.NewBuffer(data), nil
+	return io.NopCloser(bytes.NewBuffer(data)), nil
 }
 
 func (s *Store) DeletePackfile(mac objects.MAC) error {
@@ -396,13 +396,13 @@ func (s *Store) PutLock(lockID objects.MAC, rd io.Reader) (int64, error) {
 	return int64(len(data)), nil
 }
 
-func (s *Store) GetLock(lockID objects.MAC) (io.Reader, error) {
+func (s *Store) GetLock(lockID objects.MAC) (io.ReadCloser, error) {
 	var data []byte
 	err := s.conn.QueryRow(`SELECT data FROM locks WHERE mac=?`, hex.EncodeToString(lockID[:])).Scan(&data)
 	if err != nil {
 		return nil, err
 	}
-	return bytes.NewBuffer(data), nil
+	return io.NopCloser(bytes.NewBuffer(data)), nil
 }
 
 func (s *Store) DeleteLock(lockID objects.MAC) error {

@@ -212,9 +212,11 @@ func (ui *uiserver) repositoryState(w http.ResponseWriter, r *http.Request) erro
 		return err
 	}
 
+	defer rd.Close()
 	if _, err := io.Copy(w, rd); err != nil {
 		log.Println("write failed:", err)
 	}
+
 	return nil
 }
 

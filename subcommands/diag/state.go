@@ -5,11 +5,11 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/repository/state"
 	"github.com/PlakarKorp/kloset/resources"
+	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
 )
 
@@ -59,6 +59,7 @@ func (cmd *DiagState) Execute(ctx *appcontext.AppContext, repo *repository.Repos
 			if err != nil {
 				return 1, err
 			}
+			defer rawStateRd.Close()
 
 			// Temporary scan cache to reconstruct that state.
 			identifier := objects.RandomMAC()

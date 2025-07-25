@@ -28,6 +28,7 @@ import (
 	"sync"
 
 	"github.com/PlakarKorp/kloset/objects"
+	"github.com/PlakarKorp/kloset/reading"
 	"github.com/PlakarKorp/kloset/storage"
 
 	"github.com/minio/minio-go/v7"
@@ -287,7 +288,7 @@ func (s *Store) PutState(mac objects.MAC, rd io.Reader) (int64, error) {
 	return info.Size, nil
 }
 
-func (s *Store) GetState(mac objects.MAC) (io.Reader, error) {
+func (s *Store) GetState(mac objects.MAC) (io.ReadCloser, error) {
 	object, err := s.minioClient.GetObject(s.ctx, s.bucketName, s.realpath(fmt.Sprintf("states/%02x/%016x", mac[0], mac)), minio.GetObjectOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("get object: %w", err)
@@ -347,7 +348,7 @@ func (s *Store) PutPackfile(mac objects.MAC, rd io.Reader) (int64, error) {
 	return info.Size, nil
 }
 
-func (s *Store) GetPackfile(mac objects.MAC) (io.Reader, error) {
+func (s *Store) GetPackfile(mac objects.MAC) (io.ReadCloser, error) {
 	object, err := s.minioClient.GetObject(s.ctx, s.bucketName, s.realpath(fmt.Sprintf("packfiles/%02x/%016x", mac[0], mac)), minio.GetObjectOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("get object: %w", err)
@@ -355,14 +356,14 @@ func (s *Store) GetPackfile(mac objects.MAC) (io.Reader, error) {
 	return object, nil
 }
 
-func (s *Store) GetPackfileBlob(mac objects.MAC, offset uint64, length uint32) (io.Reader, error) {
+func (s *Store) GetPackfileBlob(mac objects.MAC, offset uint64, length uint32) (io.ReadCloser, error) {
 	opts := minio.GetObjectOptions{}
 	object, err := s.minioClient.GetObject(s.ctx, s.bucketName, s.realpath(fmt.Sprintf("packfiles/%02x/%016x", mac[0], mac)), opts)
 	if err != nil {
 		return nil, fmt.Errorf("get object: %w", err)
 	}
 
-	return io.NewSectionReader(object, int64(offset), int64(length)), nil
+	return reading.NewSectionReadCloser(object, int64(offset), int64(length)), nil
 }
 
 func (s *Store) DeletePackfile(mac objects.MAC) error {
@@ -408,7 +409,7 @@ func (s *Store) PutLock(lockID objects.MAC, rd io.Reader) (int64, error) {
 	return info.Size, nil
 }
 
-func (s *Store) GetLock(lockID objects.MAC) (io.Reader, error) {
+func (s *Store) GetLock(lockID objects.MAC) (io.ReadCloser, error) {
 	object, err := s.minioClient.GetObject(s.ctx, s.bucketName, s.realpath(fmt.Sprintf("locks/%016x", lockID)), minio.GetObjectOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("get object: %w", err)
