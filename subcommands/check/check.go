@@ -21,11 +21,11 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
+	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/locate"
 	"github.com/PlakarKorp/plakar/subcommands"
-	"github.com/PlakarKorp/plakar/utils"
 	"github.com/google/uuid"
 )
 
@@ -34,7 +34,7 @@ func init() {
 }
 
 func (cmd *Check) Parse(ctx *appcontext.AppContext, args []string) error {
-	cmd.LocateOptions = utils.NewDefaultLocateOptions()
+	cmd.LocateOptions = locate.NewDefaultLocateOptions()
 
 	flags := flag.NewFlagSet("check", flag.ExitOnError)
 	flags.Usage = func() {
@@ -57,7 +57,7 @@ func (cmd *Check) Parse(ctx *appcontext.AppContext, args []string) error {
 	}
 
 	cmd.LocateOptions.MaxConcurrency = ctx.MaxConcurrency
-	cmd.LocateOptions.SortOrder = utils.LocateSortOrderAscending
+	cmd.LocateOptions.SortOrder = locate.LocateSortOrderAscending
 	cmd.RepositorySecret = ctx.GetSecret()
 	cmd.Snapshots = flags.Args()
 
@@ -67,7 +67,7 @@ func (cmd *Check) Parse(ctx *appcontext.AppContext, args []string) error {
 type Check struct {
 	subcommands.SubcommandBase
 
-	LocateOptions *utils.LocateOptions
+	LocateOptions *locate.LocateOptions
 	Concurrency   uint64
 	FastCheck     bool
 	NoVerify      bool
@@ -83,7 +83,7 @@ func (cmd *Check) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 
 	var snapshots []string
 	if len(cmd.Snapshots) == 0 {
-		snapshotIDs, err := utils.LocateSnapshotIDs(repo, cmd.LocateOptions)
+		snapshotIDs, err := locate.LocateSnapshotIDs(repo, cmd.LocateOptions)
 		if err != nil {
 			return 1, err
 		}
@@ -92,7 +92,7 @@ func (cmd *Check) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 		}
 	} else {
 		for _, snapshotPath := range cmd.Snapshots {
-			prefix, path := utils.ParseSnapshotPath(snapshotPath)
+			prefix, path := locate.ParseSnapshotPath(snapshotPath)
 			if prefix != "" {
 				if _, err := hex.DecodeString(prefix); err != nil {
 					return 1, fmt.Errorf("invalid snapshot prefix: %s", prefix)
@@ -100,7 +100,7 @@ func (cmd *Check) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 			}
 
 			cmd.LocateOptions.Prefix = prefix
-			snapshotIDs, err := utils.LocateSnapshotIDs(repo, cmd.LocateOptions)
+			snapshotIDs, err := locate.LocateSnapshotIDs(repo, cmd.LocateOptions)
 			if err != nil {
 				fmt.Fprintln(ctx.Stderr, err)
 				return 1, err
@@ -125,7 +125,7 @@ func (cmd *Check) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 
 	failures := false
 	for _, arg := range snapshots {
-		snap, pathname, err := utils.OpenSnapshotByPath(repo, arg)
+		snap, pathname, err := locate.OpenSnapshotByPath(repo, arg)
 		if err != nil {
 			return 1, err
 		}

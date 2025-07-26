@@ -22,10 +22,11 @@ import (
 	"io"
 	"path"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/kloset/snapshot/vfs"
+	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/locate"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
 	"github.com/alecthomas/chroma/quick"
@@ -67,13 +68,13 @@ type Diff struct {
 }
 
 func (cmd *Diff) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	snap1, pathname1, err := utils.OpenSnapshotByPath(repo, cmd.SnapshotPath1)
+	snap1, pathname1, err := locate.OpenSnapshotByPath(repo, cmd.SnapshotPath1)
 	if err != nil {
 		return 1, fmt.Errorf("diff: could not open snapshot: %s", cmd.SnapshotPath1)
 	}
 	defer snap1.Close()
 
-	snap2, pathname2, err := utils.OpenSnapshotByPath(repo, cmd.SnapshotPath2)
+	snap2, pathname2, err := locate.OpenSnapshotByPath(repo, cmd.SnapshotPath2)
 	if err != nil {
 		return 1, fmt.Errorf("diff: could not open snapshot: %s", cmd.SnapshotPath2)
 	}

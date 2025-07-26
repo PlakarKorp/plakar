@@ -6,10 +6,10 @@ import (
 	"path"
 	"time"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/repository"
+	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/locate"
 	"github.com/PlakarKorp/plakar/subcommands"
-	"github.com/PlakarKorp/plakar/utils"
 	"github.com/dustin/go-humanize"
 )
 
@@ -34,7 +34,7 @@ func (cmd *DiagVFS) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 func (cmd *DiagVFS) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	snap1, pathname, err := utils.OpenSnapshotByPath(repo, cmd.SnapshotPath)
+	snap1, pathname, err := locate.OpenSnapshotByPath(repo, cmd.SnapshotPath)
 	if err != nil {
 		return 1, err
 	}

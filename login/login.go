@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-package utils
+package login
 
 import (
 	"bytes"
@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/utils"
 	"github.com/google/uuid"
 )
 
@@ -138,7 +139,7 @@ func (flow *loginFlow) handleGithubResponse(resp *http.Response) (string, error)
 	if flow.noSpawn {
 		fmt.Printf("\nPlease open the following URL in your browser:\n\n")
 		fmt.Printf("  %s\n\n", respData.URL)
-	} else if err := BrowserTrySpawn(respData.URL); err != nil {
+	} else if err := utils.BrowserTrySpawn(respData.URL); err != nil {
 		fmt.Printf("\nFailed to launch browser: %s\n\n", err)
 		fmt.Printf("\nPlease open the following URL in your browser:\n\n")
 		fmt.Printf("  %s\n\n", respData.URL)
@@ -259,7 +260,7 @@ func DeriveToken(ctx *appcontext.AppContext) (string, error) {
 		return "", err
 	}
 
-	req.Header.Set("User-Agent", fmt.Sprintf("plakar/%s (%s/%s)", VERSION, runtime.GOOS, runtime.GOARCH))
+	req.Header.Set("User-Agent", fmt.Sprintf("plakar/%s (%s/%s)", utils.VERSION, runtime.GOOS, runtime.GOARCH))
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 
 	client := http.Client{}

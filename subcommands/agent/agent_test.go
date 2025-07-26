@@ -13,10 +13,10 @@ import (
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/plakar/agent"
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/locate"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/subcommands/ls"
 	ptesting "github.com/PlakarKorp/plakar/testing"
-	"github.com/PlakarKorp/plakar/utils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -116,7 +116,7 @@ func TestCmdAgentForegroundInit(t *testing.T) {
 
 	ctx2.MaxConcurrency = 1
 
-	retval, err := client.SendCommand(ctx2, []string{"ls"}, &ls.Ls{LocateOptions: utils.NewDefaultLocateOptions(), SubcommandBase: subcommands.SubcommandBase{Flags: subcommands.AgentSupport}}, map[string]string{"location": repo.Location()})
+	retval, err := client.SendCommand(ctx2, []string{"ls"}, &ls.Ls{LocateOptions: locate.NewDefaultLocateOptions(), SubcommandBase: subcommands.SubcommandBase{Flags: subcommands.AgentSupport}}, map[string]string{"location": repo.Location()})
 	require.NoError(t, err)
 	require.Equal(t, 0, retval)
 

@@ -298,7 +298,7 @@ func (cmd *Agent) ListenAndServe(ctx *appcontext.AppContext) error {
 			return err
 		}
 
-		if err := utils.ReloadConfig(ctx); err != nil {
+		if err := ctx.ReloadConfig(); err != nil {
 			ctx.GetLogger().Warn("could not load configuration: %v", err)
 			return err
 		}

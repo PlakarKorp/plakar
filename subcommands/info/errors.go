@@ -5,11 +5,11 @@ import (
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/utils"
+	"github.com/PlakarKorp/plakar/locate"
 )
 
 func (cmd *Info) executeErrors(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	snap, pathname, err := utils.OpenSnapshotByPath(repo, cmd.SnapshotID)
+	snap, pathname, err := locate.OpenSnapshotByPath(repo, cmd.SnapshotID)
 	if err != nil {
 		return 1, err
 	}

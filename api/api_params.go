@@ -8,6 +8,7 @@ import (
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot/header"
+	"github.com/PlakarKorp/plakar/locate"
 	"github.com/PlakarKorp/plakar/utils"
 )
 
@@ -19,7 +20,7 @@ func SnapshotPathParam(r *http.Request, repo *repository.Repository, param strin
 		return objects.MAC{}, "", parameterError(param, MissingArgument, ErrMissingField)
 	}
 
-	mac, err := utils.LocateSnapshotByPrefix(repo, idstr)
+	mac, err := locate.LocateSnapshotByPrefix(repo, idstr)
 	if err != nil {
 		return objects.MAC{}, "", parameterError(param, InvalidArgument, err)
 	}

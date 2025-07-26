@@ -23,11 +23,12 @@ import (
 	"path"
 	"strings"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/hashing"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/kloset/snapshot/vfs"
+	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/locate"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
 )
@@ -75,7 +76,7 @@ type Digest struct {
 func (cmd *Digest) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	errors := 0
 	for _, snapshotPath := range cmd.Targets {
-		snap, pathname, err := utils.OpenSnapshotByPath(repo, snapshotPath)
+		snap, pathname, err := locate.OpenSnapshotByPath(repo, snapshotPath)
 		if err != nil {
 			ctx.GetLogger().Error("digest: %s: %s", pathname, err)
 			errors++

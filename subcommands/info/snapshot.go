@@ -9,13 +9,13 @@ import (
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/utils"
+	"github.com/PlakarKorp/plakar/locate"
 	"github.com/dustin/go-humanize"
 	"github.com/google/uuid"
 )
 
 func (cmd *Info) executeSnapshot(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	snap, _, err := utils.OpenSnapshotByPath(repo, cmd.SnapshotID)
+	snap, _, err := locate.OpenSnapshotByPath(repo, cmd.SnapshotID)
 	if err != nil {
 		return 1, err
 	}

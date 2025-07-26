@@ -21,7 +21,7 @@ import (
 	grpc_exporter "github.com/PlakarKorp/plakar/connectors/grpc/exporter"
 	grpc_importer "github.com/PlakarKorp/plakar/connectors/grpc/importer"
 	grpc_storage "github.com/PlakarKorp/plakar/connectors/grpc/storage"
-	"github.com/PlakarKorp/plakar/utils"
+	"github.com/PlakarKorp/plakar/locate"
 )
 
 func ParseName(name string) (string, string, string, string, error) {
@@ -181,8 +181,8 @@ func extract(ctx *appcontext.AppContext, plugin, destDir string) error {
 		return err
 	}
 
-	locopts := utils.NewDefaultLocateOptions()
-	snapids, err := utils.LocateSnapshotIDs(repo, locopts)
+	locopts := locate.NewDefaultLocateOptions()
+	snapids, err := locate.LocateSnapshotIDs(repo, locopts)
 	if len(snapids) != 1 {
 		return fmt.Errorf("too many snapshot in ptar plugin: %d",
 			len(snapids))

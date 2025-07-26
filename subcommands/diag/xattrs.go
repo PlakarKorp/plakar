@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/btree"
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/resources"
 	"github.com/PlakarKorp/kloset/snapshot/vfs"
+	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/locate"
 	"github.com/PlakarKorp/plakar/subcommands"
-	"github.com/PlakarKorp/plakar/utils"
 )
 
 type DiagXattr struct {
@@ -35,7 +35,7 @@ func (cmd *DiagXattr) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 func (cmd *DiagXattr) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	snap, pathname, err := utils.OpenSnapshotByPath(repo, cmd.SnapshotPath)
+	snap, pathname, err := locate.OpenSnapshotByPath(repo, cmd.SnapshotPath)
 	if err != nil {
 		return 1, err
 	}

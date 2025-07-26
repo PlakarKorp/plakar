@@ -9,17 +9,17 @@ import (
 	"github.com/PlakarKorp/kloset/storage"
 	"github.com/PlakarKorp/kloset/versioning"
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/locate"
 	"github.com/PlakarKorp/plakar/subcommands/backup"
 	"github.com/PlakarKorp/plakar/subcommands/check"
 	"github.com/PlakarKorp/plakar/subcommands/maintenance"
 	"github.com/PlakarKorp/plakar/subcommands/restore"
 	"github.com/PlakarKorp/plakar/subcommands/rm"
 	"github.com/PlakarKorp/plakar/subcommands/sync"
-	"github.com/PlakarKorp/plakar/utils"
 )
 
 func loadRepository(newCtx *appcontext.AppContext, name string) (*repository.Repository, storage.Store, error) {
-	if err := utils.ReloadConfig(newCtx); err != nil {
+	if err := newCtx.ReloadConfig(); err != nil {
 		return nil, nil, fmt.Errorf("could not load configuration: %w", err)
 	}
 
@@ -77,7 +77,7 @@ func (s *Scheduler) backupTask(taskset Task, task BackupConfig) {
 	}
 
 	rmSubcommand := &rm.Rm{}
-	rmSubcommand.LocateOptions = utils.NewDefaultLocateOptions()
+	rmSubcommand.LocateOptions = locate.NewDefaultLocateOptions()
 	rmSubcommand.LocateOptions.Job = task.Name
 
 	for {
@@ -126,7 +126,7 @@ func (s *Scheduler) backupTask(taskset Task, task BackupConfig) {
 
 func (s *Scheduler) checkTask(taskset Task, task CheckConfig) {
 	checkSubcommand := &check.Check{}
-	checkSubcommand.LocateOptions = utils.NewDefaultLocateOptions()
+	checkSubcommand.LocateOptions = locate.NewDefaultLocateOptions()
 	checkSubcommand.LocateOptions.Job = taskset.Name
 	checkSubcommand.LocateOptions.Latest = task.Latest
 	checkSubcommand.Silent = true
@@ -250,7 +250,7 @@ func (s *Scheduler) syncTask(taskset Task, task SyncConfig) {
 func (s *Scheduler) maintenanceTask(task MaintenanceConfig) {
 	maintenanceSubcommand := &maintenance.Maintenance{}
 	rmSubcommand := &rm.Rm{}
-	rmSubcommand.LocateOptions = utils.NewDefaultLocateOptions()
+	rmSubcommand.LocateOptions = locate.NewDefaultLocateOptions()
 	rmSubcommand.LocateOptions.Job = "maintenance"
 
 	for {

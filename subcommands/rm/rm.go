@@ -21,11 +21,11 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
+	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/locate"
 	"github.com/PlakarKorp/plakar/subcommands"
-	"github.com/PlakarKorp/plakar/utils"
 )
 
 func init() {
@@ -33,7 +33,7 @@ func init() {
 }
 
 func (cmd *Rm) Parse(ctx *appcontext.AppContext, args []string) error {
-	cmd.LocateOptions = utils.NewDefaultLocateOptions()
+	cmd.LocateOptions = locate.NewDefaultLocateOptions()
 
 	flags := flag.NewFlagSet("rm", flag.ExitOnError)
 	flags.Usage = func() {
@@ -60,21 +60,21 @@ func (cmd *Rm) Parse(ctx *appcontext.AppContext, args []string) error {
 type Rm struct {
 	subcommands.SubcommandBase
 
-	LocateOptions *utils.LocateOptions
+	LocateOptions *locate.LocateOptions
 	Snapshots     []string
 }
 
 func (cmd *Rm) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	var snapshots []objects.MAC
 	if len(cmd.Snapshots) == 0 {
-		snapshotIDs, err := utils.LocateSnapshotIDs(repo, cmd.LocateOptions)
+		snapshotIDs, err := locate.LocateSnapshotIDs(repo, cmd.LocateOptions)
 		if err != nil {
 			return 1, err
 		}
 		snapshots = append(snapshots, snapshotIDs...)
 	} else {
 		for _, prefix := range cmd.Snapshots {
-			snapshotID, err := utils.LocateSnapshotByPrefix(repo, prefix)
+			snapshotID, err := locate.LocateSnapshotByPrefix(repo, prefix)
 			if err != nil {
 				continue
 			}
