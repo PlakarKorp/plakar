@@ -1,4 +1,4 @@
-package utils
+package locate
 
 import (
 	"bytes"

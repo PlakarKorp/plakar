@@ -6,9 +6,11 @@ import (
 	"io"
 	"net"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/PlakarKorp/kloset/events"
 	"github.com/PlakarKorp/plakar/appcontext"
@@ -54,13 +56,71 @@ func ExecuteRPC(ctx *appcontext.AppContext, name []string, cmd subcommands.Subco
 }
 
 func NewClient(socketPath string, ignoreVersion bool) (*Client, error) {
-	conn, err := net.Dial("unix", socketPath)
-	if err != nil {
-		if _, ok := err.(*net.OpError); ok {
-			return nil, fmt.Errorf("agent is not running, please start it with `plakar agent`")
+	var lockfile *os.File
+	var spawned bool
+
+	defer func() {
+		if lockfile != nil {
+			lockfile.Close()
+			os.Remove(lockfile.Name())
 		}
-		return nil, fmt.Errorf("failed to connect to daemon: %w %T", err, err)
+	}()
+
+	var (
+		attempt int
+		conn    net.Conn
+		err     error
+	)
+
+	for {
+		conn, err = net.Dial("unix", socketPath)
+		if err == nil {
+			// connected successfully!
+			break
+		}
+
+		attempt++
+		if attempt > 100 {
+			return nil, fmt.Errorf("failed to run the agent")
+		}
+
+		if lockfile == nil {
+			lockfile, err = os.OpenFile(socketPath+".lock",
+				os.O_WRONLY|os.O_CREATE, 0600)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create lockfile: %w", err)
+			}
+
+			err = flock(lockfile)
+			if err != nil {
+				return nil, fmt.Errorf("failed to take the lock: %w", err)
+			}
+
+			// Always retry at least once, even if we got
+			// the lock, because another client could have
+			// taken the lock, started the server and
+			// released the lock between our net.Dial and
+			// unix.Flock.
+
+			continue
+		}
+
+		if !spawned {
+			me, err := os.Executable()
+			if err != nil {
+				return nil, fmt.Errorf("failed to get executable: %w", err)
+			}
+
+			plakar := exec.Command(me, "agent", "start")
+			if err := plakar.Start(); err != nil {
+				return nil, fmt.Errorf("failed to start the agent: %w", err)
+			}
+			spawned = true
+		}
+
+		time.Sleep(5 * time.Millisecond)
 	}
+
 	encoder := msgpack.NewEncoder(conn)
 	decoder := msgpack.NewDecoder(conn)
 

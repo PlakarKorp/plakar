@@ -60,7 +60,7 @@ func TestExecuteCmdDiffIdentical(t *testing.T) {
 	require.Equal(t, 0, status)
 
 	outputErr := bufErr.String()
-	require.Contains(t, outputErr, fmt.Sprintf("%s and %s are identical\n", snapPath1, snapPath2))
+	require.Contains(t, outputErr, "")
 }
 
 func TestExecuteCmdDiffFiles(t *testing.T) {

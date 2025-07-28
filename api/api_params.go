@@ -8,6 +8,7 @@ import (
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot/header"
+	"github.com/PlakarKorp/plakar/locate"
 	"github.com/PlakarKorp/plakar/utils"
 )
 
@@ -19,7 +20,7 @@ func SnapshotPathParam(r *http.Request, repo *repository.Repository, param strin
 		return objects.MAC{}, "", parameterError(param, MissingArgument, ErrMissingField)
 	}
 
-	mac, err := utils.LocateSnapshotByPrefix(repo, idstr)
+	mac, err := locate.LocateSnapshotByPrefix(repo, idstr)
 	if err != nil {
 		return objects.MAC{}, "", parameterError(param, InvalidArgument, err)
 	}
@@ -54,7 +55,7 @@ func QueryParamToUint32(r *http.Request, param string, min, def uint32) (uint32,
 
 	n, err := strconv.ParseInt(str, 10, 32)
 	if err != nil {
-		return 0, err
+		return 0, parameterError(param, BadNumber, err)
 	}
 
 	if n < 0 || uint32(n) < min {
@@ -72,7 +73,7 @@ func QueryParamToInt64(r *http.Request, param string, min, def int64) (int64, er
 
 	n, err := strconv.ParseInt(str, 10, 64)
 	if err != nil {
-		return 0, err
+		return 0, parameterError(param, BadNumber, err)
 	}
 
 	if n < min {

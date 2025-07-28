@@ -1,4 +1,4 @@
-.Dd July 11, 2025
+.Dd July 20, 2025
 .Dt PLAKAR-PKG-MANIFEST.YAML 5
 .Os
 .Sh NAME
@@ -9,11 +9,27 @@ The
 .Nm manifest.yaml
 file format describes how to package a plugin.
 No build or compilation is done, so all executables and other files
-have to be prepared beforehand.
-It must have a top-level YAML object with the following fields:
-.Bl -tag -width repository
+must be prepared beforehand.
+.Pp
+.Nm manifest.yaml
+must have a top-level YAML object with the following fields:
+.Bl -tag -width display_name
 .It Ic name
 The name of the plugins
+.It Ic display_name
+The displayed name in the UI.
+.It Ic description
+A short description of the connectors.
+.It Ic homepage
+A link to the homepage.
+.It Ic license
+The license of the connectors.
+.It Ic tag
+A YAML array of strings for tags that describe the connectors.
+.It Ic api_version
+The API version supported.
+.\" XXX how to document the api version?  it's currently unused in the
+.\" code.
 .It Ic version
 The plugin version, which doubles as the git tag as well.
 It must follow semantic versioning and have a
@@ -48,10 +64,6 @@ Path to the plugin executable.
 .It Ic extra_file
 An optional array of YAML string.
 These are extra files that need to be included in the package.
-.It Ic homepage
-The plugin homepage.
-.It Ic license
-The plugin license.
 .El
 .El
 .Sh EXAMPLES
@@ -61,23 +73,22 @@ plugin is as follows:
 .Bd -literal -offset indent
 # manifest.yaml
 name: fs
+display_name: file system connector
 description: file storage but as external plugin
+homepage: https://github.com/PlakarKorp/integration-fs
+license: ISC
+tags: [ fs, filesystem, "local files" ]
+api_version: 1.0.0
 version: 1.0.0
 connectors:
 - type: importer
   executable: fs-importer
-  homepage: https://github.com/PlakarKorp/integration-fs
-  license: ISC
   protocols: [fs]
 - type: exporter
   executable: fs-exporter
-  homepage: https://github.com/PlakarKorp/integration-fs
-  license: ISC
   protocols: [fs]
 - type: storage
   executable: fs-store
-  homepage: https://github.com/PlakarKorp/integration-fs
-  license: ISC
   protocols: [fs]
 .Ed
 .Sh SEE ALSO

@@ -94,7 +94,7 @@ func TestExecuteCmdInfoSnapshot(t *testing.T) {
 	defer snap.Close()
 
 	indexId := snap.Header.GetIndexID()
-	args := []string{"info", "snapshot", hex.EncodeToString(indexId[:])}
+	args := []string{"info", hex.EncodeToString(indexId[:])}
 
 	subcommand, _, args := subcommands.Lookup(args)
 	err := subcommand.Parse(ctx, args)
@@ -164,50 +164,4 @@ func TestExecuteCmdInfoSnapshot(t *testing.T) {
 	//require.Contains(t, output, "Files: 4")
 	require.Contains(t, output, fmt.Sprintf("Directory: %s", snap.Header.GetSource(0).Importer.Directory))
 	require.Contains(t, output, fmt.Sprintf("SnapshotID: %s", hex.EncodeToString(indexId[:])))
-}
-
-func TestExecuteCmdInfoSnapshotPath(t *testing.T) {
-	bufOut := bytes.NewBuffer(nil)
-	bufErr := bytes.NewBuffer(nil)
-
-	repo, snap, ctx := generateSnapshot(t, bufOut, bufErr)
-	defer snap.Close()
-
-	indexId := snap.Header.GetIndexID()
-	args := []string{"info", "vfs", fmt.Sprintf("%s:subdir/dummy.txt", hex.EncodeToString(indexId[:]))}
-
-	subcommand, _, args := subcommands.Lookup(args)
-	err := subcommand.Parse(ctx, args)
-	require.NoError(t, err)
-	require.NotNil(t, subcommand)
-
-	status, err := subcommand.Execute(ctx, repo)
-	require.NoError(t, err)
-	require.Equal(t, 0, status)
-
-	// output should look like this
-	// [FileEntry]
-	// Version: 65536
-	// ParentPath: /tmp/tmp_to_backup1755905950/subdir
-	// Name: dummy.txt
-	// Type: regular
-	// Size: 11 B (11 bytes)
-	// Permissions: -rw-r--r--
-	// ModTime: 2025-03-06 07:51:06.716971661 +0000 UTC
-	// DeviceID: 64768
-	// InodeID: 22314615
-	// UserID: 1000
-	// GroupID: 1000
-	// Username: sayoun
-	// Groupname: sayoun
-	// NumLinks: 1
-	// ExtendedAttributes: []
-	// FileAttributes: 0
-	// Classification:
-	// CustomMetadata: []
-	// Tags: []
-
-	output := bufOut.String()
-	require.Contains(t, output, "[FileEntry]")
-	require.Contains(t, output, "Name: dummy.txt")
 }

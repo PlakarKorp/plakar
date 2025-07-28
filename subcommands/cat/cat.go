@@ -23,10 +23,10 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/repository"
+	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/locate"
 	"github.com/PlakarKorp/plakar/subcommands"
-	"github.com/PlakarKorp/plakar/utils"
 	"github.com/alecthomas/chroma/formatters"
 	"github.com/alecthomas/chroma/lexers"
 	"github.com/alecthomas/chroma/styles"
@@ -69,7 +69,7 @@ type Cat struct {
 func (cmd *Cat) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	errors := 0
 	for _, snapPath := range cmd.Paths {
-		snap, pathname, err := utils.OpenSnapshotByPath(repo, snapPath)
+		snap, pathname, err := locate.OpenSnapshotByPath(repo, snapPath)
 		if err != nil {
 			ctx.GetLogger().Error("cat: %s: %s", snapPath, err)
 			errors++

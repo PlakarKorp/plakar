@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
+	"strings"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
@@ -56,32 +56,33 @@ func (cmd *PkgRm) Execute(ctx *appcontext.AppContext, _ *repository.Repository) 
 	if err != nil {
 		return 1, err
 	}
-	cachedir = filepath.Join(cachedir, "plugins")
+	cachedir = filepath.Join(cachedir, "plugins", plugins.PLUGIN_API_VERSION)
 
 	dataDir, err := utils.GetDataDir("plakar")
 	if err != nil {
 		return 1, err
 	}
 
-	pluginsDir := filepath.Join(dataDir, "plugins")
+	pluginsDir := filepath.Join(dataDir, "plugins", plugins.PLUGIN_API_VERSION)
 	names, err := plugins.ListDir(ctx, pluginsDir)
 	if err != nil {
 		return 1, err
 	}
 
-	for _, name := range cmd.Args {
-		if !slices.Contains(names, name) {
-			return 1, fmt.Errorf("plugin %q is not installed", name)
-		}
-		err := os.Remove(filepath.Join(pluginsDir, name))
-		if err != nil {
-			return 1, fmt.Errorf("failed to remove %q: %w", name, err)
-		}
-		extlen := len(filepath.Ext(name))
-		pluginCache := filepath.Join(cachedir, name[:len(name)-extlen])
-		err = os.RemoveAll(pluginCache)
-		if err != nil {
-			return 1, fmt.Errorf("failed to remove cache for %q: %w", name, err)
+	for _, argName := range cmd.Args {
+		for _, name := range names {
+			if argName == name || argName == strings.Split(name, "_")[0] {
+				err := os.Remove(filepath.Join(pluginsDir, name))
+				if err != nil {
+					return 1, fmt.Errorf("failed to remove %q: %w", name, err)
+				}
+				extlen := len(filepath.Ext(name))
+				pluginCache := filepath.Join(cachedir, name[:len(name)-extlen])
+				err = os.RemoveAll(pluginCache)
+				if err != nil {
+					return 1, fmt.Errorf("failed to remove cache for %q: %w", name, err)
+				}
+			}
 		}
 	}
 

@@ -43,6 +43,10 @@ func init() {
 		subcommands.BeforeRepositoryOpen, "destination")
 }
 
+func normalizeName(name string) string {
+	return strings.TrimPrefix(name, "@")
+}
+
 func normalizeLocation(location string) string {
 	return strings.TrimPrefix(location, "location=")
 }
@@ -95,7 +99,8 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 			return fmt.Errorf("usage: plakar %s %s <name> <location> [<key>=<value>, ...]", cmd, subcmd)
 		}
 
-		name, location := args[0], normalizeLocation(args[1])
+		name, location := normalizeName(args[0]), normalizeLocation(args[1])
+
 		if hasFunc(name) {
 			return fmt.Errorf("%s %q already exists", cmd, name)
 		}
@@ -114,7 +119,7 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 		if len(args) != 1 {
 			return fmt.Errorf("usage: plakar %s check <name>", cmd)
 		}
-		name := args[0]
+		name := normalizeName(args[0])
 		if !hasFunc(name) {
 			return fmt.Errorf("%s %q does not exists", cmd, name)
 		}
@@ -181,7 +186,8 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 		if len(args) != 1 {
 			return fmt.Errorf("usage: plakar %s rm <name>", cmd)
 		}
-		name := args[0]
+
+		name := normalizeName(args[0])
 		if !hasFunc(name) {
 			return fmt.Errorf("%s %q does not exist", cmd, name)
 		}
@@ -192,7 +198,7 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 		if len(args) == 0 {
 			return fmt.Errorf("usage: plakar %s set <name> [<key>=<value>, ...]", cmd)
 		}
-		name := args[0]
+		name := normalizeName(args[0])
 		if !hasFunc(name) {
 			return fmt.Errorf("%s %q does not exists", cmd, name)
 		}
@@ -224,6 +230,7 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 			names = p.Args()
 		}
 		for _, name := range names {
+			name = normalizeName(name)
 			if !hasFunc(name) {
 				fmt.Fprintf(ctx.Stderr, "%s %q does not exist\n", cmd, name)
 				continue
@@ -247,7 +254,7 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 		if len(args) == 0 {
 			return fmt.Errorf("usage: plakar %s unset <name> [<key>, ...]", cmd)
 		}
-		name := args[0]
+		name := normalizeName(args[0])
 		if !hasFunc(name) {
 			return fmt.Errorf("%s %q does not exists", cmd, name)
 		}

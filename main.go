@@ -157,12 +157,11 @@ func entryPoint() int {
 	defer ctx.Close()
 
 	ctx.ConfigDir = opt_configdir
-	cfg, err := utils.LoadConfig(opt_configdir)
+	err = ctx.ReloadConfig()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s: could not load configuration: %s\n", flag.CommandLine.Name(), err)
 		return 1
 	}
-	ctx.Config = cfg
 
 	ctx.Client = "plakar/" + utils.GetVersion()
 	ctx.CWD = cwd
@@ -281,10 +280,10 @@ func entryPoint() int {
 
 	ctx.SetLogger(logger)
 
-	pluginDir := filepath.Join(dataDir, "plugins")
+	pluginDir := filepath.Join(dataDir, "plugins", plugins.PLUGIN_API_VERSION)
 
 	// use cookiesDir as base since it's the same wrt agentless
-	pluginCache := filepath.Join(cookiesDir, "plugins")
+	pluginCache := filepath.Join(cookiesDir, "plugins", plugins.PLUGIN_API_VERSION)
 	if err := plugins.LoadDir(ctx, pluginDir, pluginCache); err != nil {
 		logger.Warn("failed to load the plugins: %s", err)
 	}
@@ -403,6 +402,7 @@ func entryPoint() int {
 	}
 
 	cmd.SetCWD(ctx.CWD)
+	cmd.SetCommandLine(ctx.CommandLine)
 
 	c := make(chan os.Signal, 1)
 	go func() {

@@ -509,14 +509,14 @@ func (ui *uiserver) snapshotVFSSearch(w http.ResponseWriter, r *http.Request) er
 	if str := r.URL.Query().Get("offset"); str != "" {
 		o, err := strconv.ParseInt(str, 10, 32)
 		if err != nil {
-			return err
+			return parameterError("offset", BadNumber, err)
 		}
 		offset = int(o)
 	}
 	if str := r.URL.Query().Get("limit"); str != "" {
 		o, err := strconv.ParseInt(str, 10, 32)
 		if err != nil {
-			return err
+			return parameterError("limit", BadNumber, err)
 		}
 		limit = int(o)
 		if limit <= 0 {

@@ -6,6 +6,7 @@
 .Nd Display detailed information about internal structures
 .Sh SYNOPSIS
 .Nm plakar info
+.Op Fl errors
 .Op Ar snapshot Ns Oo : Ns Ar /path/to/file Oc
 .Sh DESCRIPTION
 The
@@ -14,6 +15,12 @@ command provides detailed information about a Plakar repository,
 snapshots and filesystem entries.
 The type of information displayed depends on the specified argument.
 Without any arguments, display information about the repository.
+.Pp
+The options are as follows:
+.Bl -tag -width errors-
+.It Fl errors
+Show errors within the specified snapshot.
+.El
 .Sh EXAMPLES
 Show repository information:
 .Bd -literal -offset indent
@@ -25,10 +32,15 @@ Show detailed information for a snapshot:
 $ plakar info abc123
 .Ed
 .Pp
-Show detailed information for a file within a snapshot:
+Show errors within a snapshot:
 .Bd -literal -offset indent
-$ plakar info abcd123:/etc/passwd
+$ plakar info -errors abc123
 .Ed
+.\".Pp
+.\"Show detailed information for a file within a snapshot:
+.\".Bd -literal -offset indent
+.\"$ plakar info abcd123:/etc/passwd
+.\".Ed
 .Sh DIAGNOSTICS
 .Ex -std
 .Bl -tag -width Ds

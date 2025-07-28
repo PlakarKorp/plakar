@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/PlakarKorp/plakar/utils"
+	"github.com/PlakarKorp/plakar/login"
 )
 
 type TokenResponse struct {
@@ -32,7 +32,7 @@ func (ui *uiserver) servicesLoginGithub(w http.ResponseWriter, r *http.Request) 
 	parameters["redirect"] = req.Redirect
 	parameters["repository_id"] = ui.config.RepositoryID.String()
 
-	lf, err := utils.NewLoginFlow(ui.ctx, ui.config.RepositoryID, true)
+	lf, err := login.NewLoginFlow(ui.ctx, ui.config.RepositoryID, true)
 	if err != nil {
 		return fmt.Errorf("failed to create login flow: %w", err)
 	}
@@ -63,7 +63,7 @@ func (ui *uiserver) servicesLoginEmail(w http.ResponseWriter, r *http.Request) e
 	parameters["redirect"] = req.Redirect
 	parameters["repository_id"] = ui.config.RepositoryID.String()
 
-	lf, err := utils.NewLoginFlow(ui.ctx, ui.config.RepositoryID, true)
+	lf, err := login.NewLoginFlow(ui.ctx, ui.config.RepositoryID, true)
 	if err != nil {
 		return fmt.Errorf("failed to create login flow: %w", err)
 	}

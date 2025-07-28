@@ -55,6 +55,11 @@ func forkChild(pluginPath string) (int, error) {
 		return -1, fmt.Errorf("failed to start plugin: %w", err)
 	}
 
+	// XXX - we should move this cmd.Wait() to command execution close
+	go func() {
+		_ = cmd.Wait()
+	}()
+
 	childFile.Close()
 	return sp[1], nil
 }

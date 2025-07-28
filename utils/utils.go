@@ -26,6 +26,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -80,6 +81,10 @@ type ReleaseUpdateSummary struct {
 }
 
 func shouldCheckUpdate(cachedir string) bool {
+	if strings.Contains(VERSION, "devel") {
+		return false
+	}
+
 	cookie := path.Join(cachedir, "last-update-check")
 	cutoff := time.Now().Add(-24 * time.Hour)
 
@@ -141,13 +146,14 @@ func CheckUpdate(cachedir string) (update ReleaseUpdateSummary, err error) {
 		}
 
 		body := latestEntry.Content.Body
-		if strings.Contains(body, "SECURITY") {
+		if strings.HasPrefix(body, "SECURITY") {
 			update.SecurityFix = true
 		}
-		if strings.Contains(body, "RELIABILITY") {
+		if strings.HasPrefix(body, "RELIABILITY") {
 			update.ReliabilityFix = true
 		}
 	}
+
 	return
 }
 
@@ -309,7 +315,18 @@ func GetDataDir(appName string) (string, error) {
 	return dataDir, nil
 }
 
-var VERSION = "v1.0.3-devel"
+var VERSION = func() string {
+	version := "v1.0.3-devel"
+	if info, ok := debug.ReadBuildInfo(); ok {
+		for _, setting := range info.Settings {
+			if setting.Key == "vcs.revision" {
+				version += "." + setting.Value
+			}
+		}
+	}
+
+	return version
+}()
 
 func init() {
 	if !semver.IsValid(VERSION) {

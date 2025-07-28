@@ -3,41 +3,19 @@ package info
 import (
 	"encoding/base64"
 	"encoding/hex"
-	"flag"
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/repository"
-	"github.com/PlakarKorp/plakar/subcommands"
-	"github.com/PlakarKorp/plakar/utils"
+	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/locate"
 	"github.com/dustin/go-humanize"
 	"github.com/google/uuid"
 )
 
-type InfoSnapshot struct {
-	subcommands.SubcommandBase
-
-	SnapshotID string
-}
-
-func (cmd *InfoSnapshot) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("info snapshot", flag.ExitOnError)
-	flags.Parse(args)
-
-	if len(flags.Args()) < 1 {
-		return fmt.Errorf("usage: %s snapshot SNAPSHOT", flags.Name())
-	}
-
-	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.SnapshotID = flags.Args()[0]
-
-	return nil
-}
-
-func (cmd *InfoSnapshot) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	snap, _, err := utils.OpenSnapshotByPath(repo, cmd.SnapshotID)
+func (cmd *Info) executeSnapshot(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+	snap, _, err := locate.OpenSnapshotByPath(repo, cmd.SnapshotID)
 	if err != nil {
 		return 1, err
 	}

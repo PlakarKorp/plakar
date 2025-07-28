@@ -4,11 +4,11 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
+	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/locate"
 	"github.com/PlakarKorp/plakar/subcommands"
-	"github.com/PlakarKorp/plakar/utils"
 	"github.com/dustin/go-humanize"
 )
 
@@ -101,7 +101,7 @@ func (cmd *DiagRepository) Execute(ctx *appcontext.AppContext, repo *repository.
 		}
 	}
 
-	snapshotIDs, err := utils.LocateSnapshotIDs(repo, nil)
+	snapshotIDs, err := locate.LocateSnapshotIDs(repo, nil)
 	if err != nil {
 		return 1, err
 	}

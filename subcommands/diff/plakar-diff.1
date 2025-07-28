@@ -7,6 +7,7 @@
 .Sh SYNOPSIS
 .Nm plakar diff
 .Op Fl highlight
+.Op Fl recursive
 .Ar snapshotID1 Ns Op : Ns Ar path1
 .Ar snapshotID2 Ns Op : Ns Ar path2
 .Sh DESCRIPTION
@@ -25,6 +26,8 @@ The options are as follows:
 .Bl -tag -width Ds
 .It Fl highlight
 Apply syntax highlighting to the diff output for readability.
+.It Fl recursive
+When comparing directories, recursively compare all subdirectories.
 .El
 .Sh EXAMPLES
 Compare root directories of two snapshots:

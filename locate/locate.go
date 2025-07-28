@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-package utils
+package locate
 
 import (
 	"encoding/hex"
@@ -29,6 +29,7 @@ import (
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
+	"github.com/PlakarKorp/plakar/utils"
 )
 
 type locateSortOrder int
@@ -91,8 +92,8 @@ func (lo *LocateOptions) InstallFlags(flags *flag.FlagSet) {
 
 	flags.BoolVar(&lo.Latest, "latest", false, "use latest snapshot")
 
-	flags.Var(NewTimeFlag(&lo.Before), "before", "filter by date")
-	flags.Var(NewTimeFlag(&lo.Since), "since", "filter by date")
+	flags.Var(utils.NewTimeFlag(&lo.Before), "before", "filter by date")
+	flags.Var(utils.NewTimeFlag(&lo.Since), "since", "filter by date")
 }
 
 func LocateSnapshotIDs(repo *repository.Repository, opts *LocateOptions) ([]objects.MAC, error) {

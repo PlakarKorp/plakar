@@ -27,6 +27,7 @@ import (
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/kloset/storage"
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/locate"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
 )
@@ -36,7 +37,7 @@ func init() {
 }
 
 func (cmd *Sync) Parse(ctx *appcontext.AppContext, args []string) error {
-	cmd.SrcLocateOptions = utils.NewDefaultLocateOptions()
+	cmd.SrcLocateOptions = locate.NewDefaultLocateOptions()
 
 	flags := flag.NewFlagSet("sync", flag.ExitOnError)
 	flags.Usage = func() {
@@ -142,7 +143,7 @@ type Sync struct {
 
 	Direction string
 
-	SrcLocateOptions *utils.LocateOptions
+	SrcLocateOptions *locate.LocateOptions
 }
 
 func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
@@ -202,7 +203,7 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 
 	srcSyncList := make([]objects.MAC, 0)
 
-	srcSnapshotIDs, err := utils.LocateSnapshotIDs(srcRepository, cmd.SrcLocateOptions)
+	srcSnapshotIDs, err := locate.LocateSnapshotIDs(srcRepository, cmd.SrcLocateOptions)
 	if err != nil {
 		return 1, fmt.Errorf("could not locate snapshots in source repository %s: %s", dstRepository.Location(), err)
 	}
@@ -226,7 +227,7 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 	}
 
 	if cmd.Direction == "with" {
-		dstSnapshotIDs, err := utils.LocateSnapshotIDs(dstRepository, cmd.SrcLocateOptions)
+		dstSnapshotIDs, err := locate.LocateSnapshotIDs(dstRepository, cmd.SrcLocateOptions)
 		if err != nil {
 			return 1, fmt.Errorf("could not locate snapshots in peer repository %s: %s", dstRepository.Location(), err)
 		}

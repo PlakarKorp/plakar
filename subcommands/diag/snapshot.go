@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/repository"
+	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/locate"
 	"github.com/PlakarKorp/plakar/subcommands"
-	"github.com/PlakarKorp/plakar/utils"
 	"github.com/dustin/go-humanize"
 	"github.com/google/uuid"
 )
@@ -37,7 +37,7 @@ func (cmd *DiagSnapshot) Parse(ctx *appcontext.AppContext, args []string) error 
 }
 
 func (cmd *DiagSnapshot) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	snap, _, err := utils.OpenSnapshotByPath(repo, cmd.SnapshotID)
+	snap, _, err := locate.OpenSnapshotByPath(repo, cmd.SnapshotID)
 	if err != nil {
 		return 1, err
 	}

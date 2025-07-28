@@ -1,44 +1,15 @@
 package info
 
 import (
-	"flag"
 	"fmt"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
-	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/dustin/go-humanize"
 )
 
-type InfoRepository struct {
-	subcommands.SubcommandBase
-}
-
-func (cmd *InfoRepository) Parse(ctx *appcontext.AppContext, args []string) error {
-	// Since this is the default action, we plug the general USAGE here.
-	flags := flag.NewFlagSet("info", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s snapshot SNAPSHOT\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s errors SNAPSHOT\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s state [STATE]...\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s search snapshot[:path] mime\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s packfile [PACKFILE]...\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s object [OBJECT]\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s vfs SNAPSHOT[:PATH]\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s xattr SNAPSHOT[:PATH]\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s contenttype SNAPSHOT[:PATH]\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s locks\n", flags.Name())
-	}
-	flags.Parse(args)
-
-	cmd.RepositorySecret = ctx.GetSecret()
-
-	return nil
-}
-
-func (cmd *InfoRepository) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+func (cmd *Info) executeRepository(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 
 	fmt.Fprintln(ctx.Stdout, "Version:", repo.Configuration().Version)
 	fmt.Fprintln(ctx.Stdout, "Timestamp:", repo.Configuration().Timestamp)
