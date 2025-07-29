@@ -8,6 +8,7 @@ import (
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/plakar/appcontext"
 	ptesting "github.com/PlakarKorp/plakar/testing"
+	"github.com/stretchr/testify/require"
 )
 
 func TestExporter(t *testing.T) {
@@ -32,8 +33,8 @@ func TestExporter(t *testing.T) {
 	}
 
 	// Create the exporter
-	appCtx := appcontext.NewAppContext()
-	exporter, err := NewFTPExporter(appCtx, nil, "ftp", map[string]string{
+	ctx := appcontext.NewAppContext()
+	exporter, err := NewFTPExporter(ctx, nil, "ftp", map[string]string{
 		"location": "ftp://" + server.Addr + "/",
 		"username": "test",
 		"password": "test",
@@ -41,10 +42,11 @@ func TestExporter(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create exporter: %v", err)
 	}
-	defer exporter.Close()
+	defer exporter.Close(ctx)
 
 	// Test root path
-	root := exporter.Root()
+	root, err := exporter.Root(ctx)
+	require.NoError(t, err)
 	if root != "/" {
 		t.Errorf("Expected root path '/', got '%s'", root)
 	}

@@ -204,7 +204,7 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 	if err != nil {
 		return 1, fmt.Errorf("failed to create an importer for %s: %s", scanDir, err), objects.MAC{}, nil
 	}
-	defer imp.Close()
+	defer imp.Close(ctx)
 
 	if cmd.DryRun {
 		if err := dryrun(ctx, imp, cmd.Excludes); err != nil {
@@ -229,7 +229,12 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 			return 1, fmt.Errorf("failed to create snapshot: %w", err), objects.MAC{}, nil
 		}
 	} else {
-		ep := startEventsProcessor(ctx, imp.Root(), true, cmd.Quiet)
+		root, err := imp.Root(ctx)
+		if err != nil {
+			return 1, fmt.Errorf("failed to get importer root: %w", err), objects.MAC{}, nil
+		}
+
+		ep := startEventsProcessor(ctx, root, true, cmd.Quiet)
 		if err := snap.Backup(imp, opts); err != nil {
 			ep.Close()
 			return 1, fmt.Errorf("failed to create snapshot: %w", err), objects.MAC{}, nil
@@ -287,7 +292,7 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 }
 
 func dryrun(ctx *appcontext.AppContext, imp importer.Importer, excludePatterns []string) error {
-	scanner, err := imp.Scan()
+	scanner, err := imp.Scan(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to scan: %w", err)
 	}

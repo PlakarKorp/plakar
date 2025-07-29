@@ -101,7 +101,7 @@ func (cmd *Clone) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 		return 1, fmt.Errorf("could not create repository: %w", err)
 	}
 
-	packfileMACs, err := sourceStore.GetPackfiles()
+	packfileMACs, err := sourceStore.GetPackfiles(ctx)
 	if err != nil {
 		return 1, fmt.Errorf("could not get packfiles list from repository: %w", err)
 	}
@@ -115,7 +115,7 @@ func (cmd *Clone) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 
 		packfileMAC := packfileMAC
 		wg.Go(func() error {
-			rd, err := sourceStore.GetPackfile(packfileMAC)
+			rd, err := sourceStore.GetPackfile(ctx, packfileMAC)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "could not get packfile from repository: %s\n", err)
 				return err
@@ -123,7 +123,7 @@ func (cmd *Clone) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 
 			defer rd.Close()
 
-			_, err = cloneStore.PutPackfile(packfileMAC, rd)
+			_, err = cloneStore.PutPackfile(ctx, packfileMAC, rd)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "could not put packfile to repository: %s\n", err)
 				return err
@@ -136,7 +136,7 @@ func (cmd *Clone) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 		return 1, fmt.Errorf("failed to process packfiles: %v", err)
 	}
 
-	indexesMACs, err := sourceStore.GetStates()
+	indexesMACs, err := sourceStore.GetStates(ctx)
 	if err != nil {
 		return 1, fmt.Errorf("could not get packfiles list from repository: %w", err)
 	}
@@ -150,7 +150,7 @@ func (cmd *Clone) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 
 		indexMAC := indexMAC
 		wg.Go(func() error {
-			data, err := sourceStore.GetState(indexMAC)
+			data, err := sourceStore.GetState(ctx, indexMAC)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "could not get index from repository: %s\n", err)
 				return err
@@ -158,7 +158,7 @@ func (cmd *Clone) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 
 			defer data.Close()
 
-			_, err = cloneStore.PutState(indexMAC, data)
+			_, err = cloneStore.PutState(ctx, indexMAC, data)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "could not put packfile to repository: %s\n", err)
 				return err

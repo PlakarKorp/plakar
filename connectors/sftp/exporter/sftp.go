@@ -58,16 +58,16 @@ func NewSFTPExporter(ctx context.Context, opt *exporter.Options, name string, co
 	}, nil
 }
 
-func (p *SFTPExporter) Root() string {
+func (p *SFTPExporter) Root(ctx context.Context) (string, error) {
 
-	return p.location
+	return p.location, nil
 }
 
-func (p *SFTPExporter) CreateDirectory(pathname string) error {
+func (p *SFTPExporter) CreateDirectory(ctx context.Context, pathname string) error {
 	return p.client.MkdirAll(pathname)
 }
 
-func (p *SFTPExporter) StoreFile(pathname string, fp io.Reader, size int64) error {
+func (p *SFTPExporter) StoreFile(ctx context.Context, pathname string, fp io.Reader, size int64) error {
 	f, err := p.client.Create(pathname)
 	if err != nil {
 		return err
@@ -87,7 +87,7 @@ func (p *SFTPExporter) StoreFile(pathname string, fp io.Reader, size int64) erro
 	return nil
 }
 
-func (p *SFTPExporter) SetPermissions(pathname string, fileinfo *objects.FileInfo) error {
+func (p *SFTPExporter) SetPermissions(ctx context.Context, pathname string, fileinfo *objects.FileInfo) error {
 	if err := p.client.Chmod(pathname, fileinfo.Mode()); err != nil {
 		return err
 	}
@@ -99,6 +99,6 @@ func (p *SFTPExporter) SetPermissions(pathname string, fileinfo *objects.FileInf
 	return nil
 }
 
-func (p *SFTPExporter) Close() error {
+func (p *SFTPExporter) Close(ctx context.Context) error {
 	return p.client.Close()
 }

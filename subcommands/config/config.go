@@ -130,7 +130,7 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 			if err != nil {
 				return err
 			}
-			_ = store.Close()
+			store.Close(ctx)
 
 		case "source":
 			cfg, ok := ctx.Config.GetSource(name)
@@ -141,7 +141,7 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 			if err != nil {
 				return err
 			}
-			_ = imp.Close()
+			imp.Close(ctx)
 
 		case "destination":
 			cfg, ok := ctx.Config.GetDestination(name)
@@ -152,7 +152,7 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 			if err != nil {
 				return err
 			}
-			_ = exp.Close()
+			exp.Close(ctx)
 		}
 
 		return nil

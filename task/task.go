@@ -48,7 +48,12 @@ func RunCommand(ctx *appcontext.AppContext, cmd subcommands.Subcommand, repo *re
 	reporter := reporting.NewReporter(ctx, doReport, repo, ctx.GetLogger())
 	reporter.TaskStart(taskKind, taskName)
 	if repo != nil {
-		reporter.WithRepositoryName(repo.Location())
+		location, err := repo.Location()
+		if err != nil {
+			return 1, err
+		}
+
+		reporter.WithRepositoryName(location)
 		reporter.WithRepository(repo)
 	}
 

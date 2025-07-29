@@ -50,7 +50,7 @@ func (s *server) getStates(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var resGetStates network.ResGetStates
-	indexes, err := s.store.GetStates()
+	indexes, err := s.store.GetStates(r.Context())
 	if err != nil {
 		resGetStates.Err = err.Error()
 	} else {
@@ -71,7 +71,7 @@ func (s *server) putState(w http.ResponseWriter, r *http.Request) {
 
 	var resPutIndex network.ResPutState
 	data := reqPutState.Data
-	_, err := s.store.PutState(reqPutState.MAC, bytes.NewBuffer(data))
+	_, err := s.store.PutState(r.Context(), reqPutState.MAC, bytes.NewBuffer(data))
 	if err != nil {
 		resPutIndex.Err = err.Error()
 	}
@@ -89,7 +89,7 @@ func (s *server) getState(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var resGetState network.ResGetState
-	rd, err := s.store.GetState(reqGetState.MAC)
+	rd, err := s.store.GetState(r.Context(), reqGetState.MAC)
 	if err != nil {
 		resGetState.Err = err.Error()
 	} else {
@@ -121,7 +121,7 @@ func (s *server) deleteState(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var resDeleteState network.ResDeleteState
-	err := s.store.DeleteState(reqDeleteState.MAC)
+	err := s.store.DeleteState(r.Context(), reqDeleteState.MAC)
 	if err != nil {
 		resDeleteState.Err = err.Error()
 	}
@@ -140,7 +140,7 @@ func (s *server) getPackfiles(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var resGetPackfiles network.ResGetPackfiles
-	packfiles, err := s.store.GetPackfiles()
+	packfiles, err := s.store.GetPackfiles(r.Context())
 	if err != nil {
 		resGetPackfiles.Err = err.Error()
 	} else {
@@ -160,7 +160,7 @@ func (s *server) putPackfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var resPutPackfile network.ResPutPackfile
-	_, err := s.store.PutPackfile(reqPutPackfile.MAC, bytes.NewBuffer(reqPutPackfile.Data))
+	_, err := s.store.PutPackfile(r.Context(), reqPutPackfile.MAC, bytes.NewBuffer(reqPutPackfile.Data))
 	if err != nil {
 		resPutPackfile.Err = err.Error()
 	}
@@ -178,7 +178,7 @@ func (s *server) getPackfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var resGetPackfile network.ResGetPackfile
-	rd, err := s.store.GetPackfile(reqGetPackfile.MAC)
+	rd, err := s.store.GetPackfile(r.Context(), reqGetPackfile.MAC)
 	if err != nil {
 		resGetPackfile.Err = err.Error()
 	} else {
@@ -204,7 +204,7 @@ func (s *server) GetPackfileBlob(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var resGetPackfileBlob network.ResGetPackfileBlob
-	rd, err := s.store.GetPackfileBlob(reqGetPackfileBlob.MAC, reqGetPackfileBlob.Offset, reqGetPackfileBlob.Length)
+	rd, err := s.store.GetPackfileBlob(r.Context(), reqGetPackfileBlob.MAC, reqGetPackfileBlob.Offset, reqGetPackfileBlob.Length)
 	if err != nil {
 		resGetPackfileBlob.Err = err.Error()
 	} else {
@@ -236,7 +236,7 @@ func (s *server) deletePackfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var resDeletePackfile network.ResDeletePackfile
-	err := s.store.DeletePackfile(reqDeletePackfile.MAC)
+	err := s.store.DeletePackfile(r.Context(), reqDeletePackfile.MAC)
 	if err != nil {
 		resDeletePackfile.Err = err.Error()
 	}
@@ -253,7 +253,7 @@ func (s *server) getLocks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	locks, err := s.store.GetLocks()
+	locks, err := s.store.GetLocks(r.Context())
 	res := network.ResGetLocks{
 		Locks: locks,
 	}
@@ -274,7 +274,7 @@ func (s *server) putLock(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var res network.ResPutLock
-	if _, err := s.store.PutLock(req.Mac, bytes.NewReader(req.Data)); err != nil {
+	if _, err := s.store.PutLock(r.Context(), req.Mac, bytes.NewReader(req.Data)); err != nil {
 		res.Err = err.Error()
 	}
 
@@ -292,7 +292,7 @@ func (s *server) getLock(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var res network.ResGetLock
-	rd, err := s.store.GetLock(req.Mac)
+	rd, err := s.store.GetLock(r.Context(), req.Mac)
 	if err != nil {
 		res.Err = err.Error()
 	} else {
@@ -319,7 +319,7 @@ func (s *server) deleteLock(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var res network.ResDeleteLock
-	if err := s.store.DeleteLock(req.Mac); err != nil {
+	if err := s.store.DeleteLock(r.Context(), req.Mac); err != nil {
 		res.Err = err.Error()
 	}
 

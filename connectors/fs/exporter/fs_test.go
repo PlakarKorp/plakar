@@ -22,14 +22,16 @@ func TestExporter(t *testing.T) {
 	})
 
 	var exporterInstance exporter.Exporter
-	appCtx := appcontext.NewAppContext()
+	ctx := appcontext.NewAppContext()
 
 	// Register the fs backen
-	exporterInstance, err = exporter.NewExporter(appCtx.GetInner(), map[string]string{"location": tmpExportDir})
+	exporterInstance, err = exporter.NewExporter(ctx.GetInner(), map[string]string{"location": tmpExportDir})
 	require.NoError(t, err)
-	defer exporterInstance.Close()
+	defer exporterInstance.Close(ctx)
 
-	require.Equal(t, tmpExportDir, exporterInstance.Root())
+	root, err := exporterInstance.Root(ctx)
+	require.NoError(t, err)
+	require.Equal(t, tmpExportDir, root)
 
 	data := []byte("test exporter fs")
 	datalen := int64(len(data))
@@ -41,7 +43,7 @@ func TestExporter(t *testing.T) {
 	require.NoError(t, err)
 	defer fpOrigin.Close()
 
-	err = exporterInstance.StoreFile(tmpExportDir+"/dummy.txt", fpOrigin, datalen)
+	err = exporterInstance.StoreFile(ctx, tmpExportDir+"/dummy.txt", fpOrigin, datalen)
 	require.NoError(t, err)
 
 	fpExported, err := os.Open(tmpExportDir + "/dummy.txt")
@@ -53,9 +55,9 @@ func TestExporter(t *testing.T) {
 
 	require.Equal(t, string(data), string(newContent))
 
-	err = exporterInstance.CreateDirectory(tmpExportDir + "/subdir")
+	err = exporterInstance.CreateDirectory(ctx, tmpExportDir+"/subdir")
 	require.NoError(t, err)
 
-	err = exporterInstance.SetPermissions(tmpExportDir+"/dummy.txt", &objects.FileInfo{Lmode: 0644})
+	err = exporterInstance.SetPermissions(ctx, tmpExportDir+"/dummy.txt", &objects.FileInfo{Lmode: 0644})
 	require.NoError(t, err)
 }

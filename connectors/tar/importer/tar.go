@@ -65,7 +65,7 @@ func NewTarImporter(ctx context.Context, opts *importer.Options, name string, co
 	if name == "tar+gz" || name == "tgz" {
 		rd, err := gzip.NewReader(fp)
 		if err != nil {
-			t.Close()
+			t.Close(ctx)
 			return nil, err
 		}
 		t.rd = rd
@@ -79,19 +79,18 @@ func NewTarImporter(ctx context.Context, opts *importer.Options, name string, co
 	return t, nil
 }
 
-func (t *TarImporter) Type() string { return t.name }
-func (t *TarImporter) Root() string { return "/" }
+func (t *TarImporter) Type(ctx context.Context) (string, error) { return t.name, nil }
+func (t *TarImporter) Root(ctx context.Context) (string, error) { return "/", nil }
 
-func (p *TarImporter) Origin() string {
+func (p *TarImporter) Origin(ctx context.Context) (string, error) {
 	hostname, err := os.Hostname()
 	if err != nil {
-		hostname = "localhost"
+		return "", err
 	}
-
-	return hostname
+	return hostname, nil
 }
 
-func (t *TarImporter) Scan() (<-chan *importer.ScanResult, error) {
+func (t *TarImporter) Scan(ctx context.Context) (<-chan *importer.ScanResult, error) {
 	ch := make(chan *importer.ScanResult, 1)
 	go t.scan(ch)
 	return ch, nil
@@ -182,7 +181,7 @@ func (t *TarImporter) scan(ch chan<- *importer.ScanResult) {
 	}
 }
 
-func (t *TarImporter) Close() (err error) {
+func (t *TarImporter) Close(ctx context.Context) (err error) {
 	t.fp.Close()
 	if t.rd != nil {
 		err = t.rd.Close()

@@ -17,14 +17,12 @@ import (
 type GrpcImporter struct {
 	GrpcClientScan   grpc_importer_pkg.ImporterClient
 	GrpcClientReader grpc_importer_pkg.ImporterClient
-	Ctx              context.Context
 }
 
 func NewImporter(ctx context.Context, client grpc.ClientConnInterface, opts *importer.Options, proto string, config map[string]string) (importer.Importer, error) {
 	importer := &GrpcImporter{
 		GrpcClientScan:   grpc_importer_pkg.NewImporterClient(client),
 		GrpcClientReader: grpc_importer_pkg.NewImporterClient(client),
-		Ctx:              ctx,
 	}
 
 	initReq := grpc_importer_pkg.InitRequest{
@@ -51,32 +49,32 @@ func NewImporter(ctx context.Context, client grpc.ClientConnInterface, opts *imp
 	return importer, nil
 }
 
-func (g *GrpcImporter) Origin() string {
-	info, err := g.GrpcClientScan.Info(g.Ctx, &grpc_importer_pkg.InfoRequest{})
+func (g *GrpcImporter) Origin(ctx context.Context) (string, error) {
+	info, err := g.GrpcClientScan.Info(ctx, &grpc_importer_pkg.InfoRequest{})
 	if err != nil {
-		return ""
+		return "", err
 	}
-	return info.GetOrigin()
+	return info.GetOrigin(), nil
 }
 
-func (g *GrpcImporter) Type() string {
-	info, err := g.GrpcClientScan.Info(g.Ctx, &grpc_importer_pkg.InfoRequest{})
+func (g *GrpcImporter) Type(ctx context.Context) (string, error) {
+	info, err := g.GrpcClientScan.Info(ctx, &grpc_importer_pkg.InfoRequest{})
 	if err != nil {
-		return ""
+		return "", err
 	}
-	return info.GetType()
+	return info.GetType(), nil
 }
 
-func (g *GrpcImporter) Root() string {
-	info, err := g.GrpcClientScan.Info(g.Ctx, &grpc_importer_pkg.InfoRequest{})
+func (g *GrpcImporter) Root(ctx context.Context) (string, error) {
+	info, err := g.GrpcClientScan.Info(context.Background(), &grpc_importer_pkg.InfoRequest{})
 	if err != nil {
-		return ""
+		return "", err
 	}
-	return info.GetRoot()
+	return info.GetRoot(), nil
 }
 
-func (g *GrpcImporter) Close() error {
-	_, err := g.GrpcClientScan.Close(g.Ctx, &grpc_importer_pkg.CloseRequest{})
+func (g *GrpcImporter) Close(ctx context.Context) error {
+	_, err := g.GrpcClientScan.Close(ctx, &grpc_importer_pkg.CloseRequest{})
 	if err != nil {
 		return fmt.Errorf("failed to close importer: %w", err)
 	}
@@ -144,8 +142,8 @@ func (g *GrpcReader) Close() error {
 	return nil
 }
 
-func (g *GrpcImporter) Scan() (<-chan *importer.ScanResult, error) {
-	stream, err := g.GrpcClientScan.Scan(g.Ctx, &grpc_importer_pkg.ScanRequest{})
+func (g *GrpcImporter) Scan(ctx context.Context) (<-chan *importer.ScanResult, error) {
+	stream, err := g.GrpcClientScan.Scan(ctx, &grpc_importer_pkg.ScanRequest{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to start scan: %w", err)
 	}
@@ -172,7 +170,7 @@ func (g *GrpcImporter) Scan() (<-chan *importer.ScanResult, error) {
 					Record: &importer.ScanRecord{
 						Pathname: response.GetPathname(),
 						Reader: importer.NewLazyReader(func() (io.ReadCloser, error) {
-							return NewGrpcReader(g.Ctx, g.GrpcClientReader, response.GetPathname()), nil
+							return NewGrpcReader(ctx, g.GrpcClientReader, response.GetPathname()), nil
 						}),
 						FileInfo: objects.FileInfo{
 							Lname:      response.GetRecord().GetFileinfo().GetName(),

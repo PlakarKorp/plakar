@@ -19,13 +19,11 @@ import (
 
 type GrpcExporter struct {
 	GrpcClient grpc_exporter.ExporterClient
-	Ctx        context.Context
 }
 
 func NewExporter(ctx context.Context, client grpc.ClientConnInterface, opts *exporter.Options, proto string, config map[string]string) (exporter.Exporter, error) {
 	exporter := &GrpcExporter{
 		GrpcClient: grpc_exporter.NewExporterClient(client),
-		Ctx:        ctx,
 	}
 
 	_, err := exporter.GrpcClient.Init(ctx, &grpc_exporter.InitRequest{
@@ -42,29 +40,29 @@ func NewExporter(ctx context.Context, client grpc.ClientConnInterface, opts *exp
 	return exporter, nil
 }
 
-func (g *GrpcExporter) Close() error {
-	_, err := g.GrpcClient.Close(g.Ctx, &grpc_exporter.CloseRequest{})
+func (g *GrpcExporter) Close(ctx context.Context) error {
+	_, err := g.GrpcClient.Close(ctx, &grpc_exporter.CloseRequest{})
 	return err
 }
 
-func (g *GrpcExporter) CreateDirectory(pathname string) error {
-	_, err := g.GrpcClient.CreateDirectory(g.Ctx, &grpc_exporter.CreateDirectoryRequest{Pathname: pathname})
+func (g *GrpcExporter) CreateDirectory(ctx context.Context, pathname string) error {
+	_, err := g.GrpcClient.CreateDirectory(ctx, &grpc_exporter.CreateDirectoryRequest{Pathname: pathname})
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (g *GrpcExporter) Root() string {
-	info, err := g.GrpcClient.Root(g.Ctx, &grpc_exporter.RootRequest{})
+func (g *GrpcExporter) Root(ctx context.Context) (string, error) {
+	info, err := g.GrpcClient.Root(ctx, &grpc_exporter.RootRequest{})
 	if err != nil {
-		return ""
+		return "", err
 	}
-	return info.RootPath
+	return info.RootPath, nil
 }
 
-func (g *GrpcExporter) SetPermissions(pathname string, fileinfo *objects.FileInfo) error {
-	_, err := g.GrpcClient.SetPermissions(g.Ctx, &grpc_exporter.SetPermissionsRequest{
+func (g *GrpcExporter) SetPermissions(ctx context.Context, pathname string, fileinfo *objects.FileInfo) error {
+	_, err := g.GrpcClient.SetPermissions(ctx, &grpc_exporter.SetPermissionsRequest{
 		Pathname: pathname,
 		FileInfo: &grpc_exporter.FileInfo{
 			Name:      fileinfo.Lname,
@@ -83,8 +81,8 @@ func (g *GrpcExporter) SetPermissions(pathname string, fileinfo *objects.FileInf
 	return err
 }
 
-func (g *GrpcExporter) StoreFile(pathname string, fp io.Reader, size int64) error {
-	stream, err := g.GrpcClient.StoreFile(g.Ctx)
+func (g *GrpcExporter) StoreFile(ctx context.Context, pathname string, fp io.Reader, size int64) error {
+	stream, err := g.GrpcClient.StoreFile(ctx)
 	if err != nil {
 		return err
 	}

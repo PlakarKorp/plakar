@@ -22,6 +22,8 @@ import (
 	"github.com/PlakarKorp/kloset/encryption"
 	"github.com/PlakarKorp/kloset/logging"
 	"github.com/PlakarKorp/kloset/repository"
+	"github.com/PlakarKorp/kloset/snapshot/exporter"
+	"github.com/PlakarKorp/kloset/snapshot/importer"
 	"github.com/PlakarKorp/kloset/storage"
 	"github.com/PlakarKorp/kloset/versioning"
 	"github.com/PlakarKorp/plakar/agent"
@@ -70,9 +72,17 @@ import (
 	_ "github.com/PlakarKorp/plakar/connectors/sqlite"
 	_ "github.com/PlakarKorp/plakar/connectors/stdio"
 	_ "github.com/PlakarKorp/plakar/connectors/tar"
+
+	"github.com/PlakarKorp/integration-gcs"
 )
 
 var ErrCantUnlock = errors.New("failed to unlock repository")
+
+func init() {
+	storage.Register("gcs", 0, gcs.NewStore)
+	importer.Register("gcs", 0, gcs.NewImporter)
+	exporter.Register("gcs", 0, gcs.NewExporter)
+}
 
 func entryPoint() int {
 	// default values
@@ -440,7 +450,7 @@ func entryPoint() int {
 	}
 
 	if store != nil {
-		err = store.Close()
+		err = store.Close(ctx)
 		if err != nil {
 			logger.Warn("could not close repository: %s", err)
 		}

@@ -77,7 +77,10 @@ func (cmd *Info) executeRepository(ctx *appcontext.AppContext, repo *repository.
 
 	fmt.Fprintln(ctx.Stdout, "Snapshots:", nSnapshots)
 
-	storageSize := repo.Store().Size()
+	storageSize, err := repo.Store().Size(ctx)
+	if err != nil {
+		return 1, fmt.Errorf("unable to compute storage size: %w", err)
+	}
 
 	fmt.Fprintf(ctx.Stdout, "Storage size: %s (%d bytes)\n", humanize.Bytes(uint64(storageSize)), uint64(storageSize))
 	fmt.Fprintf(ctx.Stdout, "Logical size: %s (%d bytes)\n", humanize.Bytes(uint64(logicalSize)), logicalSize)

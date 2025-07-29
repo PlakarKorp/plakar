@@ -57,22 +57,22 @@ func NewSFTPImporter(appCtx context.Context, opts *importer.Options, name string
 	}, nil
 }
 
-func (p *SFTPImporter) Origin() string {
-	return p.remoteHost
+func (p *SFTPImporter) Origin(ctx context.Context) (string, error) {
+	return p.remoteHost, nil
 }
 
-func (p *SFTPImporter) Type() string {
-	return "sftp"
+func (p *SFTPImporter) Type(ctx context.Context) (string, error) {
+	return "sftp", nil
 }
 
-func (p *SFTPImporter) Scan() (<-chan *importer.ScanResult, error) {
+func (p *SFTPImporter) Scan(ctx context.Context) (<-chan *importer.ScanResult, error) {
 	return p.walkDir_walker(256)
 }
 
-func (p *SFTPImporter) Close() error {
+func (p *SFTPImporter) Close(ctx context.Context) error {
 	return p.client.Close()
 }
 
-func (p *SFTPImporter) Root() string {
-	return p.rootDir
+func (p *SFTPImporter) Root(ctx context.Context) (string, error) {
+	return p.rootDir, nil
 }

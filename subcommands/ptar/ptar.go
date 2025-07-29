@@ -327,7 +327,7 @@ func (cmd *Ptar) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 		return 1, err
 	}
 
-	if err := st.Close(); err != nil {
+	if err := st.Close(ctx); err != nil {
 		return 1, err
 	}
 

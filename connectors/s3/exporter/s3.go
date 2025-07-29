@@ -100,15 +100,15 @@ func NewS3Exporter(ctx context.Context, opts *exporter.Options, name string, con
 	}, nil
 }
 
-func (p *S3Exporter) Root() string {
-	return p.rootDir
+func (p *S3Exporter) Root(ctx context.Context) (string, error) {
+	return p.rootDir, nil
 }
 
-func (p *S3Exporter) CreateDirectory(pathname string) error {
+func (p *S3Exporter) CreateDirectory(ctx context.Context, pathname string) error {
 	return nil
 }
 
-func (p *S3Exporter) StoreFile(pathname string, fp io.Reader, size int64) error {
+func (p *S3Exporter) StoreFile(ctx context.Context, pathname string, fp io.Reader, size int64) error {
 	_, err := p.minioClient.PutObject(p.ctx,
 		strings.TrimPrefix(p.rootDir, "/"),
 		strings.TrimPrefix(pathname, p.rootDir+"/"),
@@ -116,10 +116,10 @@ func (p *S3Exporter) StoreFile(pathname string, fp io.Reader, size int64) error 
 	return err
 }
 
-func (p *S3Exporter) SetPermissions(pathname string, fileinfo *objects.FileInfo) error {
+func (p *S3Exporter) SetPermissions(ctx context.Context, pathname string, fileinfo *objects.FileInfo) error {
 	return nil
 }
 
-func (p *S3Exporter) Close() error {
+func (p *S3Exporter) Close(ctx context.Context) error {
 	return nil
 }

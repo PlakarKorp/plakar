@@ -50,12 +50,12 @@ func NewStore(ctx context.Context, proto string, storeConfig map[string]string) 
 	}, nil
 }
 
-func (s *Store) Location() string {
-	return s.location
+func (s *Store) Location(ctx context.Context) (string, error) {
+	return s.location, nil
 }
 
 func (s *Store) Path(args ...string) string {
-	root := strings.TrimPrefix(s.Location(), "fs://")
+	root := strings.TrimPrefix(s.location, "fs://")
 
 	args = append(args, "")
 	copy(args[1:], args)
@@ -122,14 +122,14 @@ func (s *Store) Open(ctx context.Context) ([]byte, error) {
 	return data, nil
 }
 
-func (s *Store) Mode() storage.Mode {
-	return storage.ModeRead | storage.ModeWrite
+func (s *Store) Mode(ctx context.Context) (storage.Mode, error) {
+	return storage.ModeRead | storage.ModeWrite, nil
 }
 
-func (s *Store) Size() int64 {
+func (s *Store) Size(ctx context.Context) (int64, error) {
 	var size int64
-	location := strings.TrimPrefix(s.Location(), "fs://")
-	_ = filepath.WalkDir(location, func(_ string, d fs.DirEntry, err error) error {
+	location := strings.TrimPrefix(s.location, "fs://")
+	err := filepath.WalkDir(location, func(_ string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -147,14 +147,14 @@ func (s *Store) Size() int64 {
 		}
 		return nil
 	})
-	return size
+	return size, err
 }
 
-func (s *Store) GetPackfiles() ([]objects.MAC, error) {
+func (s *Store) GetPackfiles(ctx context.Context) ([]objects.MAC, error) {
 	return s.packfiles.List()
 }
 
-func (s *Store) GetPackfile(mac objects.MAC) (io.ReadCloser, error) {
+func (s *Store) GetPackfile(ctx context.Context, mac objects.MAC) (io.ReadCloser, error) {
 	fp, err := s.packfiles.Get(mac)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -166,7 +166,7 @@ func (s *Store) GetPackfile(mac objects.MAC) (io.ReadCloser, error) {
 	return fp, nil
 }
 
-func (s *Store) GetPackfileBlob(mac objects.MAC, offset uint64, length uint32) (io.ReadCloser, error) {
+func (s *Store) GetPackfileBlob(ctx context.Context, mac objects.MAC, offset uint64, length uint32) (io.ReadCloser, error) {
 	res, err := s.packfiles.GetBlob(mac, offset, length)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -177,36 +177,36 @@ func (s *Store) GetPackfileBlob(mac objects.MAC, offset uint64, length uint32) (
 	return res, nil
 }
 
-func (s *Store) DeletePackfile(mac objects.MAC) error {
+func (s *Store) DeletePackfile(ctx context.Context, mac objects.MAC) error {
 	return s.packfiles.Remove(mac)
 }
 
-func (s *Store) PutPackfile(mac objects.MAC, rd io.Reader) (int64, error) {
+func (s *Store) PutPackfile(ctx context.Context, mac objects.MAC, rd io.Reader) (int64, error) {
 	return s.packfiles.Put(mac, rd)
 }
 
-func (s *Store) Close() error {
+func (s *Store) Close(ctx context.Context) error {
 	return nil
 }
 
 /* Indexes */
-func (s *Store) GetStates() ([]objects.MAC, error) {
+func (s *Store) GetStates(ctx context.Context) ([]objects.MAC, error) {
 	return s.states.List()
 }
 
-func (s *Store) PutState(mac objects.MAC, rd io.Reader) (int64, error) {
+func (s *Store) PutState(ctx context.Context, mac objects.MAC, rd io.Reader) (int64, error) {
 	return s.states.Put(mac, rd)
 }
 
-func (s *Store) GetState(mac objects.MAC) (io.ReadCloser, error) {
+func (s *Store) GetState(ctx context.Context, mac objects.MAC) (io.ReadCloser, error) {
 	return s.states.Get(mac)
 }
 
-func (s *Store) DeleteState(mac objects.MAC) error {
+func (s *Store) DeleteState(ctx context.Context, mac objects.MAC) error {
 	return s.states.Remove(mac)
 }
 
-func (s *Store) GetLocks() ([]objects.MAC, error) {
+func (s *Store) GetLocks(ctx context.Context) ([]objects.MAC, error) {
 	ret := make([]objects.MAC, 0)
 
 	locksdir, err := os.ReadDir(s.Path("locks"))
@@ -234,11 +234,11 @@ func (s *Store) GetLocks() ([]objects.MAC, error) {
 	return ret, nil
 }
 
-func (s *Store) PutLock(lockID objects.MAC, rd io.Reader) (int64, error) {
+func (s *Store) PutLock(ctx context.Context, lockID objects.MAC, rd io.Reader) (int64, error) {
 	return WriteToFileAtomicTempDir(filepath.Join(s.Path("locks"), hex.EncodeToString(lockID[:])), rd, s.Path(""))
 }
 
-func (s *Store) GetLock(lockID objects.MAC) (io.ReadCloser, error) {
+func (s *Store) GetLock(ctx context.Context, lockID objects.MAC) (io.ReadCloser, error) {
 	fp, err := os.Open(filepath.Join(s.Path("locks"), hex.EncodeToString(lockID[:])))
 	if err != nil {
 		return nil, err
@@ -247,7 +247,7 @@ func (s *Store) GetLock(lockID objects.MAC) (io.ReadCloser, error) {
 	return fp, nil
 }
 
-func (s *Store) DeleteLock(lockID objects.MAC) error {
+func (s *Store) DeleteLock(ctx context.Context, lockID objects.MAC) error {
 	if err := os.Remove(filepath.Join(s.Path("locks"), hex.EncodeToString(lockID[:]))); err != nil {
 		return err
 	}

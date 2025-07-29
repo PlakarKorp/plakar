@@ -176,17 +176,27 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 		srcRepository = repo
 		dstRepository = peerRepository
 	} else {
-		return 1, fmt.Errorf("could not synchronize %s: invalid direction, must be to, from or with", peerStore.Location())
+		return 1, fmt.Errorf("could not synchronize %s: invalid direction, must be to, from or with", cmd.PeerRepositoryLocation)
+	}
+
+	srcLocation, err := srcRepository.Location()
+	if err != nil {
+		return 1, fmt.Errorf("could not get source location: %w", err)
+	}
+
+	dstLocation, err := dstRepository.Location()
+	if err != nil {
+		return 1, fmt.Errorf("could not get destination location: %w", err)
 	}
 
 	srcSnapshots, err := srcRepository.GetSnapshots()
 	if err != nil {
-		return 1, fmt.Errorf("could not get list of snapshots from source repository %s: %s", srcRepository.Location(), err)
+		return 1, fmt.Errorf("could not get list of snapshots from source repository %s: %s", srcLocation, err)
 	}
 
 	dstSnapshots, err := dstRepository.GetSnapshots()
 	if err != nil {
-		return 1, fmt.Errorf("could not get list of snapshots from peer repository %s: %s", dstRepository.Location(), err)
+		return 1, fmt.Errorf("could not get list of snapshots from peer repository %s: %s", dstLocation, err)
 	}
 
 	srcSnapshotsMap := make(map[objects.MAC]struct{})
@@ -204,7 +214,7 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 
 	srcSnapshotIDs, err := utils.LocateSnapshotIDs(srcRepository, cmd.SrcLocateOptions)
 	if err != nil {
-		return 1, fmt.Errorf("could not locate snapshots in source repository %s: %s", dstRepository.Location(), err)
+		return 1, fmt.Errorf("could not locate snapshots in source repository %s: %s", dstLocation, err)
 	}
 
 	for _, snapshotID := range srcSnapshotIDs {
@@ -221,14 +231,14 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 		err := synchronize(ctx, srcRepository, dstRepository, snapshotID)
 		if err != nil {
 			ctx.GetLogger().Error("failed to synchronize snapshot %x from source repository %s: %s",
-				snapshotID[:4], srcRepository.Location(), err)
+				snapshotID[:4], srcLocation, err)
 		}
 	}
 
 	if cmd.Direction == "with" {
 		dstSnapshotIDs, err := utils.LocateSnapshotIDs(dstRepository, cmd.SrcLocateOptions)
 		if err != nil {
-			return 1, fmt.Errorf("could not locate snapshots in peer repository %s: %s", dstRepository.Location(), err)
+			return 1, fmt.Errorf("could not locate snapshots in peer repository %s: %s", dstLocation, err)
 		}
 
 		dstSyncList := make([]objects.MAC, 0)
@@ -245,22 +255,22 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 			err := synchronize(ctx, dstRepository, srcRepository, snapshotID)
 			if err != nil {
 				ctx.GetLogger().Error("failed to synchronize snapshot %x from peer repository %s: %s",
-					snapshotID[:4], dstRepository.Location(), err)
+					snapshotID[:4], dstLocation, err)
 			}
 		}
 		ctx.GetLogger().Info("sync: synchronization between %s and %s completed: %d snapshots synchronized",
-			srcRepository.Location(),
-			dstRepository.Location(),
+			srcLocation,
+			dstLocation,
 			len(srcSyncList)+len(dstSyncList))
 	} else if cmd.Direction == "to" {
 		ctx.GetLogger().Info("sync: synchronization from %s to %s completed: %d snapshots synchronized",
-			srcRepository.Location(),
-			dstRepository.Location(),
+			srcLocation,
+			dstLocation,
 			len(srcSyncList))
 	} else {
 		ctx.GetLogger().Info("sync: synchronization from %s to %s completed: %d snapshots synchronized",
-			dstRepository.Location(),
-			srcRepository.Location(),
+			dstLocation,
+			srcLocation,
 			len(srcSyncList))
 	}
 
@@ -268,7 +278,17 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 }
 
 func synchronize(ctx *appcontext.AppContext, srcRepository, dstRepository *repository.Repository, snapshotID objects.MAC) error {
-	ctx.GetLogger().Info("Synchronizing snapshot %x from %s to %s", snapshotID, srcRepository.Location(), dstRepository.Location())
+	srcLocation, err := srcRepository.Location()
+	if err != nil {
+		return err
+	}
+
+	dstLocation, err := dstRepository.Location()
+	if err != nil {
+		return err
+	}
+
+	ctx.GetLogger().Info("Synchronizing snapshot %x from %s to %s", snapshotID, srcLocation, dstLocation)
 	srcSnapshot, err := snapshot.Load(srcRepository, snapshotID)
 	if err != nil {
 		return err

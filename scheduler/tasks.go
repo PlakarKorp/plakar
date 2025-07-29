@@ -35,23 +35,23 @@ func loadRepository(newCtx *appcontext.AppContext, name string) (*repository.Rep
 
 	repoConfig, err := storage.NewConfigurationFromWrappedBytes(config)
 	if err != nil {
-		store.Close()
+		store.Close(newCtx)
 		return nil, nil, fmt.Errorf("unable to read repository configuration: %w", err)
 	}
 
 	if repoConfig.Version != versioning.FromString(storage.VERSION) {
-		store.Close()
+		store.Close(newCtx)
 		return nil, nil, fmt.Errorf("incompatible repository version: %s != %s", repoConfig.Version, storage.VERSION)
 	}
 
 	if passphrase, ok := storeConfig["passphrase"]; ok {
 		key, err := encryption.DeriveKey(repoConfig.Encryption.KDFParams, []byte(passphrase))
 		if err != nil {
-			store.Close()
+			store.Close(newCtx)
 			return nil, nil, fmt.Errorf("error deriving key: %w", err)
 		}
 		if !encryption.VerifyCanary(repoConfig.Encryption, key) {
-			store.Close()
+			store.Close(newCtx)
 			return nil, nil, fmt.Errorf("invalid passphrase")
 		}
 		newCtx.SetSecret(key)
@@ -59,7 +59,7 @@ func loadRepository(newCtx *appcontext.AppContext, name string) (*repository.Rep
 
 	repo, err := repository.New(newCtx.GetInner(), newCtx.GetSecret(), store, config)
 	if err != nil {
-		store.Close()
+		store.Close(newCtx)
 		return nil, store, fmt.Errorf("unable to open repository: %w", err)
 	}
 	return repo, store, nil
@@ -119,7 +119,7 @@ func (s *Scheduler) backupTask(taskset Task, task BackupConfig) {
 
 		close:
 			repo.Close()
-			store.Close()
+			store.Close(s.ctx)
 		}
 	}
 }
@@ -156,7 +156,7 @@ func (s *Scheduler) checkTask(taskset Task, task CheckConfig) {
 			}
 
 			repo.Close()
-			store.Close()
+			store.Close(s.ctx)
 		}
 	}
 }
@@ -192,7 +192,7 @@ func (s *Scheduler) restoreTask(taskset Task, task RestoreConfig) {
 			}
 
 			repo.Close()
-			store.Close()
+			store.Close(s.ctx)
 		}
 	}
 }
@@ -242,7 +242,7 @@ func (s *Scheduler) syncTask(taskset Task, task SyncConfig) {
 			}
 
 			repo.Close()
-			store.Close()
+			store.Close(s.ctx)
 		}
 	}
 }
@@ -290,7 +290,7 @@ func (s *Scheduler) maintenanceTask(task MaintenanceConfig) {
 
 		close:
 			repo.Close()
-			store.Close()
+			store.Close(s.ctx)
 		}
 	}
 }

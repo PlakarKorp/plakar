@@ -173,10 +173,15 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 	if err != nil {
 		return 1, err
 	}
-	defer exporterInstance.Close()
+	defer exporterInstance.Close(ctx)
 
 	opts := &snapshot.RestoreOptions{
 		MaxConcurrency: cmd.Concurrency,
+	}
+
+	root, err := exporterInstance.Root(ctx)
+	if err != nil {
+		return 1, err
 	}
 
 	for _, snapPath := range snapshots {
@@ -186,11 +191,11 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 		}
 		opts.Strip = snap.Header.GetSource(0).Importer.Directory
 
-		err = snap.Restore(exporterInstance, exporterInstance.Root(), pathname, opts)
-
+		err = snap.Restore(exporterInstance, root, pathname, opts)
 		if err != nil {
 			return 1, err
 		}
+
 		ctx.GetLogger().Info("restore: restoration of %x:%s at %s completed successfully",
 			snap.Header.GetIndexShortID(),
 			pathname,

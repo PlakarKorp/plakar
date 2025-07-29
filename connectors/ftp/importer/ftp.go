@@ -135,7 +135,7 @@ func (p *FTPImporter) walkDir(root string, results chan<- string, wg *sync.WaitG
 	}
 }
 
-func (p *FTPImporter) Scan() (<-chan *importer.ScanResult, error) {
+func (p *FTPImporter) Scan(ctx context.Context) (<-chan *importer.ScanResult, error) {
 	client, err := connectToFTP(p.host, "", "")
 	if err != nil {
 		return nil, err
@@ -182,21 +182,21 @@ func (p *FTPImporter) NewReader(pathname string) (io.ReadCloser, error) {
 	return tmpfile, nil
 }
 
-func (p *FTPImporter) Close() error {
+func (p *FTPImporter) Close(ctx context.Context) error {
 	if p.client != nil {
 		return p.client.Close()
 	}
 	return nil
 }
 
-func (p *FTPImporter) Root() string {
-	return p.rootDir
+func (p *FTPImporter) Root(ctx context.Context) (string, error) {
+	return p.rootDir, nil
 }
 
-func (p *FTPImporter) Origin() string {
-	return p.host
+func (p *FTPImporter) Origin(ctx context.Context) (string, error) {
+	return p.host, nil
 }
 
-func (p *FTPImporter) Type() string {
-	return "ftp"
+func (p *FTPImporter) Type(ctx context.Context) (string, error) {
+	return "ftp", nil
 }

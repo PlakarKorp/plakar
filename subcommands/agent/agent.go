@@ -446,7 +446,7 @@ func handleClient(ctx *appcontext.AppContext, wg *sync.WaitGroup, conn net.Conn)
 			fmt.Fprintf(clientContext.Stderr, "Failed to open storage: %s\n", err)
 			return
 		}
-		defer store.Close()
+		defer store.Close(ctx)
 
 		repo, err = repository.New(clientContext.GetInner(), clientContext.GetSecret(), store, serializedConfig)
 		if err != nil {

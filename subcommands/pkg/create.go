@@ -155,7 +155,7 @@ func (cmd *PkgCreate) Execute(ctx *appcontext.AppContext, _ *repository.Reposito
 		return 1, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	if err := st.Close(); err != nil {
+	if err := st.Close(ctx); err != nil {
 		return 1, fmt.Errorf("failed to close the storage: %w", err)
 	}
 

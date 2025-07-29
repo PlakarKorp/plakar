@@ -41,15 +41,15 @@ func NewFSExporter(ctx context.Context, opts *exporter.Options, name string, con
 	}, nil
 }
 
-func (p *FSExporter) Root() string {
-	return p.rootDir
+func (p *FSExporter) Root(ctx context.Context) (string, error) {
+	return p.rootDir, nil
 }
 
-func (p *FSExporter) CreateDirectory(pathname string) error {
+func (p *FSExporter) CreateDirectory(ctx context.Context, pathname string) error {
 	return os.MkdirAll(pathname, 0700)
 }
 
-func (p *FSExporter) StoreFile(pathname string, fp io.Reader, size int64) error {
+func (p *FSExporter) StoreFile(ctx context.Context, pathname string, fp io.Reader, size int64) error {
 	f, err := os.Create(pathname)
 	if err != nil {
 		return err
@@ -69,7 +69,7 @@ func (p *FSExporter) StoreFile(pathname string, fp io.Reader, size int64) error 
 	return nil
 }
 
-func (p *FSExporter) SetPermissions(pathname string, fileinfo *objects.FileInfo) error {
+func (p *FSExporter) SetPermissions(ctx context.Context, pathname string, fileinfo *objects.FileInfo) error {
 	if err := os.Chmod(pathname, fileinfo.Mode()); err != nil {
 		return err
 	}
@@ -84,6 +84,6 @@ func (p *FSExporter) SetPermissions(pathname string, fileinfo *objects.FileInfo)
 	return nil
 }
 
-func (p *FSExporter) Close() error {
+func (p *FSExporter) Close(ctx context.Context) error {
 	return nil
 }

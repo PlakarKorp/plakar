@@ -68,8 +68,8 @@ func NewStore(ctx context.Context, proto string, storeConfig map[string]string) 
 	}, nil
 }
 
-func (s *Store) Location() string {
-	return s.location
+func (s *Store) Location(ctx context.Context) (string, error) {
+	return s.location, nil
 }
 
 func (s *Store) Create(ctx context.Context, config []byte) error {
@@ -169,7 +169,7 @@ func (s *Store) Open(ctx context.Context) ([]byte, error) {
 	return s.config, nil
 }
 
-func (s *Store) Close() error {
+func (s *Store) Close(ctx context.Context) error {
 	if s.mode&storage.ModeWrite != 0 {
 		binary.Write(s.fp, binary.LittleEndian, s.configOffset)
 		binary.Write(s.fp, binary.LittleEndian, s.configLength)
@@ -181,20 +181,20 @@ func (s *Store) Close() error {
 	return s.fp.Close()
 }
 
-func (s *Store) Mode() storage.Mode {
-	return s.mode
+func (s *Store) Mode(ctx context.Context) (storage.Mode, error) {
+	return s.mode, nil
 }
 
-func (s *Store) Size() int64 {
+func (s *Store) Size(ctx context.Context) (int64, error) {
 	fi, err := s.fp.Stat()
 	if err != nil {
-		return 0
+		return 0, err
 	}
-	return fi.Size()
+	return fi.Size(), nil
 }
 
 // states
-func (s *Store) GetStates() ([]objects.MAC, error) {
+func (s *Store) GetStates(ctx context.Context) ([]objects.MAC, error) {
 	if s.mode&storage.ModeWrite != 0 {
 		return []objects.MAC{}, nil
 	}
@@ -204,7 +204,7 @@ func (s *Store) GetStates() ([]objects.MAC, error) {
 	}, nil
 }
 
-func (s *Store) PutState(mac objects.MAC, rd io.Reader) (int64, error) {
+func (s *Store) PutState(ctx context.Context, mac objects.MAC, rd io.Reader) (int64, error) {
 	if s.mode&storage.ModeWrite == 0 {
 		return 0, storage.ErrNotWritable
 	}
@@ -219,14 +219,14 @@ func (s *Store) PutState(mac objects.MAC, rd io.Reader) (int64, error) {
 	return nbytes, nil
 }
 
-func (s *Store) GetState(mac objects.MAC) (io.ReadCloser, error) {
+func (s *Store) GetState(ctx context.Context, mac objects.MAC) (io.ReadCloser, error) {
 	if mac != stateMAC {
 		return nil, fmt.Errorf("invalid MAC: %s", mac)
 	}
 	return io.NopCloser(io.NewSectionReader(s.fp, s.stateOffset, s.stateLength)), nil
 }
 
-func (s *Store) DeleteState(mac objects.MAC) error {
+func (s *Store) DeleteState(ctx context.Context, mac objects.MAC) error {
 	if s.mode&storage.ModeWrite == 0 {
 		return storage.ErrNotWritable
 	}
@@ -234,13 +234,13 @@ func (s *Store) DeleteState(mac objects.MAC) error {
 }
 
 // packfiles
-func (s *Store) GetPackfiles() ([]objects.MAC, error) {
+func (s *Store) GetPackfiles(ctx context.Context) ([]objects.MAC, error) {
 	return []objects.MAC{
 		packfileMAC,
 	}, nil
 }
 
-func (s *Store) PutPackfile(mac objects.MAC, rd io.Reader) (int64, error) {
+func (s *Store) PutPackfile(ctx context.Context, mac objects.MAC, rd io.Reader) (int64, error) {
 	if s.mode&storage.ModeWrite == 0 {
 		return 0, storage.ErrNotWritable
 	}
@@ -255,15 +255,15 @@ func (s *Store) PutPackfile(mac objects.MAC, rd io.Reader) (int64, error) {
 	return nbytes, nil
 }
 
-func (s *Store) GetPackfile(mac objects.MAC) (io.ReadCloser, error) {
+func (s *Store) GetPackfile(ctx context.Context, mac objects.MAC) (io.ReadCloser, error) {
 	return io.NopCloser(io.NewSectionReader(s.fp, s.packfileOffset, s.packfileLength)), nil
 }
 
-func (s *Store) GetPackfileBlob(mac objects.MAC, offset uint64, length uint32) (io.ReadCloser, error) {
+func (s *Store) GetPackfileBlob(ctx context.Context, mac objects.MAC, offset uint64, length uint32) (io.ReadCloser, error) {
 	return io.NopCloser(io.NewSectionReader(s.fp, s.packfileOffset+int64(offset), int64(length))), nil
 }
 
-func (s *Store) DeletePackfile(mac objects.MAC) error {
+func (s *Store) DeletePackfile(ctx context.Context, mac objects.MAC) error {
 	if s.mode&storage.ModeWrite == 0 {
 		return storage.ErrNotWritable
 	}
@@ -271,22 +271,22 @@ func (s *Store) DeletePackfile(mac objects.MAC) error {
 }
 
 /* Locks */
-func (s *Store) GetLocks() ([]objects.MAC, error) {
+func (s *Store) GetLocks(ctx context.Context) ([]objects.MAC, error) {
 	return []objects.MAC{}, nil
 }
 
-func (s *Store) PutLock(lockID objects.MAC, rd io.Reader) (int64, error) {
+func (s *Store) PutLock(ctx context.Context, lockID objects.MAC, rd io.Reader) (int64, error) {
 	if s.mode&storage.ModeWrite == 0 {
 		return 0, storage.ErrNotWritable
 	}
 	return 0, nil
 }
 
-func (s *Store) GetLock(lockID objects.MAC) (io.ReadCloser, error) {
+func (s *Store) GetLock(ctx context.Context, lockID objects.MAC) (io.ReadCloser, error) {
 	return io.NopCloser(bytes.NewBuffer([]byte{})), nil
 }
 
-func (s *Store) DeleteLock(lockID objects.MAC) error {
+func (s *Store) DeleteLock(ctx context.Context, lockID objects.MAC) error {
 	if s.mode&storage.ModeWrite == 0 {
 		return storage.ErrNotWritable
 	}

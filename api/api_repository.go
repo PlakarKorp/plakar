@@ -64,7 +64,11 @@ func (ui *uiserver) repositoryInfo(w http.ResponseWriter, r *http.Request) error
 	}
 
 	efficiency := float64(0)
-	storageSize := ui.repository.StorageSize()
+	storageSize, err := ui.repository.StorageSize()
+	if err != nil {
+		return fmt.Errorf("unable to compute storage size: %w", err)
+	}
+
 	if storageSize == -1 || logicalSize == 0 {
 		efficiency = -1
 	} else {
@@ -82,11 +86,16 @@ func (ui *uiserver) repositoryInfo(w http.ResponseWriter, r *http.Request) error
 		}
 	}
 
+	location, err := ui.repository.Location()
+	if err != nil {
+		return fmt.Errorf("unable to get storage location: %w", err)
+	}
+
 	return json.NewEncoder(w).Encode(Item[RepositoryInfoResponse]{Item: RepositoryInfoResponse{
-		Location: ui.repository.Location(),
+		Location: location,
 		Snapshots: RepositoryInfoSnapshots{
 			Total:           nSnapshots,
-			StorageSize:     int64(ui.repository.StorageSize()),
+			StorageSize:     storageSize,
 			LogicalSize:     logicalSize,
 			Efficiency:      efficiency,
 			SnapshotsPerDay: nSnapshotsPerDay,
