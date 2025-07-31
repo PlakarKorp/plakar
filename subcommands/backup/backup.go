@@ -18,10 +18,11 @@ package backup
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
 	"os"
 	"strings"
+
+	flag "github.com/spf13/pflag"
 
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
@@ -38,41 +39,9 @@ func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &Backup{} }, subcommands.AgentSupport, "backup")
 }
 
-type excludeFlags []string
-
-func (e *excludeFlags) String() string {
-	return strings.Join(*e, ",")
-}
-
-func (e *excludeFlags) Set(value string) error {
-	*e = append(*e, value)
-	return nil
-}
-
-type tagFlags string
-
-// Called by the flag package to print the default / help.
-func (e *tagFlags) String() string {
-	return string(*e)
-}
-
-// Called once per flag occurrence to set the value.
-func (e *tagFlags) Set(value string) error {
-	if *e != "" {
-		return fmt.Errorf("tags should be specified only once, as a comma-separated list")
-	}
-	*e = tagFlags(value)
-	return nil
-}
-
-func (e *tagFlags) asList() []string {
-	return strings.Split(string(*e), ",")
-}
-
 func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
 	var opt_exclude_file string
-	var opt_exclude excludeFlags
-	var opt_tags tagFlags
+	excludeFlags := []string{}
 
 	excludes := []string{}
 
@@ -83,26 +52,37 @@ func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
 		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS] path\n", flags.Name())
 		fmt.Fprintf(flags.Output(), "       %s [OPTIONS] @LOCATION\n", flags.Name())
 		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
+		flags.SortFlags = false
 		flags.PrintDefaults()
+		fmt.Fprintf(flags.Output(), "\nRun 'plakar help backup' for details.\n")
 	}
 
+	flags.StringSliceVarP(&excludeFlags, "exclude", "x", []string{}, "glob pattern to exclude files, can be specified multiple times to add several exclusion patterns")
+	flags.StringVar(&opt_exclude_file, "exclude-file", "", "path to a file containing newline-separated regex patterns, treated as --exclude")
+	flags.StringSliceVarP(&cmd.Tags, "tag", "t", []string{}, "comma-separated list of tags to apply to the snapshot")
+	flags.BoolVarP(&cmd.DryRun, "scan", "n", false, "do not actually perform a backup, just list the files")
+	flags.BoolVarP(&cmd.Quiet, "quiet", "q", false, "suppress output")
+	flags.BoolVarP(&cmd.Silent, "silent", "s", false, "suppress ALL output")
+	flags.BoolVarP(&cmd.OptCheck, "check", "c", false, "check the snapshot after creating it")
 	flags.Uint64Var(&cmd.Concurrency, "concurrency", uint64(ctx.MaxConcurrency), "maximum number of parallel tasks")
-	flags.Var(&opt_tags, "tag", "comma-separated list of tags to apply to the snapshot")
-	flags.StringVar(&opt_exclude_file, "exclude-file", "", "path to a file containing newline-separated regex patterns, treated as -exclude")
-	flags.Var(&opt_exclude, "exclude", "glob pattern to exclude files, can be specified multiple times to add several exclusion patterns")
-	flags.BoolVar(&cmd.Quiet, "quiet", false, "suppress output")
-	flags.BoolVar(&cmd.Silent, "silent", false, "suppress ALL output")
-	flags.BoolVar(&cmd.OptCheck, "check", false, "check the snapshot after creating it")
-	flags.Var(utils.NewOptsFlag(cmd.Opts), "o", "specify extra importer options")
-	flags.BoolVar(&cmd.DryRun, "scan", false, "do not actually perform a backup, just list the files")
-	//flags.BoolVar(&opt_stdio, "stdio", false, "output one line per file to stdout instead of the default interactive output")
+	flags.VarP(utils.NewOptsFlag(cmd.Opts), "option", "o", "specify extra importer options")
+	flags.BoolVar(&cmd.StdIo, "stdio", false, "output one line per file to stdout instead of the default interactive output")
+
+	var help bool
+	flags.BoolVarP(&help, "help", "h", false, "show this help message")
+
 	flags.Parse(args)
+
+	if help {
+		flags.Usage()
+		os.Exit(0)
+	}
 
 	if flags.NArg() > 1 {
 		return fmt.Errorf("Too many arguments")
 	}
 
-	for _, item := range opt_exclude {
+	for _, item := range excludeFlags {
 		if _, err := glob.Compile(item); err != nil {
 			return fmt.Errorf("failed to compile exclude pattern: %s", item)
 		}
@@ -134,7 +114,6 @@ func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
 	cmd.RepositorySecret = ctx.GetSecret()
 	cmd.Excludes = excludes
 	cmd.Path = flags.Arg(0)
-	cmd.Tags = opt_tags.asList()
 
 	if cmd.Path == "" {
 		cmd.Path = "fs:" + ctx.CWD
@@ -156,6 +135,7 @@ type Backup struct {
 	OptCheck    bool
 	Opts        map[string]string
 	DryRun      bool
+	StdIo       bool
 }
 
 func (cmd *Backup) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
