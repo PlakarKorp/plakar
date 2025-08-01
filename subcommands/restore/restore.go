@@ -26,8 +26,8 @@ import (
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/kloset/snapshot/exporter"
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/locate"
 	"github.com/PlakarKorp/plakar/subcommands"
-	"github.com/PlakarKorp/plakar/utils"
 )
 
 func init() {
@@ -100,9 +100,9 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 	}
 	var snapshots []string
 	if len(cmd.Snapshots) == 0 {
-		locateOptions := utils.NewDefaultLocateOptions()
+		locateOptions := locate.NewDefaultLocateOptions()
 		locateOptions.MaxConcurrency = ctx.MaxConcurrency
-		locateOptions.SortOrder = utils.LocateSortOrderAscending
+		locateOptions.SortOrder = locate.LocateSortOrderAscending
 		locateOptions.Latest = true
 
 		locateOptions.Name = cmd.OptName
@@ -112,7 +112,7 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 		locateOptions.Job = cmd.OptJob
 		locateOptions.Tag = cmd.OptTag
 
-		snapshotIDs, err := utils.LocateSnapshotIDs(repo, locateOptions)
+		snapshotIDs, err := locate.LocateSnapshotIDs(repo, locateOptions)
 		if err != nil {
 			return 1, fmt.Errorf("ls: could not fetch snapshots list: %w", err)
 		}
@@ -121,11 +121,11 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 		}
 	} else {
 		for _, snapshotPath := range cmd.Snapshots {
-			prefix, path := utils.ParseSnapshotPath(snapshotPath)
+			prefix, path := locate.ParseSnapshotPath(snapshotPath)
 
-			locateOptions := utils.NewDefaultLocateOptions()
+			locateOptions := locate.NewDefaultLocateOptions()
 			locateOptions.MaxConcurrency = ctx.MaxConcurrency
-			locateOptions.SortOrder = utils.LocateSortOrderAscending
+			locateOptions.SortOrder = locate.LocateSortOrderAscending
 			locateOptions.Latest = true
 
 			locateOptions.Name = cmd.OptName
@@ -136,7 +136,7 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 			locateOptions.Tag = cmd.OptTag
 			locateOptions.Prefix = prefix
 
-			snapshotIDs, err := utils.LocateSnapshotIDs(repo, locateOptions)
+			snapshotIDs, err := locate.LocateSnapshotIDs(repo, locateOptions)
 			if err != nil {
 				return 1, fmt.Errorf("ls: could not fetch snapshots list: %w", err)
 			}
@@ -173,24 +173,29 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 	if err != nil {
 		return 1, err
 	}
-	defer exporterInstance.Close()
+	defer exporterInstance.Close(ctx)
 
 	opts := &snapshot.RestoreOptions{
 		MaxConcurrency: cmd.Concurrency,
 	}
 
+	root, err := exporterInstance.Root(ctx)
+	if err != nil {
+		return 1, err
+	}
+
 	for _, snapPath := range snapshots {
-		snap, pathname, err := utils.OpenSnapshotByPath(repo, snapPath)
+		snap, pathname, err := locate.OpenSnapshotByPath(repo, snapPath)
 		if err != nil {
 			return 1, err
 		}
 		opts.Strip = snap.Header.GetSource(0).Importer.Directory
 
-		err = snap.Restore(exporterInstance, exporterInstance.Root(), pathname, opts)
-
+		err = snap.Restore(exporterInstance, root, pathname, opts)
 		if err != nil {
 			return 1, err
 		}
+
 		ctx.GetLogger().Info("restore: restoration of %x:%s at %s completed successfully",
 			snap.Header.GetIndexShortID(),
 			pathname,

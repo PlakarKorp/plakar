@@ -30,12 +30,18 @@ func TestStdioImporter(t *testing.T) {
 	require.NotNil(t, importer)
 
 	// Test basic properties
-	require.Equal(t, "/", importer.Root())
-	require.Equal(t, "stdin", importer.Type())
-	require.Equal(t, hostname, importer.Origin())
+	root, err := importer.Root(ctx)
+	require.NoError(t, err)
+	require.Equal(t, "/", root)
+	typ, err := importer.Type(ctx)
+	require.NoError(t, err)
+	require.Equal(t, "stdin", typ)
+	orig, err := importer.Origin(ctx)
+	require.NoError(t, err)
+	require.Equal(t, hostname, orig)
 
 	// Test scanning
-	scanChan, err := importer.Scan()
+	scanChan, err := importer.Scan(ctx)
 	require.NoError(t, err)
 	require.NotNil(t, scanChan)
 
@@ -55,6 +61,6 @@ func TestStdioImporter(t *testing.T) {
 	require.Equal(t, []string{"/", "/test.txt"}, paths)
 
 	// Test close
-	err = importer.Close()
+	err = importer.Close(ctx)
 	require.NoError(t, err)
 }

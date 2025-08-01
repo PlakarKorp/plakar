@@ -24,12 +24,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/caching"
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/resources"
 	"github.com/PlakarKorp/kloset/snapshot"
+	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"golang.org/x/sync/errgroup"
 )
@@ -376,6 +376,7 @@ func (cmd *Maintenance) Lock() (chan bool, error) {
 		}
 
 		lock, err := repository.NewLockFromStream(version, rd)
+		rd.Close()
 		if err != nil {
 			cmd.repository.DeleteLock(cmd.maintenanceID)
 			return nil, err

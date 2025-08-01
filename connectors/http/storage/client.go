@@ -46,8 +46,8 @@ func NewStore(ctx context.Context, proto string, storeConfig map[string]string) 
 	}, nil
 }
 
-func (s *Store) Location() string {
-	return s.location
+func (s *Store) Location(ctx context.Context) (string, error) {
+	return s.location, nil
 }
 
 func (s *Store) sendRequest(method string, requestType string, payload interface{}) (*http.Response, error) {
@@ -87,20 +87,20 @@ func (s *Store) Open(ctx context.Context) ([]byte, error) {
 	return resOpen.Configuration, nil
 }
 
-func (s *Store) Close() error {
+func (s *Store) Close(ctx context.Context) error {
 	return nil
 }
 
-func (s *Store) Mode() storage.Mode {
-	return storage.ModeRead | storage.ModeWrite
+func (s *Store) Mode(ctx context.Context) (storage.Mode, error) {
+	return storage.ModeRead | storage.ModeWrite, nil
 }
 
-func (s *Store) Size() int64 {
-	return -1
+func (s *Store) Size(ctx context.Context) (int64, error) {
+	return -1, nil
 }
 
 // states
-func (s *Store) GetStates() ([]objects.MAC, error) {
+func (s *Store) GetStates(ctx context.Context) ([]objects.MAC, error) {
 	r, err := s.sendRequest("GET", "/states", network.ReqGetStates{})
 	if err != nil {
 		return nil, err
@@ -121,7 +121,7 @@ func (s *Store) GetStates() ([]objects.MAC, error) {
 	return ret, nil
 }
 
-func (s *Store) PutState(MAC objects.MAC, rd io.Reader) (int64, error) {
+func (s *Store) PutState(ctx context.Context, MAC objects.MAC, rd io.Reader) (int64, error) {
 	data, err := io.ReadAll(rd)
 	if err != nil {
 		return 0, err
@@ -145,7 +145,7 @@ func (s *Store) PutState(MAC objects.MAC, rd io.Reader) (int64, error) {
 	return int64(len(data)), nil
 }
 
-func (s *Store) GetState(MAC objects.MAC) (io.Reader, error) {
+func (s *Store) GetState(ctx context.Context, MAC objects.MAC) (io.ReadCloser, error) {
 	r, err := s.sendRequest("GET", "/state", network.ReqGetState{
 		MAC: MAC,
 	})
@@ -160,10 +160,10 @@ func (s *Store) GetState(MAC objects.MAC) (io.Reader, error) {
 	if resGetState.Err != "" {
 		return nil, fmt.Errorf("%s", resGetState.Err)
 	}
-	return bytes.NewBuffer(resGetState.Data), nil
+	return io.NopCloser(bytes.NewBuffer(resGetState.Data)), nil
 }
 
-func (s *Store) DeleteState(MAC objects.MAC) error {
+func (s *Store) DeleteState(ctx context.Context, MAC objects.MAC) error {
 	r, err := s.sendRequest("DELETE", "/state", network.ReqDeleteState{
 		MAC: MAC,
 	})
@@ -182,7 +182,7 @@ func (s *Store) DeleteState(MAC objects.MAC) error {
 }
 
 // packfiles
-func (s *Store) GetPackfiles() ([]objects.MAC, error) {
+func (s *Store) GetPackfiles(ctx context.Context) ([]objects.MAC, error) {
 	r, err := s.sendRequest("GET", "/packfiles", network.ReqGetPackfiles{})
 	if err != nil {
 		return nil, err
@@ -203,7 +203,7 @@ func (s *Store) GetPackfiles() ([]objects.MAC, error) {
 	return ret, nil
 }
 
-func (s *Store) PutPackfile(MAC objects.MAC, rd io.Reader) (int64, error) {
+func (s *Store) PutPackfile(ctx context.Context, MAC objects.MAC, rd io.Reader) (int64, error) {
 	data, err := io.ReadAll(rd)
 	if err != nil {
 		return 0, err
@@ -226,7 +226,7 @@ func (s *Store) PutPackfile(MAC objects.MAC, rd io.Reader) (int64, error) {
 	return int64(len(data)), nil
 }
 
-func (s *Store) GetPackfile(MAC objects.MAC) (io.Reader, error) {
+func (s *Store) GetPackfile(ctx context.Context, MAC objects.MAC) (io.ReadCloser, error) {
 	r, err := s.sendRequest("GET", "/packfile", network.ReqGetPackfile{
 		MAC: MAC,
 	})
@@ -241,10 +241,10 @@ func (s *Store) GetPackfile(MAC objects.MAC) (io.Reader, error) {
 	if resGetPackfile.Err != "" {
 		return nil, fmt.Errorf("%s", resGetPackfile.Err)
 	}
-	return bytes.NewBuffer(resGetPackfile.Data), nil
+	return io.NopCloser(bytes.NewBuffer(resGetPackfile.Data)), nil
 }
 
-func (s *Store) GetPackfileBlob(MAC objects.MAC, offset uint64, length uint32) (io.Reader, error) {
+func (s *Store) GetPackfileBlob(ctx context.Context, MAC objects.MAC, offset uint64, length uint32) (io.ReadCloser, error) {
 	r, err := s.sendRequest("GET", "/packfile/blob", network.ReqGetPackfileBlob{
 		MAC:    MAC,
 		Offset: offset,
@@ -261,10 +261,10 @@ func (s *Store) GetPackfileBlob(MAC objects.MAC, offset uint64, length uint32) (
 	if resGetPackfileBlob.Err != "" {
 		return nil, fmt.Errorf("%s", resGetPackfileBlob.Err)
 	}
-	return bytes.NewBuffer(resGetPackfileBlob.Data), nil
+	return io.NopCloser(bytes.NewBuffer(resGetPackfileBlob.Data)), nil
 }
 
-func (s *Store) DeletePackfile(MAC objects.MAC) error {
+func (s *Store) DeletePackfile(ctx context.Context, MAC objects.MAC) error {
 	r, err := s.sendRequest("DELETE", "/packfile", network.ReqDeletePackfile{
 		MAC: MAC,
 	})
@@ -283,7 +283,7 @@ func (s *Store) DeletePackfile(MAC objects.MAC) error {
 }
 
 /* Locks */
-func (s *Store) GetLocks() ([]objects.MAC, error) {
+func (s *Store) GetLocks(ctx context.Context) ([]objects.MAC, error) {
 	r, err := s.sendRequest("GET", "/locks", &network.ReqGetLocks{})
 	if err != nil {
 		return []objects.MAC{}, err
@@ -299,7 +299,7 @@ func (s *Store) GetLocks() ([]objects.MAC, error) {
 	return res.Locks, nil
 }
 
-func (s *Store) PutLock(lockID objects.MAC, rd io.Reader) (int64, error) {
+func (s *Store) PutLock(ctx context.Context, lockID objects.MAC, rd io.Reader) (int64, error) {
 	data, err := io.ReadAll(rd)
 	if err != nil {
 		return 0, err
@@ -324,7 +324,7 @@ func (s *Store) PutLock(lockID objects.MAC, rd io.Reader) (int64, error) {
 	return int64(len(data)), nil
 }
 
-func (s *Store) GetLock(lockID objects.MAC) (io.Reader, error) {
+func (s *Store) GetLock(ctx context.Context, lockID objects.MAC) (io.ReadCloser, error) {
 	req := network.ReqGetLock{
 		Mac: lockID,
 	}
@@ -342,10 +342,10 @@ func (s *Store) GetLock(lockID objects.MAC) (io.Reader, error) {
 		return nil, fmt.Errorf("%s", res.Err)
 	}
 
-	return bytes.NewReader(res.Data), nil
+	return io.NopCloser(bytes.NewReader(res.Data)), nil
 }
 
-func (s *Store) DeleteLock(lockID objects.MAC) error {
+func (s *Store) DeleteLock(ctx context.Context, lockID objects.MAC) error {
 	req := network.ReqDeleteLock{
 		Mac: lockID,
 	}

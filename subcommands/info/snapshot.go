@@ -3,41 +3,19 @@ package info
 import (
 	"encoding/base64"
 	"encoding/hex"
-	"flag"
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/repository"
-	"github.com/PlakarKorp/plakar/subcommands"
-	"github.com/PlakarKorp/plakar/utils"
+	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/locate"
 	"github.com/dustin/go-humanize"
 	"github.com/google/uuid"
 )
 
-type InfoSnapshot struct {
-	subcommands.SubcommandBase
-
-	SnapshotID string
-}
-
-func (cmd *InfoSnapshot) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("info snapshot", flag.ExitOnError)
-	flags.Parse(args)
-
-	if len(flags.Args()) < 1 {
-		return fmt.Errorf("usage: %s snapshot SNAPSHOT", flags.Name())
-	}
-
-	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.SnapshotID = flags.Args()[0]
-
-	return nil
-}
-
-func (cmd *InfoSnapshot) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	snap, _, err := utils.OpenSnapshotByPath(repo, cmd.SnapshotID)
+func (cmd *Info) executeSnapshot(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+	snap, _, err := locate.OpenSnapshotByPath(repo, cmd.SnapshotID)
 	if err != nil {
 		return 1, err
 	}
@@ -97,9 +75,9 @@ func (cmd *InfoSnapshot) Execute(ctx *appcontext.AppContext, repo *repository.Re
 
 	fmt.Fprintf(ctx.Stdout, " - Objects: %d\n", header.GetSource(0).Summary.Directory.Objects+header.GetSource(0).Summary.Below.Objects)
 	fmt.Fprintf(ctx.Stdout, " - Chunks: %d\n", header.GetSource(0).Summary.Directory.Chunks+header.GetSource(0).Summary.Below.Chunks)
-	fmt.Fprintf(ctx.Stdout, " - MinSize: %s (%d bytes)\n", humanize.Bytes(min(header.GetSource(0).Summary.Directory.MinSize, header.GetSource(0).Summary.Below.MinSize)), min(header.GetSource(0).Summary.Directory.MinSize, header.GetSource(0).Summary.Below.MinSize))
-	fmt.Fprintf(ctx.Stdout, " - MaxSize: %s (%d bytes)\n", humanize.Bytes(max(header.GetSource(0).Summary.Directory.MaxSize, header.GetSource(0).Summary.Below.MaxSize)), max(header.GetSource(0).Summary.Directory.MaxSize, header.GetSource(0).Summary.Below.MaxSize))
-	fmt.Fprintf(ctx.Stdout, " - Size: %s (%d bytes)\n", humanize.Bytes(header.GetSource(0).Summary.Directory.Size+header.GetSource(0).Summary.Below.Size), header.GetSource(0).Summary.Directory.Size+header.GetSource(0).Summary.Below.Size)
+	fmt.Fprintf(ctx.Stdout, " - MinSize: %s (%d bytes)\n", humanize.IBytes(min(header.GetSource(0).Summary.Directory.MinSize, header.GetSource(0).Summary.Below.MinSize)), min(header.GetSource(0).Summary.Directory.MinSize, header.GetSource(0).Summary.Below.MinSize))
+	fmt.Fprintf(ctx.Stdout, " - MaxSize: %s (%d bytes)\n", humanize.IBytes(max(header.GetSource(0).Summary.Directory.MaxSize, header.GetSource(0).Summary.Below.MaxSize)), max(header.GetSource(0).Summary.Directory.MaxSize, header.GetSource(0).Summary.Below.MaxSize))
+	fmt.Fprintf(ctx.Stdout, " - Size: %s (%d bytes)\n", humanize.IBytes(header.GetSource(0).Summary.Directory.Size+header.GetSource(0).Summary.Below.Size), header.GetSource(0).Summary.Directory.Size+header.GetSource(0).Summary.Below.Size)
 	fmt.Fprintf(ctx.Stdout, " - MinModTime: %s\n", time.Unix(min(header.GetSource(0).Summary.Directory.MinModTime, header.GetSource(0).Summary.Below.MinModTime), 0))
 	fmt.Fprintf(ctx.Stdout, " - MaxModTime: %s\n", time.Unix(max(header.GetSource(0).Summary.Directory.MaxModTime, header.GetSource(0).Summary.Below.MaxModTime), 0))
 	fmt.Fprintf(ctx.Stdout, " - MinEntropy: %f\n", min(header.GetSource(0).Summary.Directory.MinEntropy, header.GetSource(0).Summary.Below.MinEntropy))

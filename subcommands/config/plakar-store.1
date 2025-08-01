@@ -32,8 +32,11 @@ parameters.
 Check wether the store identified by
 .Ar name
 is properly configured.
-.It Cm import
+.It Cm import Op Ar names
 Ingest a store configuration from stdin.
+If
+.Ar names
+are specified, only those sections will be imported.
 .It Cm ping Ar name
 Try to connect to the store identified by
 .Ar name

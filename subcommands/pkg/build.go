@@ -19,39 +19,24 @@ package pkg
 import (
 	"flag"
 	"fmt"
-	"io"
-	"net/http"
-	"net/url"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"regexp"
-	"runtime"
-	"strings"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/plugins"
 	"github.com/PlakarKorp/plakar/subcommands"
-	"go.yaml.in/yaml/v3"
 	"golang.org/x/mod/semver"
 )
 
-var recipeURL, _ = url.Parse("https://plugins.plakar.io/recipe/")
-
 var namere = regexp.MustCompile("^[_a-zA-Z0-9]+$")
-
-type Recipe struct {
-	Name       string `yaml:"name"`
-	Version    string `yaml:"version"`
-	Repository string `yaml:"repository"`
-	Checksum   string `yaml:"checksum"`
-}
 
 type PkgBuild struct {
 	subcommands.SubcommandBase
 
-	Recipe Recipe
+	Recipe plugins.Recipe
 }
 
 func (cmd *PkgBuild) Parse(ctx *appcontext.AppContext, args []string) error {
@@ -69,42 +54,9 @@ func (cmd *PkgBuild) Parse(ctx *appcontext.AppContext, args []string) error {
 		return fmt.Errorf("wrong usage")
 	}
 
-	var rd io.ReadCloser
-	var err error
-
 	recipe := flags.Arg(0)
-	remote := strings.HasPrefix(recipe, "https://") || strings.HasPrefix(recipe, "http://")
-	if !remote && !filepath.IsAbs(recipe) && !strings.Contains(recipe, string(os.PathSeparator)) {
-		u := *recipeURL
-		u.Path = path.Join(u.Path, recipe)
-		if !strings.HasPrefix(recipe, ".yaml") {
-			u.Path += ".yaml"
-		}
-		recipe = u.String()
-		remote = true
-	}
-
-	if recipe == "-" {
-		rd = io.NopCloser(ctx.Stdin)
-	} else if remote {
-		resp, err := http.Get(recipe)
-		if err != nil {
-			return fmt.Errorf("can't fetch %s: %w", flags.Arg(0), err)
-		}
-		if resp.StatusCode/100 != 2 {
-			return fmt.Errorf("HTTP error %d: %s", resp.StatusCode, resp.Status)
-		}
-		rd = resp.Body
-	} else {
-		rd, err = os.Open(recipe)
-	}
-	if err != nil {
-		return fmt.Errorf("can't open %s: %w", recipe, err)
-	}
-	defer rd.Close()
-
-	if err := yaml.NewDecoder(rd).Decode(&cmd.Recipe); err != nil {
-		return fmt.Errorf("failed to parse the recipe %s: %w", flags.Arg(0), err)
+	if err := getRecipe(ctx, recipe, &cmd.Recipe); err != nil {
+		return fmt.Errorf("failed to parse the %q recipe: %w", flags.Arg(0), err)
 	}
 
 	if !namere.Match([]byte(cmd.Recipe.Name)) {
@@ -145,11 +97,11 @@ func (cmd *PkgBuild) Execute(ctx *appcontext.AppContext, repo *repository.Reposi
 	if err := create.Parse(ctx, []string{manifest}); err != nil {
 		return 1, err
 	}
-	create.Out = fmt.Sprintf("%s_%s_%s_%s.ptar", recipe.Name, recipe.Version, runtime.GOOS, runtime.GOARCH)
+	create.Out = recipe.PkgName()
 	return create.Execute(ctx, repo)
 }
 
-func clone(destdir string, recipe *Recipe) error {
+func clone(destdir string, recipe *plugins.Recipe) error {
 	git := exec.Command("git", "clone", "--depth=1", "--branch", recipe.Version,
 		recipe.Repository, destdir)
 	if err := git.Run(); err != nil {

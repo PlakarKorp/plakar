@@ -22,8 +22,8 @@ import (
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
+	plogin "github.com/PlakarKorp/plakar/login"
 	"github.com/PlakarKorp/plakar/subcommands"
-	"github.com/PlakarKorp/plakar/utils"
 )
 
 func init() {
@@ -47,7 +47,7 @@ type TokenCreate struct {
 }
 
 func (cmd *TokenCreate) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	token, err := utils.DeriveToken(ctx)
+	token, err := plogin.DeriveToken(ctx)
 	if err != nil {
 		return 1, err
 	}

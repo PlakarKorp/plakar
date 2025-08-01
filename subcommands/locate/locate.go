@@ -21,10 +21,11 @@ import (
 	"fmt"
 	"path"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
+	"github.com/PlakarKorp/plakar/appcontext"
+	plocate "github.com/PlakarKorp/plakar/locate"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
 )
@@ -34,7 +35,7 @@ func init() {
 }
 
 func (cmd *Locate) Parse(ctx *appcontext.AppContext, args []string) error {
-	cmd.LocateOptions = utils.NewDefaultLocateOptions()
+	cmd.LocateOptions = plocate.NewDefaultLocateOptions()
 
 	flags := flag.NewFlagSet("locate", flag.ExitOnError)
 	flags.Usage = func() {
@@ -52,7 +53,7 @@ func (cmd *Locate) Parse(ctx *appcontext.AppContext, args []string) error {
 	}
 
 	cmd.LocateOptions.MaxConcurrency = ctx.MaxConcurrency
-	cmd.LocateOptions.SortOrder = utils.LocateSortOrderAscending
+	cmd.LocateOptions.SortOrder = plocate.LocateSortOrderAscending
 	cmd.RepositorySecret = ctx.GetSecret()
 	cmd.Patterns = flags.Args()
 
@@ -62,7 +63,7 @@ func (cmd *Locate) Parse(ctx *appcontext.AppContext, args []string) error {
 type Locate struct {
 	subcommands.SubcommandBase
 
-	LocateOptions *utils.LocateOptions
+	LocateOptions *plocate.LocateOptions
 	Snapshot      string
 	Patterns      []string
 }
@@ -70,13 +71,13 @@ type Locate struct {
 func (cmd *Locate) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	var snapshots []objects.MAC
 	if len(cmd.Snapshot) == 0 {
-		snapshotIDs, err := utils.LocateSnapshotIDs(repo, cmd.LocateOptions)
+		snapshotIDs, err := plocate.LocateSnapshotIDs(repo, cmd.LocateOptions)
 		if err != nil {
 			return 1, fmt.Errorf("ls: could not fetch snapshots list: %w", err)
 		}
 		snapshots = append(snapshots, snapshotIDs...)
 	} else {
-		snapshotIDs := utils.LookupSnapshotByPrefix(repo, cmd.Snapshot)
+		snapshotIDs := plocate.LookupSnapshotByPrefix(repo, cmd.Snapshot)
 		snapshots = append(snapshots, snapshotIDs...)
 	}
 

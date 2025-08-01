@@ -80,11 +80,11 @@ func NewFTPExporter(ctx context.Context, opts *exporter.Options, name string, co
 	}, nil
 }
 
-func (p *FTPExporter) Root() string {
-	return p.rootDir
+func (p *FTPExporter) Root(ctx context.Context) (string, error) {
+	return p.rootDir, nil
 }
 
-func (p *FTPExporter) CreateDirectory(pathname string) error {
+func (p *FTPExporter) CreateDirectory(ctx context.Context, pathname string) error {
 	if pathname == "/" {
 		return nil
 	}
@@ -97,16 +97,16 @@ func (p *FTPExporter) CreateDirectory(pathname string) error {
 	return err
 }
 
-func (p *FTPExporter) StoreFile(pathname string, fp io.Reader, size int64) error {
+func (p *FTPExporter) StoreFile(ctx context.Context, pathname string, fp io.Reader, size int64) error {
 	return p.client.Store(pathname, fp)
 }
 
-func (p *FTPExporter) SetPermissions(pathname string, fileinfo *objects.FileInfo) error {
+func (p *FTPExporter) SetPermissions(ctx context.Context, pathname string, fileinfo *objects.FileInfo) error {
 	// can't chown/chmod on FTP
 	return nil
 }
 
-func (p *FTPExporter) Close() error {
+func (p *FTPExporter) Close(ctx context.Context) error {
 	if p.client != nil {
 		return p.client.Close()
 	}

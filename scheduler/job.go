@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/reporting"
 )
 
 type Job struct {
@@ -34,7 +35,7 @@ func (job *Job) Done() {
 	job.isRunning = false
 }
 
-func (job *Job) Execute(ctx *appcontext.AppContext, scheduledAt time.Time) {
+func (job *Job) Execute(ctx *appcontext.AppContext, reporter *reporting.Reporter, scheduledAt time.Time) {
 	if !job.Start() {
 		ctx.GetLogger().Warn("job %q: still running", job.Name)
 		return
@@ -57,6 +58,7 @@ func (job *Job) Execute(ctx *appcontext.AppContext, scheduledAt time.Time) {
 		taskCtx := TaskContext{
 			JobName:    job.Name,
 			AppContext: appcontext.NewAppContextFrom(ctx),
+			report:     reporter.NewReport(),
 		}
 
 		err := taskCtx.Prepare(job.Task)

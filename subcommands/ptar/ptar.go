@@ -37,6 +37,7 @@ import (
 	"github.com/PlakarKorp/kloset/storage"
 	"github.com/PlakarKorp/kloset/versioning"
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/locate"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
 	"github.com/google/uuid"
@@ -327,7 +328,7 @@ func (cmd *Ptar) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 		return 1, err
 	}
 
-	if err := st.Close(); err != nil {
+	if err := st.Close(ctx); err != nil {
 		return 1, err
 	}
 
@@ -368,8 +369,8 @@ func (cmd *Ptar) backup(ctx *appcontext.AppContext, repo *repository.RepositoryW
 }
 
 func (cmd *Ptar) synchronize(ctx *appcontext.AppContext, srcRepository *repository.Repository, dstRepository *repository.RepositoryWriter) error {
-	srcLocateOptions := utils.NewDefaultLocateOptions()
-	srcSnapshotIDs, err := utils.LocateSnapshotIDs(srcRepository, srcLocateOptions)
+	srcLocateOptions := locate.NewDefaultLocateOptions()
+	srcSnapshotIDs, err := locate.LocateSnapshotIDs(srcRepository, srcLocateOptions)
 	if err != nil {
 		return err
 	}

@@ -44,17 +44,19 @@ func TestS3Importer(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, importer)
 
-	origin := importer.Origin()
+	origin, err := importer.Origin(ctx)
+	require.NoError(t, err)
 	require.NotEmpty(t, origin)
 
-	root := importer.Root()
+	root, err := importer.Root(ctx)
 	require.NoError(t, err)
 	require.Equal(t, "/", root)
 
-	typ := importer.Type()
+	typ, err := importer.Type(ctx)
+	require.NoError(t, err)
 	require.Equal(t, "s3", typ)
 
-	scanChan, err := importer.Scan()
+	scanChan, err := importer.Scan(ctx)
 	require.NoError(t, err)
 	require.NotNil(t, scanChan)
 
@@ -75,6 +77,6 @@ func TestS3Importer(t *testing.T) {
 	sort.Strings(paths)
 	require.Equal(t, expected, paths)
 
-	err = importer.Close()
+	err = importer.Close(ctx)
 	require.NoError(t, err)
 }

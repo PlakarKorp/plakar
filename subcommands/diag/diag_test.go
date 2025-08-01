@@ -114,30 +114,6 @@ func TestExecuteCmdDiagSnapshot(t *testing.T) {
 	require.Contains(t, output, fmt.Sprintf("SnapshotID: %s", hex.EncodeToString(indexId[:])))
 }
 
-func TestExecuteCmdDiagErrors(t *testing.T) {
-	bufOut := bytes.NewBuffer(nil)
-	bufErr := bytes.NewBuffer(nil)
-
-	repo, snap, ctx := generateSnapshot(t, bufOut, bufErr)
-	defer snap.Close()
-
-	// override the homedir to avoid having test overwriting existing home configuration
-	indexId := snap.Header.GetIndexID()
-	args := []string{"diag", "errors", fmt.Sprintf("%s", hex.EncodeToString(indexId[:]))}
-
-	subcommand, _, args := subcommands.Lookup(args)
-	err := subcommand.Parse(ctx, args)
-	require.NoError(t, err)
-	require.NotNil(t, subcommand)
-
-	status, err := subcommand.Execute(ctx, repo)
-	require.NoError(t, err)
-	require.Equal(t, 0, status)
-
-	output := bufOut.String()
-	require.Equal(t, "", strings.Trim(output, "\n"))
-}
-
 func TestExecuteCmdDiagState(t *testing.T) {
 	bufOut := bytes.NewBuffer(nil)
 	bufErr := bytes.NewBuffer(nil)

@@ -40,9 +40,12 @@ The subcommands are as follows:
 > *name*
 > is properly configured.
 
-**import**
+**import** \[*names*]
 
 > Ingest a destination configuration from stdin.
+> If
+> *names*
+> are specified, only those sections will be imported.
 
 **ls**
 

@@ -78,15 +78,15 @@ func NewFSImporter(appCtx context.Context, opts *importer.Options, name string, 
 	}, nil
 }
 
-func (p *FSImporter) Origin() string {
-	return p.opts.Hostname
+func (p *FSImporter) Origin(ctx context.Context) (string, error) {
+	return p.opts.Hostname, nil
 }
 
-func (p *FSImporter) Type() string {
-	return "fs"
+func (p *FSImporter) Type(ctx context.Context) (string, error) {
+	return "fs", nil
 }
 
-func (p *FSImporter) Scan() (<-chan *importer.ScanResult, error) {
+func (p *FSImporter) Scan(ctx context.Context) (<-chan *importer.ScanResult, error) {
 	results := make(chan *importer.ScanResult, 1000)
 	go p.walkDir_walker(results, 256)
 	return results, nil
@@ -200,12 +200,12 @@ func realpathFollow(path string) (resolved string, dev uint64, err error) {
 	return path, dev, nil
 }
 
-func (p *FSImporter) Close() error {
+func (p *FSImporter) Close(ctx context.Context) error {
 	return nil
 }
 
-func (p *FSImporter) Root() string {
-	return toslash(p.rootDir)
+func (p *FSImporter) Root(ctx context.Context) (string, error) {
+	return toslash(p.rootDir), nil
 }
 
 // convert paths to the internal format.  For unix nothing changes,

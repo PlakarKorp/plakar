@@ -65,7 +65,9 @@ func TestExecuteCmdPtarWithSync(t *testing.T) {
 		os.RemoveAll(tmpDir)
 	})
 
-	args := []string{"-plaintext", "-o", filepath.Join(tmpDir, "test.ptar"), "-k", srcRepo.Location()}
+	location, err := srcRepo.Location()
+	require.NoError(t, err)
+	args := []string{"-plaintext", "-o", filepath.Join(tmpDir, "test.ptar"), "-k", location}
 
 	subcommand := &Ptar{}
 	err = subcommand.Parse(ctx, args)

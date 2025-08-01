@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sync/atomic"
 	"time"
 
 	"github.com/PlakarKorp/kloset/objects"
@@ -21,6 +22,7 @@ type Emitter interface {
 
 type Reporter struct {
 	ctx             *appcontext.AppContext
+	reportCount     atomic.Int32
 	reports         chan *Report
 	stop            chan any
 	done            chan any
@@ -46,14 +48,17 @@ func NewReporter(ctx *appcontext.AppContext) *Reporter {
 				goto done
 			case rp = <-r.reports:
 				r.Process(rp)
+				r.reportCount.Add(-1)
 			}
 		}
 	done:
-		close(r.reports)
 		// drain remaining reports
-		for rp = range r.reports {
+		for r.reportCount.Load() != 0 {
+			rp = <-r.reports
 			r.Process(rp)
+			r.reportCount.Add(-1)
 		}
+		close(r.reports)
 		close(r.done)
 	}()
 
@@ -80,8 +85,7 @@ func (reporter *Reporter) Process(report *Report) {
 
 func (reporter *Reporter) StopAndWait() {
 	close(reporter.stop)
-	for _ = range reporter.done {
-	}
+	<-reporter.done
 }
 
 func (reporter *Reporter) getEmitter() Emitter {
@@ -95,11 +99,7 @@ func (reporter *Reporter) getEmitter() Emitter {
 	reporter.emitter_timeout = time.Now().Add(time.Minute)
 
 	// Check if user is logged
-	token, err := reporter.ctx.GetCookies().GetAuthToken()
-	if err != nil {
-		reporter.ctx.GetLogger().Warn("cannot get auth token: %v", err)
-		return reporter.emitter
-	}
+	token, _ := reporter.ctx.GetCookies().GetAuthToken()
 	if token == "" {
 		return reporter.emitter
 	}
@@ -128,6 +128,7 @@ func (reporter *Reporter) getEmitter() Emitter {
 }
 
 func (reporter *Reporter) NewReport() *Report {
+	reporter.reportCount.Add(1)
 	return &Report{
 		logger:   reporter.ctx.GetLogger(),
 		reporter: reporter.reports,

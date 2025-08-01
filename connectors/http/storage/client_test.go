@@ -8,10 +8,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/storage"
 	"github.com/PlakarKorp/plakar/api"
+	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/network"
 	"github.com/stretchr/testify/require"
 )
@@ -233,7 +233,8 @@ func TestHttpBackend(t *testing.T) {
 		t.Fatal("error creating repository", err)
 	}
 
-	location := repo.Location()
+	location, err := repo.Location(ctx)
+	require.NoError(t, err)
 	require.Equal(t, ts.URL, location)
 
 	config := storage.NewConfiguration()
@@ -247,18 +248,18 @@ func TestHttpBackend(t *testing.T) {
 	require.NoError(t, err)
 	//require.Equal(t, repo.Configuration().Version, versioning.FromString(storage.VERSION))
 
-	err = repo.Close()
+	err = repo.Close(ctx)
 	require.NoError(t, err)
 
 	// states
 	MAC1 := objects.MAC{0x10, 0x20}
 	MAC2 := objects.MAC{0x30, 0x40}
-	_, err = repo.PutState(MAC1, bytes.NewReader([]byte("test1")))
+	_, err = repo.PutState(ctx, MAC1, bytes.NewReader([]byte("test1")))
 	require.NoError(t, err)
-	_, err = repo.PutState(MAC2, bytes.NewReader([]byte("test2")))
+	_, err = repo.PutState(ctx, MAC2, bytes.NewReader([]byte("test2")))
 	require.NoError(t, err)
 
-	states, err := repo.GetStates()
+	states, err := repo.GetStates(ctx)
 	require.NoError(t, err)
 	expected := []objects.MAC{
 		{0x10, 0x20, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
@@ -266,17 +267,17 @@ func TestHttpBackend(t *testing.T) {
 	}
 	require.Equal(t, expected, states)
 
-	rd, err := repo.GetState(MAC2)
+	rd, err := repo.GetState(ctx, MAC2)
 	require.NoError(t, err)
 	buf := new(bytes.Buffer)
 	_, err = io.Copy(buf, rd)
 	require.NoError(t, err)
 	require.Equal(t, "test2", buf.String())
 
-	err = repo.DeleteState(MAC1)
+	err = repo.DeleteState(ctx, MAC1)
 	require.NoError(t, err)
 
-	states, err = repo.GetStates()
+	states, err = repo.GetStates(ctx)
 	require.NoError(t, err)
 	expected = []objects.MAC{{0x30, 0x40, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}}
 	require.Equal(t, expected, states)
@@ -284,12 +285,12 @@ func TestHttpBackend(t *testing.T) {
 	// packfiles
 	MAC3 := objects.MAC{0x50, 0x60}
 	MAC4 := objects.MAC{0x60, 0x70}
-	_, err = repo.PutPackfile(MAC3, bytes.NewReader([]byte("test3")))
+	_, err = repo.PutPackfile(ctx, MAC3, bytes.NewReader([]byte("test3")))
 	require.NoError(t, err)
-	_, err = repo.PutPackfile(MAC4, bytes.NewReader([]byte("test4")))
+	_, err = repo.PutPackfile(ctx, MAC4, bytes.NewReader([]byte("test4")))
 	require.NoError(t, err)
 
-	packfiles, err := repo.GetPackfiles()
+	packfiles, err := repo.GetPackfiles(ctx)
 	require.NoError(t, err)
 	expected = []objects.MAC{
 		{0x50, 0x60, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
@@ -297,21 +298,21 @@ func TestHttpBackend(t *testing.T) {
 	}
 	require.Equal(t, expected, packfiles)
 
-	rd, err = repo.GetPackfileBlob(MAC4, 0, 4)
+	rd, err = repo.GetPackfileBlob(ctx, MAC4, 0, 4)
 	buf = new(bytes.Buffer)
 	_, err = io.Copy(buf, rd)
 	require.NoError(t, err)
 	require.Equal(t, "test", buf.String())
 
-	err = repo.DeletePackfile(MAC3)
+	err = repo.DeletePackfile(ctx, MAC3)
 	require.NoError(t, err)
 
-	packfiles, err = repo.GetPackfiles()
+	packfiles, err = repo.GetPackfiles(ctx)
 	require.NoError(t, err)
 	expected = []objects.MAC{{0x60, 0x70, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}}
 	require.Equal(t, expected, packfiles)
 
-	rd, err = repo.GetPackfile(MAC4)
+	rd, err = repo.GetPackfile(ctx, MAC4)
 	buf = new(bytes.Buffer)
 	_, err = io.Copy(buf, rd)
 	require.NoError(t, err)

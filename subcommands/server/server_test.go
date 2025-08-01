@@ -76,7 +76,7 @@ func TestExecuteCmdServerDefault(t *testing.T) {
 	require.NoError(t, err, "unmarshaling response")
 
 	hasher := hashing.GetHasher(hashing.DEFAULT_HASHING_ALGORITHM)
-	version, unwrappedConfigRd, err := storage.Deserialize(hasher, resources.RT_CONFIG, bytes.NewReader(resOpen.Configuration))
+	version, unwrappedConfigRd, err := storage.Deserialize(hasher, resources.RT_CONFIG, io.NopCloser(bytes.NewReader(resOpen.Configuration)))
 	require.NoError(t, err, "deserializing configuration")
 
 	unwrappedConfig, err := io.ReadAll(unwrappedConfigRd)

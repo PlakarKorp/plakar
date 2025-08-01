@@ -7,6 +7,8 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"os"
+	"strconv"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
@@ -128,16 +130,25 @@ func (ui *uiserver) apiInfo(w http.ResponseWriter, r *http.Request) error {
 		authenticated = true
 	}
 
+	isDemoMode, _ := strconv.ParseBool(os.Getenv("PLAKAR_DEMO_MODE"))
+
+	mode, err := ui.store.Mode(r.Context())
+	if err != nil {
+		return err
+	}
+
 	res := &struct {
 		RepositoryId  string `json:"repository_id"`
 		Authenticated bool   `json:"authenticated"`
 		Version       string `json:"version"`
 		Browsable     bool   `json:"browsable"`
+		DemoMode      bool   `json:"demo_mode"`
 	}{
 		RepositoryId:  configuration.RepositoryID.String(),
 		Authenticated: authenticated,
 		Version:       utils.GetVersion(),
-		Browsable:     ui.store.Mode()&storage.ModeRead != 0,
+		Browsable:     mode&storage.ModeRead != 0,
+		DemoMode:      isDemoMode,
 	}
 	return json.NewEncoder(w).Encode(res)
 }
@@ -162,18 +173,30 @@ func SetupRoutes(server *http.ServeMux, repo *repository.Repository, ctx *appcon
 		}
 	}))
 
+	isDemoMode, _ := strconv.ParseBool(os.Getenv("PLAKAR_DEMO_MODE"))
+
 	server.Handle("GET /api/info", authToken(JSONAPIView(ui.apiInfo)))
 
-	server.Handle("POST /api/authentication/login/github", authToken(JSONAPIView(ui.servicesLoginGithub)))
-	server.Handle("POST /api/authentication/login/email", authToken(JSONAPIView(ui.servicesLoginEmail)))
-	server.Handle("POST /api/authentication/logout", authToken(JSONAPIView(ui.servicesLogout)))
+	// The demo mode is the read-only mode of the API available at demo.plakar.io. Disable the write operations.
+	if !isDemoMode {
+		server.Handle("POST /api/authentication/login/github", authToken(JSONAPIView(ui.servicesLoginGithub)))
+		server.Handle("POST /api/authentication/login/email", authToken(JSONAPIView(ui.servicesLoginEmail)))
+		server.Handle("POST /api/authentication/logout", authToken(JSONAPIView(ui.servicesLogout)))
+
+		server.Handle("POST /api/proxy/v1/account/notifications/set-status", authToken(JSONAPIView(ui.servicesProxy)))
+		server.Handle("PUT /api/proxy/v1/account/services/alerting", authToken(JSONAPIView(ui.servicesSetAlertingServiceConfiguration)))
+	}
 
 	server.Handle("GET /api/proxy/v1/account/me", authToken(JSONAPIView(ui.servicesProxy)))
 	server.Handle("GET /api/proxy/v1/account/notifications", authToken(JSONAPIView(ui.servicesProxy)))
-	server.Handle("POST /api/proxy/v1/account/notifications/set-status", authToken(JSONAPIView(ui.servicesProxy)))
 	server.Handle("GET /api/proxy/v1/account/services/alerting", authToken(JSONAPIView(ui.servicesGetAlertingServiceConfiguration)))
-	server.Handle("PUT /api/proxy/v1/account/services/alerting", authToken(JSONAPIView(ui.servicesSetAlertingServiceConfiguration)))
 	server.Handle("GET /api/proxy/v1/reporting/reports", authToken(JSONAPIView(ui.servicesProxy)))
+	server.Handle("GET /api/proxy/v1/integration", authToken(JSONAPIView(ui.servicesGetIntegration)))
+	server.Handle("GET /api/proxy/v1/integration/{id}", authToken(JSONAPIView(ui.servicesGetIntegrationId)))
+	server.Handle("GET /api/proxy/v1/integration/{id}/{path...}", authToken(JSONAPIView(ui.servicesGetIntegrationPath)))
+
+	server.Handle("POST /api/integrations/install", authToken(JSONAPIView(ui.integrationsInstall)))
+	server.Handle("DELETE /api/integrations/{id}", authToken(JSONAPIView(ui.integrationsUninstall)))
 
 	server.Handle("GET /api/repository/info", authToken(JSONAPIView(ui.repositoryInfo)))
 	server.Handle("GET /api/repository/snapshots", authToken(JSONAPIView(ui.repositorySnapshots)))
@@ -194,4 +217,12 @@ func SetupRoutes(server *http.ServeMux, repo *repository.Repository, ctx *appcon
 
 	server.Handle("POST /api/snapshot/vfs/downloader/{snapshot_path...}", authToken(JSONAPIView(ui.snapshotVFSDownloader)))
 	server.Handle("GET /api/snapshot/vfs/downloader-sign-url/{id}", JSONAPIView(ui.snapshotVFSDownloaderSigned))
+}
+
+func (ui *uiserver) reloadPlugins() {
+	// Installed packaged might have changed
+	err := ui.ctx.GetPlugins().ReloadPlugins(ui.ctx.GetInner())
+	if err != nil {
+		ui.ctx.GetLogger().Warn("failed to reload plugins: %w", err)
+	}
 }

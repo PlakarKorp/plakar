@@ -74,7 +74,7 @@ func (cmd *Agent) Parse(ctx *appcontext.AppContext, args []string) error {
 
 	_, envAgentLess := os.LookupEnv("PLAKAR_AGENTLESS")
 	if envAgentLess {
-		return fmt.Errorf("agent can not be start when PLAKAR_AGENTLESS is set")
+		return fmt.Errorf("agent can not be started when PLAKAR_AGENTLESS is set")
 	}
 
 	flags := flag.NewFlagSet("agent", flag.ExitOnError)
@@ -300,6 +300,11 @@ func (cmd *Agent) ListenAndServe(ctx *appcontext.AppContext) error {
 			return err
 		}
 
+		if err := ctx.ReloadConfig(); err != nil {
+			ctx.GetLogger().Warn("could not load configuration: %v", err)
+			return err
+		}
+
 		wg.Add(1)
 		go handleClient(ctx, &wg, conn)
 	}
@@ -417,6 +422,7 @@ func handleClient(ctx *appcontext.AppContext, wg *sync.WaitGroup, conn net.Conn)
 	}
 	clientContext.GetLogger().EnableTracing(subcommand.GetLogTraces())
 	clientContext.CWD = subcommand.GetCWD()
+	clientContext.CommandLine = subcommand.GetCommandLine()
 
 	ctx.GetLogger().Info("%s at %s", strings.Join(name, " "), storeConfig["location"])
 
@@ -442,7 +448,7 @@ func handleClient(ctx *appcontext.AppContext, wg *sync.WaitGroup, conn net.Conn)
 			fmt.Fprintf(clientContext.Stderr, "Failed to open storage: %s\n", err)
 			return
 		}
-		defer store.Close()
+		defer store.Close(ctx)
 
 		repo, err = repository.New(clientContext.GetInner(), clientContext.GetSecret(), store, serializedConfig)
 		if err != nil {

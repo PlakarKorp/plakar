@@ -41,7 +41,6 @@ func (s *AgentScheduler) Run() {
 
 	runq := make(chan *ScheduledJob, 1000)
 	s.sched = NewScheduler(runq)
-
 	stopped, err := s.sched.Start()
 	if err != nil {
 		s.ctx.GetLogger().Error("failed to start scheduler: %v", err)
@@ -72,11 +71,11 @@ func (s *AgentScheduler) Run() {
 			case <-stopped:
 				goto out
 			case schedJob := <-runq:
-				schedJob.job.Execute(s.ctx, schedJob.scheduled)
+				schedJob.job.Execute(s.ctx, s.reporter, schedJob.scheduled)
 			}
 		}
 	out:
-		// XXX flush reports
+		s.reporter.StopAndWait()
 	}()
 }
 

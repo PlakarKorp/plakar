@@ -18,6 +18,7 @@
 package pkg
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path"
@@ -36,17 +37,9 @@ type pkgerImporter struct {
 	manifestPath string
 }
 
-func (imp *pkgerImporter) Origin() string {
-	return ""
-}
-
-func (imp *pkgerImporter) Type() string {
-	return "pkger"
-}
-
-func (imp *pkgerImporter) Root() string {
-	return "/"
-}
+func (imp *pkgerImporter) Origin(ctx context.Context) (string, error) { return "", nil }
+func (imp *pkgerImporter) Type(ctx context.Context) (string, error)   { return "pkger", nil }
+func (imp *pkgerImporter) Root(ctx context.Context) (string, error)   { return "/", nil }
 
 func absolutify(cwd, path string) string {
 	if filepath.IsAbs(path) {
@@ -128,12 +121,12 @@ func (imp *pkgerImporter) scan(ch chan<- *importer.ScanResult) {
 	}
 }
 
-func (imp *pkgerImporter) Scan() (<-chan *importer.ScanResult, error) {
+func (imp *pkgerImporter) Scan(ctx context.Context) (<-chan *importer.ScanResult, error) {
 	ch := make(chan *importer.ScanResult, 1)
 	go imp.scan(ch)
 	return ch, nil
 }
 
-func (imp *pkgerImporter) Close() error {
+func (imp *pkgerImporter) Close(ctx context.Context) error {
 	return nil
 }

@@ -28,6 +28,8 @@ type Subcommand interface {
 	setFlags(CommandFlags)
 	GetCWD() string
 	SetCWD(string)
+	GetCommandLine() string
+	SetCommandLine(string)
 
 	GetLogInfo() bool
 	SetLogInfo(bool)
@@ -39,6 +41,7 @@ type SubcommandBase struct {
 	RepositorySecret []byte
 	Flags            CommandFlags
 	CWD              string
+	CommandLine      string
 
 	// XXX - rework that post-release
 	LogInfo   bool
@@ -59,6 +62,14 @@ func (cmd *SubcommandBase) GetCWD() string {
 
 func (cmd *SubcommandBase) SetCWD(cwd string) {
 	cmd.CWD = cwd
+}
+
+func (cmd *SubcommandBase) GetCommandLine() string {
+	return cmd.CommandLine
+}
+
+func (cmd *SubcommandBase) SetCommandLine(cmdline string) {
+	cmd.CommandLine = cmdline
 }
 
 func (cmd *SubcommandBase) GetLogInfo() bool {

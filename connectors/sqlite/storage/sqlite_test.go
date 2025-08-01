@@ -6,9 +6,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/storage"
+	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/stretchr/testify/require"
 
 	_ "modernc.org/sqlite"
@@ -28,7 +28,8 @@ func TestDatabaseBackend(t *testing.T) {
 		t.Fatal("error creating repository", err)
 	}
 
-	location := repo.Location()
+	location, err := repo.Location(ctx)
+	require.NoError(t, err)
 	require.Equal(t, "/tmp/testdb.db", location)
 
 	config := storage.NewConfiguration()
@@ -42,18 +43,18 @@ func TestDatabaseBackend(t *testing.T) {
 	require.NoError(t, err)
 	//	require.Equal(t, repo.Configuration().Version, versioning.FromString(storage.VERSION))
 
-	err = repo.Close()
+	err = repo.Close(ctx)
 	require.NoError(t, err)
 
 	// states
 	mac1 := objects.MAC{0x10, 0x20}
 	mac2 := objects.MAC{0x30, 0x40}
-	_, err = repo.PutState(mac1, bytes.NewReader([]byte("test1")))
+	_, err = repo.PutState(ctx, mac1, bytes.NewReader([]byte("test1")))
 	require.NoError(t, err)
-	_, err = repo.PutState(mac2, bytes.NewReader([]byte("test2")))
+	_, err = repo.PutState(ctx, mac2, bytes.NewReader([]byte("test2")))
 	require.NoError(t, err)
 
-	states, err := repo.GetStates()
+	states, err := repo.GetStates(ctx)
 	require.NoError(t, err)
 	expected := []objects.MAC{
 		{0x10, 0x20, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
@@ -61,17 +62,17 @@ func TestDatabaseBackend(t *testing.T) {
 	}
 	require.Equal(t, expected, states)
 
-	rd, err := repo.GetState(mac2)
+	rd, err := repo.GetState(ctx, mac2)
 	require.NoError(t, err)
 	buf := new(bytes.Buffer)
 	_, err = io.Copy(buf, rd)
 	require.NoError(t, err)
 	require.Equal(t, "test2", buf.String())
 
-	err = repo.DeleteState(mac1)
+	err = repo.DeleteState(ctx, mac1)
 	require.NoError(t, err)
 
-	states, err = repo.GetStates()
+	states, err = repo.GetStates(ctx)
 	require.NoError(t, err)
 	expected = []objects.MAC{{0x30, 0x40, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}}
 	require.Equal(t, expected, states)
@@ -79,12 +80,12 @@ func TestDatabaseBackend(t *testing.T) {
 	// packfiles
 	mac3 := objects.MAC{0x50, 0x60}
 	mac4 := objects.MAC{0x60, 0x70}
-	_, err = repo.PutPackfile(mac3, bytes.NewReader([]byte("test3")))
+	_, err = repo.PutPackfile(ctx, mac3, bytes.NewReader([]byte("test3")))
 	require.NoError(t, err)
-	_, err = repo.PutPackfile(mac4, bytes.NewReader([]byte("test4")))
+	_, err = repo.PutPackfile(ctx, mac4, bytes.NewReader([]byte("test4")))
 	require.NoError(t, err)
 
-	packfiles, err := repo.GetPackfiles()
+	packfiles, err := repo.GetPackfiles(ctx)
 	require.NoError(t, err)
 	expected = []objects.MAC{
 		{0x50, 0x60, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
@@ -92,21 +93,21 @@ func TestDatabaseBackend(t *testing.T) {
 	}
 	require.Equal(t, expected, packfiles)
 
-	rd, err = repo.GetPackfileBlob(mac4, 0, 4)
+	rd, err = repo.GetPackfileBlob(ctx, mac4, 0, 4)
 	buf = new(bytes.Buffer)
 	_, err = io.Copy(buf, rd)
 	require.NoError(t, err)
 	require.Equal(t, "test", buf.String())
 
-	err = repo.DeletePackfile(mac3)
+	err = repo.DeletePackfile(ctx, mac3)
 	require.NoError(t, err)
 
-	packfiles, err = repo.GetPackfiles()
+	packfiles, err = repo.GetPackfiles(ctx)
 	require.NoError(t, err)
 	expected = []objects.MAC{{0x60, 0x70, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}}
 	require.Equal(t, expected, packfiles)
 
-	rd, err = repo.GetPackfile(mac4)
+	rd, err = repo.GetPackfile(ctx, mac4)
 	buf = new(bytes.Buffer)
 	_, err = io.Copy(buf, rd)
 	require.NoError(t, err)

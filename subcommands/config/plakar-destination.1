@@ -33,8 +33,11 @@ parameters.
 Check wether the exporter for the destination identified by
 .Ar name
 is properly configured.
-.It Cm import
+.It Cm import Op Ar names
 Ingest a destination configuration from stdin.
+If
+.Ar names
+are specified, only those sections will be imported.
 .It Cm ls
 Display the current destinations configuration.
 This is the default if no subcommand is specified.

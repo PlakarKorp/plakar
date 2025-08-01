@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"os"
 	"path/filepath"
 	"runtime"
 
@@ -76,8 +77,17 @@ func (cmd *PkgCreate) Parse(ctx *appcontext.AppContext, args []string) error {
 		return fmt.Errorf("failed to parse the manifest %s: %w", manifest, err)
 	}
 
+	GOOS := runtime.GOOS
+	GOARCH := runtime.GOARCH
+	if goosEnv := os.Getenv("GOOS"); goosEnv != "" {
+		GOOS = goosEnv
+	}
+	if goarchEnv := os.Getenv("GOARCH"); goarchEnv != "" {
+		GOARCH = goarchEnv
+	}
+
 	if cmd.Out == "" {
-		p := fmt.Sprintf("%s_%s_%s_%s.ptar", cmd.Manifest.Name, cmd.Manifest.Version, runtime.GOOS, runtime.GOARCH)
+		p := fmt.Sprintf("%s_%s_%s_%s.ptar", cmd.Manifest.Name, cmd.Manifest.Version, GOOS, GOARCH)
 		cmd.Out = filepath.Join(ctx.CWD, p)
 	}
 
@@ -155,7 +165,7 @@ func (cmd *PkgCreate) Execute(ctx *appcontext.AppContext, _ *repository.Reposito
 		return 1, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	if err := st.Close(); err != nil {
+	if err := st.Close(ctx); err != nil {
 		return 1, fmt.Errorf("failed to close the storage: %w", err)
 	}
 

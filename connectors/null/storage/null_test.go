@@ -5,9 +5,9 @@ import (
 	"io"
 	"testing"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/storage"
+	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/stretchr/testify/require"
 )
 
@@ -20,7 +20,8 @@ func TestNullBackend(t *testing.T) {
 		t.Fatal("error creating repository", err)
 	}
 
-	location := repo.Location()
+	location, err := repo.Location(ctx)
+	require.NoError(t, err)
 	require.Equal(t, "/test/location", location)
 
 	config := storage.NewConfiguration()
@@ -35,49 +36,49 @@ func TestNullBackend(t *testing.T) {
 	// only test one field
 	//require.Equal(t, repo.Configuration().Version, versioning.FromString(storage.VERSION))
 
-	err = repo.Close()
+	err = repo.Close(ctx)
 	require.NoError(t, err)
 
 	mac := objects.MAC{0x10}
 
 	// states
-	macs, err := repo.GetStates()
+	macs, err := repo.GetStates(ctx)
 	require.NoError(t, err)
 	require.Equal(t, macs, []objects.MAC{})
 
-	_, err = repo.PutState(mac, bytes.NewReader([]byte("test")))
+	_, err = repo.PutState(ctx, mac, bytes.NewReader([]byte("test")))
 	require.NoError(t, err)
 
-	rd, err := repo.GetState(mac)
+	rd, err := repo.GetState(ctx, mac)
 	require.NoError(t, err)
 	buf := new(bytes.Buffer)
 	_, err = io.Copy(buf, rd)
 	require.NoError(t, err)
 	require.Equal(t, "", buf.String())
 
-	err = repo.DeleteState(mac)
+	err = repo.DeleteState(ctx, mac)
 	require.NoError(t, err)
 
 	// packfiles
-	macs, err = repo.GetPackfiles()
+	macs, err = repo.GetPackfiles(ctx)
 	require.NoError(t, err)
 	require.Equal(t, macs, []objects.MAC{})
 
-	_, err = repo.PutPackfile(mac, bytes.NewReader([]byte("test")))
+	_, err = repo.PutPackfile(ctx, mac, bytes.NewReader([]byte("test")))
 	require.NoError(t, err)
 
-	rd, err = repo.GetPackfile(mac)
+	rd, err = repo.GetPackfile(ctx, mac)
 	buf = new(bytes.Buffer)
 	_, err = io.Copy(buf, rd)
 	require.NoError(t, err)
 	require.Equal(t, "", buf.String())
 
-	rd, err = repo.GetPackfileBlob(mac, 0, 0)
+	rd, err = repo.GetPackfileBlob(ctx, mac, 0, 0)
 	buf = new(bytes.Buffer)
 	_, err = io.Copy(buf, rd)
 	require.NoError(t, err)
 	require.Equal(t, "", buf.String())
 
-	err = repo.DeletePackfile(mac)
+	err = repo.DeletePackfile(ctx, mac)
 	require.NoError(t, err)
 }

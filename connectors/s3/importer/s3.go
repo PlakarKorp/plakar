@@ -108,7 +108,7 @@ func NewS3Importer(ctx context.Context, opts *importer.Options, name string, con
 	}, nil
 }
 
-func (p *S3Importer) Scan() (<-chan *importer.ScanResult, error) {
+func (p *S3Importer) Scan(ctx context.Context) (<-chan *importer.ScanResult, error) {
 	result := make(chan *importer.ScanResult)
 	go func() {
 		defer close(result)
@@ -182,18 +182,18 @@ func (p *S3Importer) Scan() (<-chan *importer.ScanResult, error) {
 	return result, nil
 }
 
-func (p *S3Importer) Close() error {
+func (p *S3Importer) Close(ctx context.Context) error {
 	return nil
 }
 
-func (p *S3Importer) Root() string {
-	return p.scanDir
+func (p *S3Importer) Root(ctx context.Context) (string, error) {
+	return p.scanDir, nil
 }
 
-func (p *S3Importer) Origin() string {
-	return p.host + "/" + p.bucket
+func (p *S3Importer) Origin(ctx context.Context) (string, error) {
+	return p.host + "/" + p.bucket, nil
 }
 
-func (p *S3Importer) Type() string {
-	return "s3"
+func (p *S3Importer) Type(ctx context.Context) (string, error) {
+	return "s3", nil
 }

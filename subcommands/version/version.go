@@ -19,13 +19,9 @@ package version
 import (
 	"flag"
 	"fmt"
-	"strings"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/repository"
-	"github.com/PlakarKorp/kloset/snapshot/exporter"
-	"github.com/PlakarKorp/kloset/snapshot/importer"
-	"github.com/PlakarKorp/kloset/storage"
+	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
 )
@@ -52,11 +48,5 @@ type Version struct {
 
 func (cmd *Version) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	fmt.Printf("plakar/%s\n", utils.GetVersion())
-
-	fmt.Println()
-	fmt.Println("importers:", strings.Join(importer.Backends(), ", "))
-	fmt.Println("exporters:", strings.Join(exporter.Backends(), ", "))
-	fmt.Println("klosets:", strings.Join(storage.Backends(), ", "))
-
 	return 0, nil
 }

@@ -8,6 +8,7 @@ PLAKAR-DIFF(1) - General Commands Manual
 
 **plakar&nbsp;diff**
 \[**-highlight**]
+\[**-recursive**]
 *snapshotID1*\[:*path1*]
 *snapshotID2*\[:*path2*]
 
@@ -29,6 +30,10 @@ The options are as follows:
 **-highlight**
 
 > Apply syntax highlighting to the diff output for readability.
+
+**-recursive**
+
+> When comparing directories, recursively compare all subdirectories.
 
 # EXAMPLES
 

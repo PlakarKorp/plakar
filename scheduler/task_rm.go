@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/PlakarKorp/kloset/events"
+	"github.com/PlakarKorp/plakar/locate"
 	"github.com/PlakarKorp/plakar/subcommands/rm"
-	"github.com/PlakarKorp/plakar/utils"
 )
 
 type RmTask struct {
@@ -21,7 +21,7 @@ func (task *RmTask) Base() *TaskBase {
 
 func (task *RmTask) Run(ctx *TaskContext) {
 	if task.Cmd.LocateOptions == nil {
-		task.Cmd.LocateOptions = utils.NewDefaultLocateOptions()
+		task.Cmd.LocateOptions = locate.NewDefaultLocateOptions()
 	}
 	task.Cmd.LocateOptions.Job = ctx.JobName
 	task.Cmd.LocateOptions.Before = time.Now().Add(-task.Retention)

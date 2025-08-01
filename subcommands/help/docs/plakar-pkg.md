@@ -7,12 +7,25 @@ PLAKAR-PKG(1) - General Commands Manual
 # SYNOPSIS
 
 **plakar&nbsp;pkg**
+\[**-available**]
+\[**-long**]
 
 # DESCRIPTION
 
 The
 **plakar pkg**
 lists the currently installed plugins.
+
+The options are as follows:
+
+**-available**
+
+> Instead of installed packages,
+> list the set of prebuilt packages available for this system.
+
+**-long**
+
+> Show the full package name.
 
 # FILES
 

@@ -29,6 +29,7 @@ import (
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/kloset/snapshot/vfs"
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/locate"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
 	"github.com/dustin/go-humanize"
@@ -39,7 +40,7 @@ func init() {
 }
 
 func (cmd *Ls) Parse(ctx *appcontext.AppContext, args []string) error {
-	cmd.LocateOptions = utils.NewDefaultLocateOptions()
+	cmd.LocateOptions = locate.NewDefaultLocateOptions()
 
 	flags := flag.NewFlagSet("ls", flag.ExitOnError)
 	flags.Usage = func() {
@@ -67,7 +68,7 @@ func (cmd *Ls) Parse(ctx *appcontext.AppContext, args []string) error {
 type Ls struct {
 	subcommands.SubcommandBase
 
-	LocateOptions *utils.LocateOptions
+	LocateOptions *locate.LocateOptions
 	Recursive     bool
 	DisplayUUID   bool
 	Path          string
@@ -89,9 +90,9 @@ func (cmd *Ls) Execute(ctx *appcontext.AppContext, repo *repository.Repository) 
 
 func (cmd *Ls) list_snapshots(ctx *appcontext.AppContext, repo *repository.Repository) error {
 	cmd.LocateOptions.MaxConcurrency = ctx.MaxConcurrency
-	cmd.LocateOptions.SortOrder = utils.LocateSortOrderDescending
+	cmd.LocateOptions.SortOrder = locate.LocateSortOrderDescending
 
-	snapshotIDs, err := utils.LocateSnapshotIDs(repo, cmd.LocateOptions)
+	snapshotIDs, err := locate.LocateSnapshotIDs(repo, cmd.LocateOptions)
 	if err != nil {
 		return fmt.Errorf("ls: could not fetch snapshots list: %w", err)
 	}
@@ -106,7 +107,7 @@ func (cmd *Ls) list_snapshots(ctx *appcontext.AppContext, repo *repository.Repos
 			fmt.Fprintf(ctx.Stdout, "%s %10s%10s%10s %s\n",
 				snap.Header.Timestamp.UTC().Format(time.RFC3339),
 				hex.EncodeToString(snap.Header.GetIndexShortID()),
-				humanize.Bytes(snap.Header.GetSource(0).Summary.Directory.Size+snap.Header.GetSource(0).Summary.Below.Size),
+				humanize.IBytes(snap.Header.GetSource(0).Summary.Directory.Size+snap.Header.GetSource(0).Summary.Below.Size),
 				snap.Header.Duration.Round(time.Second),
 				utils.SanitizeText(snap.Header.GetSource(0).Importer.Directory))
 		} else {
@@ -114,7 +115,7 @@ func (cmd *Ls) list_snapshots(ctx *appcontext.AppContext, repo *repository.Repos
 			fmt.Fprintf(ctx.Stdout, "%s %3s%10s%10s %s\n",
 				snap.Header.Timestamp.UTC().Format(time.RFC3339),
 				hex.EncodeToString(indexID[:]),
-				humanize.Bytes(snap.Header.GetSource(0).Summary.Directory.Size+snap.Header.GetSource(0).Summary.Below.Size),
+				humanize.IBytes(snap.Header.GetSource(0).Summary.Directory.Size+snap.Header.GetSource(0).Summary.Below.Size),
 				snap.Header.Duration.Round(time.Second),
 				utils.SanitizeText(snap.Header.GetSource(0).Importer.Directory))
 		}
@@ -125,7 +126,7 @@ func (cmd *Ls) list_snapshots(ctx *appcontext.AppContext, repo *repository.Repos
 }
 
 func (cmd *Ls) list_snapshot(ctx *appcontext.AppContext, repo *repository.Repository, snapshotPath string, recursive bool) error {
-	snap, pathname, err := utils.OpenSnapshotByPath(repo, snapshotPath)
+	snap, pathname, err := locate.OpenSnapshotByPath(repo, snapshotPath)
 	if err != nil {
 		return err
 	}
@@ -191,7 +192,7 @@ func (cmd *Ls) list_snapshot(ctx *appcontext.AppContext, repo *repository.Reposi
 			sb.Mode(),
 			username,
 			groupname,
-			humanize.Bytes(uint64(sb.Size())),
+			humanize.IBytes(uint64(sb.Size())),
 			utils.SanitizeText(entryname),
 			linkTarget)
 

@@ -23,10 +23,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/repository"
+	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/locate"
 	"github.com/PlakarKorp/plakar/subcommands"
-	"github.com/PlakarKorp/plakar/utils"
 )
 
 func init() {
@@ -77,7 +77,7 @@ type Archive struct {
 }
 
 func (cmd *Archive) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	snap, pathname, err := utils.OpenSnapshotByPath(repo, cmd.SnapshotPrefix)
+	snap, pathname, err := locate.OpenSnapshotByPath(repo, cmd.SnapshotPrefix)
 	if err != nil {
 		return 1, fmt.Errorf("archive: could not open snapshot: %s", cmd.SnapshotPrefix)
 	}

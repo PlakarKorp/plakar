@@ -108,7 +108,7 @@ func (buckets *Buckets) Path(mac objects.MAC) (string, error) {
 	return dest, nil
 }
 
-func (buckets *Buckets) Get(mac objects.MAC) (io.Reader, error) {
+func (buckets *Buckets) Get(mac objects.MAC) (io.ReadCloser, error) {
 	p, err := buckets.Path(mac)
 	if err != nil {
 		return nil, err
@@ -118,10 +118,10 @@ func (buckets *Buckets) Get(mac objects.MAC) (io.Reader, error) {
 	if err != nil {
 		return nil, err
 	}
-	return reading.ClosingReader(fp), nil
+	return fp, nil
 }
 
-func (buckets *Buckets) GetBlob(mac objects.MAC, offset uint64, length uint32) (io.Reader, error) {
+func (buckets *Buckets) GetBlob(mac objects.MAC, offset uint64, length uint32) (io.ReadCloser, error) {
 	p, err := buckets.Path(mac)
 	if err != nil {
 		return nil, err
@@ -131,7 +131,8 @@ func (buckets *Buckets) GetBlob(mac objects.MAC, offset uint64, length uint32) (
 	if err != nil {
 		return nil, err
 	}
-	return ClosingLimitedReaderFromOffset(fp, int64(offset), int64(length))
+
+	return reading.NewSectionReadCloser(fp, int64(offset), int64(length)), nil
 }
 
 func (buckets *Buckets) Remove(mac objects.MAC) error {

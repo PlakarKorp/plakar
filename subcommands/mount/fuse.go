@@ -22,8 +22,8 @@ package mount
 import (
 	"fmt"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/repository"
+	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/plakarfs"
 	"github.com/anacrolix/fuse"
 	"github.com/anacrolix/fuse/fs"
@@ -39,7 +39,13 @@ func (cmd *Mount) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 	if err != nil {
 		return 1, fmt.Errorf("mount: %v", err)
 	}
-	ctx.GetLogger().Info("mounted repository %s at %s", repo.Location(), cmd.Mountpoint)
+
+	loc, err := repo.Location()
+	if err != nil {
+		return 1, fmt.Errorf("mount: %v", err)
+	}
+
+	ctx.GetLogger().Info("mounted repository %s at %s", loc, cmd.Mountpoint)
 
 	go func() {
 		<-ctx.Done()

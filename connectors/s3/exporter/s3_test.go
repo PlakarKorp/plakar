@@ -29,12 +29,14 @@ func TestExporter(t *testing.T) {
 	tmpExportBucket := "s3://" + ts.Listener.Addr().String() + "/bucket"
 
 	var exporterInstance exporter.Exporter
-	appCtx := appcontext.NewAppContext()
-	exporterInstance, err = exporter.NewExporter(appCtx.GetInner(), map[string]string{"location": tmpExportBucket, "access_key": "", "secret_access_key": "", "use_tls": "false"})
+	ctx := appcontext.NewAppContext()
+	exporterInstance, err = exporter.NewExporter(ctx.GetInner(), map[string]string{"location": tmpExportBucket, "access_key": "", "secret_access_key": "", "use_tls": "false"})
 	require.NoError(t, err)
-	defer exporterInstance.Close()
+	defer exporterInstance.Close(ctx)
 
-	require.Equal(t, "/bucket", exporterInstance.Root())
+	root, err := exporterInstance.Root(ctx)
+	require.NoError(t, err)
+	require.Equal(t, "/bucket", root)
 
 	data := []byte("test exporter s3")
 	datalen := int64(len(data))
@@ -47,12 +49,12 @@ func TestExporter(t *testing.T) {
 	require.NoError(t, err)
 	defer fpOrigin.Close()
 
-	err = exporterInstance.StoreFile("dummy.txt", fpOrigin, datalen)
+	err = exporterInstance.StoreFile(ctx, "dummy.txt", fpOrigin, datalen)
 	require.NoError(t, err)
 
-	err = exporterInstance.CreateDirectory("/bucket/subdir")
+	err = exporterInstance.CreateDirectory(ctx, "/bucket/subdir")
 	require.NoError(t, err)
 
-	err = exporterInstance.SetPermissions("bucket/subdir", &objects.FileInfo{Lmode: 0644})
+	err = exporterInstance.SetPermissions(ctx, "bucket/subdir", &objects.FileInfo{Lmode: 0644})
 	require.NoError(t, err)
 }

@@ -53,6 +53,12 @@ jobs:
           mkdir -p ./plakar/ui/v2/frontend
           cp -r ./plakar-ui/dist/* ./plakar/ui/v2/frontend/
 
+      - name: Get plakar-ui commit SHA
+        id: plakar_ui
+        run: |
+          cd plakar-ui
+          echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
         with:
@@ -62,8 +68,6 @@ jobs:
           delete-branch: true
           author: "Plakup <noreply@plakar.io>"
           committer: "Plakup <noreply@plakar.io>"
-          title: "Update Plakar UI from ${{ github.event.inputs.plakar-ui-ref }}"
-          body: |
-            Update plakar-ui frontend from ${{ github.event.inputs.plakar-ui-ref }}
-          commit-message: |
-            Update plakar-ui frontend from ${{ github.event.inputs.plakar-ui-ref }}
+          title: Update Plakar UI to ${{ github.event.inputs.plakar-ui-ref }}@${{ steps.plakar_ui.outputs.sha }}
+          body: Update Plakar UI to ${{ github.event.inputs.plakar-ui-ref }}@${{ steps.plakar_ui.outputs.sha }}
+          commit-message: Update Plakar UI to ${{ github.event.inputs.plakar-ui-ref }}@${{ steps.plakar_ui.outputs.sha }}

@@ -26,16 +26,19 @@ func TestFSImporter(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, importer)
 
-	require.Equal(t, ctx.Hostname, importer.Origin())
+	orig, err := importer.Origin(ctx)
+	require.NoError(t, err)
+	require.Equal(t, ctx.Hostname, orig)
 
-	root := importer.Root()
+	root, err := importer.Root(ctx)
 	require.NoError(t, err)
 	require.Equal(t, tmpImportDir, root)
 
-	typ := importer.Type()
+	typ, err := importer.Type(ctx)
+	require.NoError(t, err)
 	require.Equal(t, "fs", typ)
 
-	scanChan, err := importer.Scan()
+	scanChan, err := importer.Scan(ctx)
 	require.NoError(t, err)
 	require.NotNil(t, scanChan)
 
@@ -58,6 +61,6 @@ func TestFSImporter(t *testing.T) {
 	sort.Strings(paths)
 	require.Equal(t, expected, paths)
 
-	err = importer.Close()
+	err = importer.Close(ctx)
 	require.NoError(t, err)
 }

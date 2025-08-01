@@ -223,9 +223,6 @@ func LoadJSON(rd io.Reader) (map[string]map[string]string, error) {
 	if err := decoder.Decode(&raw); err != nil {
 		return nil, err
 	}
-
-	fmt.Println(raw)
-
 	return raw, nil
 }
 
@@ -242,16 +239,15 @@ func GetConf(rd io.Reader) (map[string]map[string]string, error) {
 		return nil, fmt.Errorf("failed to parse config data: %w", err)
 	}
 
-	providerSpecialCases := map[string]string{
-		"drive":         "googledrive://",
-		"google photos": "googlephotos://",
-	}
 	for _, section := range configMap {
 		if section["type"] != "" {
-			if specialCase, ok := providerSpecialCases[section["type"]]; ok {
-				section["location"] = specialCase
-			} else {
-				section["location"] += section["type"] + "://"
+			section["location"] = "rclone://"
+		}
+	}
+	for _, section := range configMap {
+		for key, value := range section {
+			if value == "" {
+				delete(section, key)
 			}
 		}
 	}

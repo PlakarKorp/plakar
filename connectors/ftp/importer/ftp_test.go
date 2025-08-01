@@ -30,21 +30,22 @@ func TestImporter(t *testing.T) {
 	}
 
 	// Create the importer
-	appCtx := appcontext.NewAppContext()
-	importer, err := NewFTPImporter(appCtx, nil, "ftp", map[string]string{
+	ctx := appcontext.NewAppContext()
+	importer, err := NewFTPImporter(ctx, nil, "ftp", map[string]string{
 		"location": "ftp://" + server.Addr + "/",
 	})
 	require.NoError(t, err)
-	defer importer.Close()
+	defer importer.Close(ctx)
 
 	// Test root path
-	root := importer.Root()
+	root, err := importer.Root(ctx)
+	require.NoError(t, err)
 	if root != "/" {
 		t.Errorf("Expected root path '/', got '%s'", root)
 	}
 
 	// Test scanning files
-	scanResults, err := importer.Scan()
+	scanResults, err := importer.Scan(ctx)
 	require.NoError(t, err)
 	require.NotNil(t, scanResults)
 

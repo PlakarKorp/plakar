@@ -56,25 +56,25 @@ func NewStdioExporter(appCtx context.Context, opts *exporter.Options, name strin
 	}, nil
 }
 
-func (p *StdioExporter) Root() string {
-	return "/"
+func (p *StdioExporter) Root(ctx context.Context) (string, error) {
+	return "/", nil
 }
 
-func (p *StdioExporter) CreateDirectory(pathname string) error {
+func (p *StdioExporter) CreateDirectory(ctx context.Context, pathname string) error {
 	// can't mkdir on Stdio
 	return nil
 }
 
-func (p *StdioExporter) StoreFile(pathname string, fp io.Reader, size int64) error {
+func (p *StdioExporter) StoreFile(ctx context.Context, pathname string, fp io.Reader, size int64) error {
 	_, err := io.Copy(p.w, fp)
 	return err
 }
 
-func (p *StdioExporter) SetPermissions(pathname string, fileinfo *objects.FileInfo) error {
+func (p *StdioExporter) SetPermissions(ctx context.Context, pathname string, fileinfo *objects.FileInfo) error {
 	// can't chown/chmod on Stdio
 	return nil
 }
 
-func (p *StdioExporter) Close() error {
+func (p *StdioExporter) Close(ctx context.Context) error {
 	return nil
 }

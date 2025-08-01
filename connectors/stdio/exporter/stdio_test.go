@@ -28,9 +28,11 @@ func TestExporter(t *testing.T) {
 		Stdout: &buf,
 	}, "stdout", map[string]string{"location": "stdout://"})
 	require.NoError(t, err)
-	defer stdoutExporter.Close()
+	defer stdoutExporter.Close(ctx)
 
-	require.Equal(t, "/", stdoutExporter.Root())
+	root, err := stdoutExporter.Root(ctx)
+	require.NoError(t, err)
+	require.Equal(t, "/", root)
 
 	// Create test data
 	data := []byte("test exporter stdout")
@@ -46,18 +48,18 @@ func TestExporter(t *testing.T) {
 	defer fpOrigin.Close()
 
 	// Store the file
-	err = stdoutExporter.StoreFile("/dummy.txt", fpOrigin, datalen)
+	err = stdoutExporter.StoreFile(ctx, "/dummy.txt", fpOrigin, datalen)
 	require.NoError(t, err)
 
 	// Verify the content
 	require.Equal(t, string(data), buf.String())
 
 	// Test directory creation (should succeed but do nothing)
-	err = stdoutExporter.CreateDirectory("/subdir")
+	err = stdoutExporter.CreateDirectory(ctx, "/subdir")
 	require.NoError(t, err)
 
 	// Test setting permissions (should succeed but do nothing)
-	err = stdoutExporter.SetPermissions("/dummy.txt", &objects.FileInfo{Lmode: 0644})
+	err = stdoutExporter.SetPermissions(ctx, "/dummy.txt", &objects.FileInfo{Lmode: 0644})
 	require.NoError(t, err)
 
 	// Create a buffer to capture stderr
@@ -70,15 +72,17 @@ func TestExporter(t *testing.T) {
 		"location": "stderr://",
 	})
 	require.NoError(t, err)
-	defer stderrExporter.Close()
+	defer stderrExporter.Close(ctx)
 
-	require.Equal(t, "/", stderrExporter.Root())
+	root, err = stderrExporter.Root(ctx)
+	require.NoError(t, err)
+	require.Equal(t, "/", root)
 
 	// Reset the test file position
 	fpOrigin.Seek(0, 0)
 
 	// Store the file to stderr
-	err = stderrExporter.StoreFile("/dummy.txt", fpOrigin, datalen)
+	err = stderrExporter.StoreFile(ctx, "/dummy.txt", fpOrigin, datalen)
 	require.NoError(t, err)
 
 	// Verify the content

@@ -85,7 +85,7 @@ func (p *StdioImporter) stdioWalker_addPrefixDirectories(results chan<- *importe
 	}
 }
 
-func (p *StdioImporter) Scan() (<-chan *importer.ScanResult, error) {
+func (p *StdioImporter) Scan(ctx context.Context) (<-chan *importer.ScanResult, error) {
 	results := make(chan *importer.ScanResult)
 
 	go func() {
@@ -111,18 +111,18 @@ func (p *StdioImporter) Scan() (<-chan *importer.ScanResult, error) {
 	return results, nil
 }
 
-func (p *StdioImporter) Close() error {
+func (p *StdioImporter) Close(ctx context.Context) error {
 	return nil
 }
 
-func (p *StdioImporter) Root() string {
-	return "/"
+func (p *StdioImporter) Root(ctx context.Context) (string, error) {
+	return "/", nil
 }
 
-func (p *StdioImporter) Origin() string {
-	return p.opts.Hostname
+func (p *StdioImporter) Origin(ctx context.Context) (string, error) {
+	return p.opts.Hostname, nil
 }
 
-func (p *StdioImporter) Type() string {
-	return p.name
+func (p *StdioImporter) Type(ctx context.Context) (string, error) {
+	return p.name, nil
 }

@@ -6,10 +6,21 @@
 .Nd List installed Plakar plugins
 .Sh SYNOPSIS
 .Nm plakar pkg
+.Op Fl available
+.Op Fl long
 .Sh DESCRIPTION
 The
 .Nm plakar pkg
 lists the currently installed plugins.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl available
+Instead of installed packages,
+list the set of prebuilt packages available for this system.
+.It Fl long
+Show the full package name.
+.El
 .Sh FILES
 .Bl -tag -width Ds
 .It Pa ~/.cache/plakar/plugins/

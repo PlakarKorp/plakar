@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
+	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/locate"
 	"github.com/PlakarKorp/plakar/subcommands"
-	"github.com/PlakarKorp/plakar/utils"
 )
 
 type DiagSearch struct {
@@ -45,7 +45,7 @@ func (cmd *DiagSearch) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 func (cmd *DiagSearch) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	snap, pathname, err := utils.OpenSnapshotByPath(repo, cmd.SnapshotPath)
+	snap, pathname, err := locate.OpenSnapshotByPath(repo, cmd.SnapshotPath)
 	if err != nil {
 		return 1, err
 	}

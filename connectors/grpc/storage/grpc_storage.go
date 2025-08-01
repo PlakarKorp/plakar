@@ -31,7 +31,6 @@ import (
 
 type GrpcStorage struct {
 	GrpcClient grpc_storage.StoreClient
-	Ctx        context.Context
 }
 
 const bufferSize = 16 * 1024
@@ -39,7 +38,6 @@ const bufferSize = 16 * 1024
 func NewStorage(ctx context.Context, client grpc.ClientConnInterface, proto string, config map[string]string) (storage.Store, error) {
 	storage := &GrpcStorage{
 		GrpcClient: grpc_storage.NewStoreClient(client),
-		Ctx:        ctx,
 	}
 
 	_, err := storage.GrpcClient.Init(ctx, &grpc_storage.InitRequest{
@@ -69,34 +67,35 @@ func (s *GrpcStorage) Open(ctx context.Context) ([]byte, error) {
 	return resp.Config, nil
 }
 
-func (s *GrpcStorage) Location() string {
-	resp, err := s.GrpcClient.GetLocation(s.Ctx, &grpc_storage.GetLocationRequest{})
-	if err != nil { // TODO: asdd error logging
-		return ""
-	}
-	return resp.Location
-}
-
-func (s *GrpcStorage) Mode() storage.Mode {
-	resp, err := s.GrpcClient.GetMode(s.Ctx, &grpc_storage.GetModeRequest{})
+func (s *GrpcStorage) Location(ctx context.Context) (string, error) {
+	resp, err := s.GrpcClient.GetLocation(ctx, &grpc_storage.GetLocationRequest{})
 	if err != nil {
-		return storage.Mode(0)
+		return "", err
 	}
-	return storage.Mode(resp.Mode)
+	return resp.Location, nil
 }
 
-func (s *GrpcStorage) Size() int64 {
-	resp, err := s.GrpcClient.GetSize(s.Ctx, &grpc_storage.GetSizeRequest{})
+func (s *GrpcStorage) Mode(ctx context.Context) (storage.Mode, error) {
+	resp, err := s.GrpcClient.GetMode(ctx, &grpc_storage.GetModeRequest{})
 	if err != nil {
-		return -1
+		return storage.Mode(0), err
 	}
-	return resp.Size
+	return storage.Mode(resp.Mode), nil
 }
 
-func SendChunks(rd io.Reader, chunkSendFn func(chunk []byte) error) (int64, error) {
+func (s *GrpcStorage) Size(ctx context.Context) (int64, error) {
+	resp, err := s.GrpcClient.GetSize(ctx, &grpc_storage.GetSizeRequest{})
+	if err != nil {
+		return -1, err
+	}
+	return resp.Size, nil
+}
+
+func SendChunks(rd io.ReadCloser, chunkSendFn func(chunk []byte) error) (int64, error) {
 	buffer := make([]byte, bufferSize)
 	var totalBytes int64
 
+	defer rd.Close()
 	for {
 		n, err := rd.Read(buffer)
 		if n > 0 {
@@ -155,7 +154,14 @@ func (g *grpcChunkReader) Read(p []byte) (int, error) {
 	return totalRead, nil
 }
 
-func ReceiveChunks(chunkReceiverFn func() ([]byte, error)) io.Reader {
+// Actual closing is done by the SendChunks function whenever it has read the
+// full content of the Reader. We do not actually forward the Close call over
+// GRPC, but we should at some point.
+func (g *grpcChunkReader) Close() error {
+	return nil
+}
+
+func ReceiveChunks(chunkReceiverFn func() ([]byte, error)) io.ReadCloser {
 	streamReader := &grpcChunkReader{
 		streamRecv: chunkReceiverFn,
 	}
@@ -166,8 +172,8 @@ func toGrpcMAC(mac objects.MAC) *grpc_storage.MAC {
 	return &grpc_storage.MAC{Value: mac[:]}
 }
 
-func (s *GrpcStorage) GetStates() ([]objects.MAC, error) {
-	resp, err := s.GrpcClient.GetStates(s.Ctx, &grpc_storage.GetStatesRequest{})
+func (s *GrpcStorage) GetStates(ctx context.Context) ([]objects.MAC, error) {
+	resp, err := s.GrpcClient.GetStates(ctx, &grpc_storage.GetStatesRequest{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get states: %w", err)
 	}
@@ -182,8 +188,8 @@ func (s *GrpcStorage) GetStates() ([]objects.MAC, error) {
 	return states, nil
 }
 
-func (s *GrpcStorage) PutState(mac objects.MAC, rd io.Reader) (int64, error) {
-	stream, err := s.GrpcClient.PutState(s.Ctx)
+func (s *GrpcStorage) PutState(ctx context.Context, mac objects.MAC, rd io.Reader) (int64, error) {
+	stream, err := s.GrpcClient.PutState(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to start PutState stream: %w", err)
 	}
@@ -196,15 +202,15 @@ func (s *GrpcStorage) PutState(mac objects.MAC, rd io.Reader) (int64, error) {
 		return 0, fmt.Errorf("failed to send MAC: %w", err)
 	}
 
-	return SendChunks(rd, func(chunk []byte) error {
+	return SendChunks(io.NopCloser(rd), func(chunk []byte) error {
 		return stream.Send(&grpc_storage.PutStateRequest{
 			Chunk: chunk,
 		})
 	})
 }
 
-func (s *GrpcStorage) GetState(mac objects.MAC) (io.Reader, error) {
-	stream, err := s.GrpcClient.GetState(s.Ctx, &grpc_storage.GetStateRequest{
+func (s *GrpcStorage) GetState(ctx context.Context, mac objects.MAC) (io.ReadCloser, error) {
+	stream, err := s.GrpcClient.GetState(ctx, &grpc_storage.GetStateRequest{
 		Mac: toGrpcMAC(mac),
 	})
 	if err != nil {
@@ -220,8 +226,8 @@ func (s *GrpcStorage) GetState(mac objects.MAC) (io.Reader, error) {
 	}), nil
 }
 
-func (s *GrpcStorage) DeleteState(mac objects.MAC) error {
-	_, err := s.GrpcClient.DeleteState(s.Ctx, &grpc_storage.DeleteStateRequest{
+func (s *GrpcStorage) DeleteState(ctx context.Context, mac objects.MAC) error {
+	_, err := s.GrpcClient.DeleteState(ctx, &grpc_storage.DeleteStateRequest{
 		Mac: toGrpcMAC(mac),
 	})
 	if err != nil {
@@ -230,8 +236,8 @@ func (s *GrpcStorage) DeleteState(mac objects.MAC) error {
 	return nil
 }
 
-func (s *GrpcStorage) GetPackfiles() ([]objects.MAC, error) {
-	resp, err := s.GrpcClient.GetPackfiles(s.Ctx, &grpc_storage.GetPackfilesRequest{})
+func (s *GrpcStorage) GetPackfiles(ctx context.Context) ([]objects.MAC, error) {
+	resp, err := s.GrpcClient.GetPackfiles(ctx, &grpc_storage.GetPackfilesRequest{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get packfiles: %w", err)
 	}
@@ -246,8 +252,8 @@ func (s *GrpcStorage) GetPackfiles() ([]objects.MAC, error) {
 	return packfiles, nil
 }
 
-func (s *GrpcStorage) PutPackfile(mac objects.MAC, rd io.Reader) (int64, error) {
-	stream, err := s.GrpcClient.PutPackfile(s.Ctx)
+func (s *GrpcStorage) PutPackfile(ctx context.Context, mac objects.MAC, rd io.Reader) (int64, error) {
+	stream, err := s.GrpcClient.PutPackfile(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to start PutPackfile stream: %w", err)
 	}
@@ -260,15 +266,15 @@ func (s *GrpcStorage) PutPackfile(mac objects.MAC, rd io.Reader) (int64, error) 
 		return 0, fmt.Errorf("failed to send MAC: %w", err)
 	}
 
-	return SendChunks(rd, func(chunk []byte) error {
+	return SendChunks(io.NopCloser(rd), func(chunk []byte) error {
 		return stream.Send(&grpc_storage.PutPackfileRequest{
 			Chunk: chunk,
 		})
 	})
 }
 
-func (s *GrpcStorage) GetPackfile(mac objects.MAC) (io.Reader, error) {
-	stream, err := s.GrpcClient.GetPackfile(s.Ctx, &grpc_storage.GetPackfileRequest{
+func (s *GrpcStorage) GetPackfile(ctx context.Context, mac objects.MAC) (io.ReadCloser, error) {
+	stream, err := s.GrpcClient.GetPackfile(ctx, &grpc_storage.GetPackfileRequest{
 		Mac: toGrpcMAC(mac),
 	})
 	if err != nil {
@@ -284,8 +290,8 @@ func (s *GrpcStorage) GetPackfile(mac objects.MAC) (io.Reader, error) {
 	}), nil
 }
 
-func (s *GrpcStorage) GetPackfileBlob(mac objects.MAC, offset uint64, length uint32) (io.Reader, error) {
-	stream, err := s.GrpcClient.GetPackfileBlob(s.Ctx, &grpc_storage.GetPackfileBlobRequest{
+func (s *GrpcStorage) GetPackfileBlob(ctx context.Context, mac objects.MAC, offset uint64, length uint32) (io.ReadCloser, error) {
+	stream, err := s.GrpcClient.GetPackfileBlob(ctx, &grpc_storage.GetPackfileBlobRequest{
 		Mac:    toGrpcMAC(mac),
 		Offset: offset,
 		Length: length,
@@ -303,8 +309,8 @@ func (s *GrpcStorage) GetPackfileBlob(mac objects.MAC, offset uint64, length uin
 	}), nil
 }
 
-func (s *GrpcStorage) DeletePackfile(mac objects.MAC) error {
-	_, err := s.GrpcClient.DeletePackfile(s.Ctx, &grpc_storage.DeletePackfileRequest{
+func (s *GrpcStorage) DeletePackfile(ctx context.Context, mac objects.MAC) error {
+	_, err := s.GrpcClient.DeletePackfile(ctx, &grpc_storage.DeletePackfileRequest{
 		Mac: toGrpcMAC(mac),
 	})
 	if err != nil {
@@ -313,8 +319,8 @@ func (s *GrpcStorage) DeletePackfile(mac objects.MAC) error {
 	return nil
 }
 
-func (s *GrpcStorage) GetLocks() ([]objects.MAC, error) {
-	resp, err := s.GrpcClient.GetLocks(s.Ctx, &grpc_storage.GetLocksRequest{})
+func (s *GrpcStorage) GetLocks(ctx context.Context) ([]objects.MAC, error) {
+	resp, err := s.GrpcClient.GetLocks(ctx, &grpc_storage.GetLocksRequest{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get locks: %w", err)
 	}
@@ -329,8 +335,8 @@ func (s *GrpcStorage) GetLocks() ([]objects.MAC, error) {
 	return locks, nil
 }
 
-func (s *GrpcStorage) PutLock(lockID objects.MAC, rd io.Reader) (int64, error) {
-	stream, err := s.GrpcClient.PutLock(s.Ctx)
+func (s *GrpcStorage) PutLock(ctx context.Context, lockID objects.MAC, rd io.Reader) (int64, error) {
+	stream, err := s.GrpcClient.PutLock(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to start PutLock stream: %w", err)
 	}
@@ -343,15 +349,15 @@ func (s *GrpcStorage) PutLock(lockID objects.MAC, rd io.Reader) (int64, error) {
 		return 0, fmt.Errorf("failed to send MAC: %w", err)
 	}
 
-	return SendChunks(rd, func(chunk []byte) error {
+	return SendChunks(io.NopCloser(rd), func(chunk []byte) error {
 		return stream.Send(&grpc_storage.PutLockRequest{
 			Chunk: chunk,
 		})
 	})
 }
 
-func (s *GrpcStorage) GetLock(lockID objects.MAC) (io.Reader, error) {
-	stream, err := s.GrpcClient.GetLock(s.Ctx, &grpc_storage.GetLockRequest{
+func (s *GrpcStorage) GetLock(ctx context.Context, lockID objects.MAC) (io.ReadCloser, error) {
+	stream, err := s.GrpcClient.GetLock(ctx, &grpc_storage.GetLockRequest{
 		Mac: toGrpcMAC(lockID),
 	})
 	if err != nil {
@@ -367,8 +373,8 @@ func (s *GrpcStorage) GetLock(lockID objects.MAC) (io.Reader, error) {
 	}), nil
 }
 
-func (s *GrpcStorage) DeleteLock(lockID objects.MAC) error {
-	_, err := s.GrpcClient.DeleteLock(s.Ctx, &grpc_storage.DeleteLockRequest{
+func (s *GrpcStorage) DeleteLock(ctx context.Context, lockID objects.MAC) error {
+	_, err := s.GrpcClient.DeleteLock(ctx, &grpc_storage.DeleteLockRequest{
 		Mac: toGrpcMAC(lockID),
 	})
 	if err != nil {
@@ -377,10 +383,11 @@ func (s *GrpcStorage) DeleteLock(lockID objects.MAC) error {
 	return nil
 }
 
-func (s *GrpcStorage) Close() error {
-	_, err := s.GrpcClient.Close(s.Ctx, &grpc_storage.CloseRequest{})
+func (s *GrpcStorage) Close(ctx context.Context) error {
+	_, err := s.GrpcClient.Close(ctx, &grpc_storage.CloseRequest{})
 	if err != nil {
 		return err
 	}
+
 	return nil
 }

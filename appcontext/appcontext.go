@@ -4,12 +4,15 @@ import (
 	"github.com/PlakarKorp/kloset/kcontext"
 	"github.com/PlakarKorp/kloset/snapshot/importer"
 	"github.com/PlakarKorp/plakar/cookies"
+	"github.com/PlakarKorp/plakar/plugins"
+	"github.com/PlakarKorp/plakar/utils"
 )
 
 type AppContext struct {
 	*kcontext.KContext
 
 	cookies *cookies.Manager `msgpack:"-"`
+	plugins *plugins.Manager `msgpack:"-"`
 
 	ConfigDir string
 	secret    []byte
@@ -26,6 +29,7 @@ func NewAppContextFrom(ctx *AppContext) *AppContext {
 		KContext: kcontext.NewKContextFrom(ctx.GetInner()),
 
 		cookies:   ctx.cookies,
+		plugins:   ctx.plugins,
 		ConfigDir: ctx.ConfigDir,
 	}
 }
@@ -62,4 +66,21 @@ func (c *AppContext) SetCookies(cacheManager *cookies.Manager) {
 
 func (c *AppContext) GetCookies() *cookies.Manager {
 	return c.cookies
+}
+
+func (c *AppContext) SetPlugins(pluginsManager *plugins.Manager) {
+	c.plugins = pluginsManager
+}
+
+func (c *AppContext) GetPlugins() *plugins.Manager {
+	return c.plugins
+}
+
+func (c *AppContext) ReloadConfig() error {
+	cfg, err := utils.LoadConfig(c.ConfigDir)
+	if err != nil {
+		return err
+	}
+	c.Config = cfg
+	return nil
 }

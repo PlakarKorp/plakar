@@ -34,7 +34,6 @@ type TaskContext struct {
 	Store      storage.Store
 	Repository *repository.Repository
 
-	reporter     *reporting.Reporter
 	report       *reporting.Report
 	taskStatus   reporting.TaskStatus
 	taskErrorMsg string
@@ -93,7 +92,7 @@ func (ctx *TaskContext) Finalize() {
 		ctx.Repository = nil
 	}
 	if ctx.Store != nil {
-		_ = ctx.Store.Close()
+		_ = ctx.Store.Close(ctx.AppContext)
 		ctx.Store = nil
 	}
 
@@ -102,15 +101,13 @@ func (ctx *TaskContext) Finalize() {
 		ctx.report.WithSnapshotID(ctx.snapshotId)
 	}
 
-	if ctx.reporter != nil {
-		switch ctx.taskStatus {
-		case reporting.StatusWarning:
-			ctx.report.TaskWarning(ctx.taskErrorMsg)
-		case reporting.StatusFailed:
-			ctx.report.TaskFailed(1, ctx.taskErrorMsg)
-		default:
-			ctx.report.TaskDone()
-		}
+	switch ctx.taskStatus {
+	case reporting.StatusWarning:
+		ctx.report.TaskWarning(ctx.taskErrorMsg)
+	case reporting.StatusFailed:
+		ctx.report.TaskFailed(1, ctx.taskErrorMsg)
+	default:
+		ctx.report.TaskDone()
 	}
 
 	ctx.AppContext.Close()
@@ -129,12 +126,12 @@ func (ctx *TaskContext) loadRepository(task *TaskBase) error {
 
 	repoConfig, err := storage.NewConfigurationFromWrappedBytes(config)
 	if err != nil {
-		store.Close()
+		store.Close(ctx.AppContext)
 		return fmt.Errorf("unable to read repository configuration: %w", err)
 	}
 
 	if repoConfig.Version != versioning.FromString(storage.VERSION) {
-		store.Close()
+		store.Close(ctx.AppContext)
 		return fmt.Errorf("incompatible repository version: %s != %s", repoConfig.Version, storage.VERSION)
 	}
 
@@ -142,18 +139,18 @@ func (ctx *TaskContext) loadRepository(task *TaskBase) error {
 	if passphrase, ok := storeConfig["passphrase"]; ok {
 		key, err = encryption.DeriveKey(repoConfig.Encryption.KDFParams, []byte(passphrase))
 		if err != nil {
-			store.Close()
+			store.Close(ctx.AppContext)
 			return fmt.Errorf("error deriving key: %w", err)
 		}
 		if !encryption.VerifyCanary(repoConfig.Encryption, key) {
-			store.Close()
+			store.Close(ctx.AppContext)
 			return fmt.Errorf("invalid passphrase")
 		}
 	}
 
 	repo, err := repository.New(ctx.AppContext.GetInner(), key, store, config)
 	if err != nil {
-		store.Close()
+		store.Close(ctx.AppContext)
 		return fmt.Errorf("unable to open repository: %w", err)
 	}
 

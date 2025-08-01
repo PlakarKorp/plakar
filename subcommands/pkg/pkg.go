@@ -19,13 +19,11 @@ package pkg
 import (
 	"flag"
 	"fmt"
-	"path/filepath"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/plugins"
 	"github.com/PlakarKorp/plakar/subcommands"
-	"github.com/PlakarKorp/plakar/utils"
 )
 
 func init() {
@@ -52,10 +50,14 @@ func init() {
 
 type Pkg struct {
 	subcommands.SubcommandBase
+	LongName bool
+	ListAll  bool
 }
 
 func (cmd *Pkg) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags := flag.NewFlagSet("pkg", flag.ExitOnError)
+	flags.BoolVar(&cmd.LongName, "long", false, "show full package name")
+	flags.BoolVar(&cmd.ListAll, "available", false, "list available prebuilt packages")
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s",
 			flags.Name())
@@ -73,19 +75,34 @@ func (cmd *Pkg) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 func (cmd *Pkg) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (int, error) {
-	dataDir, err := utils.GetDataDir("plakar")
-	if err != nil {
-		return 1, err
+	var packages []plugins.Package
+	var err error
+
+	if cmd.ListAll {
+		var filter plugins.IntegrationFilter
+		integrations, err := ctx.GetPlugins().ListIntegrations(filter)
+		if err != nil {
+			return 1, err
+		}
+		for _, int := range integrations {
+			if int.Installation.Available {
+				pkg := ctx.GetPlugins().IntegrationAsPackage(&int)
+				packages = append(packages, pkg)
+			}
+		}
+	} else {
+		packages, err = ctx.GetPlugins().ListInstalledPackages()
+		if err != nil {
+			return 1, err
+		}
 	}
 
-	pluginsDir := filepath.Join(dataDir, "plugins")
-	names, err := plugins.ListDir(ctx, pluginsDir)
-	if err != nil {
-		return 1, err
-	}
-
-	for _, name := range names {
-		fmt.Fprintln(ctx.Stdout, name)
+	for _, pkg := range packages {
+		if cmd.LongName {
+			fmt.Fprintln(ctx.Stdout, pkg.PkgName())
+		} else {
+			fmt.Fprintln(ctx.Stdout, pkg.Name)
+		}
 	}
 
 	return 0, nil

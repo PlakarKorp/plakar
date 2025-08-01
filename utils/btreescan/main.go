@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -171,7 +172,7 @@ func main() {
 }
 
 func doScan(imp importer.Importer, idx *btree.BTree[string, int, empty]) error {
-	scan, err := imp.Scan()
+	scan, err := imp.Scan(context.Background())
 	if err != nil {
 		return fmt.Errorf("fs scan failed: %s", err)
 	}

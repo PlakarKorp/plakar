@@ -17,6 +17,9 @@ is an absolute path, or if it starts with
 .Sq ./ ,
 then it is considered a path to a local plugin file, otherwise
 it is downloaded from the Plakar plugin server.
+In the latter case, the user must be logged in via the
+.Xr plakar-login 1
+command.
 .Sh FILES
 .Bl -tag -width Ds
 .It Pa ~/.cache/plakar/plugins/
@@ -31,6 +34,7 @@ Respects
 if set.
 .El
 .Sh SEE ALSO
+.Xr plakar-login 1 ,
 .Xr plakar-pkg 1 ,
 .Xr plakar-pkg-create 1 ,
 .Xr plakar-pkg-rm 1

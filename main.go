@@ -157,12 +157,11 @@ func entryPoint() int {
 	defer ctx.Close()
 
 	ctx.ConfigDir = opt_configdir
-	cfg, err := utils.LoadConfig(opt_configdir)
+	err = ctx.ReloadConfig()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s: could not load configuration: %s\n", flag.CommandLine.Name(), err)
 		return 1
 	}
-	ctx.Config = cfg
 
 	ctx.Client = "plakar/" + utils.GetVersion()
 	ctx.CWD = cwd
@@ -201,6 +200,7 @@ func entryPoint() int {
 		fmt.Fprintf(os.Stderr, "%s: could not get data directory: %s\n", flag.CommandLine.Name(), err)
 		return 1
 	}
+	ctx.SetPlugins(plugins.NewManager(dataDir, cookiesDir))
 
 	if opt_disableSecurityCheck {
 		ctx.GetCookies().SetDisabledSecurityCheck()
@@ -261,7 +261,7 @@ func entryPoint() int {
 	ctx.MachineID = opt_machineIdDefault
 	ctx.KeyFromFile = secretFromKeyfile
 	ctx.ProcessID = os.Getpid()
-	ctx.MaxConcurrency = opt_cpuCount*8 + 1
+	ctx.MaxConcurrency = opt_cpuCount*2 + 1
 
 	if flag.NArg() == 0 {
 		fmt.Fprintf(os.Stderr, "%s: a subcommand must be provided\n", filepath.Base(flag.CommandLine.Name()))
@@ -281,12 +281,9 @@ func entryPoint() int {
 
 	ctx.SetLogger(logger)
 
-	pluginDir := filepath.Join(dataDir, "plugins")
-
-	// use cookiesDir as base since it's the same wrt agentless
-	pluginCache := filepath.Join(cookiesDir, "plugins")
-	if err := plugins.LoadDir(ctx, pluginDir, pluginCache); err != nil {
-		logger.Warn("failed to load the plugins: %s", err)
+	err = ctx.GetPlugins().LoadPlugins(ctx.GetInner())
+	if err != nil {
+		log.Fatalf("failed to load the plugins: %s", err)
 	}
 
 	var repositoryPath string
@@ -403,6 +400,7 @@ func entryPoint() int {
 	}
 
 	cmd.SetCWD(ctx.CWD)
+	cmd.SetCommandLine(ctx.CommandLine)
 
 	c := make(chan os.Signal, 1)
 	go func() {
@@ -439,7 +437,7 @@ func entryPoint() int {
 	}
 
 	if store != nil {
-		err = store.Close()
+		err = store.Close(ctx)
 		if err != nil {
 			logger.Warn("could not close repository: %s", err)
 		}

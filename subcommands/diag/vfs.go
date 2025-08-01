@@ -6,10 +6,10 @@ import (
 	"path"
 	"time"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/repository"
+	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/locate"
 	"github.com/PlakarKorp/plakar/subcommands"
-	"github.com/PlakarKorp/plakar/utils"
 	"github.com/dustin/go-humanize"
 )
 
@@ -34,7 +34,7 @@ func (cmd *DiagVFS) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 func (cmd *DiagVFS) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	snap1, pathname, err := utils.OpenSnapshotByPath(repo, cmd.SnapshotPath)
+	snap1, pathname, err := locate.OpenSnapshotByPath(repo, cmd.SnapshotPath)
 	if err != nil {
 		return 1, err
 	}
@@ -60,7 +60,7 @@ func (cmd *DiagVFS) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 	fmt.Fprintf(ctx.Stdout, "Version: %d\n", entry.Version)
 	fmt.Fprintf(ctx.Stdout, "ParentPath: %s\n", entry.ParentPath)
 	fmt.Fprintf(ctx.Stdout, "Name: %s\n", entry.Stat().Name())
-	fmt.Fprintf(ctx.Stdout, "Size: %s (%d bytes)\n", humanize.Bytes(uint64(entry.Stat().Size())), entry.Stat().Size())
+	fmt.Fprintf(ctx.Stdout, "Size: %s (%d bytes)\n", humanize.IBytes(uint64(entry.Stat().Size())), entry.Stat().Size())
 	fmt.Fprintf(ctx.Stdout, "Permissions: %s\n", entry.Stat().Mode())
 	fmt.Fprintf(ctx.Stdout, "ModTime: %s\n", entry.Stat().ModTime())
 	fmt.Fprintf(ctx.Stdout, "DeviceID: %d\n", entry.Stat().Dev())
@@ -98,9 +98,9 @@ func (cmd *DiagVFS) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 		fmt.Fprintf(ctx.Stdout, "Below.Sticky: %d\n", entry.Summary.Below.Sticky)
 		fmt.Fprintf(ctx.Stdout, "Below.Objects: %d\n", entry.Summary.Below.Objects)
 		fmt.Fprintf(ctx.Stdout, "Below.Chunks: %d\n", entry.Summary.Below.Chunks)
-		fmt.Fprintf(ctx.Stdout, "Below.MinSize: %s (%d bytes)\n", humanize.Bytes(uint64(entry.Summary.Below.MinSize)), entry.Summary.Below.MinSize)
-		fmt.Fprintf(ctx.Stdout, "Below.MaxSize: %s (%d bytes)\n", humanize.Bytes(uint64(entry.Summary.Below.MaxSize)), entry.Summary.Below.MaxSize)
-		fmt.Fprintf(ctx.Stdout, "Below.Size: %s (%d bytes)\n", humanize.Bytes(uint64(entry.Summary.Below.Size)), entry.Summary.Below.Size)
+		fmt.Fprintf(ctx.Stdout, "Below.MinSize: %s (%d bytes)\n", humanize.IBytes(uint64(entry.Summary.Below.MinSize)), entry.Summary.Below.MinSize)
+		fmt.Fprintf(ctx.Stdout, "Below.MaxSize: %s (%d bytes)\n", humanize.IBytes(uint64(entry.Summary.Below.MaxSize)), entry.Summary.Below.MaxSize)
+		fmt.Fprintf(ctx.Stdout, "Below.Size: %s (%d bytes)\n", humanize.IBytes(uint64(entry.Summary.Below.Size)), entry.Summary.Below.Size)
 		fmt.Fprintf(ctx.Stdout, "Below.MinModTime: %s\n", time.Unix(entry.Summary.Below.MinModTime, 0))
 		fmt.Fprintf(ctx.Stdout, "Below.MaxModTime: %s\n", time.Unix(entry.Summary.Below.MaxModTime, 0))
 		fmt.Fprintf(ctx.Stdout, "Below.MinEntropy: %f\n", entry.Summary.Below.MinEntropy)
@@ -125,9 +125,9 @@ func (cmd *DiagVFS) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 		fmt.Fprintf(ctx.Stdout, "Directory.Sticky: %d\n", entry.Summary.Directory.Sticky)
 		fmt.Fprintf(ctx.Stdout, "Directory.Objects: %d\n", entry.Summary.Directory.Objects)
 		fmt.Fprintf(ctx.Stdout, "Directory.Chunks: %d\n", entry.Summary.Directory.Chunks)
-		fmt.Fprintf(ctx.Stdout, "Directory.MinSize: %s (%d bytes)\n", humanize.Bytes(uint64(entry.Summary.Directory.MinSize)), entry.Summary.Directory.MinSize)
-		fmt.Fprintf(ctx.Stdout, "Directory.MaxSize: %s (%d bytes)\n", humanize.Bytes(uint64(entry.Summary.Directory.MaxSize)), entry.Summary.Directory.MaxSize)
-		fmt.Fprintf(ctx.Stdout, "Directory.Size: %s (%d bytes)\n", humanize.Bytes(uint64(entry.Summary.Directory.Size)), entry.Summary.Directory.Size)
+		fmt.Fprintf(ctx.Stdout, "Directory.MinSize: %s (%d bytes)\n", humanize.IBytes(uint64(entry.Summary.Directory.MinSize)), entry.Summary.Directory.MinSize)
+		fmt.Fprintf(ctx.Stdout, "Directory.MaxSize: %s (%d bytes)\n", humanize.IBytes(uint64(entry.Summary.Directory.MaxSize)), entry.Summary.Directory.MaxSize)
+		fmt.Fprintf(ctx.Stdout, "Directory.Size: %s (%d bytes)\n", humanize.IBytes(uint64(entry.Summary.Directory.Size)), entry.Summary.Directory.Size)
 		fmt.Fprintf(ctx.Stdout, "Directory.MinModTime: %s\n", time.Unix(entry.Summary.Directory.MinModTime, 0))
 		fmt.Fprintf(ctx.Stdout, "Directory.MaxModTime: %s\n", time.Unix(entry.Summary.Directory.MaxModTime, 0))
 		fmt.Fprintf(ctx.Stdout, "Directory.MinEntropy: %f\n", entry.Summary.Directory.MinEntropy)

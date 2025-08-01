@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/repository"
+	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
 )
 
@@ -36,6 +36,7 @@ func (cmd *DiagLocks) Execute(ctx *appcontext.AppContext, repo *repository.Repos
 		}
 
 		lock, err := repository.NewLockFromStream(version, rd)
+		rd.Close()
 		if err != nil {
 			fmt.Fprintf(ctx.Stderr, "Failed to deserialize lock %x\n", lockID)
 		}
