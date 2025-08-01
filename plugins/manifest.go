@@ -24,6 +24,7 @@ type Manifest struct {
 		Protocols     []string `yaml:"protocols"`
 		LocationFlags []string `yaml:"location_flags"`
 		Executable    string   `yaml:"executable"`
+		Args          []string `yaml:"args"`
 		ExtraFiles    []string `yaml:"extra_files"`
 	} `yaml:"connectors"`
 }
