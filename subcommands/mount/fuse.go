@@ -21,6 +21,7 @@ package mount
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
@@ -30,6 +31,15 @@ import (
 )
 
 func (cmd *Mount) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+	if _, err := os.Stat(cmd.Mountpoint); err != nil {
+		if !os.IsNotExist(err) {
+			return 1, fmt.Errorf("mount: %v", err)
+		}
+		if err := os.MkdirAll(cmd.Mountpoint, 0700); err != nil {
+			return 1, fmt.Errorf("mount: cannot create mountpoint %s: %v", cmd.Mountpoint, err)
+		}
+	}
+
 	c, err := fuse.Mount(
 		cmd.Mountpoint,
 		fuse.FSName("plakar"),
@@ -40,25 +50,24 @@ func (cmd *Mount) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 		return 1, fmt.Errorf("mount: %v", err)
 	}
 
-	loc, err := repo.Location()
-	if err != nil {
-		return 1, fmt.Errorf("mount: %v", err)
-	}
-
-	ctx.GetLogger().Info("mounted repository %s at %s", loc, cmd.Mountpoint)
-
 	go func() {
 		<-ctx.Done()
-		fuse.Unmount(cmd.Mountpoint)
+		if err := fuse.Unmount(cmd.Mountpoint); err != nil {
+			ctx.GetLogger().Error("unmount failed: %v", err)
+		}
+		c.Close()
 	}()
 
-	err = fs.Serve(c, plakarfs.NewFS(repo, cmd.Mountpoint))
-	if err != nil {
-		return 1, err
-	}
+	go func() {
+		if err := fs.Serve(c, plakarfs.NewFS(repo, cmd.LocateOptions, cmd.Snapshots, cmd.Mountpoint)); err != nil {
+			ctx.GetLogger().Error("serve error: %v", err)
+		}
+	}()
+
 	<-c.Ready
 	if err := c.MountError; err != nil {
 		return 1, err
 	}
+	<-ctx.Done()
 	return 0, nil
 }

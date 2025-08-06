@@ -4,7 +4,6 @@ package plakarfs
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"math/rand/v2"
 	"os"
@@ -15,11 +14,13 @@ import (
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/kloset/snapshot/vfs"
+	"github.com/PlakarKorp/plakar/locate"
 	"github.com/anacrolix/fuse"
 	"github.com/anacrolix/fuse/fs"
 )
 
 type Dir struct {
+	fs       *FS
 	parent   *Dir
 	name     string
 	fullpath string
@@ -36,14 +37,7 @@ func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
 		a.Uid = uint32(os.Geteuid())
 		a.Gid = uint32(os.Getgid())
 	} else if d.parent.name == "/" {
-		snapshotID, err := hex.DecodeString(d.name)
-		if err != nil {
-			return err
-		}
-		if len(snapshotID) != 32 {
-			return fmt.Errorf("invalid snapshot id length %d", len(snapshotID))
-		}
-		snap, err := snapshot.Load(d.repo, objects.MAC(snapshotID))
+		snap, _, err := locate.OpenSnapshotByPath(d.repo, d.name)
 		if err != nil {
 			return err
 		}
@@ -96,9 +90,9 @@ func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
 
 func (d *Dir) Lookup(ctx context.Context, name string) (fs.Node, error) {
 	if d.name == "/" {
-		return &Dir{parent: d, name: name, repo: d.repo}, nil
+		return &Dir{parent: d, name: name, repo: d.repo, fs: d.fs}, nil
 	} else if d.parent.name == "/" {
-		return &Dir{parent: d, name: name}, nil
+		return &Dir{parent: d, name: name, fs: d.fs}, nil
 	} else {
 		cleanpath := filepath.Clean(d.fullpath + "/" + name)
 		entry, err := d.vfs.GetEntry(cleanpath)
@@ -107,9 +101,9 @@ func (d *Dir) Lookup(ctx context.Context, name string) (fs.Node, error) {
 		}
 
 		if entry.Stat().IsDir() {
-			return &Dir{parent: d, name: name}, nil
+			return &Dir{parent: d, name: name, fs: d.fs}, nil
 		}
-		return &File{parent: d, name: name}, nil
+		return &File{parent: d, name: name, fs: d.fs}, nil
 	}
 }
 
@@ -118,15 +112,28 @@ func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 
 		d.repo.RebuildState()
 
-		snapshotIDs, err := d.repo.GetSnapshots()
-		if err != nil {
-			return nil, err
+		var snapshots []objects.MAC
+		if len(d.fs.snapshots) == 0 {
+			snapshotIDs, err := locate.LocateSnapshotIDs(d.repo, d.fs.locateOptions)
+			if err != nil {
+				return nil, err
+			}
+			snapshots = append(snapshots, snapshotIDs...)
+		} else {
+			for _, prefix := range d.fs.snapshots {
+				snapshotID, err := locate.LocateSnapshotByPrefix(d.repo, prefix)
+				if err != nil {
+					continue
+				}
+				snapshots = append(snapshots, snapshotID)
+			}
 		}
+
 		dirDirs := make([]fuse.Dirent, 0)
-		for idx, snapshotID := range snapshotIDs {
+		for idx, snapshotID := range snapshots {
 			dirDirs = append(dirDirs, fuse.Dirent{
 				Inode: uint64(idx),
-				Name:  fmt.Sprintf("%x", snapshotID),
+				Name:  fmt.Sprintf("%x", snapshotID[:4]),
 				Type:  fuse.DT_Dir,
 			})
 		}

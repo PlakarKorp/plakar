@@ -16,6 +16,7 @@ import (
 
 // File implements both Node and Handle for the hello file.
 type File struct {
+	fs       *FS
 	parent   *Dir
 	name     string
 	fullpath string
