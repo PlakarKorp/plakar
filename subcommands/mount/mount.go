@@ -36,6 +36,7 @@ func (cmd *Mount) Parse(ctx *appcontext.AppContext, args []string) error {
 		fmt.Fprintf(flags.Output(), "Usage: %s PATH\n", flags.Name())
 	}
 	flags.StringVar(&cmd.Mountpoint, "to", "", "Mountpoint to use for the FUSE filesystem")
+	flags.BoolVar(&cmd.Detach, "detach", false, "Detach the mountpoint after mounting")
 	cmd.LocateOptions.InstallFlags(flags)
 	flags.Parse(args)
 
@@ -55,6 +56,8 @@ func (cmd *Mount) Parse(ctx *appcontext.AppContext, args []string) error {
 
 type Mount struct {
 	subcommands.SubcommandBase
+
+	Detach bool
 
 	LocateOptions *locate.LocateOptions
 	Mountpoint    string

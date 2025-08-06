@@ -6,21 +6,87 @@
 .Nd Mount Plakar snapshots as read-only filesystem
 .Sh SYNOPSIS
 .Nm plakar mount
-.Ar mountpoint
+.Fl to Ar mountpoint
+.Op Fl name Ar name
+.Op Fl category Ar category
+.Op Fl environment Ar environment
+.Op Fl perimeter Ar perimeter
+.Op Fl job Ar job
+.Op Fl tag Ar tag
+.Op Fl latest
+.Op Fl before Ar date
+.Op Fl since Ar date
+.Op snapshots
 .Sh DESCRIPTION
 The
 .Nm plakar mount
-command mounts a Plakar repository snapshot as a read-only filesystem
+command mounts a Plakar repository as a read-only filesystem
 at the specified
 .Ar mountpoint .
 This allows users to access snapshot contents as if they were part of
 the local file system, providing easy browsing and retrieval of files
 without needing to explicitly restore them.
 This command may not work on all Operating Systems.
+
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl name Ar name
+Only mount snapshots that match
+.Ar name .
+.It Fl category Ar category
+Only mount snapshots that match
+.Ar category .
+.It Fl environment Ar environment
+Only mount snapshots that match
+.Ar environment .
+.It Fl perimeter Ar perimeter
+Only mount snapshots that match
+.Ar perimeter .
+.It Fl job Ar job
+Only mount snapshots that match
+.Ar job .
+.It Fl tag Ar tag
+Filter snapshots by the specified tag, listing only those that contain
+the given tag.
+.It Fl latest
+Only mount latest snapshot matching filters.
+.It Fl before Ar date
+Only mount snapshots matching filters and older than the specified
+date.
+Accepted formats include relative durations
+.Pq e.g. "2d" for two days, "1w" for one week
+or specific dates in various formats
+.Pq e.g. "2006-01-02 15:04:05" .
+.It Fl since Ar date
+Only mount snapshots matching filters and created since the specified
+date, included.
+Accepted formats include relative durations
+.Pq e.g. "2d" for two days, "1w" for one week
+or specific dates in various formats
+.Pq e.g. "2006-01-02 15:04:05" .
+.El
+.Pp
+If no
+.Ar snapshots
+are specified, the command will mount all the snapshots.
+If multiple snapshots match the criteria, the command will mount
+all of them.
+.Pp
+The mount command does not detach and will run until interrupted.
 .Sh EXAMPLES
-Mount a snapshot to the specified directory:
+Mount all snapshots of a repository to the specified directory:
 .Bd -literal -offset indent
-$ plakar mount ~/mnt
+$ plakar mount -to ~/mnt
+.Ed
+.Pp
+Mount the latest snapshot to the specified directory:
+.Bd -literal -offset indent
+$ plakar mount -latest -to ~/mnt
+.Ed
+.Pp
+Mount the snapshot abcd1234 to the specified directory:
+.Bd -literal -offset indent
+$ plakar mount -to ~/mnt abcd1234
 .Ed
 .Sh DIAGNOSTICS
 .Ex -std

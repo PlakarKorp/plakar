@@ -40,6 +40,11 @@ func (cmd *Mount) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 		}
 	}
 
+	location, err := repo.Location()
+	if err != nil {
+		return 1, fmt.Errorf("mount: cannot get repository location: %v", err)
+	}
+
 	c, err := fuse.Mount(
 		cmd.Mountpoint,
 		fuse.FSName("plakar"),
@@ -50,24 +55,36 @@ func (cmd *Mount) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 		return 1, fmt.Errorf("mount: %v", err)
 	}
 
+	return cmd.RunForeground(ctx, repo, location, c)
+}
+
+func (cmd *Mount) RunForeground(ctx *appcontext.AppContext, repo *repository.Repository, location string, c *fuse.Conn) (int, error) {
+	done := make(chan error, 1)
+
+	go func() {
+		done <- fs.Serve(c, plakarfs.NewFS(repo, cmd.LocateOptions, cmd.Snapshots, cmd.Mountpoint))
+	}()
+
+	<-c.Ready
+	if err := c.MountError; err != nil {
+		c.Close()
+		return 1, fmt.Errorf("mount error: %v", err)
+	}
+
+	ctx.GetLogger().Info("mounted %s at %s", location, cmd.Mountpoint)
+
 	go func() {
 		<-ctx.Done()
 		if err := fuse.Unmount(cmd.Mountpoint); err != nil {
 			ctx.GetLogger().Error("unmount failed: %v", err)
 		}
-		c.Close()
 	}()
 
-	go func() {
-		if err := fs.Serve(c, plakarfs.NewFS(repo, cmd.LocateOptions, cmd.Snapshots, cmd.Mountpoint)); err != nil {
-			ctx.GetLogger().Error("serve error: %v", err)
-		}
-	}()
+	err := <-done
+	defer c.Close()
 
-	<-c.Ready
-	if err := c.MountError; err != nil {
-		return 1, err
+	if err != nil {
+		return 1, fmt.Errorf("mount: %v", err)
 	}
-	<-ctx.Done()
 	return 0, nil
 }
