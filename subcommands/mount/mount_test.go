@@ -64,7 +64,7 @@ func TestExecuteCmdMountDefault(t *testing.T) {
 	output := bufOut.String()
 	location, err := repo.Location()
 	require.NoError(t, err)
-	require.Contains(t, output, fmt.Sprintf("mounted repository %s at %s", location, tmpMountPoint))
+	require.Contains(t, output, fmt.Sprintf("mounted %s at %s", location, tmpMountPoint))
 
 	indexId := snap.Header.GetIndexID()
 	snapshotPath := fmt.Sprintf("%s", hex.EncodeToString(indexId[:]))
