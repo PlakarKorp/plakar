@@ -87,6 +87,10 @@ func (pkg Package) PkgName() string {
 	return fmt.Sprintf("%s_%s_%s_%s.ptar", pkg.Name, pkg.Version, pkg.Os, pkg.Arch)
 }
 
+func (pkg Package) PkgNameAndVersion() string {
+	return fmt.Sprintf("%s@%s", pkg.Name, pkg.Version)
+}
+
 func (pkg Package) PluginName() string {
 	return fmt.Sprintf("%s_%s_%s_%s", pkg.Name, pkg.Version, pkg.Os, pkg.Arch)
 }

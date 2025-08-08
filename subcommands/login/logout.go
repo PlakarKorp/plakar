@@ -33,9 +33,7 @@ func init() {
 func (cmd *Logout) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags := flag.NewFlagSet("logout", flag.ExitOnError)
 	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS]\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
-		flags.PrintDefaults()
+		fmt.Fprintf(flags.Output(), "Usage: %s\n", flags.Name())
 	}
 	flags.Parse(args)
 

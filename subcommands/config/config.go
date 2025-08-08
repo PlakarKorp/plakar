@@ -97,8 +97,15 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 
 	switch subcmd {
 	case "add":
+		p := flag.NewFlagSet("add", flag.ExitOnError)
+		p.Usage = func() {
+			fmt.Fprintf(ctx.Stdout, "Usage: plakar %s %s <name> <location> [<key>=<value>...]\n", cmd, p.Name())
+			p.PrintDefaults()
+		}
+		p.Parse(args)
+
 		if len(args) < 2 {
-			return fmt.Errorf("usage: plakar %s %s <name> <location> [<key>=<value>, ...]", cmd, subcmd)
+			return fmt.Errorf("Usage: plakar %s %s <name> <location> [<key>=<value>...]", cmd, p.Name())
 		}
 
 		name, location := normalizeName(args[0]), normalizeLocation(args[1])
@@ -111,13 +118,20 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 		for _, kv := range args[2:] {
 			key, val, found := strings.Cut(kv, "=")
 			if !found || key == "" {
-				return fmt.Errorf("usage: plakar %s %s <name> <location> [<key>=<value>, ...]", cmd, subcmd)
+				return fmt.Errorf("Usage: plakar %s %s <name> <location> [<key>=<value>...]", cmd, p.Name())
 			}
 			cfgMap[name][key] = val
 		}
 		return utils.SaveConfig(ctx.ConfigDir, ctx.Config)
 
 	case "check":
+		p := flag.NewFlagSet("check", flag.ExitOnError)
+		p.Usage = func() {
+			fmt.Fprintf(ctx.Stdout, "Usage: plakar %s %s <name>\n", cmd, p.Name())
+			p.PrintDefaults()
+		}
+		p.Parse(args)
+
 		if len(args) != 1 {
 			return fmt.Errorf("usage: plakar %s check <name>", cmd)
 		}
@@ -167,6 +181,10 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 		flags.BoolVar(&opt_rclone, "rclone", false, "import using rclone")
 		flags.StringVar(&opt_config, "config", "", "import from a file")
 		flags.BoolVar(&opt_overwrite, "overwrite", false, "overwrite existing configurations")
+		flags.Usage = func() {
+			fmt.Fprintf(ctx.Stdout, "Usage: plakar %s %s [OPTIONS] <section>...\n", cmd, flags.Name())
+			flags.PrintDefaults()
+		}
 		flags.Parse(args)
 
 		var rd io.Reader = ctx.Stdin
@@ -229,11 +247,18 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 		return utils.SaveConfig(ctx.ConfigDir, ctx.Config)
 
 	case "ping":
-		return fmt.Errorf("not implemented")
+		return fmt.Errorf("the ping subcomand is not yet implemented in this version of plakar")
 
 	case "rm":
+		p := flag.NewFlagSet("rm", flag.ExitOnError)
+		p.Usage = func() {
+			fmt.Fprintf(ctx.Stdout, "Usage: plakar %s %s <name>\n", cmd, p.Name())
+			p.PrintDefaults()
+		}
+		p.Parse(args)
+
 		if len(args) != 1 {
-			return fmt.Errorf("usage: plakar %s rm <name>", cmd)
+			return fmt.Errorf("Usage: plakar %s %s <name>", cmd, p.Name())
 		}
 
 		name := normalizeName(args[0])
@@ -244,8 +269,15 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 		return utils.SaveConfig(ctx.ConfigDir, ctx.Config)
 
 	case "set":
-		if len(args) == 0 {
-			return fmt.Errorf("usage: plakar %s set <name> [<key>=<value>, ...]", cmd)
+		p := flag.NewFlagSet("set", flag.ExitOnError)
+		p.Usage = func() {
+			fmt.Fprintf(ctx.Stdout, "Usage: plakar %s %s <name> <key>=<value>...\n", cmd, p.Name())
+			p.PrintDefaults()
+		}
+		p.Parse(args)
+
+		if len(args) < 2 {
+			return fmt.Errorf("Usage: plakar %s %s <name> <key>=<value>...", cmd, p.Name())
 		}
 		name := normalizeName(args[0])
 		if !hasFunc(name) {
@@ -265,6 +297,11 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 		var opt_ini bool
 		var opt_yaml bool
 		p := flag.NewFlagSet("show", flag.ExitOnError)
+		p.Usage = func() {
+			fmt.Fprintf(ctx.Stdout, "Usage: plakar %s %s [<name>...]\n", cmd, p.Name())
+			p.PrintDefaults()
+		}
+
 		p.BoolVar(&opt_json, "json", false, "output in JSON format")
 		p.BoolVar(&opt_ini, "ini", false, "output in INI format")
 		p.BoolVar(&opt_yaml, "yaml", false, "output in YAML format (default)")
@@ -300,8 +337,15 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 		return nil
 
 	case "unset":
-		if len(args) == 0 {
-			return fmt.Errorf("usage: plakar %s unset <name> [<key>, ...]", cmd)
+		p := flag.NewFlagSet("unset", flag.ExitOnError)
+		p.Usage = func() {
+			fmt.Fprintf(ctx.Stdout, "Usage: plakar %s %s <name> <key>...\n", cmd, p.Name())
+			p.PrintDefaults()
+		}
+		p.Parse(args)
+
+		if len(args) < 2 {
+			return fmt.Errorf("Usage: plakar %s %s <name> <key>...", cmd, p.Name())
 		}
 		name := normalizeName(args[0])
 		if !hasFunc(name) {

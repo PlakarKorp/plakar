@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Eric Faurot <eric.faurot@plakar.io>
+ * Copyright (c) 2025 Julien Castets <julien.castets@plakar.io>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-package pkg
+package services
 
 import (
 	"flag"
@@ -22,42 +22,46 @@ import (
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/services"
 	"github.com/PlakarKorp/plakar/subcommands"
 )
 
-type PkgRm struct {
+type ServicesEnable struct {
 	subcommands.SubcommandBase
-	Args []string
+
+	Service string
 }
 
-func (cmd *PkgRm) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("pkg rm", flag.ExitOnError)
+func (cmd *ServicesEnable) Parse(ctx *appcontext.AppContext, args []string) error {
+	flags := flag.NewFlagSet("services-enable", flag.ExitOnError)
 	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s",
-			flags.Name())
-		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
-		flags.PrintDefaults()
+		fmt.Fprintf(flags.Output(), "Usage: service enable SERVICE_NAME\n")
 	}
-
 	flags.Parse(args)
 
-	cmd.Args = flags.Args()
+	if flags.NArg() != 1 {
+		return fmt.Errorf("invalid number of arguments, expected 1 but got %d", flags.NArg())
+	}
+
+	cmd.Service = flags.Arg(0)
 
 	return nil
 }
 
-func (cmd *PkgRm) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (int, error) {
-
-	for _, name := range cmd.Args {
-		pkg, err := ctx.GetPlugins().FindInstalledPackage(name)
-		if err != nil {
-			return 1, fmt.Errorf("failed to remove %q: %w", name, err)
-		}
-		err = ctx.GetPlugins().UninstallPackage(ctx.GetInner(), pkg)
-		if err != nil {
-			return 1, fmt.Errorf("failed to remove %q: %w", name, err)
-		}
+func (cmd *ServicesEnable) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+	authToken, err := ctx.GetCookies().GetAuthToken()
+	if err != nil {
+		return 1, err
+	} else if authToken == "" {
+		return 1, fmt.Errorf("access to services requires login, please run `plakar login`")
 	}
+
+	sc := services.NewServiceConnector(ctx, authToken)
+	err = sc.SetServiceStatus(cmd.Service, true)
+	if err != nil {
+		return 1, err
+	}
+	fmt.Fprintf(ctx.Stdout, "enabled\n")
 
 	return 0, nil
 }

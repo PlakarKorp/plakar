@@ -49,7 +49,7 @@ The subcommands are as follows:
 > If
 > **-overwrite**
 > is specified, existing sections will be overwritten by new ones.
-> qIf
+> If
 > **-rclone**
 > is specified, the input will be treated as an rclone configuration.
 > If

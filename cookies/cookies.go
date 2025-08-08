@@ -39,10 +39,13 @@ func (m *Manager) GetDir() string {
 func (c *Manager) GetAuthToken() (string, error) {
 	data, err := os.ReadFile(filepath.Join(c.cookiesDir, ".auth-token"))
 	if err != nil {
+		if os.IsNotExist(err) {
+			return "", fmt.Errorf("no auth token found: use `plakar login` first")
+		}
 		return "", err
 	}
 	if len(data) == 0 {
-		return "", fmt.Errorf("no auth token found")
+		return "", fmt.Errorf("no auth token found: use `plakar login` first")
 	}
 	return string(data), nil
 }

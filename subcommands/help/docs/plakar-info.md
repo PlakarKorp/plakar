@@ -8,14 +8,14 @@ PLAKAR-INFO(1) - General Commands Manual
 
 **plakar&nbsp;info**
 \[**-errors**]
-\[*snapshot*\[:*/path/to/file*]]
+\[*snapshot*]
 
 # DESCRIPTION
 
 The
 **plakar info**
-command provides detailed information about a Plakar repository,
-snapshots and filesystem entries.
+command provides detailed information about a Plakar repository
+and snapshots.
 The type of information displayed depends on the specified argument.
 Without any arguments, display information about the repository.
 

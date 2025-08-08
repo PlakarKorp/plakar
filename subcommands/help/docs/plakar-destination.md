@@ -50,17 +50,12 @@ The subcommands are as follows:
 > If
 > **-overwrite**
 > is specified, existing sections will be overwritten by new ones.
-> qIf
+> If
 > **-rclone**
 > is specified, the input will be treated as an rclone configuration.
 > If
 > *sections*
 > are specified, only those sections will be imported.
-
-**ls**
-
-> Display the current destinations configuration.
-> This is the default if no subcommand is specified.
 
 **ping** *name*
 

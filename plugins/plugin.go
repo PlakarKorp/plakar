@@ -97,7 +97,7 @@ func (plugin *Plugin) TearDown(ctx *kcontext.KContext) {
 
 func (plugin *Plugin) registerStorage(ctx *kcontext.KContext, proto string, flags location.Flags, exe string, args []string) error {
 	err := storage.Register(proto, flags, func(ctx context.Context, s string, config map[string]string) (storage.Store, error) {
-		client, err := connectPlugin(exe, args)
+		client, err := connectPlugin(ctx, exe, args)
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to plugin: %w", err)
 		}
@@ -114,7 +114,7 @@ func (plugin *Plugin) registerStorage(ctx *kcontext.KContext, proto string, flag
 
 func (plugin *Plugin) registerImporter(ctx *kcontext.KContext, proto string, flags location.Flags, exe string, args []string) error {
 	err := importer.Register(proto, flags, func(ctx context.Context, o *importer.Options, s string, config map[string]string) (importer.Importer, error) {
-		client, err := connectPlugin(exe, args)
+		client, err := connectPlugin(ctx, exe, args)
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to plugin: %w", err)
 		}
@@ -129,7 +129,7 @@ func (plugin *Plugin) registerImporter(ctx *kcontext.KContext, proto string, fla
 
 func (plugin *Plugin) registerExporter(ctx *kcontext.KContext, proto string, flags location.Flags, exe string, args []string) error {
 	err := exporter.Register(proto, flags, func(ctx context.Context, o *exporter.Options, s string, config map[string]string) (exporter.Exporter, error) {
-		client, err := connectPlugin(exe, args)
+		client, err := connectPlugin(ctx, exe, args)
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to plugin: %w", err)
 		}

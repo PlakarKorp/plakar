@@ -47,7 +47,7 @@ func (cmd *PkgAdd) Parse(ctx *appcontext.AppContext, args []string) error {
 		fmt.Fprintf(flags.Output(), "Usage: %s plugin.ptar ...",
 			flags.Name())
 		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
-		flag.PrintDefaults()
+		flags.PrintDefaults()
 	}
 
 	flags.Parse(args)

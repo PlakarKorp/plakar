@@ -32,6 +32,20 @@ The options are as follows:
 > The hostname is optional.
 > If not given, the server defaults to listen on localhost at port 9876.
 
+# EXAMPLES
+
+Start a plakar server on the local store:
+
+	$ plakar server
+
+Start a plakar server on a remote store:
+
+	$ plakar at sftp://example.org server
+
+Start a server on a specific address and port:
+
+	$ plakar server -addr 127.0.0.1:12345
+
 # DIAGNOSTICS
 
 The **plakar-server** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.

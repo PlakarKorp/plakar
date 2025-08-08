@@ -45,7 +45,7 @@ func (cmd *PkgBuild) Parse(ctx *appcontext.AppContext, args []string) error {
 		fmt.Fprintf(flags.Output(), "Usage: %s recipe.yaml",
 			flags.Name())
 		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
-		flag.PrintDefaults()
+		flags.PrintDefaults()
 	}
 
 	flags.Parse(args)

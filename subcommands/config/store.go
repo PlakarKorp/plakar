@@ -19,6 +19,14 @@ func (cmd *ConfigStoreCmd) Parse(ctx *appcontext.AppContext, args []string) erro
 	flags := flag.NewFlagSet("store", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s\n", flags.Name())
+		fmt.Fprintf(flags.Output(), "       %s add <name> <location> [<option>=<value>]...\n", flags.Name())
+		fmt.Fprintf(flags.Output(), "       %s check <name>\n", flags.Name())
+		fmt.Fprintf(flags.Output(), "       %s import [-config <location>] [-overwrite] [-rclone] [<section>...]\n", flags.Name())
+		fmt.Fprintf(flags.Output(), "       %s ping <name>\n", flags.Name())
+		fmt.Fprintf(flags.Output(), "       %s rm <name>\n", flags.Name())
+		fmt.Fprintf(flags.Output(), "       %s set <name> [<option>=<value>...]\n", flags.Name())
+		fmt.Fprintf(flags.Output(), "       %s show [<name>...]\n", flags.Name())
+		fmt.Fprintf(flags.Output(), "       %s unset <name> <option>...\n", flags.Name())
 		flags.PrintDefaults()
 	}
 

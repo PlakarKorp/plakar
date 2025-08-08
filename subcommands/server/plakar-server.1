@@ -26,6 +26,21 @@ The hostname and port where to listen to, separated by a colon.
 The hostname is optional.
 If not given, the server defaults to listen on localhost at port 9876.
 .El
+.Sh EXAMPLES
+Start a plakar server on the local store:
+.Bd -literal -offset indent
+$ plakar server
+.Ed
+.Pp
+Start a plakar server on a remote store:
+.Bd -literal -offset indent
+$ plakar at sftp://example.org server
+.Ed
+.Pp
+Start a server on a specific address and port:
+.Bd -literal -offset indent
+$ plakar server -addr 127.0.0.1:12345
+.Ed
 .Sh DIAGNOSTICS
 .Ex -std
 .Bl -tag -width Ds

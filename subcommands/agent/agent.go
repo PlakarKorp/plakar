@@ -64,7 +64,7 @@ func (cmd *Agent) Parse(ctx *appcontext.AppContext, args []string) error {
 		flags.PrintDefaults()
 	}
 
-	flags.DurationVar(&cmd.teardown, "teardown", 1*time.Minute, "delay before tearing down the agent (for testing purposes)")
+	flags.DurationVar(&cmd.teardown, "teardown", 5*time.Second, "delay before tearing down the agent")
 	flags.Parse(args)
 	if flags.NArg() != 0 {
 		return fmt.Errorf("too many arguments")

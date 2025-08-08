@@ -5,8 +5,8 @@ github.com/NickBall/go-aes-key-wrap v0.0.0-20170929221519-1c3aa3e4dfc5 h1:5BIUS5
 github.com/NickBall/go-aes-key-wrap v0.0.0-20170929221519-1c3aa3e4dfc5/go.mod h1:w5D10RxC0NmPYxmQ438CC1S07zaC1zpvuNW7s5sUk2Q=
 github.com/PlakarKorp/go-cdc-chunkers v1.0.1 h1:7yNCCMxfZwVcZJ7O4TTCROm/pKTlZv5vhw/9yqt2giM=
 github.com/PlakarKorp/go-cdc-chunkers v1.0.1/go.mod h1:y7ag92JABKPBDoSOPwedssQ5NIOgjRm4Mu6yTBpmUMY=
-github.com/PlakarKorp/go-human2duration v0.1.5 h1:6pw79LhjPuj5o8Xp9kUcle26+APaCII34odJtgb2kzY=
-github.com/PlakarKorp/go-human2duration v0.1.5/go.mod h1:1kg75kTlYCYURVyciaeO2GFdLgGDMhIfBTBpfydv1sk=
+github.com/PlakarKorp/go-human2duration v0.1.6 h1:pRPAU3yX4ROV7RihXihPkwyjoQNI1lnemjAMFdWRwi8=
+github.com/PlakarKorp/go-human2duration v0.1.6/go.mod h1:1kg75kTlYCYURVyciaeO2GFdLgGDMhIfBTBpfydv1sk=
 github.com/PlakarKorp/integration-fs v1.0.5 h1:qpr3b/h0KZEn2pz2ZQ/0GwFJgLBKXOLFOh4+63XHtuE=
 github.com/PlakarKorp/integration-fs v1.0.5/go.mod h1:V9NKdxra1ICM6jLDoVV2Y2xYvbT9liQRQhuMzR0YIXQ=
 github.com/PlakarKorp/integration-grpc v1.0.1 h1:mlYxMT2YjJruWtwxUEevgrjAbwzwQAMQLwcndSivob8=
@@ -15,8 +15,8 @@ github.com/PlakarKorp/integration-ptar v1.0.0-beta.1 h1:Vradb55Ggv4vEf8juMZoMBuy
 github.com/PlakarKorp/integration-ptar v1.0.0-beta.1/go.mod h1:U6nK1QW98Clk+4nUjrbIzyi95Df2g3h2Bteas61SSNE=
 github.com/PlakarKorp/integration-stdio v0.1.0-beta.2 h1:am+cLDZKNRIHZYmCHnsnmW/4CG9VZLwB3ZyTCoS4ug4=
 github.com/PlakarKorp/integration-stdio v0.1.0-beta.2/go.mod h1:5g19vNRN1MirlHuZB2Ljh8rVyTKiwbRys0QeYJRHOPc=
-github.com/PlakarKorp/kloset v1.0.1-beta.5.0.20250806110746-289340444a97 h1:0jVtLRNYz6u563JmQ/ffokf2iYoxSRrjwtcE+fdNoik=
-github.com/PlakarKorp/kloset v1.0.1-beta.5.0.20250806110746-289340444a97/go.mod h1:sfYj/HSQ520KVHsPFZB1vSOEWI4KSipEDf7eFmk6UEk=
+github.com/PlakarKorp/kloset v1.0.1 h1:StRDKBgXwA3z1iJvh9E4dFhy1m2WWGpUiE2iybYSdKc=
+github.com/PlakarKorp/kloset v1.0.1/go.mod h1:sfYj/HSQ520KVHsPFZB1vSOEWI4KSipEDf7eFmk6UEk=
 github.com/aclements/go-perfevent v0.0.0-20240301234650-f7843625020f h1:JjxwchlOepwsUWcQwD2mLUAGE9aCp0/ehy6yCHFBOvo=
 github.com/aclements/go-perfevent v0.0.0-20240301234650-f7843625020f/go.mod h1:tMDTce/yLLN/SK8gMOxQfnyeMeCg8KGzp0D1cbECEeo=
 github.com/alecthomas/assert/v2 v2.11.0 h1:2Q9r3ki8+JYXvGsDyBXwH3LcJ+WK5D0gc5E8vS6K3D0=

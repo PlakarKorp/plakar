@@ -54,7 +54,7 @@ func (cmd *PkgCreate) Parse(ctx *appcontext.AppContext, args []string) error {
 		fmt.Fprintf(flags.Output(), "Usage: %s [-out plugin] manifest.yaml",
 			flags.Name())
 		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
-		flag.PrintDefaults()
+		flags.PrintDefaults()
 	}
 
 	flags.StringVar(&cmd.Out, "out", "", "Plugin file to create")

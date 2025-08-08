@@ -271,3 +271,32 @@ func OpenSnapshotByPath(repo *repository.Repository, snapshotPath string) (*snap
 	}
 	return snap, path.Clean(snapRoot), err
 }
+
+func OpenSnapshotByPathRelative(repo *repository.Repository, snapshotPath string) (*snapshot.Snapshot, string, string, error) {
+	prefix, pathname := ParseSnapshotPath(snapshotPath)
+
+	snapshotID, err := LocateSnapshotByPrefix(repo, prefix)
+	if err != nil {
+		return nil, "", "", err
+	}
+
+	snap, err := snapshot.Load(repo, snapshotID)
+	if err != nil {
+		return nil, "", "", err
+	}
+
+	var snapRoot string
+	var relative string
+	if strings.HasPrefix(pathname, "/") {
+		snapRoot = pathname
+		relative = ""
+	} else {
+		snapRoot = path.Clean(path.Join(snap.Header.GetSource(0).Importer.Directory, pathname))
+		relative = pathname
+		if relative == "" {
+			relative = "."
+		}
+	}
+
+	return snap, path.Clean(snapRoot), relative, err
+}

@@ -19,6 +19,7 @@ package restore
 import (
 	"flag"
 	"fmt"
+	"path"
 	"strings"
 	"time"
 
@@ -185,11 +186,18 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 	}
 
 	for _, snapPath := range snapshots {
-		snap, pathname, err := locate.OpenSnapshotByPath(repo, snapPath)
+		snap, pathname, relative, err := locate.OpenSnapshotByPathRelative(repo, snapPath)
 		if err != nil {
 			return 1, err
 		}
-		opts.Strip = snap.Header.GetSource(0).Importer.Directory
+
+		if relative != "" {
+			if !strings.HasSuffix(relative, "/") {
+				opts.Strip = path.Dir(pathname)
+			} else {
+				opts.Strip = pathname
+			}
+		}
 
 		err = snap.Restore(exporterInstance, root, pathname, opts)
 		if err != nil {

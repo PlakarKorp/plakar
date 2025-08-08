@@ -62,7 +62,7 @@ func (cmd *Pkg) Parse(ctx *appcontext.AppContext, args []string) error {
 		fmt.Fprintf(flags.Output(), "Usage: %s",
 			flags.Name())
 		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
-		flag.PrintDefaults()
+		flags.PrintDefaults()
 	}
 
 	flags.Parse(args)
@@ -101,7 +101,7 @@ func (cmd *Pkg) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (i
 		if cmd.LongName {
 			fmt.Fprintln(ctx.Stdout, pkg.PkgName())
 		} else {
-			fmt.Fprintln(ctx.Stdout, pkg.Name)
+			fmt.Fprintln(ctx.Stdout, pkg.PkgNameAndVersion())
 		}
 	}
 
