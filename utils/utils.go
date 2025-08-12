@@ -316,7 +316,7 @@ func GetDataDir(appName string) (string, error) {
 }
 
 var VERSION = func() string {
-	version := "v1.0.3-devel"
+	version := "v1.0.3-rc.2"
 	if info, ok := debug.ReadBuildInfo(); ok {
 		for _, setting := range info.Settings {
 			if setting.Key == "vcs.revision" {
