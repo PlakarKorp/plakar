@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/locate"
 	"github.com/PlakarKorp/plakar/subcommands"
 )
 
@@ -29,18 +30,25 @@ func init() {
 }
 
 func (cmd *Mount) Parse(ctx *appcontext.AppContext, args []string) error {
+	cmd.LocateOptions = locate.NewDefaultLocateOptions()
 	flags := flag.NewFlagSet("mount", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s PATH\n", flags.Name())
 	}
+	flags.StringVar(&cmd.Mountpoint, "to", "", "Mountpoint to use for the FUSE filesystem")
+	cmd.LocateOptions.InstallFlags(flags)
 	flags.Parse(args)
 
-	if flags.NArg() != 1 {
-		return fmt.Errorf("need mountpoint")
+	if cmd.Mountpoint == "" {
+		return fmt.Errorf("option -to is required to specify a mountpoint")
+	}
+
+	if flags.NArg() != 0 && !cmd.LocateOptions.Empty() {
+		ctx.GetLogger().Warn("snapshot specified, filters will be ignored")
 	}
 
 	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.Mountpoint = flags.Arg(0)
+	cmd.Snapshots = flags.Args()
 
 	return nil
 }
@@ -48,5 +56,7 @@ func (cmd *Mount) Parse(ctx *appcontext.AppContext, args []string) error {
 type Mount struct {
 	subcommands.SubcommandBase
 
-	Mountpoint string
+	LocateOptions *locate.LocateOptions
+	Mountpoint    string
+	Snapshots     []string
 }
