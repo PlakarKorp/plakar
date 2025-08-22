@@ -75,29 +75,33 @@ func (cmd *DiagDirPack) Execute(ctx *appcontext.AppContext, repo *repository.Rep
 		return 1, err
 	}
 
+	obj, err := snap.DirPackObject()
+	if err != nil {
+		return 1, err
+	}
+
+	var size int64
+	for _, ch := range obj.Chunks {
+		size += int64(ch.Length)
+	}
+
+	rd := vfs.NewObjectReader(repo, obj, size)
 	for it.Next() {
 		fmt.Println("===============================================")
-		path, dirpackmac := it.Current()
+		path, pair := it.Current()
 		if !strings.HasPrefix(path, pathname) {
 			break
 		}
 
-		fmt.Fprintf(ctx.Stdout, "%s %x\n", path, dirpackmac)
+		offset := (pair >> 32)
+		length := pair & 0xFFFFFFFF
 
-		obj, err := snap.LookupObject(dirpackmac)
-		if err != nil {
-			return 1, fmt.Errorf("failed to get object %x: %w", dirpackmac, err)
-		}
-
-		var size int64
-		for _, c := range obj.Chunks {
-			size += int64(c.Length)
-		}
-
-		rd := vfs.NewObjectReader(repo, obj, size)
+		fmt.Fprintf(ctx.Stdout, "Offset %d, Length %d\n", offset, length)
+		rd.Seek(int64(offset), io.SeekStart)
+		lrd := io.LimitReader(rd, int64(length))
 
 		for {
-			typ, siz, err := readDirPackHdr(rd)
+			typ, siz, err := readDirPackHdr(lrd)
 			if err != nil {
 				if errors.Is(err, io.EOF) {
 					break
@@ -105,10 +109,10 @@ func (cmd *DiagDirPack) Execute(ctx *appcontext.AppContext, repo *repository.Rep
 				return 1, fmt.Errorf("failed to read: %w", err)
 			}
 
-			lrd := io.LimitReader(rd, int64(siz))
+			llrd := io.LimitReader(lrd, int64(siz))
 
 			var entry vfs.Entry
-			err = msgpack.NewDecoder(lrd).Decode(&entry)
+			err = msgpack.NewDecoder(llrd).Decode(&entry)
 			if err != nil {
 				return 1, fmt.Errorf("failed to read entry: %w", err)
 			}
