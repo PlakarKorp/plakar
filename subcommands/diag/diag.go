@@ -30,5 +30,6 @@ func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &DiagContentType{} }, subcommands.AgentSupport, "diag", "contenttype")
 	subcommands.Register(func() subcommands.Subcommand { return &DiagLocks{} }, subcommands.AgentSupport, "diag", "locks")
 	subcommands.Register(func() subcommands.Subcommand { return &DiagSearch{} }, subcommands.AgentSupport, "diag", "search")
+	subcommands.Register(func() subcommands.Subcommand { return &DiagDirPack{} }, subcommands.AgentSupport, "diag", "dirpack")
 	subcommands.Register(func() subcommands.Subcommand { return &DiagRepository{} }, subcommands.AgentSupport, "diag")
 }
