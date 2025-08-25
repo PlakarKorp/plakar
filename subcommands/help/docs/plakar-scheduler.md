@@ -7,12 +7,29 @@ PLAKAR-SCHEDULER(1) - General Commands Manual
 # SYNOPSIS
 
 **plakar&nbsp;scheduler**
+\[**-foreground**]
+**-tasks**&nbsp;*configfile*
+\[*stop*]
 
 # DESCRIPTION
 
 The
 **plakar scheduler**
 runs in the background and manages task execution based on the defined schedule.
+
+The options are as follows:
+
+**-foreground**
+
+> Run the scheduler in the foreground instead of as a background service.
+
+**-tasks** *configfile*
+
+> Specify the configuration file that contains the task definitions and schedules.
+
+*stop*
+
+> Stop the currently running scheduler service.
 
 # DIAGNOSTICS
 

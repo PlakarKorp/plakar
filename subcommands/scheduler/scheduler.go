@@ -19,9 +19,12 @@ package scheduler
 import (
 	"flag"
 	"fmt"
+	"io"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -34,14 +37,8 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &SchedulerConfigure{} },
-		subcommands.BeforeRepositoryOpen, "scheduler", "configure")
-	subcommands.Register(func() subcommands.Subcommand { return &SchedulerStart{} },
-		subcommands.BeforeRepositoryOpen, "scheduler", "start")
 	subcommands.Register(func() subcommands.Subcommand { return &SchedulerStop{} },
 		subcommands.BeforeRepositoryOpen, "scheduler", "stop")
-	subcommands.Register(func() subcommands.Subcommand { return &SchedulerTerminate{} },
-		subcommands.BeforeRepositoryOpen, "scheduler", "terminate")
 	subcommands.Register(func() subcommands.Subcommand { return &Scheduler{} },
 		subcommands.BeforeRepositoryOpen, "scheduler")
 }
@@ -51,6 +48,7 @@ var schedulerContextSingleton *SchedulerContext
 func (cmd *Scheduler) Parse(ctx *appcontext.AppContext, args []string) error {
 	var opt_foreground bool
 	var opt_logfile string
+	var opt_tasks string
 
 	flags := flag.NewFlagSet("scheduler", flag.ExitOnError)
 	flags.Usage = func() {
@@ -61,10 +59,46 @@ func (cmd *Scheduler) Parse(ctx *appcontext.AppContext, args []string) error {
 
 	flags.BoolVar(&opt_foreground, "foreground", false, "run in foreground")
 	flags.StringVar(&opt_logfile, "log", "", "log file")
+	flags.StringVar(&opt_tasks, "tasks", "", "tasks configuration file")
 	flags.Parse(args)
 	if flags.NArg() != 0 {
 		return fmt.Errorf("too many arguments")
 	}
+
+	if opt_tasks == "" {
+		return fmt.Errorf("no tasks configuration file provided")
+	}
+
+	var rd io.Reader
+	if strings.HasPrefix(opt_tasks, "http://") || strings.HasPrefix(opt_tasks, "https://") {
+		resp, err := http.Get(opt_tasks)
+		if err != nil {
+			return fmt.Errorf("failed to download configuration file from %q: %w", opt_tasks, err)
+		}
+		defer resp.Body.Close()
+		rd = resp.Body
+	} else {
+		absolutePath, err := filepath.Abs(opt_tasks)
+		if err != nil {
+			return fmt.Errorf("failed to get absolute path for configuration file: %w", err)
+		}
+		fp, err := os.Open(absolutePath)
+		if err != nil {
+			return fmt.Errorf("failed to open configuration file %q: %w", absolutePath, err)
+		}
+		defer fp.Close()
+		rd = fp
+	}
+
+	configBytes, err := io.ReadAll(rd)
+	if err != nil {
+		return fmt.Errorf("failed to read configuration file: %w", err)
+	}
+	_, err = scheduler.ParseConfigBytes(configBytes)
+	if err != nil {
+		return err
+	}
+	cmd.schedConfigBytes = configBytes
 
 	if !opt_foreground && os.Getenv("REEXEC") == "" {
 		err := daemonize(os.Args)
@@ -85,6 +119,7 @@ func (cmd *Scheduler) Parse(ctx *appcontext.AppContext, args []string) error {
 
 	ctx.GetLogger().Info("Plakar scheduler up")
 	cmd.socketPath = filepath.Join(ctx.CacheDir, "scheduler.sock")
+
 	return nil
 }
 
@@ -105,13 +140,17 @@ type SchedulerContext struct {
 
 type Scheduler struct {
 	subcommands.SubcommandBase
-	socketPath string
+	socketPath       string
+	schedConfigBytes []byte
 }
 
 func (cmd *Scheduler) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	schedulerContextSingleton = &SchedulerContext{
 		agentCtx: ctx,
 	}
+
+	configureTasks(cmd.schedConfigBytes)
+	startTasks()
 
 	if err := cmd.ListenAndServe(ctx); err != nil {
 		return 1, err
@@ -199,29 +238,8 @@ func handleClient(_ *appcontext.AppContext, conn net.Conn) {
 
 	var response scheduler.Response
 	switch request.Type {
-	case "start":
-		if _, err := startTasks(); err != nil {
-			response.ExitCode = 1
-			response.Err = err.Error()
-		} else {
-			response.ExitCode = 0
-		}
 	case "stop":
-		if _, err := stopTasks(); err != nil {
-			response.ExitCode = 1
-			response.Err = err.Error()
-		} else {
-			response.ExitCode = 0
-		}
-	case "terminate":
 		if _, err := terminate(); err != nil {
-			response.ExitCode = 1
-			response.Err = err.Error()
-		} else {
-			response.ExitCode = 0
-		}
-	case "configure":
-		if _, err := configureTasks(request.Payload); err != nil {
 			response.ExitCode = 1
 			response.Err = err.Error()
 		} else {
@@ -254,23 +272,6 @@ func startTasks() (int, error) {
 	go scheduler.NewScheduler(schedulerContextSingleton.schedulerCtx, schedulerContextSingleton.schedulerConfig).Run()
 
 	schedulerContextSingleton.schedulerState = AGENT_SCHEDULER_RUNNING
-
-	return 0, nil
-}
-
-func stopTasks() (int, error) {
-	schedulerContextSingleton.mtx.Lock()
-	defer schedulerContextSingleton.mtx.Unlock()
-
-	if schedulerContextSingleton.schedulerState&AGENT_SCHEDULER_RUNNING == 0 {
-		return 1, fmt.Errorf("agent scheduler not running")
-	}
-
-	//fmt.Fprintf(ctx.Stderr, "Stopping agent scheduler... (may take some time)\n")
-	schedulerContextSingleton.schedulerCtx.Cancel()
-	schedulerContextSingleton.schedulerState = AGENT_SCHEDULER_STOPPED
-	//fmt.Fprintf(ctx.Stderr, "done !\n")
-	schedulerContextSingleton.schedulerCtx = nil
 
 	return 0, nil
 }

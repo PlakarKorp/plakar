@@ -6,10 +6,23 @@
 .Nd Run the Plakar scheduler
 .Sh SYNOPSIS
 .Nm plakar scheduler
+.Op Fl foreground
+.Fl tasks Ar configfile
+.Op Ar stop
 .Sh DESCRIPTION
 The
 .Nm plakar scheduler
 runs in the background and manages task execution based on the defined schedule.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl foreground
+Run the scheduler in the foreground instead of as a background service.
+.It Fl tasks Ar configfile
+Specify the configuration file that contains the task definitions and schedules.
+.It Ar stop
+Stop the currently running scheduler service.
+.El
 .Sh DIAGNOSTICS
 .Ex -std
 .Bl -tag -width Ds
