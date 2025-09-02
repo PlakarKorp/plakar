@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
+	_ "github.com/PlakarKorp/integration-fs/exporter"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/plakar/appcontext"
-	_ "github.com/PlakarKorp/plakar/connectors/fs/exporter"
 	ptesting "github.com/PlakarKorp/plakar/testing"
 	"github.com/stretchr/testify/require"
 )

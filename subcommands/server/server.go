@@ -39,7 +39,7 @@ func (cmd *Server) Parse(ctx *appcontext.AppContext, args []string) error {
 		flags.PrintDefaults()
 	}
 
-	flags.StringVar(&cmd.ListenAddr, "listen", "127.0.0.1:9876", "address to listen on")
+	flags.StringVar(&cmd.ListenAddr, "listen", "localhost:9876", "address to listen on")
 	flags.BoolVar(&opt_allowdelete, "allow-delete", false, "enable delete operations")
 	flags.Parse(args)
 
@@ -62,6 +62,10 @@ type Server struct {
 }
 
 func (cmd *Server) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	httpd.Server(ctx, repo, cmd.ListenAddr, cmd.NoDelete)
+	ctx.GetLogger().Info("listening on http://%s", cmd.ListenAddr)
+	err := httpd.Server(ctx, repo, cmd.ListenAddr, cmd.NoDelete)
+	if err != nil {
+		return 1, err
+	}
 	return 0, nil
 }

@@ -8,6 +8,7 @@ PLAKAR-BACKUP(1) - General Commands Manual
 
 **plakar&nbsp;backup**
 \[**-concurrency**&nbsp;*number*]
+\[**-disk-based**&nbsp;*path*]
 \[**-exclude**&nbsp;*pattern*]
 \[**-exclude-file**&nbsp;*file*]
 \[**-check**]
@@ -41,6 +42,16 @@ The options are as follows:
 > Set the maximum number of parallel tasks for faster processing.
 > Defaults to
 > `8 * CPU count + 1`.
+
+**-disk-based** *path*
+
+> Path where to put the temporary packfiles instead of building them in memory.
+> If the special value
+> 'on'
+> is specified then the system temporary directory is used.
+> Otherwise
+> 'off'
+> can be used to disable the feature.
 
 **-exclude** *pattern*
 
@@ -119,4 +130,4 @@ The **plakar-backup** utility exits&#160;0 on success, and&#160;&gt;0 if an erro
 plakar(1),
 plakar-source(1)
 
-Plakar - July 3, 2025
+Plakar - July 3, 2025 - PLAKAR-BACKUP(1)

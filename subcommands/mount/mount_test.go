@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	_ "github.com/PlakarKorp/plakar/connectors/fs/exporter"
+	_ "github.com/PlakarKorp/integration-fs/exporter"
 	ptesting "github.com/PlakarKorp/plakar/testing"
 	"github.com/stretchr/testify/require"
 )

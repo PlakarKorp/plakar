@@ -42,10 +42,8 @@ type PkgBuild struct {
 func (cmd *PkgBuild) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags := flag.NewFlagSet("pkg build", flag.ExitOnError)
 	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s recipe.yaml",
+		fmt.Fprintf(flags.Output(), "Usage: %s recipe.yaml\n",
 			flags.Name())
-		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
-		flag.PrintDefaults()
 	}
 
 	flags.Parse(args)

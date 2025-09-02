@@ -55,7 +55,7 @@ func (cmd *DiagState) Execute(ctx *appcontext.AppContext, repo *repository.Repos
 			var byteArray [32]byte
 			copy(byteArray[:], b)
 
-			version, rawStateRd, err := repo.GetState(byteArray)
+			rawStateRd, err := repo.GetState(byteArray)
 			if err != nil {
 				return 1, err
 			}
@@ -69,7 +69,7 @@ func (cmd *DiagState) Execute(ctx *appcontext.AppContext, repo *repository.Repos
 			}
 			defer scanCache.Close()
 
-			st, err := state.FromStream(version, rawStateRd, scanCache)
+			st, err := state.FromStream(rawStateRd, scanCache)
 			if err != nil {
 				return 1, err
 			}

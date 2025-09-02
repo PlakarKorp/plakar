@@ -7,8 +7,9 @@
 .Sh SYNOPSIS
 .Nm plakar backup
 .Op Fl concurrency Ar number
-.Op Fl exclude Ar pattern
-.Op Fl exclude-file Ar file
+.Op Fl disk-based Ar path
+.Op Fl ignore Ar pattern
+.Op Fl ignore-file Ar file
 .Op Fl check
 .Op Fl o Ar option
 .Op Fl quiet
@@ -22,7 +23,7 @@ The
 command creates a new snapshot of
 .Ar place ,
 or the current directory.
-Snapshots can be filtered to exclude specific files or directories
+Snapshots can be filtered to ignore specific files or directories
 based on patterns provided through options.
 .Pp
 .Ar place
@@ -37,12 +38,20 @@ The options are as follows:
 Set the maximum number of parallel tasks for faster processing.
 Defaults to
 .Dv 8 * CPU count + 1 .
-.It Fl exclude Ar pattern
-Specify individual glob exclusion patterns to ignore files or
+.It Fl disk-based Ar path
+Path where to put the temporary packfiles instead of building them in memory.
+If the special value
+.Sq on
+is specified then the system temporary directory is used.
+Otherwise
+.Sq off
+can be used to disable the feature.
 directories in the backup.
 This option can be repeated.
-.It Fl exclude-file Ar file
-Specify a file containing glob exclusion patterns, one per line, to
+.It Fl ignore Ar pattern
+Specify individual gitignore exclusion patterns to ignore files or
+.It Fl ignore-file Ar file
+Specify a file containing gitignore exclusion patterns, one per line, to
 ignore files or directories in the backup.
 .It Fl check
 Perform a full check on the backup after success.
@@ -71,12 +80,12 @@ $ plakar backup -tag daily-backup,production
 .Pp
 Backup a specific directory with exclusion patterns from a file:
 .Bd -literal -offset indent
-$ plakar backup -exclude-file ~/my-excludes-file /var/www
+$ plakar backup -ignore-file ~/my-ignore-file /var/www
 .Ed
 .Pp
 Backup a directory with specific file exclusions:
 .Bd -literal -offset indent
-$ plakar backup -exclude "*.tmp" -exclude "*.log" /var/www
+$ plakar backup -ignore "*.tmp" -ignore "*.log" /var/www
 .Ed
 .Sh DIAGNOSTICS
 .Ex -std

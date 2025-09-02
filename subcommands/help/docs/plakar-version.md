@@ -12,14 +12,10 @@ PLAKAR-VERSION(1) - General Commands Manual
 
 The
 **plakar version**
-command displays the current version of the Plakar software.
-
-# DIAGNOSTICS
-
-The **plakar-version** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
+command displays the current version of Plakar.
 
 # SEE ALSO
 
 plakar(1)
 
-Plakar - July 3, 2025
+Plakar - July 3, 2025 - PLAKAR-VERSION(1)

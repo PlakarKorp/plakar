@@ -8,7 +8,7 @@ PLAKAR-SERVER(1) - General Commands Manual
 
 **plakar&nbsp;server**
 \[**-allow-delete**]
-\[**-listen**&nbsp;*address*]
+\[**-listen**&nbsp;\[*host*]:*port*]
 
 # DESCRIPTION
 
@@ -26,27 +26,45 @@ The options are as follows:
 > By default, delete operations are disabled to prevent accidental data
 > loss.
 
-**-listen** *address*
+**-listen** \[*host*]:*port*
 
-> The hostname and port where to listen to, separated by a colon.
-> The hostname is optional.
-> If not given, the server defaults to listen on localhost at port 9876.
+> The
+> *host*
+> and
+> *port*
+> where to listen to, separated by a colon.
+> The host name is optional, and defaults to all available addresses.
+> If
+> **-listen**
+> is not provided, the server defaults to listen on localhost at port 9876.
+
+# EXAMPLES
+
+Start a plakar server on the local store:
+
+	$ plakar server
+
+Start a plakar server on a remote store:
+
+	$ plakar at sftp://example.org server
+
+Start a server on a specific address and port:
+
+	$ plakar server -listen 127.0.0.1:12345
 
 # DIAGNOSTICS
 
 The **plakar-server** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
 
-0
-
-> Command completed successfully.
-
-&gt;0
-
-> An error occurred, such as an unsupported protocol or invalid
-> configuration.
-
 # SEE ALSO
 
 plakar(1)
 
-Plakar - July 3, 2025
+# CAVEATS
+
+When a host name is provided,
+**plakar server**
+uses only one of the IP addresses it resolves to,
+preferably IPv4 .
+
+Plakar - July 3, 2025 - PLAKAR-SERVER(1)

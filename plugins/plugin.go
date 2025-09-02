@@ -9,18 +9,18 @@ import (
 	"path/filepath"
 	"strings"
 
+	fsexporter "github.com/PlakarKorp/integration-fs/exporter"
+	grpc_exporter "github.com/PlakarKorp/integration-grpc/exporter"
+	grpc_importer "github.com/PlakarKorp/integration-grpc/importer"
+	grpc_storage "github.com/PlakarKorp/integration-grpc/storage"
 	"github.com/PlakarKorp/kloset/kcontext"
+	"github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/kloset/location"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/kloset/snapshot/exporter"
 	"github.com/PlakarKorp/kloset/snapshot/importer"
 	"github.com/PlakarKorp/kloset/storage"
-	fsexporter "github.com/PlakarKorp/plakar/connectors/fs/exporter"
-	grpc_exporter "github.com/PlakarKorp/plakar/connectors/grpc/exporter"
-	grpc_importer "github.com/PlakarKorp/plakar/connectors/grpc/importer"
-	grpc_storage "github.com/PlakarKorp/plakar/connectors/grpc/storage"
-	"github.com/PlakarKorp/plakar/locate"
 )
 
 type TearDownFunc func() error
@@ -67,11 +67,11 @@ func (plugin *Plugin) SetUp(ctx *kcontext.KContext, pluginFile, pluginName, cach
 		for _, proto := range conn.Protocols {
 			switch conn.Type {
 			case "importer":
-				err = plugin.registerImporter(ctx, proto, flags, exe)
+				err = plugin.registerImporter(ctx, proto, flags, exe, conn.Args)
 			case "exporter":
-				err = plugin.registerExporter(ctx, proto, flags, exe)
+				err = plugin.registerExporter(ctx, proto, flags, exe, conn.Args)
 			case "storage":
-				err = plugin.registerStorage(ctx, proto, flags, exe)
+				err = plugin.registerStorage(ctx, proto, flags, exe, conn.Args)
 			default:
 				err = fmt.Errorf("unknown plugin type: %s", conn.Type)
 			}
@@ -95,9 +95,9 @@ func (plugin *Plugin) TearDown(ctx *kcontext.KContext) {
 	plugin.teardown = nil
 }
 
-func (plugin *Plugin) registerStorage(ctx *kcontext.KContext, proto string, flags location.Flags, exe string) error {
+func (plugin *Plugin) registerStorage(ctx *kcontext.KContext, proto string, flags location.Flags, exe string, args []string) error {
 	err := storage.Register(proto, flags, func(ctx context.Context, s string, config map[string]string) (storage.Store, error) {
-		client, err := connectPlugin(exe)
+		client, err := connectPlugin(ctx, exe, args)
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to plugin: %w", err)
 		}
@@ -112,13 +112,12 @@ func (plugin *Plugin) registerStorage(ctx *kcontext.KContext, proto string, flag
 	return nil
 }
 
-func (plugin *Plugin) registerImporter(ctx *kcontext.KContext, proto string, flags location.Flags, exe string) error {
+func (plugin *Plugin) registerImporter(ctx *kcontext.KContext, proto string, flags location.Flags, exe string, args []string) error {
 	err := importer.Register(proto, flags, func(ctx context.Context, o *importer.Options, s string, config map[string]string) (importer.Importer, error) {
-		client, err := connectPlugin(exe)
+		client, err := connectPlugin(ctx, exe, args)
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to plugin: %w", err)
 		}
-
 		return grpc_importer.NewImporter(ctx, client, o, s, config)
 	})
 	if err != nil {
@@ -128,9 +127,9 @@ func (plugin *Plugin) registerImporter(ctx *kcontext.KContext, proto string, fla
 	return nil
 }
 
-func (plugin *Plugin) registerExporter(ctx *kcontext.KContext, proto string, flags location.Flags, exe string) error {
+func (plugin *Plugin) registerExporter(ctx *kcontext.KContext, proto string, flags location.Flags, exe string, args []string) error {
 	err := exporter.Register(proto, flags, func(ctx context.Context, o *exporter.Options, s string, config map[string]string) (exporter.Exporter, error) {
-		client, err := connectPlugin(exe)
+		client, err := connectPlugin(ctx, exe, args)
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to plugin: %w", err)
 		}

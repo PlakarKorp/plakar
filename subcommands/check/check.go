@@ -21,10 +21,10 @@ import (
 	"flag"
 	"fmt"
 
+	"github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/locate"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/google/uuid"
 )
@@ -48,7 +48,7 @@ func (cmd *Check) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags.BoolVar(&cmd.FastCheck, "fast", false, "enable fast checking (no digest verification)")
 	flags.BoolVar(&cmd.Quiet, "quiet", false, "suppress output")
 	flags.BoolVar(&cmd.Silent, "silent", false, "suppress ALL output")
-	cmd.LocateOptions.InstallFlags(flags)
+	cmd.LocateOptions.InstallLocateFlags(flags)
 
 	flags.Parse(args)
 
@@ -56,8 +56,6 @@ func (cmd *Check) Parse(ctx *appcontext.AppContext, args []string) error {
 		ctx.GetLogger().Warn("snapshot specified, filters will be ignored")
 	}
 
-	cmd.LocateOptions.MaxConcurrency = ctx.MaxConcurrency
-	cmd.LocateOptions.SortOrder = locate.LocateSortOrderAscending
 	cmd.RepositorySecret = ctx.GetSecret()
 	cmd.Snapshots = flags.Args()
 
@@ -99,7 +97,7 @@ func (cmd *Check) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 				}
 			}
 
-			cmd.LocateOptions.Prefix = prefix
+			cmd.LocateOptions.Filters.IDs = []string{prefix}
 			snapshotIDs, err := locate.LocateSnapshotIDs(repo, cmd.LocateOptions)
 			if err != nil {
 				fmt.Fprintln(ctx.Stderr, err)

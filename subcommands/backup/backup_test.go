@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	_ "github.com/PlakarKorp/integration-fs/importer"
+	bfs "github.com/PlakarKorp/integration-fs/storage"
 	"github.com/PlakarKorp/kloset/caching"
 	"github.com/PlakarKorp/kloset/hashing"
 	"github.com/PlakarKorp/kloset/logging"
@@ -16,8 +18,6 @@ import (
 	"github.com/PlakarKorp/kloset/storage"
 	"github.com/PlakarKorp/kloset/versioning"
 	"github.com/PlakarKorp/plakar/appcontext"
-	_ "github.com/PlakarKorp/plakar/connectors/fs/importer"
-	bfs "github.com/PlakarKorp/plakar/connectors/fs/storage"
 	"github.com/stretchr/testify/require"
 )
 

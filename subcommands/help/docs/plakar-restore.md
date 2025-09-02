@@ -18,7 +18,6 @@ PLAKAR-RESTORE(1) - General Commands Manual
 \[**-since**&nbsp;*date*]
 \[**-concurrency**&nbsp;*number*]
 \[**-quiet**]
-\[**-rebase**]
 \[**-to**&nbsp;*directory*]
 \[*snapshotID*:*path&nbsp;...*]
 
@@ -83,14 +82,6 @@ The options are as follows:
 > Specify the base directory to which the files will be restored.
 > If omitted, files are restored to the current working directory.
 
-**-rebase**
-
-> Strip the original path from each restored file, placing files
-> directly in the specified directory (or the current working directory
-> if
-> **-to**
-> is omitted).
-
 **-quiet**
 
 > Suppress output to standard input, only logging errors and warnings.
@@ -105,9 +96,21 @@ Restore to a specific directory:
 
 	$ plakar restore -to /mnt/ abc123
 
-Restore with rebase option, placing files directly in the target directory:
+Restore latest snapshot to a specific directory:
 
-	$ plakar restore -rebase -to /home/op abc123
+	$ plakar restore -latest -to /mnt/ abc123
+
+Restore specific path to a specific directory:
+
+	$ plakar restore -to /mnt/ abc123:/etc/apache2
+
+Restore to a specific destination:
+
+	$ plakar restore -to @s3target abc123
+
+Restore specific path to a specific destination :
+
+	$ plakar restore -to  @s3target abc123:/etc/apache2
 
 # DIAGNOSTICS
 
@@ -127,4 +130,4 @@ The **plakar-restore** utility exits&#160;0 on success, and&#160;&gt;0 if an err
 plakar(1),
 plakar-backup(1)
 
-Plakar - July 3, 2025
+Plakar - July 3, 2025 - PLAKAR-RESTORE(1)

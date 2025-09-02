@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"io"
 	"maps"
+	"net/http"
+	"os"
 	"strings"
 
 	"github.com/PlakarKorp/kloset/snapshot/exporter"
@@ -41,6 +43,8 @@ func init() {
 		subcommands.BeforeRepositoryOpen, "source")
 	subcommands.Register(func() subcommands.Subcommand { return &ConfigDestinationCmd{} },
 		subcommands.BeforeRepositoryOpen, "destination")
+	subcommands.Register(func() subcommands.Subcommand { return &ConfigPolicyCmd{} },
+		subcommands.BeforeRepositoryOpen, "policy")
 }
 
 func normalizeName(name string) string {
@@ -95,8 +99,15 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 
 	switch subcmd {
 	case "add":
+		p := flag.NewFlagSet("add", flag.ExitOnError)
+		p.Usage = func() {
+			fmt.Fprintf(ctx.Stdout, "Usage: plakar %s %s <name> <location> [<key>=<value>...]\n", cmd, p.Name())
+			p.PrintDefaults()
+		}
+		p.Parse(args)
+
 		if len(args) < 2 {
-			return fmt.Errorf("usage: plakar %s %s <name> <location> [<key>=<value>, ...]", cmd, subcmd)
+			return fmt.Errorf("Usage: plakar %s %s <name> <location> [<key>=<value>...]", cmd, p.Name())
 		}
 
 		name, location := normalizeName(args[0]), normalizeLocation(args[1])
@@ -109,13 +120,20 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 		for _, kv := range args[2:] {
 			key, val, found := strings.Cut(kv, "=")
 			if !found || key == "" {
-				return fmt.Errorf("usage: plakar %s %s <name> <location> [<key>=<value>, ...]", cmd, subcmd)
+				return fmt.Errorf("Usage: plakar %s %s <name> <location> [<key>=<value>...]", cmd, p.Name())
 			}
 			cfgMap[name][key] = val
 		}
 		return utils.SaveConfig(ctx.ConfigDir, ctx.Config)
 
 	case "check":
+		p := flag.NewFlagSet("check", flag.ExitOnError)
+		p.Usage = func() {
+			fmt.Fprintf(ctx.Stdout, "Usage: plakar %s %s <name>\n", cmd, p.Name())
+			p.PrintDefaults()
+		}
+		p.Parse(args)
+
 		if len(args) != 1 {
 			return fmt.Errorf("usage: plakar %s check <name>", cmd)
 		}
@@ -158,7 +176,44 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 		return nil
 
 	case "import":
-		newConfMap, err := utils.GetConf(ctx.Stdin)
+		var opt_rclone bool
+		var opt_config string
+		var opt_overwrite bool
+		flags := flag.NewFlagSet("import", flag.ExitOnError)
+		flags.BoolVar(&opt_rclone, "rclone", false, "import using rclone")
+		flags.StringVar(&opt_config, "config", "", "import from a file")
+		flags.BoolVar(&opt_overwrite, "overwrite", false, "overwrite existing configurations")
+		flags.Usage = func() {
+			fmt.Fprintf(ctx.Stdout, "Usage: plakar %s %s [OPTIONS] <section>...\n", cmd, flags.Name())
+			flags.PrintDefaults()
+		}
+		flags.Parse(args)
+
+		var rd io.Reader = ctx.Stdin
+		if opt_config != "" {
+			if strings.HasPrefix(opt_config, "http://") || strings.HasPrefix(opt_config, "https://") {
+				resp, err := http.Get(opt_config)
+				if err != nil {
+					return fmt.Errorf("failed to fetch config from %q: %w", opt_config, err)
+				}
+				defer resp.Body.Close()
+				rd = resp.Body
+			} else {
+				f, err := os.Open(opt_config)
+				if err != nil {
+					return fmt.Errorf("failed to open file %q: %w", opt_config, err)
+				}
+				defer f.Close()
+				rd = f
+			}
+		}
+
+		thirdParty := ""
+		if opt_rclone {
+			thirdParty = "rclone"
+		}
+
+		newConfMap, err := utils.GetConf(rd, thirdParty)
 		if err != nil {
 			return fmt.Errorf("failed to load config: %w", err)
 		}
@@ -166,9 +221,9 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 			return fmt.Errorf("no valid %ss found in config", cmd)
 		}
 
-		if len(args) == 0 {
+		if flags.NArg() == 0 {
 			for name, section := range newConfMap {
-				if hasFunc(name) {
+				if hasFunc(name) && !opt_overwrite {
 					fmt.Fprintf(ctx.Stderr, "%s %q already exists, skipping\n", cmd, name)
 					continue
 				}
@@ -176,29 +231,44 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 				maps.Copy(cfgMap[name], section)
 			}
 		} else {
-			for _, requestedName := range args {
-				if hasFunc(requestedName) {
-					fmt.Fprintf(ctx.Stderr, "%s %q already exists, skipping\n", cmd, requestedName)
+			for _, requestedName := range flags.Args() {
+				origName, targetName, found := strings.Cut(requestedName, ":")
+				if !found {
+					targetName = normalizeName(origName)
+				}
+				if origName == "" || targetName == "" {
+					fmt.Fprintf(ctx.Stderr, "%s empty section name in %q, skipping\n", cmd, requestedName)
 					continue
 				}
-				if section, ok := newConfMap[requestedName]; !ok {
-					fmt.Fprintf(ctx.Stderr, "%s %q does not exist in config", cmd, requestedName)
+
+				if hasFunc(targetName) && !opt_overwrite {
+					fmt.Fprintf(ctx.Stderr, "%s %q already exists, skipping\n", cmd, targetName)
+					continue
+				}
+				if section, ok := newConfMap[origName]; !ok {
+					fmt.Fprintf(ctx.Stderr, "%s %q does not exist in config\n", cmd, origName)
 					continue
 				} else {
-					name := normalizeName(requestedName)
-					cfgMap[name] = make(map[string]string)
-					maps.Copy(cfgMap[name], section)
+					cfgMap[targetName] = make(map[string]string)
+					maps.Copy(cfgMap[targetName], section)
 				}
 			}
 		}
 		return utils.SaveConfig(ctx.ConfigDir, ctx.Config)
 
 	case "ping":
-		return fmt.Errorf("not implemented")
+		return fmt.Errorf("the ping subcomand is not yet implemented in this version of plakar")
 
 	case "rm":
+		p := flag.NewFlagSet("rm", flag.ExitOnError)
+		p.Usage = func() {
+			fmt.Fprintf(ctx.Stdout, "Usage: plakar %s %s <name>\n", cmd, p.Name())
+			p.PrintDefaults()
+		}
+		p.Parse(args)
+
 		if len(args) != 1 {
-			return fmt.Errorf("usage: plakar %s rm <name>", cmd)
+			return fmt.Errorf("Usage: plakar %s %s <name>", cmd, p.Name())
 		}
 
 		name := normalizeName(args[0])
@@ -209,8 +279,15 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 		return utils.SaveConfig(ctx.ConfigDir, ctx.Config)
 
 	case "set":
-		if len(args) == 0 {
-			return fmt.Errorf("usage: plakar %s set <name> [<key>=<value>, ...]", cmd)
+		p := flag.NewFlagSet("set", flag.ExitOnError)
+		p.Usage = func() {
+			fmt.Fprintf(ctx.Stdout, "Usage: plakar %s %s <name> <key>=<value>...\n", cmd, p.Name())
+			p.PrintDefaults()
+		}
+		p.Parse(args)
+
+		if len(args) < 2 {
+			return fmt.Errorf("Usage: plakar %s %s <name> <key>=<value>...", cmd, p.Name())
 		}
 		name := normalizeName(args[0])
 		if !hasFunc(name) {
@@ -230,6 +307,11 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 		var opt_ini bool
 		var opt_yaml bool
 		p := flag.NewFlagSet("show", flag.ExitOnError)
+		p.Usage = func() {
+			fmt.Fprintf(ctx.Stdout, "Usage: plakar %s %s [<name>...]\n", cmd, p.Name())
+			p.PrintDefaults()
+		}
+
 		p.BoolVar(&opt_json, "json", false, "output in JSON format")
 		p.BoolVar(&opt_ini, "ini", false, "output in INI format")
 		p.BoolVar(&opt_yaml, "yaml", false, "output in YAML format (default)")
@@ -265,8 +347,15 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 		return nil
 
 	case "unset":
-		if len(args) == 0 {
-			return fmt.Errorf("usage: plakar %s unset <name> [<key>, ...]", cmd)
+		p := flag.NewFlagSet("unset", flag.ExitOnError)
+		p.Usage = func() {
+			fmt.Fprintf(ctx.Stdout, "Usage: plakar %s %s <name> <key>...\n", cmd, p.Name())
+			p.PrintDefaults()
+		}
+		p.Parse(args)
+
+		if len(args) < 2 {
+			return fmt.Errorf("Usage: plakar %s %s <name> <key>...", cmd, p.Name())
 		}
 		name := normalizeName(args[0])
 		if !hasFunc(name) {
@@ -281,6 +370,6 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 		return utils.SaveConfig(ctx.ConfigDir, ctx.Config)
 
 	default:
-		return fmt.Errorf("usage: plakar %s [add|check|import|ls|ping|rm|set|show|unset]", cmd)
+		return fmt.Errorf("usage: plakar %s [add|check|import|ping|rm|set|show|unset]", cmd)
 	}
 }

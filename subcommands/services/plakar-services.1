@@ -1,13 +1,13 @@
-.Dd July 8, 2025
+.Dd August 7, 2025
 .Dt PLAKAR-SERVICES 1
 .Os
 .Sh NAME
 .Nm plakar-services
 .Nd Manage optional Plakar-connected services
 .Sh SYNOPSIS
-.Nm plakar services status Ar service_name
-.Nm plakar services enable Ar service_name
-.Nm plakar services disable Ar service_name
+.Nm plakar services
+.Op Cm status | enable | disable
+.Ar service_name
 .Sh DESCRIPTION
 The
 .Nm plakar services
@@ -23,10 +23,10 @@ enabled if you agree to transmit non-sensitive operational data to plakar.io.
 All subcommands require prior authentication via
 .Xr plakar-login 1 .
 .Pp
-At present, only the
+Services are managed by the backend and discovered at runtime.
+For example, when the
 .Dq alerting
-service is available.
-When enabled, alerting will:
+service is enable, it will:
 .Bl -enum
 .It
 Send email notifications when operations fail.
@@ -41,13 +41,10 @@ By default, all services are disabled.
 .It Ar status Ar service_name
 Display the current configuration status (enabled or disabled) of the named
 service.
-Currently, only the "alerting" service is supported.
 .It Ar enable Ar service_name
 Enable the specified service.
-Currently, only the "alerting" service is supported.
 .It Ar disable Ar service_name
 Disable the specified service.
-Currently, only the "alerting" service is supported.
 .El
 .Sh EXAMPLES
 Check the status of the alerting service:

@@ -17,16 +17,31 @@
 package rm
 
 import (
+	"encoding/hex"
 	"flag"
 	"fmt"
+	"sort"
+	"strings"
 	"sync"
+	"time"
 
+	"github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
+	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/locate"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/PlakarKorp/plakar/utils"
+	"github.com/dustin/go-humanize"
 )
+
+type Rm struct {
+	subcommands.SubcommandBase
+
+	LocateOptions *locate.LocateOptions
+
+	Apply bool
+}
 
 func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &Rm{} }, subcommands.AgentSupport, "rm")
@@ -41,60 +56,105 @@ func (cmd *Rm) Parse(ctx *appcontext.AppContext, args []string) error {
 		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
 		flags.PrintDefaults()
 	}
-
-	cmd.LocateOptions.InstallFlags(flags)
+	flags.BoolVar(&cmd.Apply, "apply", false, "do the actual removal")
+	cmd.LocateOptions.InstallDeletionFlags(flags)
 	flags.Parse(args)
 
-	if flags.NArg() != 0 && !cmd.LocateOptions.Empty() {
-		ctx.GetLogger().Warn("snapshot specified, filters will be ignored")
-	} else if flags.NArg() == 0 && cmd.LocateOptions.Empty() {
+	if flags.NArg() == 0 && cmd.LocateOptions.Empty() {
 		return fmt.Errorf("no filter specified, not going to remove everything")
 	}
 
+	cmd.LocateOptions.Filters.IDs = flags.Args()
+
 	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.Snapshots = flags.Args()
 
 	return nil
 }
 
-type Rm struct {
-	subcommands.SubcommandBase
-
-	LocateOptions *locate.LocateOptions
-	Snapshots     []string
-}
-
 func (cmd *Rm) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	var snapshots []objects.MAC
-	if len(cmd.Snapshots) == 0 {
-		snapshotIDs, err := locate.LocateSnapshotIDs(repo, cmd.LocateOptions)
-		if err != nil {
-			return 1, err
-		}
-		snapshots = append(snapshots, snapshotIDs...)
-	} else {
-		for _, prefix := range cmd.Snapshots {
-			snapshotID, err := locate.LocateSnapshotByPrefix(repo, prefix)
-			if err != nil {
-				continue
-			}
-			snapshots = append(snapshots, snapshotID)
-		}
+	matches, err := locate.LocateSnapshotIDs(repo, cmd.LocateOptions)
+	if err != nil {
+		return 1, err
 	}
 
+	if len(matches) == 0 {
+		ctx.GetLogger().Info("rm: no snapshots matched the selection")
+		return 0, nil
+	}
+
+	// plan
+	if !cmd.Apply {
+		type planEntry struct {
+			prefix string
+			id     objects.MAC
+			key    string
+			ts     time.Time
+		}
+
+		entries := make([]planEntry, 0, len(matches))
+		for _, id := range matches {
+			key := fmt.Sprintf("%x", id[:])
+			snap, err := snapshot.Load(repo, id)
+			if err != nil {
+				ctx.GetLogger().Warn("rm: skipping %x for timestamp lookup: %v", id[:4], err)
+				continue
+			}
+
+			tags := ""
+			tagList := strings.Join(snap.Header.Tags, ",")
+			if tagList != "" {
+				tags = " tags=" + strings.Join(snap.Header.Tags, ",")
+			}
+			prefix := fmt.Sprintf("%s %10s%10s%10s %s%s",
+				snap.Header.Timestamp.UTC().Format(time.RFC3339),
+				hex.EncodeToString(snap.Header.GetIndexShortID()),
+				humanize.IBytes(snap.Header.GetSource(0).Summary.Directory.Size+snap.Header.GetSource(0).Summary.Below.Size),
+				snap.Header.Duration.Round(time.Second),
+				utils.SanitizeText(snap.Header.GetSource(0).Importer.Directory),
+				tags)
+			snap.Close()
+			entries = append(entries, planEntry{prefix: prefix, id: id, key: key, ts: snap.Header.Timestamp})
+		}
+
+		// Sort newest-first; unknown timestamps (IsZero) go last
+		sort.SliceStable(entries, func(i, j int) bool {
+			ti, tj := entries[i].ts, entries[j].ts
+			if ti.IsZero() && tj.IsZero() {
+				return entries[i].key < entries[j].key // stable tiebreak
+			}
+			if ti.IsZero() {
+				return false
+			}
+			if tj.IsZero() {
+				return true
+			}
+			return ti.After(tj)
+		})
+		fmt.Fprintf(ctx.Stdout, "rm: would remove these %d snapshot(s), run with -apply to proceed\n", len(matches))
+		l := 0
+		for _, e := range entries {
+			l = max(l, len(e.prefix))
+		}
+		for _, e := range entries {
+			fmt.Fprintf(ctx.Stdout, "%s\n", e.prefix)
+		}
+		return 0, nil
+	}
+
+	// execution
 	errors := 0
 	wg := sync.WaitGroup{}
-	for _, snap := range snapshots {
+	for _, matchID := range matches {
 		wg.Add(1)
 		go func(snapshotID objects.MAC) {
-			err := repo.DeleteSnapshot(snapshotID)
-			if err != nil {
+			defer wg.Done()
+			if err := repo.DeleteSnapshot(snapshotID); err != nil {
 				ctx.GetLogger().Error("%s", err)
 				errors++
+				return
 			}
 			ctx.GetLogger().Info("rm: removal of %x completed successfully", snapshotID[:4])
-			wg.Done()
-		}(snap)
+		}(matchID)
 	}
 	wg.Wait()
 

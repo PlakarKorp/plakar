@@ -7,7 +7,7 @@
 .Sh SYNOPSIS
 .Nm plakar server
 .Op Fl allow-delete
-.Op Fl listen Ar address
+.Op Fl listen Oo Ar host Ns Oc : Ns Ar port
 .Sh DESCRIPTION
 The
 .Nm plakar server
@@ -21,19 +21,38 @@ The options are as follows:
 Enable delete operations.
 By default, delete operations are disabled to prevent accidental data
 loss.
-.It Fl listen Ar address
-The hostname and port where to listen to, separated by a colon.
-The hostname is optional.
-If not given, the server defaults to listen on localhost at port 9876.
+.It Fl listen Oo Ar host Ns Oc : Ns Ar port
+The
+.Ar host
+and
+.Ar port
+where to listen to, separated by a colon.
+The host name is optional, and defaults to all available addresses.
+If
+.Fl listen
+is not provided, the server defaults to listen on localhost at port 9876.
 .El
+.Sh EXAMPLES
+Start a plakar server on the local store:
+.Bd -literal -offset indent
+$ plakar server
+.Ed
+.Pp
+Start a plakar server on a remote store:
+.Bd -literal -offset indent
+$ plakar at sftp://example.org server
+.Ed
+.Pp
+Start a server on a specific address and port:
+.Bd -literal -offset indent
+$ plakar server -listen 127.0.0.1:12345
+.Ed
 .Sh DIAGNOSTICS
 .Ex -std
-.Bl -tag -width Ds
-.It 0
-Command completed successfully.
-.It >0
-An error occurred, such as an unsupported protocol or invalid
-configuration.
-.El
 .Sh SEE ALSO
 .Xr plakar 1
+.Sh CAVEATS
+When a host name is provided,
+.Nm plakar server
+uses only one of the IP addresses it resolves to,
+preferably IPv4 .

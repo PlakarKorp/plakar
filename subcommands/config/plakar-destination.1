@@ -33,14 +33,26 @@ parameters.
 Check wether the exporter for the destination identified by
 .Ar name
 is properly configured.
-.It Cm import Op Ar names
-Ingest a destination configuration from stdin.
+.It Cm import Oo Fl config Ar location Oc Oo Fl overwrite Oc Oo Fl rclone Oc Oo Ar sections ... Oc
+Import a configuration from either stdin (default),
+a file, or a URL.
+.Pp
 If
-.Ar names
+.Ar location
+is specified, the input will be read from that file or URL.
+.Pp
+If
+.Fl overwrite
+is specified, existing sections will be overwritten by new ones.
+.Pp
+If
+.Fl rclone
+is specified, the input will be treated as an rclone configuration.
+.Pp
+If
+.Ar sections
 are specified, only those sections will be imported.
-.It Cm ls
-Display the current destinations configuration.
-This is the default if no subcommand is specified.
+A section can be renamed on import by appending a colon and the new name.
 .It Cm ping Ar name
 Try to open the destination identified by
 .Ar name

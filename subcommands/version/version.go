@@ -39,6 +39,10 @@ func (_ *Version) Parse(ctx *appcontext.AppContext, args []string) error {
 
 	flags.Parse(args)
 
+	if flags.NArg() > 0 {
+		return fmt.Errorf("Too many arguments")
+	}
+
 	return nil
 }
 

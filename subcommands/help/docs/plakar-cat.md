@@ -7,7 +7,7 @@ PLAKAR-CAT(1) - General Commands Manual
 # SYNOPSIS
 
 **plakar&nbsp;cat**
-\[**-no-decompress**]
+\[**-decompress**]
 \[**-highlight**]
 *snapshotID*:*path&nbsp;...*
 
@@ -24,10 +24,9 @@ highlighting based on the file type.
 
 The options are as follows:
 
-**-no-decompress**
+**-decompress**
 
-> Display the file content as-is, without attempting to decompress it,
-> even if it is compressed.
+> If set, Plakar attempts to decompress application/gzip files.
 
 **-highlight**
 
@@ -61,4 +60,4 @@ The **plakar-cat** utility exits&#160;0 on success, and&#160;&gt;0 if an error o
 plakar(1),
 plakar-backup(1)
 
-Plakar - July 3, 2025
+Plakar - August 6, 2025 - PLAKAR-CAT(1)

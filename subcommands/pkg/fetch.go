@@ -31,7 +31,7 @@ func openURL(ctx *appcontext.AppContext, path string) (io.ReadCloser, error) {
 	}
 
 	token := ""
-	if u.Hostname() == "plugins.plakar.io" && strings.HasPrefix(u.Path, "kloset/pkg/") {
+	if u.Hostname() == "plugins.plakar.io" && strings.HasPrefix(u.Path, "/kloset/pkg/") {
 		token, _ = ctx.GetCookies().GetAuthToken()
 		if token == "" {
 			return nil, fmt.Errorf("login required for %q", path)

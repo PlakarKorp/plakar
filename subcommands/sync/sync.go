@@ -22,12 +22,12 @@ import (
 	"os"
 
 	"github.com/PlakarKorp/kloset/encryption"
+	"github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/kloset/storage"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/locate"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
 )
@@ -43,11 +43,16 @@ func (cmd *Sync) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s [SNAPSHOT] to REPOSITORY\n", flags.Name())
 		fmt.Fprintf(flags.Output(), "       %s [SNAPSHOT] from REPOSITORY\n", flags.Name())
+		fmt.Fprintf(flags.Output(), "       %s [SNAPSHOT] with REPOSITORY\n", flags.Name())
 		flags.PrintDefaults()
 	}
-	cmd.SrcLocateOptions.InstallFlags(flags)
+	cmd.SrcLocateOptions.InstallLocateFlags(flags)
 
 	flags.Parse(args)
+
+	if flags.NArg() > 3 {
+		return fmt.Errorf("Too many arguments")
+	}
 
 	direction := ""
 	peerRepositoryPath := ""
@@ -61,12 +66,12 @@ func (cmd *Sync) Parse(ctx *appcontext.AppContext, args []string) error {
 		if !cmd.SrcLocateOptions.Empty() {
 			ctx.GetLogger().Warn("snapshot specified, filters will be ignored")
 		}
-		cmd.SrcLocateOptions.Prefix = args[0]
+		cmd.SrcLocateOptions.Filters.IDs = []string{args[0]}
 		direction = args[1]
 		peerRepositoryPath = args[2]
 
 	default:
-		return fmt.Errorf("usage: sync [SNAPSHOT] to|from REPOSITORY")
+		return fmt.Errorf("usage: sync [SNAPSHOT] to|from|with REPOSITORY")
 	}
 
 	if direction != "to" && direction != "from" && direction != "with" {
@@ -296,7 +301,7 @@ func synchronize(ctx *appcontext.AppContext, srcRepository, dstRepository *repos
 	}
 	defer srcSnapshot.Close()
 
-	dstSnapshot, err := snapshot.Create(dstRepository, repository.DefaultType)
+	dstSnapshot, err := snapshot.Create(dstRepository, repository.DefaultType, "")
 	if err != nil {
 		return err
 	}

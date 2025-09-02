@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	bfs "github.com/PlakarKorp/integration-fs/storage"
 	"github.com/PlakarKorp/kloset/caching"
 	"github.com/PlakarKorp/kloset/encryption"
 	"github.com/PlakarKorp/kloset/hashing"
@@ -16,7 +17,6 @@ import (
 	"github.com/PlakarKorp/kloset/storage"
 	"github.com/PlakarKorp/kloset/versioning"
 	"github.com/PlakarKorp/plakar/appcontext"
-	bfs "github.com/PlakarKorp/plakar/connectors/fs/storage"
 	"github.com/PlakarKorp/plakar/cookies"
 	"github.com/stretchr/testify/require"
 )

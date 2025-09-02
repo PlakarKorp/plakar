@@ -2,7 +2,7 @@ PLAKAR-PKG-CREATE(1) - General Commands Manual
 
 # NAME
 
-**plakar-pkg-create** - Create Plakar plugins
+**plakar-pkg-create** - Package a plugin
 
 # SYNOPSIS
 
@@ -29,4 +29,4 @@ plakar-pkg-add(1),
 plakar-pkg-rm(1),
 plakar-pkg-manifest.yaml(5)
 
-Plakar - July 11, 2025
+Plakar - July 11, 2025 - PLAKAR-PKG-CREATE(1)

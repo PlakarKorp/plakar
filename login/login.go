@@ -27,7 +27,6 @@ import (
 
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/utils"
-	"github.com/google/uuid"
 )
 
 type TokenResponse struct {
@@ -36,14 +35,12 @@ type TokenResponse struct {
 
 type loginFlow struct {
 	appCtx       *appcontext.AppContext
-	repositoryID uuid.UUID
 	noSpawn      bool
 }
 
-func NewLoginFlow(appCtx *appcontext.AppContext, repositoryID uuid.UUID, noSpawn bool) (*loginFlow, error) {
+func NewLoginFlow(appCtx *appcontext.AppContext, noSpawn bool) (*loginFlow, error) {
 	flow := &loginFlow{
 		appCtx:       appCtx,
-		repositoryID: repositoryID,
 		noSpawn:      noSpawn,
 	}
 	return flow, nil

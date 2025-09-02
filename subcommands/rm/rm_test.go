@@ -7,10 +7,10 @@ import (
 	"os"
 	"testing"
 
+	_ "github.com/PlakarKorp/integration-fs/exporter"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/plakar/appcontext"
-	_ "github.com/PlakarKorp/plakar/connectors/fs/exporter"
 	ptesting "github.com/PlakarKorp/plakar/testing"
 	"github.com/stretchr/testify/require"
 )
@@ -39,7 +39,8 @@ func TestExecuteCmdRmDefault(t *testing.T) {
 	repo, snap, ctx := generateSnapshot(t, bufOut, bufErr)
 	defer snap.Close()
 
-	args := []string{"-latest"}
+	// Need -apply to actually delete (otherwise it's a dry-run plan).
+	args := []string{"-latest", "-apply"}
 
 	subcommand := &Rm{}
 	err := subcommand.Parse(ctx, args)
@@ -53,7 +54,6 @@ func TestExecuteCmdRmDefault(t *testing.T) {
 	output := bufOut.String()
 	require.Contains(t, output, fmt.Sprintf("info: rm: removal of %s completed successfully", hex.EncodeToString(snap.Header.GetIndexShortID())))
 }
-
 func TestExecuteCmdRmWithSnapshot(t *testing.T) {
 	bufOut := bytes.NewBuffer(nil)
 	bufErr := bytes.NewBuffer(nil)
@@ -61,7 +61,7 @@ func TestExecuteCmdRmWithSnapshot(t *testing.T) {
 	repo, snap, ctx := generateSnapshot(t, bufOut, bufErr)
 	defer snap.Close()
 
-	args := []string{hex.EncodeToString(snap.Header.GetIndexShortID())}
+	args := []string{"-apply", hex.EncodeToString(snap.Header.GetIndexShortID())}
 
 	subcommand := &Rm{}
 	err := subcommand.Parse(ctx, args)
@@ -73,5 +73,28 @@ func TestExecuteCmdRmWithSnapshot(t *testing.T) {
 	require.Equal(t, 0, status)
 
 	output := bufOut.String()
-	require.Contains(t, output, fmt.Sprintf("info: rm: removal of %s completed successfully", hex.EncodeToString(snap.Header.GetIndexShortID())))
+	require.Contains(t, output,
+		fmt.Sprintf("info: rm: removal of %s completed successfully", hex.EncodeToString(snap.Header.GetIndexShortID())),
+	)
+	// sanity: no dry-run text
+	require.NotContains(t, output, "rm: would remove these")
+}
+
+func TestRm_DryRun_ShowsPlan(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+
+	repo, snap, ctx := generateSnapshot(t, bufOut, bufErr)
+	defer snap.Close()
+
+	args := []string{"-latest"} // no -apply → plan only
+
+	subcommand := &Rm{}
+	require.NoError(t, subcommand.Parse(ctx, args))
+	_, err := subcommand.Execute(ctx, repo)
+	require.NoError(t, err)
+
+	out := bufOut.String()
+	require.Contains(t, out, "rm: would remove these 1 snapshot(s), run with -apply to proceed")
+	require.NotContains(t, out, "rm: removal of") // no actual deletion
 }

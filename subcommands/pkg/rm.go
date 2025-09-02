@@ -33,10 +33,8 @@ type PkgRm struct {
 func (cmd *PkgRm) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags := flag.NewFlagSet("pkg rm", flag.ExitOnError)
 	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s",
+		fmt.Fprintf(flags.Output(), "Usage: %s plugins...\n",
 			flags.Name())
-		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
-		flag.PrintDefaults()
 	}
 
 	flags.Parse(args)
@@ -47,7 +45,6 @@ func (cmd *PkgRm) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 func (cmd *PkgRm) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (int, error) {
-
 	for _, name := range cmd.Args {
 		pkg, err := ctx.GetPlugins().FindInstalledPackage(name)
 		if err != nil {

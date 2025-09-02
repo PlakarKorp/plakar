@@ -10,6 +10,7 @@ PLAKAR-LOGIN(1) - General Commands Manual
 \[**-email**&nbsp;*email*]
 \[**-github**]
 \[**-no-spawn**]
+\[**-status**]
 
 # DESCRIPTION
 
@@ -50,6 +51,11 @@ The options are as follows:
 
 > Do not automatically open a browser window for authentication flows.
 
+**-status**
+
+> Check wether the user is currently logged in.
+> This option cannot be used with any other options.
+
 # EXAMPLES
 
 Start a login via email:
@@ -63,6 +69,7 @@ Authenticate via GitHub (default, opens browser):
 # SEE ALSO
 
 plakar(1),
+plakar-logout(1),
 plakar-services(1)
 
-Plakar - July 8, 2025
+Plakar - July 8, 2025 - PLAKAR-LOGIN(1)

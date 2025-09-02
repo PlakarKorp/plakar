@@ -184,7 +184,7 @@ func (cmd *Maintenance) colourPass(ctx *appcontext.AppContext, cache *caching.Ma
 	// For now we keep the same serial so that those delete gets merged in.
 	// Once we do the real deletion we will rebuild the aggregated view
 	// excluding those resources alltogether.
-	repoWriter := cmd.repository.NewRepositoryWriter(sc, cmd.maintenanceID, repository.DefaultType)
+	repoWriter := cmd.repository.NewRepositoryWriter(sc, cmd.maintenanceID, repository.DefaultType, "")
 
 	coloredPackfiles := 0
 	for packfile := range packfiles {
@@ -369,13 +369,13 @@ func (cmd *Maintenance) Lock() (chan bool, error) {
 			continue
 		}
 
-		version, rd, err := cmd.repository.GetLock(lockID)
+		rd, err := cmd.repository.GetLock(lockID)
 		if err != nil {
 			cmd.repository.DeleteLock(cmd.maintenanceID)
 			return nil, err
 		}
 
-		lock, err := repository.NewLockFromStream(version, rd)
+		lock, err := repository.NewLockFromStream(rd)
 		rd.Close()
 		if err != nil {
 			cmd.repository.DeleteLock(cmd.maintenanceID)

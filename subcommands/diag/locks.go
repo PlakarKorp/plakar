@@ -30,12 +30,12 @@ func (cmd *DiagLocks) Execute(ctx *appcontext.AppContext, repo *repository.Repos
 	}
 
 	for _, lockID := range locksID {
-		version, rd, err := repo.GetLock(lockID)
+		rd, err := repo.GetLock(lockID)
 		if err != nil {
 			fmt.Fprintf(ctx.Stderr, "Failed to fetch lock %x\n", lockID)
 		}
 
-		lock, err := repository.NewLockFromStream(version, rd)
+		lock, err := repository.NewLockFromStream(rd)
 		rd.Close()
 		if err != nil {
 			fmt.Fprintf(ctx.Stderr, "Failed to deserialize lock %x\n", lockID)

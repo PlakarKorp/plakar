@@ -40,17 +40,27 @@ The subcommands are as follows:
 > *name*
 > is properly configured.
 
-**import** \[*names*]
+**import** \[**-config** *location*] \[**-overwrite**] \[**-rclone**] \[*sections ...*]
 
-> Ingest a destination configuration from stdin.
+> Import a configuration from either stdin (default),
+> a file, or a URL.
+
 > If
-> *names*
+> *location*
+> is specified, the input will be read from that file or URL.
+
+> If
+> **-overwrite**
+> is specified, existing sections will be overwritten by new ones.
+
+> If
+> **-rclone**
+> is specified, the input will be treated as an rclone configuration.
+
+> If
+> *sections*
 > are specified, only those sections will be imported.
-
-**ls**
-
-> Display the current destinations configuration.
-> This is the default if no subcommand is specified.
+> A section can be renamed on import by appending a colon and the new name.
 
 **ping** *name*
 
@@ -94,4 +104,4 @@ The **plakar-destination** utility exits&#160;0 on success, and&#160;&gt;0 if an
 
 plakar(1)
 
-Plakar - July 3, 2025
+Plakar - July 3, 2025 - PLAKAR-DESTINATION(1)

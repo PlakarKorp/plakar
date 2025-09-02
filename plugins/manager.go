@@ -8,10 +8,12 @@ import (
 	"path/filepath"
 	"runtime"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/PlakarKorp/kloset/kcontext"
+	"golang.org/x/mod/semver"
 )
 
 type Cache[T any] struct {
@@ -66,7 +68,7 @@ func NewManager(pluginsDir, cacheDir string) *Manager {
 	}
 	mgr.integrations = Cache[[]Integration]{
 		ttl: 5 * time.Minute,
-		get: fetchIntegrationList,
+		get: func() ([]Integration, error) { return fetchIntegrationList(mgr.ApiVersion) },
 	}
 	return mgr
 }
@@ -152,6 +154,9 @@ func (mgr *Manager) FindInstalledPackage(name string) (Package, error) {
 		if pkg.PkgName() == name {
 			return pkg, nil
 		}
+		if pkg.PkgNameAndVersion() == name {
+			return pkg, nil
+		}
 	}
 	return Package{}, fmt.Errorf("package not installed")
 }
@@ -167,6 +172,20 @@ func (mgr *Manager) IsInstalled(pkg Package) (bool, Package, error) {
 		}
 	}
 	return false, Package{}, nil
+}
+func GetStageFromVersion(version string) string {
+	stage := strings.TrimPrefix(semver.Prerelease(version), "-")
+
+	if stage == "" {
+		return "stable"
+	}
+	if stage == "rc" {
+		return "testing"
+	}
+
+	stage, _, _ = strings.Cut(stage, ".")
+
+	return stage
 }
 
 func (mgr *Manager) ListIntegrations(filter IntegrationFilter) ([]Integration, error) {
@@ -201,10 +220,12 @@ func (mgr *Manager) ListIntegrations(filter IntegrationFilter) ([]Integration, e
 			continue
 		}
 
-		ok, err := mgr.IsAvailable(mgr.IntegrationAsPackage(&info))
+		ok, _ := mgr.IsAvailable(mgr.IntegrationAsPackage(&info))
 		if ok {
 			info.Installation.Available = true
 		}
+
+		info.Stage = GetStageFromVersion(info.LatestVersion)
 
 		res = append(res, info)
 	}
@@ -251,8 +272,9 @@ func (mgr *Manager) doLoadPlugins(ctx *kcontext.KContext) error {
 		var plugin Plugin
 		err := plugin.SetUp(ctx, mgr.PluginFile(pkg), pkg.PluginName(), mgr.CacheDir)
 		if err != nil {
-			mgr.doUnloadPlugins(ctx)
-			return fmt.Errorf("failed to load plugin %q", mgr.PluginFile(pkg))
+			ctx.GetLogger().Warn("failed to load plugin %q: %v", mgr.PluginFile(pkg), err)
+			continue
+
 		}
 		mgr.plugins[pkg] = &plugin
 	}
@@ -315,12 +337,10 @@ func (mgr *Manager) UninstallPackage(ctx *kcontext.KContext, pkg Package) error 
 	mgr.pluginsMtx.Lock()
 	defer mgr.pluginsMtx.Unlock()
 	plugin, ok := mgr.plugins[pkg]
-	if !ok {
-		return fmt.Errorf("package not installed")
+	if ok {
+		delete(mgr.plugins, pkg)
+		plugin.TearDown(ctx)
 	}
-
-	delete(mgr.plugins, pkg)
-	plugin.TearDown(ctx)
 
 	pluginFile := mgr.PluginFile(pkg)
 
@@ -349,7 +369,7 @@ func (mgr *Manager) InstallPackage(ctx *kcontext.KContext, pkg Package, filename
 	// Check if installed
 	installed, err := mgr.ListInstalledPackages()
 	if err != nil {
-		return fmt.Errorf("failed to list installed package: %w", err)
+		return fmt.Errorf("failed to list installed packages: %w", err)
 	}
 	for _, p := range installed {
 		if p == pkg {

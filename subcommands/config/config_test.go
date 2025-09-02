@@ -100,7 +100,7 @@ func TestCmdRemote(t *testing.T) {
 
 	args = []string{"unknown"}
 	err = configure(ctx, "source", args)
-	require.EqualError(t, err, "usage: plakar source [add|check|import|ls|ping|rm|set|show|unset]")
+	require.EqualError(t, err, "usage: plakar source [add|check|import|ping|rm|set|show|unset]")
 
 	args = []string{"add", "my-remote", "invalid://my-remote"}
 	err = configure(ctx, "source", args)
@@ -148,7 +148,7 @@ func TestCmdRepository(t *testing.T) {
 
 	args := []string{"unknown"}
 	err = configure(ctx, "store", args)
-	require.EqualError(t, err, "usage: plakar store [add|check|import|ls|ping|rm|set|show|unset]")
+	require.EqualError(t, err, "usage: plakar store [add|check|import|ping|rm|set|show|unset]")
 
 	args = []string{"add", "my-repo", "fs:/tmp/my-repo"}
 	err = configure(ctx, "store", args)

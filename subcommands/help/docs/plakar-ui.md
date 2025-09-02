@@ -16,8 +16,8 @@ PLAKAR-UI(1) - General Commands Manual
 
 The
 **plakar ui**
-command serves the Plakar webapp user interface.
-By default, this command opens the default web browser to use the interface.
+command serves the Plakar web user interface.
+By default, it opens the default web browser.
 
 The options are as follows:
 
@@ -27,13 +27,13 @@ The options are as follows:
 > (e.g. localhost:8080).
 > If omitted,
 > **plakar ui**
-> listen on localhost on a random port.
+> listens on localhost on a random port.
 
 **-cors**
 
 > Set the
 > 'Access-Control-Allow-Origin'
-> HTTP headers to allow the UI to be accesses from any origin.
+> HTTP headers to allow the UI to be accessed from any origin.
 
 **-no-auth**
 
@@ -67,4 +67,4 @@ The **plakar-ui** utility exits&#160;0 on success, and&#160;&gt;0 if an error oc
 
 plakar(1)
 
-Plakar - July 3, 2025
+Plakar - August 6, 2025 - PLAKAR-UI(1)

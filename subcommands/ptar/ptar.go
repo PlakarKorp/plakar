@@ -29,6 +29,7 @@ import (
 	"github.com/PlakarKorp/kloset/compression"
 	"github.com/PlakarKorp/kloset/encryption"
 	"github.com/PlakarKorp/kloset/hashing"
+	"github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/resources"
@@ -37,7 +38,6 @@ import (
 	"github.com/PlakarKorp/kloset/storage"
 	"github.com/PlakarKorp/kloset/versioning"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/locate"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
 	"github.com/google/uuid"
@@ -295,7 +295,7 @@ func (cmd *Ptar) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 
 	defer scanCache.Close()
 
-	repoWriter := repo.NewRepositoryWriter(scanCache, identifier, repository.PtarType)
+	repoWriter := repo.NewRepositoryWriter(scanCache, identifier, repository.PtarType, "")
 	for i, syncTarget := range cmd.SyncTargets {
 		storeConfig, err := ctx.Config.GetRepository(syncTarget)
 		if err != nil {

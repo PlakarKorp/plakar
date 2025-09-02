@@ -21,11 +21,11 @@ import (
 	"fmt"
 	"path"
 
+	plocate "github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/plakar/appcontext"
-	plocate "github.com/PlakarKorp/plakar/locate"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
 )
@@ -45,15 +45,13 @@ func (cmd *Locate) Parse(ctx *appcontext.AppContext, args []string) error {
 	}
 
 	flags.StringVar(&cmd.Snapshot, "snapshot", "", "snapshot to locate in")
-	cmd.LocateOptions.InstallFlags(flags)
+	cmd.LocateOptions.InstallLocateFlags(flags)
 	flags.Parse(args)
 
 	if cmd.Snapshot != "" && !cmd.LocateOptions.Empty() {
 		ctx.GetLogger().Warn("snapshot specified, filters will be ignored")
 	}
 
-	cmd.LocateOptions.MaxConcurrency = ctx.MaxConcurrency
-	cmd.LocateOptions.SortOrder = plocate.LocateSortOrderAscending
 	cmd.RepositorySecret = ctx.GetSecret()
 	cmd.Patterns = flags.Args()
 

@@ -23,9 +23,9 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/locate"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/alecthomas/chroma/formatters"
 	"github.com/alecthomas/chroma/lexers"
@@ -44,7 +44,7 @@ func (cmd *Cat) Parse(ctx *appcontext.AppContext, args []string) error {
 		flags.PrintDefaults()
 	}
 
-	flags.BoolVar(&cmd.NoDecompress, "no-decompress", false, "do not try to decompress output")
+	flags.BoolVar(&cmd.Decompress, "decompress", false, "decompress output")
 	flags.BoolVar(&cmd.Highlight, "highlight", false, "highlight output")
 	flags.Parse(args)
 
@@ -61,9 +61,9 @@ func (cmd *Cat) Parse(ctx *appcontext.AppContext, args []string) error {
 type Cat struct {
 	subcommands.SubcommandBase
 
-	NoDecompress bool
-	Highlight    bool
-	Paths        []string
+	Decompress bool
+	Highlight  bool
+	Paths      []string
 }
 
 func (cmd *Cat) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
@@ -107,21 +107,23 @@ func (cmd *Cat) Execute(ctx *appcontext.AppContext, repo *repository.Repository)
 			continue
 		}
 
-		file := entry.Open(fs)
+		file, err := entry.Open(fs)
+		if err != nil {
+			return 1, err
+		}
+
 		var rd io.ReadCloser = file
 
-		if !cmd.NoDecompress {
-			if entry.ResolvedObject.ContentType == "application/gzip" && !cmd.NoDecompress {
-				gzRd, err := gzip.NewReader(rd)
-				if err != nil {
-					ctx.GetLogger().Error("cat: %s: %s", pathname, err)
-					errors++
-					file.Close()
-					snap.Close()
-					continue
-				}
-				rd = gzRd
+		if cmd.Decompress && entry.ResolvedObject.ContentType == "application/gzip" {
+			gzRd, err := gzip.NewReader(rd)
+			if err != nil {
+				ctx.GetLogger().Error("cat: %s: %s", pathname, err)
+				errors++
+				file.Close()
+				snap.Close()
+				continue
 			}
+			rd = gzRd
 		}
 
 		if cmd.Highlight {

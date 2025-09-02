@@ -6,9 +6,9 @@ PLAKAR-SERVICES(1) - General Commands Manual
 
 # SYNOPSIS
 
-**plakar&nbsp;services&nbsp;status&nbsp;*service\_name*&zwnj;**  
-**plakar&nbsp;services&nbsp;enable&nbsp;*service\_name*&zwnj;**  
-**plakar&nbsp;services&nbsp;disable&nbsp;*service\_name*&zwnj;**
+**plakar&nbsp;services**
+\[**status**&nbsp;|&nbsp;**enable**&nbsp;|&nbsp;**disable**]
+*service\_name*
 
 # DESCRIPTION
 
@@ -26,10 +26,10 @@ enabled if you agree to transmit non-sensitive operational data to plakar.io.
 All subcommands require prior authentication via
 plakar-login(1).
 
-At present, only the
+Services are managed by the backend and discovered at runtime.
+For example, when the
 "alerting"
-service is available.
-When enabled, alerting will:
+service is enable, it will:
 
 1.	Send email notifications when operations fail.
 
@@ -44,17 +44,14 @@ By default, all services are disabled.
 
 > Display the current configuration status (enabled or disabled) of the named
 > service.
-> Currently, only the "alerting" service is supported.
 
 *enable* *service\_name*
 
 > Enable the specified service.
-> Currently, only the "alerting" service is supported.
 
 *disable* *service\_name*
 
 > Disable the specified service.
-> Currently, only the "alerting" service is supported.
 
 # EXAMPLES
 
@@ -75,4 +72,4 @@ Disable alerting:
 plakar-login(1),
 plakar-ui(1)
 
-Plakar - July 8, 2025
+Plakar - August 7, 2025 - PLAKAR-SERVICES(1)

@@ -8,10 +8,10 @@ import (
 	"strings"
 	"testing"
 
+	_ "github.com/PlakarKorp/integration-fs/exporter"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/plakar/appcontext"
-	_ "github.com/PlakarKorp/plakar/connectors/fs/exporter"
 	"github.com/PlakarKorp/plakar/subcommands"
 	ptesting "github.com/PlakarKorp/plakar/testing"
 	"github.com/stretchr/testify/require"
@@ -234,12 +234,12 @@ func TestExecuteCmdDiagPackfile(t *testing.T) {
 	require.Contains(t, output, fmt.Sprintf("snapshot %s", fmt.Sprintf("%s", hex.EncodeToString(indexId[:]))))
 	require.Contains(t, output, "chunk ")
 	require.Contains(t, output, "object ")
-	require.Contains(t, output, "vfs btree ")
+	require.Contains(t, output, "vfs-btree ")
 
 	lines = strings.Split(strings.Trim(output, "\n"), "\n")
 	var fileline string
 	for _, line := range lines {
-		if strings.HasPrefix(line, "vfs btree ") {
+		if strings.HasPrefix(line, "vfs-btree ") {
 			fileline = line
 			break
 		}
@@ -248,7 +248,7 @@ func TestExecuteCmdDiagPackfile(t *testing.T) {
 	var partFile, partPackfile []byte
 	var partOffset, partLength int
 	fmt.Println(fileline)
-	fmt.Sscanf(fileline, "vfs btree %x : packfile %x, offset %d, length %d", &partFile, &partPackfile, &partOffset, &partLength)
+	fmt.Sscanf(fileline, "vfs-btree %x : packfile %x, offset %d, length %d", &partFile, &partPackfile, &partOffset, &partLength)
 
 	bufOut.Reset()
 	args = []string{"diag", "packfile", hex.EncodeToString(partPackfile)}
@@ -267,8 +267,8 @@ func TestExecuteCmdDiagPackfile(t *testing.T) {
 	// Timestamp: 2025-03-10 21:56:35.854685977 +0000 UTC
 	// Index MAC: 887b4128edf0f15bcbe9061265a25252339aa36c23e7394ea628664228dbe5c4
 
-	// blob[0]: 1448059cb6850e686ed6104bfa95c9098566563eb694afcd59643969d2343578 0 291 0 vfs entry
-	// blob[1]: 5937a8cb73583a2571e9fa3baa117424d6262ee0e9b079f9a940ccb92fb8a66b 291 86 0 vfs btree
+	// blob[0]: 1448059cb6850e686ed6104bfa95c9098566563eb694afcd59643969d2343578 0 291 0 vfs-entry
+	// blob[1]: 5937a8cb73583a2571e9fa3baa117424d6262ee0e9b079f9a940ccb92fb8a66b 291 86 0 vfs-btree
 	output = bufOut.String()
 	require.Contains(t, output, "Index MAC:")
 	require.Contains(t, output, "blob[0]:")

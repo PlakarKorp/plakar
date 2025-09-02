@@ -41,4 +41,4 @@ plakar-pkg-create(1),
 plakar-pkg-rm(1),
 plakar-pkg-recipe.yaml(5)
 
-Plakar - July 11, 2025
+Plakar - July 11, 2025 - PLAKAR-PKG-BUILD(1)

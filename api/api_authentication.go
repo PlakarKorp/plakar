@@ -30,9 +30,8 @@ func (ui *uiserver) servicesLoginGithub(w http.ResponseWriter, r *http.Request) 
 
 	parameters := make(map[string]string)
 	parameters["redirect"] = req.Redirect
-	parameters["repository_id"] = ui.config.RepositoryID.String()
 
-	lf, err := login.NewLoginFlow(ui.ctx, ui.config.RepositoryID, true)
+	lf, err := login.NewLoginFlow(ui.ctx, true)
 	if err != nil {
 		return fmt.Errorf("failed to create login flow: %w", err)
 	}
@@ -61,9 +60,8 @@ func (ui *uiserver) servicesLoginEmail(w http.ResponseWriter, r *http.Request) e
 	parameters := make(map[string]string)
 	parameters["email"] = req.Email
 	parameters["redirect"] = req.Redirect
-	parameters["repository_id"] = ui.config.RepositoryID.String()
 
-	lf, err := login.NewLoginFlow(ui.ctx, ui.config.RepositoryID, true)
+	lf, err := login.NewLoginFlow(ui.ctx, true)
 	if err != nil {
 		return fmt.Errorf("failed to create login flow: %w", err)
 	}

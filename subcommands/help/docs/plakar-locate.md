@@ -120,4 +120,4 @@ plakar-backup(1)
 The patterns may have to be quoted to avoid the shell attempting to
 expand them.
 
-Plakar - July 3, 2025
+Plakar - July 3, 2025 - PLAKAR-LOCATE(1)

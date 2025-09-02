@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/PlakarKorp/kloset/events"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
@@ -80,7 +79,7 @@ func NewClient(socketPath string, ignoreVersion bool) (*Client, error) {
 		}
 
 		attempt++
-		if attempt > 100 {
+		if attempt > 1000 {
 			return nil, fmt.Errorf("failed to run the agent")
 		}
 
@@ -111,7 +110,7 @@ func NewClient(socketPath string, ignoreVersion bool) (*Client, error) {
 				return nil, fmt.Errorf("failed to get executable: %w", err)
 			}
 
-			plakar := exec.Command(me, "agent", "start")
+			plakar := exec.Command(me, "agent")
 			if err := plakar.Start(); err != nil {
 				return nil, fmt.Errorf("failed to start the agent: %w", err)
 			}
@@ -199,12 +198,6 @@ func (c *Client) SendCommand(ctx *appcontext.AppContext, name []string, cmd subc
 			fmt.Printf("%s", string(response.Data))
 		case "stderr":
 			fmt.Fprintf(os.Stderr, "%s", string(response.Data))
-		case "event":
-			evt, err := events.Deserialize(response.Data)
-			if err != nil {
-				return 1, fmt.Errorf("failed to deserialize event: %w", err)
-			}
-			ctx.Events().Send(evt)
 		case "exit":
 			var err error
 			if response.Err != "" {

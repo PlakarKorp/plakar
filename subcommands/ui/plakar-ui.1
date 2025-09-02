@@ -1,4 +1,4 @@
-.Dd July 3, 2025
+.Dd August 6, 2025
 .Dt PLAKAR-UI 1
 .Os
 .Sh NAME
@@ -13,8 +13,8 @@
 .Sh DESCRIPTION
 The
 .Nm plakar ui
-command serves the Plakar webapp user interface.
-By default, this command opens the default web browser to use the interface.
+command serves the Plakar web user interface.
+By default, it opens the default web browser.
 .Pp
 The options are as follows:
 .Bl -tag -width Ds
@@ -23,11 +23,11 @@ Specify the address and port for the UI to listen on separated by a colon,
 .Pq e.g. localhost:8080 .
 If omitted,
 .Nm plakar ui
-listen on localhost on a random port.
+listens on localhost on a random port.
 .It Fl cors
 Set the
 .Sq Access-Control-Allow-Origin
-HTTP headers to allow the UI to be accesses from any origin.
+HTTP headers to allow the UI to be accessed from any origin.
 .It Fl no-auth
 Disable the authentication token that otherwise is needed to consume
 the exposed HTTP APIs.

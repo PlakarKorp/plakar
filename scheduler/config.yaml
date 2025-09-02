@@ -1,27 +1,19 @@
 agent:
-  reporting: true
-  #  emitter: http://localhost:8080/report
-  maintenance:
-    - interval: 10s
-      repository: /Users/gilles/.plakar
-      retention: 24h
-
   tasks:
-    - name: system
-      repository: /Users/gilles/.plakar
-      
+    - name: Backup Plakar source code
+      repository: /var/backups
+      #repository: /Users/niluje/dev/plakar/plakar/toto
+      #repository: /Users/niluje/.plakar
+
       backup:
-        path: /private/etc
-        interval: 5s
-        retention: 60s
-        #check: true
+        path: /Users/niluje/dev/plakar/plakar
+        interval: '20s'
+        check: true
+        tags:
+          - backup
+          - source
 
-      check:
-        - interval: 10s
-          path: /
-          latest: true
-
-      sync:
-        - interval: 10s
-          direction: with
-          peer: /tmp/foobar
+      #check:
+      #  - interval: 1s
+      #    path: /
+      #    latest: true

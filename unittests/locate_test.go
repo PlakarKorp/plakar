@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
-	"github.com/PlakarKorp/plakar/locate"
 	ptesting "github.com/PlakarKorp/plakar/testing"
 	"github.com/stretchr/testify/require"
 )
@@ -135,8 +135,7 @@ func TestLocateSnapshotIDs(t *testing.T) {
 
 	// Test case: Locate snapshots by category
 	opts := &locate.LocateOptions{
-		MaxConcurrency: 1,
-		Name:           "snapshot2",
+		Filters: locate.LocateFilters{Name: "snapshot2"},
 	}
 	results, err := locate.LocateSnapshotIDs(repo, opts)
 	require.NoError(t, err)
@@ -145,9 +144,9 @@ func TestLocateSnapshotIDs(t *testing.T) {
 
 	// Test case: Locate latest snapshot
 	opts = &locate.LocateOptions{
-		MaxConcurrency: 1,
-		Latest:         true,
-		SortOrder:      locate.LocateSortOrderDescending,
+		Filters: locate.LocateFilters{
+			Latest: true,
+		},
 	}
 	results2, err := locate.LocateSnapshotIDs(repo, opts)
 	require.NoError(t, err)

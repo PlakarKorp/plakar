@@ -14,6 +14,7 @@ PLAKAR-LS(1) - General Commands Manual
 \[**-perimeter**&nbsp;*perimeter*]
 \[**-job**&nbsp;*job*]
 \[**-tag**&nbsp;*tag*]
+\[**-tags**]
 \[**-latest**]
 \[**-before**&nbsp;*date*]
 \[**-since**&nbsp;*date*]
@@ -60,6 +61,10 @@ The options are as follows:
 
 > Filter snapshots by the specified tag, listing only those that contain
 > the given tag.
+
+**-tags**
+
+> Display tags when listing snapshots.
 
 **-latest**
 
@@ -131,4 +136,4 @@ The **plakar-ls** utility exits&#160;0 on success, and&#160;&gt;0 if an error oc
 
 plakar(1)
 
-Plakar - July 3, 2025
+Plakar - July 3, 2025 - PLAKAR-LS(1)

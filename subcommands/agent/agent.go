@@ -23,50 +23,32 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
-	"syscall"
+	"sync/atomic"
+	"time"
 
-	"github.com/PlakarKorp/kloset/events"
 	"github.com/PlakarKorp/kloset/logging"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/storage"
 	"github.com/PlakarKorp/plakar/agent"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/scheduler"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/task"
 	"github.com/PlakarKorp/plakar/utils"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/vmihailenco/msgpack/v5"
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &AgentTasksShow{} },
-		subcommands.AgentSupport|subcommands.BeforeRepositoryOpen, "agent", "tasks", "show")
-	subcommands.Register(func() subcommands.Subcommand { return &AgentTasksConfigure{} },
-		subcommands.AgentSupport|subcommands.BeforeRepositoryOpen, "agent", "tasks", "configure")
-	subcommands.Register(func() subcommands.Subcommand { return &AgentTasksStart{} },
-		subcommands.AgentSupport|subcommands.BeforeRepositoryOpen, "agent", "tasks", "start")
-	subcommands.Register(func() subcommands.Subcommand { return &AgentTasksStop{} },
-		subcommands.AgentSupport|subcommands.BeforeRepositoryOpen, "agent", "tasks", "stop")
-	subcommands.Register(func() subcommands.Subcommand { return &AgentRestart{} },
-		subcommands.AgentSupport|subcommands.BeforeRepositoryOpen|subcommands.IgnoreVersion, "agent", "reload")
-	subcommands.Register(func() subcommands.Subcommand { return &AgentRestart{} },
-		subcommands.AgentSupport|subcommands.BeforeRepositoryOpen|subcommands.IgnoreVersion, "agent", "restart")
-	subcommands.Register(func() subcommands.Subcommand { return &AgentStop{} },
-		subcommands.AgentSupport|subcommands.BeforeRepositoryOpen|subcommands.IgnoreVersion, "agent", "stop")
-	subcommands.Register(func() subcommands.Subcommand { return &Agent{} },
-		subcommands.BeforeRepositoryOpen, "agent", "start")
-	subcommands.Register(func() subcommands.Subcommand { return &Agent{} },
-		subcommands.BeforeRepositoryOpen, "agent")
+	if runtime.GOOS != "windows" {
+		subcommands.Register(func() subcommands.Subcommand { return &Agent{} },
+			subcommands.BeforeRepositoryOpen, "agent")
+	}
 }
-
-var agentContextSingleton *AgentContext
 
 func (cmd *Agent) Parse(ctx *appcontext.AppContext, args []string) error {
 	var opt_foreground bool
@@ -84,9 +66,7 @@ func (cmd *Agent) Parse(ctx *appcontext.AppContext, args []string) error {
 		flags.PrintDefaults()
 	}
 
-	flags.StringVar(&cmd.prometheus, "prometheus", "", "prometheus exporter interface, e.g. 127.0.0.1:9090")
-	flags.BoolVar(&opt_foreground, "foreground", false, "run in foreground")
-	flags.StringVar(&opt_logfile, "log", "", "log file")
+	flags.DurationVar(&cmd.teardown, "teardown", 5*time.Second, "delay before tearing down the agent")
 	flags.Parse(args)
 	if flags.NArg() != 0 {
 		return fmt.Errorf("too many arguments")
@@ -110,102 +90,16 @@ func (cmd *Agent) Parse(ctx *appcontext.AppContext, args []string) error {
 	}
 
 	cmd.socketPath = filepath.Join(ctx.CacheDir, "agent.sock")
-
-	ctx.GetLogger().Info("Plakar agent up")
 	return nil
-}
-
-type schedulerState int8
-
-var (
-	AGENT_SCHEDULER_STOPPED schedulerState = 0
-	AGENT_SCHEDULER_RUNNING schedulerState = 1
-)
-
-type AgentContext struct {
-	agentCtx        *appcontext.AppContext
-	schedulerCtx    *appcontext.AppContext
-	schedulerConfig *scheduler.Configuration
-	schedulerState  schedulerState
-	mtx             sync.Mutex
-}
-
-type AgentStop struct {
-	subcommands.SubcommandBase
-}
-
-func (cmd *AgentStop) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("agent stop", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS]\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
-		flags.PrintDefaults()
-	}
-	flags.Parse(args)
-	if flags.NArg() != 0 {
-		return fmt.Errorf("too many arguments")
-	}
-
-	return nil
-}
-
-func (cmd *AgentStop) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	if err := stop(); err != nil {
-		return 1, err
-	}
-	return 0, nil
-}
-
-type AgentRestart struct {
-	subcommands.SubcommandBase
-}
-
-func (cmd *AgentRestart) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("agent restart", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS]\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
-		flags.PrintDefaults()
-	}
-	flags.Parse(args)
-	if flags.NArg() != 0 {
-		return fmt.Errorf("too many arguments")
-	}
-
-	return nil
-}
-
-func (cmd *AgentRestart) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	if err := restart(); err != nil {
-		return 1, fmt.Errorf("failed to restart agent: %w", err)
-	}
-	return 0, nil
-}
-
-func restart() error {
-	exePath, err := os.Executable()
-	if err != nil {
-		return fmt.Errorf("cannot find executable path: %w", err)
-	}
-	return syscall.Exec(exePath, append([]string{exePath}, os.Args[1:]...), os.Environ())
 }
 
 type Agent struct {
 	subcommands.SubcommandBase
 
-	prometheus string
 	socketPath string
+	listener   net.Listener
 
-	listener net.Listener
-}
-
-func (cmd *Agent) checkSocket() bool {
-	conn, err := net.Dial("unix", cmd.socketPath)
-	if err != nil {
-		return false
-	}
-	conn.Close()
-	return true
+	teardown time.Duration
 }
 
 func (cmd *Agent) Close() error {
@@ -227,10 +121,6 @@ func isDisconnectError(err error) bool {
 }
 
 func (cmd *Agent) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	agentContextSingleton = &AgentContext{
-		agentCtx: ctx,
-	}
-
 	if err := cmd.ListenAndServe(ctx); err != nil {
 		return 1, err
 	}
@@ -239,80 +129,74 @@ func (cmd *Agent) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 }
 
 func (cmd *Agent) ListenAndServe(ctx *appcontext.AppContext) error {
-	if _, err := os.Stat(cmd.socketPath); err == nil {
-		if !cmd.checkSocket() {
-			cmd.Close()
-		} else {
-			return fmt.Errorf("already running")
-		}
-	} else if !os.IsNotExist(err) {
-		return err
-	}
-
-	var err error
-
-	// Bind socket
-	cmd.listener, err = net.Listen("unix", cmd.socketPath)
+	lock, err := agent.LockedFile(cmd.socketPath + ".agent-lock")
 	if err != nil {
-		return fmt.Errorf("failed to bind socket: %w", err)
+		return fmt.Errorf("failed to obtain lock")
 	}
-	defer os.Remove(cmd.socketPath)
-
-	// Set socket permissions
-	if err := os.Chmod(cmd.socketPath, 0600); err != nil {
-		cmd.Close()
-		return fmt.Errorf("failed to set socket permissions: %w", err)
+	conn, err := net.Dial("unix", cmd.socketPath)
+	if err == nil {
+		lock.Unlock()
+		conn.Close()
+		return fmt.Errorf("agent already running")
 	}
+	os.Remove(cmd.socketPath)
 
-	var promlistener net.Listener
-	if cmd.prometheus != "" {
-		promlistener, err = net.Listen("tcp", cmd.prometheus)
-		if err != nil {
-			return fmt.Errorf("failed to bind prometheus listener: %w", err)
-		}
-		defer promlistener.Close()
+	listener, err := net.Listen("unix", cmd.socketPath)
+	lock.Unlock()
 
-		go func() {
-			http.Handle("/metrics", promhttp.Handler())
-			http.Serve(promlistener, nil)
-		}()
+	if err != nil {
+		return fmt.Errorf("failed to bind the socket: %w", err)
 	}
 
-	// close the listener when the context gets closed
+	cancelled := false
 	go func() {
 		<-ctx.Done()
-		if promlistener != nil {
-			promlistener.Close()
-		}
-		cmd.listener.Close()
+		cancelled = true
+		listener.Close()
 	}()
 
-	var wg sync.WaitGroup
-
+	var inflight atomic.Int64
+	var nextID atomic.Int64
 	for {
-		conn, err := cmd.listener.Accept()
+		conn, err := listener.Accept()
 		if err != nil {
-			wg.Wait()
+			if cancelled {
+				return ctx.Err()
+			}
+
 			if opErr, ok := err.(*net.OpError); ok && opErr.Err.Error() == "use of closed network connection" {
 				return nil
 			}
-			ctx.GetLogger().Warn("failed to accept connection: %v", err)
+			// TODO: we should retry / wait and retry on
+			// some errors, not everything is fatal.
 			return err
 		}
 
-		if err := ctx.ReloadConfig(); err != nil {
-			ctx.GetLogger().Warn("could not load configuration: %v", err)
-			return err
-		}
+		inflight.Add(1)
 
-		wg.Add(1)
-		go handleClient(ctx, &wg, conn)
+		go func() {
+			myid := nextID.Add(1)
+			defer func() {
+				n := inflight.Add(-1)
+				if n == 0 {
+					time.Sleep(cmd.teardown)
+					if nextID.Load() == myid && inflight.Load() == 0 {
+						listener.Close()
+					}
+				}
+			}()
+
+			if err := ctx.ReloadConfig(); err != nil {
+				ctx.GetLogger().Warn("could not load configuration: %v", err)
+			}
+
+			handleClient(ctx, conn)
+		}()
 	}
 }
 
-func handleClient(ctx *appcontext.AppContext, wg *sync.WaitGroup, conn net.Conn) {
+func handleClient(ctx *appcontext.AppContext, conn net.Conn) {
 	defer conn.Close()
-	defer wg.Done()
 
 	mu := sync.Mutex{}
 
@@ -459,25 +343,6 @@ func handleClient(ctx *appcontext.AppContext, wg *sync.WaitGroup, conn net.Conn)
 		defer repo.Close()
 	}
 
-	eventsDone := make(chan struct{})
-	eventsChan := clientContext.Events().Listen()
-	go func() {
-		for evt := range eventsChan {
-			serialized, err := events.Serialize(evt)
-			if err != nil {
-				clientContext.GetLogger().Warn("Failed to serialize event: %v", err)
-				fmt.Fprintf(clientContext.Stderr, "Failed to serialize event: %s\n", err)
-				return
-			}
-			// Send the event to the client
-			write(agent.Packet{
-				Type: "event",
-				Data: serialized,
-			})
-		}
-		eventsDone <- struct{}{}
-	}()
-
 	status, err := task.RunCommand(clientContext, subcommand, repo, "@agent")
 
 	errStr := ""
@@ -491,7 +356,6 @@ func handleClient(ctx *appcontext.AppContext, wg *sync.WaitGroup, conn net.Conn)
 	})
 
 	clientContext.Close()
-	<-eventsDone
 }
 
 type CustomWriter struct {

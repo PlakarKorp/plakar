@@ -3,9 +3,9 @@ package info
 import (
 	"fmt"
 
+	"github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/locate"
 )
 
 func (cmd *Info) executeErrors(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {

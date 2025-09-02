@@ -21,12 +21,14 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/charmbracelet/glamour"
 	"github.com/muesli/termenv"
+	"golang.org/x/term"
 )
 
 //go:embed docs/*
@@ -47,13 +49,7 @@ func (cmd *Help) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags.StringVar(&cmd.Style, "style", "dracula", "style to use")
 	flags.Parse(args)
 
-	command := ""
-	if flags.NArg() > 0 {
-		command = flags.Arg(0)
-	}
-
-	cmd.Command = command
-
+	cmd.Command = strings.Join(flags.Args(), "-")
 	return nil
 }
 
@@ -76,9 +72,26 @@ func (cmd *Help) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 		return 1, err
 	}
 
+	disableColors := false
+	if _, nocolor := os.LookupEnv("NO_COLOR"); nocolor {
+		disableColors = true
+	} else if !term.IsTerminal(int(os.Stdout.Fd())) {
+		disableColors = true
+	}
+
+	options := []glamour.TermRendererOption{}
+	if disableColors {
+		options = []glamour.TermRendererOption{
+			glamour.WithColorProfile(termenv.Ascii),
+		}
+	} else {
+		options = []glamour.TermRendererOption{
+			glamour.WithStandardStyle(cmd.Style),
+			glamour.WithColorProfile(termenv.TrueColor),
+		}
+	}
 	r, err := glamour.NewTermRenderer(
-		glamour.WithStandardStyle(cmd.Style),
-		glamour.WithColorProfile(termenv.TrueColor),
+		options...,
 	)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to create renderer: %s\n", err)
@@ -90,6 +103,7 @@ func (cmd *Help) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 		fmt.Fprintf(os.Stderr, "failed to render: %s\n", err)
 		return 1, err
 	}
+
 	fmt.Print(string(out))
 
 	return 0, err

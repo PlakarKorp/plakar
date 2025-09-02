@@ -5,9 +5,9 @@ import (
 	"os"
 	"testing"
 
+	_ "github.com/PlakarKorp/integration-fs/storage"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
-	_ "github.com/PlakarKorp/plakar/connectors/fs/storage"
 	"github.com/stretchr/testify/require"
 )
 

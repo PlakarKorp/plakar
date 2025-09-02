@@ -23,6 +23,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -86,9 +87,19 @@ func (imp *pkgerImporter) dofile(p string, ch chan<- *importer.ScanResult, mustE
 		return
 	}
 
-	if mustExe && (fi.Mode()&0111) == 0 {
-		ch <- importer.NewScanError(name, fmt.Errorf("Not executable: %s", absolute))
-		return
+	if mustExe {
+		var isexe bool
+		switch runtime.GOOS {
+		case "windows":
+			isexe = strings.HasSuffix(fi.Name(), ".exe")
+		default:
+			isexe = (fi.Mode() & 0111) != 0
+		}
+
+		if !isexe {
+			ch <- importer.NewScanError(name, fmt.Errorf("Not executable: %s", absolute))
+			return
+		}
 	}
 
 	mkstruct(name, ch)

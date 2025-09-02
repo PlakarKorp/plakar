@@ -44,10 +44,8 @@ type PkgAdd struct {
 func (cmd *PkgAdd) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags := flag.NewFlagSet("pkg add", flag.ExitOnError)
 	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s plugin.ptar ...",
+		fmt.Fprintf(flags.Output(), "Usage: %s plugin.ptar ...\n",
 			flags.Name())
-		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
-		flag.PrintDefaults()
 	}
 
 	flags.Parse(args)
@@ -91,7 +89,7 @@ func (cmd *PkgAdd) Execute(ctx *appcontext.AppContext, _ *repository.Repository)
 func installPlugin(ctx *appcontext.AppContext, pluginFile string) error {
 	var pkg plugins.Package
 
-	err := plugins.ParsePackageName(path.Base(pluginFile), &pkg)
+	err := plugins.ParsePackageName(filepath.Base(pluginFile), &pkg)
 	if err != nil {
 		return err
 	}
@@ -113,6 +111,10 @@ func installPlugin(ctx *appcontext.AppContext, pluginFile string) error {
 }
 
 func fetchPlugin(ctx *appcontext.AppContext, path string) (string, error) {
+	if err := os.MkdirAll(ctx.GetPlugins().PluginsDir, 0755); err != nil {
+		return "", fmt.Errorf("failed to create plugin dir: %w", err)
+	}
+
 	fp, err := os.CreateTemp(ctx.GetPlugins().PluginsDir, "fetch-plugin-*")
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp file: %w", err)
@@ -120,10 +122,10 @@ func fetchPlugin(ctx *appcontext.AppContext, path string) (string, error) {
 	defer fp.Close()
 
 	rd, err := openURL(ctx, path)
-	defer rd.Close()
 	if err != nil {
 		return "", err
 	}
+	defer rd.Close()
 
 	if _, err := io.Copy(fp, rd); err != nil {
 		defer os.Remove(fp.Name())

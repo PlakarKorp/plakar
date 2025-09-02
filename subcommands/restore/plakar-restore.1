@@ -17,7 +17,6 @@
 .Op Fl since Ar date
 .Op Fl concurrency Ar number
 .Op Fl quiet
-.Op Fl rebase
 .Op Fl to Ar directory
 .Op Ar snapshotID : Ns Ar path ...
 .Sh DESCRIPTION
@@ -64,12 +63,6 @@ Defaults to
 .It Fl to Ar directory
 Specify the base directory to which the files will be restored.
 If omitted, files are restored to the current working directory.
-.It Fl rebase
-Strip the original path from each restored file, placing files
-directly in the specified directory (or the current working directory
-if
-.Fl to
-is omitted).
 .It Fl quiet
 Suppress output to standard input, only logging errors and warnings.
 .El
@@ -84,9 +77,24 @@ Restore to a specific directory:
 $ plakar restore -to /mnt/ abc123
 .Ed
 .Pp
-Restore with rebase option, placing files directly in the target directory:
+Restore latest snapshot to a specific directory:
 .Bd -literal -offset indent
-$ plakar restore -rebase -to /home/op abc123
+$ plakar restore -latest -to /mnt/ abc123
+.Ed
+.Pp
+Restore specific path to a specific directory:
+.Bd -literal -offset indent
+$ plakar restore -to /mnt/ abc123:/etc/apache2
+.Ed
+.Pp
+Restore to a specific destination:
+.Bd -literal -offset indent
+$ plakar restore -to @s3target abc123
+.Ed
+.Pp
+Restore specific path to a specific destination :
+.Bd -literal -offset indent
+$ plakar restore -to  @s3target abc123:/etc/apache2
 .Ed
 .Sh DIAGNOSTICS
 .Ex -std

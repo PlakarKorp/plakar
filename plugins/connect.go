@@ -1,5 +1,3 @@
-//go:build !windows
-
 package plugins
 
 import (
@@ -8,22 +6,15 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"syscall"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-func connectPlugin(pluginPath string) (grpc.ClientConnInterface, error) {
-	fd, err := forkChild(pluginPath)
+func connectPlugin(ctx context.Context, pluginPath string, args []string) (grpc.ClientConnInterface, error) {
+	conn, err := spawn(ctx, pluginPath, args)
 	if err != nil {
 		return nil, err
-	}
-
-	connFile := os.NewFile(uintptr(fd), "grpc-conn")
-	conn, err := net.FileConn(connFile)
-	if err != nil {
-		return nil, fmt.Errorf("net.FileConn failed: %w", err)
 	}
 
 	clientConn, err := grpc.NewClient("127.0.0.1:0",
@@ -38,28 +29,39 @@ func connectPlugin(pluginPath string) (grpc.ClientConnInterface, error) {
 	return clientConn, nil
 }
 
-func forkChild(pluginPath string) (int, error) {
-	sp, err := syscall.Socketpair(syscall.AF_UNIX, syscall.SOCK_STREAM, 0)
-	if err != nil {
-		return -1, fmt.Errorf("failed to create socketpair: %w", err)
-	}
-
-	childFile := os.NewFile(uintptr(sp[0]), "child-conn")
-
-	cmd := exec.Command(pluginPath)
-	cmd.Stdin = childFile
-	cmd.Stdout = os.Stdout
+func spawn(ctx context.Context, pluginPath string, args []string) (net.Conn, error) {
+	cmd := exec.CommandContext(ctx, pluginPath, args...)
 	cmd.Stderr = os.Stderr
 
-	if err := cmd.Start(); err != nil {
-		return -1, fmt.Errorf("failed to start plugin: %w", err)
+	wr, err := cmd.StdinPipe()
+	if err != nil {
+		return nil, err
+	}
+	rd, err := cmd.StdoutPipe()
+	if err != nil {
+		wr.Close()
+		return nil, err
 	}
 
-	// XXX - we should move this cmd.Wait() to command execution close
-	go func() {
-		_ = cmd.Wait()
-	}()
+	stdin, ok := rd.(*os.File)
+	if !ok {
+		wr.Close()
+		rd.Close()
+		reason := "stdin is not a file"
+		return nil, fmt.Errorf("failed to spawn plugin: %s", reason)
+	}
 
-	childFile.Close()
-	return sp[1], nil
+	stdout, ok := wr.(*os.File)
+	if !ok {
+		wr.Close()
+		rd.Close()
+		reason := "stdout is not a file"
+		return nil, fmt.Errorf("failed to spawn plugin: %s", reason)
+	}
+
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("failed to start plugin: %w", err)
+	}
+
+	return NewStdioConn(stdin, stdout, cmd), nil
 }

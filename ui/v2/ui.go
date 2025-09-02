@@ -98,7 +98,6 @@ func Ui(repo *repository.Repository, ctx *appcontext.AppContext, addr string, op
 		if err := utils.BrowserTrySpawn(url); err != nil {
 			repo.Logger().Printf("failed to launch browser: %s", err)
 			repo.Logger().Printf("you can access the webUI at %s", url)
-			return err
 		}
 	}
 	fmt.Fprintf(repo.AppContext().Stdout, "launching webUI at %s\n", url)

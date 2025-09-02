@@ -53,23 +53,22 @@ import (
 	_ "github.com/PlakarKorp/plakar/subcommands/maintenance"
 	_ "github.com/PlakarKorp/plakar/subcommands/mount"
 	_ "github.com/PlakarKorp/plakar/subcommands/pkg"
+	_ "github.com/PlakarKorp/plakar/subcommands/prune"
 	_ "github.com/PlakarKorp/plakar/subcommands/ptar"
 	_ "github.com/PlakarKorp/plakar/subcommands/restore"
 	_ "github.com/PlakarKorp/plakar/subcommands/rm"
+	_ "github.com/PlakarKorp/plakar/subcommands/scheduler"
 	_ "github.com/PlakarKorp/plakar/subcommands/server"
 	_ "github.com/PlakarKorp/plakar/subcommands/services"
 	_ "github.com/PlakarKorp/plakar/subcommands/ui"
 	_ "github.com/PlakarKorp/plakar/subcommands/version"
 
-	_ "github.com/PlakarKorp/plakar/connectors/fs"
-	_ "github.com/PlakarKorp/plakar/connectors/ftp"
-	_ "github.com/PlakarKorp/plakar/connectors/http"
-	_ "github.com/PlakarKorp/plakar/connectors/ptar"
-	_ "github.com/PlakarKorp/plakar/connectors/s3"
-	_ "github.com/PlakarKorp/plakar/connectors/sftp"
-	_ "github.com/PlakarKorp/plakar/connectors/sqlite"
-	_ "github.com/PlakarKorp/plakar/connectors/stdio"
-	_ "github.com/PlakarKorp/plakar/connectors/tar"
+	_ "github.com/PlakarKorp/integration-fs/exporter"
+	_ "github.com/PlakarKorp/integration-fs/importer"
+	_ "github.com/PlakarKorp/integration-fs/storage"
+	_ "github.com/PlakarKorp/integration-ptar/storage"
+	_ "github.com/PlakarKorp/integration-stdio/exporter"
+	_ "github.com/PlakarKorp/integration-stdio/importer"
 )
 
 var ErrCantUnlock = errors.New("failed to unlock repository")
@@ -87,24 +86,22 @@ func entryPoint() int {
 		opt_cpuDefault = opt_cpuDefault - 1
 	}
 
-	opt_userDefault, err := user.Current()
+	userDefault, err := user.Current()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s: go away casper !\n", flag.CommandLine.Name())
 		return 1
 	}
 
-	opt_hostnameDefault, err := os.Hostname()
+	hostnameDefault, err := os.Hostname()
 	if err != nil {
-		opt_hostnameDefault = "localhost"
+		hostnameDefault = "localhost"
 	}
 
 	opt_machineIdDefault, err := machineid.ID()
 	if err != nil {
-		opt_machineIdDefault = uuid.NewSHA1(uuid.Nil, []byte(opt_hostnameDefault)).String()
+		opt_machineIdDefault = uuid.NewSHA1(uuid.Nil, []byte(hostnameDefault)).String()
 	}
 	opt_machineIdDefault = strings.ToLower(opt_machineIdDefault)
-
-	opt_usernameDefault := opt_userDefault.Username
 
 	opt_configDefault, err := utils.GetConfigDir("plakar")
 	if err != nil {
@@ -115,8 +112,6 @@ func entryPoint() int {
 	// command line overrides
 	var opt_cpuCount int
 	var opt_configdir string
-	var opt_username string
-	var opt_hostname string
 	var opt_cpuProfile string
 	var opt_memProfile string
 	var opt_time bool
@@ -129,8 +124,6 @@ func entryPoint() int {
 
 	flag.StringVar(&opt_configdir, "config", opt_configDefault, "configuration directory")
 	flag.IntVar(&opt_cpuCount, "cpu", opt_cpuDefault, "limit the number of usable cores")
-	flag.StringVar(&opt_username, "username", opt_usernameDefault, "default username")
-	flag.StringVar(&opt_hostname, "hostname", opt_hostnameDefault, "default hostname")
 	flag.StringVar(&opt_cpuProfile, "profile-cpu", "", "profile CPU usage")
 	flag.StringVar(&opt_memProfile, "profile-mem", "", "profile MEM usage")
 	flag.BoolVar(&opt_time, "time", false, "display command execution time")
@@ -167,7 +160,7 @@ func entryPoint() int {
 	ctx.CWD = cwd
 
 	_, envAgentLess := os.LookupEnv("PLAKAR_AGENTLESS")
-	if envAgentLess {
+	if envAgentLess || runtime.GOOS == "windows" {
 		opt_agentless = true
 	}
 
@@ -255,8 +248,8 @@ func entryPoint() int {
 
 	ctx.OperatingSystem = runtime.GOOS
 	ctx.Architecture = runtime.GOARCH
-	ctx.Username = opt_username
-	ctx.Hostname = opt_hostname
+	ctx.Username = userDefault.Username
+	ctx.Hostname = hostnameDefault
 	ctx.CommandLine = strings.Join(os.Args, " ")
 	ctx.MachineID = opt_machineIdDefault
 	ctx.KeyFromFile = secretFromKeyfile
@@ -307,7 +300,7 @@ func entryPoint() int {
 			if def != "" {
 				repositoryPath = "@" + def
 			} else {
-				repositoryPath = "fs:" + filepath.Join(opt_userDefault.HomeDir, ".plakar")
+				repositoryPath = "fs:" + filepath.Join(userDefault.HomeDir, ".plakar")
 			}
 		}
 
@@ -522,10 +515,13 @@ func getPassphraseFromEnv(ctx *appcontext.AppContext, params map[string]string) 
 	}
 
 	if pass, ok := params["passphrase"]; ok {
+		delete(params, "passphrase")
 		return pass, nil
 	}
 
 	if cmd, ok := params["passphrase_cmd"]; ok {
+		delete(params, "passphrase_cmd")
+
 		var c *exec.Cmd
 		switch runtime.GOOS {
 		case "windows":

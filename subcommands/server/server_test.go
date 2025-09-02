@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
+	_ "github.com/PlakarKorp/integration-fs/exporter"
 	"github.com/PlakarKorp/kloset/hashing"
 	"github.com/PlakarKorp/kloset/resources"
 	"github.com/PlakarKorp/kloset/storage"
 	"github.com/PlakarKorp/kloset/versioning"
-	_ "github.com/PlakarKorp/plakar/connectors/fs/exporter"
 	"github.com/PlakarKorp/plakar/network"
 	ptesting "github.com/PlakarKorp/plakar/testing"
 	"github.com/stretchr/testify/require"
@@ -49,11 +49,7 @@ func TestExecuteCmdServerDefault(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
 
-	go func() {
-		status, err := subcommand.Execute(ctx, repo)
-		require.NoError(t, err)
-		require.Equal(t, 0, status)
-	}()
+	go subcommand.Execute(ctx, repo)
 
 	// wait for the server to start
 	time.Sleep(100 * time.Millisecond)

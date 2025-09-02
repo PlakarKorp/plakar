@@ -9,6 +9,7 @@
 .Op Fl email Ar email
 .Op Fl github
 .Op Fl no-spawn
+.Op Fl status
 .Sh DESCRIPTION
 The
 .Nm plakar login
@@ -41,6 +42,9 @@ A browser will be spawned to initiate the OAuth flow unless
 is specified.
 .It Fl no-spawn
 Do not automatically open a browser window for authentication flows.
+.It Fl status
+Check wether the user is currently logged in.
+This option cannot be used with any other options.
 .El
 .Sh EXAMPLES
 Start a login via email:
@@ -54,4 +58,5 @@ $ plakar login
 .Ed
 .Sh SEE ALSO
 .Xr plakar 1 ,
+.Xr plakar-logout 1 ,
 .Xr plakar-services 1

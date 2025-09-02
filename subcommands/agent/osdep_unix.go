@@ -3,10 +3,9 @@
 package agent
 
 import (
-	"fmt"
+	"log/syslog"
 	"os"
 	"syscall"
-	"log/syslog"
 
 	"github.com/PlakarKorp/plakar/appcontext"
 )
@@ -26,7 +25,11 @@ func daemonize(argv []string) error {
 		return err
 	}
 
-	procAttr := syscall.ProcAttr{}
+	procAttr := syscall.ProcAttr{
+		Sys: &syscall.SysProcAttr{
+			Setsid: true,
+		},
+	}
 	procAttr.Files = []uintptr{
 		uintptr(syscall.Stdin),
 		uintptr(syscall.Stdout),
@@ -36,15 +39,10 @@ func daemonize(argv []string) error {
 		"REEXEC=1",
 	)
 
-	pid, err := syscall.ForkExec(binary, argv, &procAttr)
-	if err != nil {
+	if _, err := syscall.ForkExec(binary, argv, &procAttr); err != nil {
 		return err
+	} else {
+		os.Exit(0)
+		return nil
 	}
-	fmt.Printf("agent started with pid=%d\n", pid)
-	os.Exit(0)
-	return nil
-}
-
-func stop() error {
-	return syscall.Kill(os.Getpid(), syscall.SIGINT)
 }

@@ -1,0 +1,39 @@
+.Dd July 3, 2025
+.Dt PLAKAR-SCHEDULER 1
+.Os
+.Sh NAME
+.Nm plakar-scheduler
+.Nd Run the Plakar scheduler
+.Sh SYNOPSIS
+.Nm plakar scheduler
+.Op Fl foreground
+.Op Cm start Fl tasks Ar configfile
+.Op Cm stop
+.Sh DESCRIPTION
+The
+.Nm plakar scheduler
+runs in the background and manages task execution based on the defined schedule.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl foreground
+Run the scheduler in the foreground instead of as a background service.
+.It Fl tasks Ar configfile
+Specify the configuration file that contains the task definitions and schedules.
+.It Cm start Fl tasks Ar configfile
+Starts the scheduler service and its tasks from
+.Ar configfile .
+.It Cm stop
+Stop the currently running scheduler service.
+.El
+.Sh DIAGNOSTICS
+.Ex -std
+.Bl -tag -width Ds
+.It 0
+Command completed successfully.
+.It >0
+An error occurred, such as invalid parameters, inability to create the
+repository, or configuration issues.
+.El
+.Sh SEE ALSO
+.Xr plakar 1

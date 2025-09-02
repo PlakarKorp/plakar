@@ -6,9 +6,9 @@ import (
 	"path"
 	"time"
 
+	"github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/locate"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/dustin/go-humanize"
 )
@@ -145,31 +145,33 @@ func (cmd *DiagVFS) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 		fmt.Fprintf(ctx.Stdout, "Directory.Children: %d\n", entry.Summary.Directory.Children)
 	}
 
-	iter, err := entry.Getdents(fs)
-	if err != nil {
-		return 1, err
-	}
-	offset := 0
-	for child := range iter {
-		fmt.Fprintf(ctx.Stdout, "Child[%d].FileInfo.Name(): %s\n", offset, child.Stat().Name())
-		fmt.Fprintf(ctx.Stdout, "Child[%d].FileInfo.Size(): %d\n", offset, child.Stat().Size())
-		fmt.Fprintf(ctx.Stdout, "Child[%d].FileInfo.Mode(): %s\n", offset, child.Stat().Mode())
-		fmt.Fprintf(ctx.Stdout, "Child[%d].FileInfo.Dev(): %d\n", offset, child.Stat().Dev())
-		fmt.Fprintf(ctx.Stdout, "Child[%d].FileInfo.Ino(): %d\n", offset, child.Stat().Ino())
-		fmt.Fprintf(ctx.Stdout, "Child[%d].FileInfo.Uid(): %d\n", offset, child.Stat().Uid())
-		fmt.Fprintf(ctx.Stdout, "Child[%d].FileInfo.Gid(): %d\n", offset, child.Stat().Gid())
-		fmt.Fprintf(ctx.Stdout, "Child[%d].FileInfo.Username(): %s\n", offset, child.Stat().Username())
-		fmt.Fprintf(ctx.Stdout, "Child[%d].FileInfo.Groupname(): %s\n", offset, child.Stat().Groupname())
-		fmt.Fprintf(ctx.Stdout, "Child[%d].FileInfo.Nlink(): %d\n", offset, child.Stat().Nlink())
-		fmt.Fprintf(ctx.Stdout, "Child[%d].ExtendedAttributes(): %v\n", offset, child.ExtendedAttributes)
-		offset++
+	if entry.IsDir() {
+		iter, err := entry.Getdents(fs)
+		if err != nil {
+			return 1, err
+		}
+		offset := 0
+		for child := range iter {
+			fmt.Fprintf(ctx.Stdout, "Child[%d].FileInfo.Name(): %s\n", offset, child.Stat().Name())
+			fmt.Fprintf(ctx.Stdout, "Child[%d].FileInfo.Size(): %d\n", offset, child.Stat().Size())
+			fmt.Fprintf(ctx.Stdout, "Child[%d].FileInfo.Mode(): %s\n", offset, child.Stat().Mode())
+			fmt.Fprintf(ctx.Stdout, "Child[%d].FileInfo.Dev(): %d\n", offset, child.Stat().Dev())
+			fmt.Fprintf(ctx.Stdout, "Child[%d].FileInfo.Ino(): %d\n", offset, child.Stat().Ino())
+			fmt.Fprintf(ctx.Stdout, "Child[%d].FileInfo.Uid(): %d\n", offset, child.Stat().Uid())
+			fmt.Fprintf(ctx.Stdout, "Child[%d].FileInfo.Gid(): %d\n", offset, child.Stat().Gid())
+			fmt.Fprintf(ctx.Stdout, "Child[%d].FileInfo.Username(): %s\n", offset, child.Stat().Username())
+			fmt.Fprintf(ctx.Stdout, "Child[%d].FileInfo.Groupname(): %s\n", offset, child.Stat().Groupname())
+			fmt.Fprintf(ctx.Stdout, "Child[%d].FileInfo.Nlink(): %d\n", offset, child.Stat().Nlink())
+			fmt.Fprintf(ctx.Stdout, "Child[%d].ExtendedAttributes(): %v\n", offset, child.ExtendedAttributes)
+			offset++
+		}
 	}
 
 	errors, err := fs.Errors(pathname)
 	if err != nil {
 		return 1, err
 	}
-	offset = 0
+	offset := 0
 	for err := range errors {
 		fmt.Fprintf(ctx.Stdout, "Error[%d]: %s: %s\n", offset, err.Name, err.Error)
 		offset++

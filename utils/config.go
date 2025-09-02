@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"gopkg.in/ini.v1"
 
@@ -18,6 +19,24 @@ type configHandler struct {
 	Path string
 }
 
+const CONFIG_VERSION = "v1.0.0"
+
+type storesConfig struct {
+	Version string                       `yaml:"version"`
+	Default string                       `yaml:"default,omitempty"`
+	Stores  map[string]map[string]string `yaml:"stores"`
+}
+
+type sourcesConfig struct {
+	Version string                       `yaml:"version"`
+	Sources map[string]map[string]string `yaml:"sources"`
+}
+
+type destinationsConfig struct {
+	Version      string                       `yaml:"version"`
+	Destinations map[string]map[string]string `yaml:"destinations"`
+}
+
 func newConfigHandler(path string) *configHandler {
 	return &configHandler{
 		Path: path,
@@ -25,73 +44,83 @@ func newConfigHandler(path string) *configHandler {
 }
 
 func (cl *configHandler) Load() (*config.Config, error) {
+	sources := sourcesConfig{}
+	destinations := destinationsConfig{}
+	stores := storesConfig{}
+
+	err := cl.load("sources.yml", &sources)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return cl.LoadFallback()
+		}
+		return nil, err
+	}
+
+	err = cl.load("destinations.yml", &destinations)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return cl.LoadFallback()
+		}
+		return nil, err
+	}
+
+	err = cl.load("stores.yml", &stores)
+	if err != nil && os.IsNotExist(err) {
+		// try to load former file
+		err = cl.load("klosets.yml", &stores)
+	}
+	if err != nil {
+		if os.IsNotExist(err) {
+			return cl.LoadFallback()
+		}
+		return nil, err
+	}
+
 	cfg := config.NewConfig()
-	err := cl.load("sources.yml", &cfg.Sources)
-	if err != nil {
-		if os.IsNotExist(err) {
-			goto fallback
-		}
-		return nil, err
-	}
-	err = cl.load("destinations.yml", &cfg.Destinations)
-	if err != nil {
-		if os.IsNotExist(err) {
-			goto fallback
-		}
-		return nil, err
-	}
-	err = cl.load("klosets.yml", &cfg.Repositories)
-	if err != nil {
-		if os.IsNotExist(err) {
-			goto fallback
-		}
-		return nil, err
-	}
-
-	for k, v := range cfg.Repositories {
-		if _, ok := v[".isDefault"]; ok {
-			if cfg.DefaultRepository != "" {
-				return nil, fmt.Errorf("multiple default store")
-			}
-			cfg.DefaultRepository = k
-			delete(v, ".isDefault")
-		}
-	}
-
+	cfg.Sources = sources.Sources
+	cfg.Destinations = destinations.Destinations
+	cfg.Repositories = stores.Stores
+	cfg.DefaultRepository = stores.Default
 	return cfg, nil
+}
 
-fallback:
+func (cl *configHandler) LoadFallback() (*config.Config, error) {
 	// Load old config if found
 	oldpath := filepath.Join(cl.Path, "plakar.yml")
-	cfg, err = LoadOldConfigIfExists(oldpath)
+	cfg, err := LoadOldConfigIfExists(oldpath)
 	if err != nil {
-		return nil, fmt.Errorf("error reading old config file: %w", err)
+		return nil, fmt.Errorf("error reading file %s: %w", oldpath, err)
 	}
 
 	// Save the config in the new format right now
 	err = SaveConfig(cl.Path, cfg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to update old config file: %w", err)
+		return nil, fmt.Errorf("failed to update config file: %w", err)
 	}
 	// Do we want to remove the old file?
 	return cfg, nil
 }
 
 func (cl *configHandler) Save(cfg *config.Config) error {
-	err := cl.save("sources.yml", cfg.Sources)
+	err := cl.save("sources.yml", sourcesConfig{
+		Version: CONFIG_VERSION,
+		Sources: cfg.Sources,
+	})
 	if err != nil {
 		return err
 	}
-	err = cl.save("destinations.yml", cfg.Destinations)
+	err = cl.save("destinations.yml", destinationsConfig{
+		Version:      CONFIG_VERSION,
+		Destinations: cfg.Destinations,
+	})
 	if err != nil {
 		return err
 	}
-	for k, v := range cfg.Repositories {
-		if k == cfg.DefaultRepository {
-			v[".isDefault"] = "yes"
-		}
-	}
-	err = cl.save("klosets.yml", cfg.Repositories)
+	err = cl.save("stores.yml", storesConfig{
+		Version: CONFIG_VERSION,
+		Default: cfg.DefaultRepository,
+		Stores:  cfg.Repositories,
+	})
 	if err != nil {
 		return err
 	}
@@ -105,19 +134,60 @@ func (cl *configHandler) load(filename string, dst any) error {
 		if os.IsNotExist(err) {
 			return err
 		}
-		return fmt.Errorf("error reading config file: %w", err)
+		return fmt.Errorf("failed to open file %s: %w", path, err)
 	}
 	defer f.Close()
 
 	info, err := f.Stat()
 	if err != nil {
-		return fmt.Errorf("failed to get config file info: %w", err)
+		return fmt.Errorf("failed to stat file %s: %w", path, err)
 	}
 	if info.Size() == 0 {
 		return nil
 	}
 
+	// try to load the new format
 	err = yaml.NewDecoder(f).Decode(dst)
+	var version string
+	switch t := dst.(type) {
+	case *storesConfig:
+		version = t.Version
+	case *destinationsConfig:
+		version = t.Version
+	case *sourcesConfig:
+		version = t.Version
+	default:
+		return fmt.Errorf("invalid configuration type %v", t)
+	}
+	if err == nil && version == CONFIG_VERSION {
+		return nil
+	}
+
+	// fallback to the previous format
+	_, err = f.Seek(0, io.SeekStart)
+	if err != nil {
+		return fmt.Errorf("failed to rewind config file: %w", err)
+	}
+
+	switch t := dst.(type) {
+	case *storesConfig:
+		err = yaml.NewDecoder(f).Decode(&t.Stores)
+		if err == nil {
+			for k, v := range t.Stores {
+				if _, ok := v[".isDefault"]; ok {
+					if t.Default != "" {
+						return fmt.Errorf("multiple default store")
+					}
+					t.Default = k
+					delete(v, ".isDefault")
+				}
+			}
+		}
+	case *destinationsConfig:
+		err = yaml.NewDecoder(f).Decode(&t.Destinations)
+	case *sourcesConfig:
+		err = yaml.NewDecoder(f).Decode(&t.Sources)
+	}
 	if err != nil {
 		return fmt.Errorf("failed to parse config file: %w", err)
 	}
@@ -226,7 +296,7 @@ func LoadJSON(rd io.Reader) (map[string]map[string]string, error) {
 	return raw, nil
 }
 
-func GetConf(rd io.Reader) (map[string]map[string]string, error) {
+func GetConf(rd io.Reader, thirdParty string) (map[string]map[string]string, error) {
 	data, err := io.ReadAll(rd)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config data: %w", err)
@@ -239,11 +309,24 @@ func GetConf(rd io.Reader) (map[string]map[string]string, error) {
 		return nil, fmt.Errorf("failed to parse config data: %w", err)
 	}
 
-	for _, section := range configMap {
-		if section["type"] != "" {
-			section["location"] = "rclone://"
+	if thirdParty != "" {
+		for _, section := range configMap {
+			var ignore []string
+			for key, value := range section {
+				if slices.Contains(ignore, key) {
+					continue
+				}
+				if value != "" {
+					newKey := thirdParty + "_" + key
+					section[newKey] = value
+					ignore = append(ignore, newKey)
+				}
+				delete(section, key)
+			}
+			section["location"] = thirdParty + "://"
 		}
 	}
+
 	for _, section := range configMap {
 		for key, value := range section {
 			if value == "" {

@@ -32,4 +32,4 @@ Removing a plugin:
 plakar-pkg(1),
 plakar-pkg-add(1)
 
-Plakar - July 11, 2025
+Plakar - July 11, 2025 - PLAKAR-PKG-RM(1)

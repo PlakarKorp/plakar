@@ -8,7 +8,9 @@ PLAKAR-PKG(1) - General Commands Manual
 
 **plakar&nbsp;pkg**
 \[**-available**]
-\[**-long**]
+\[**-long**]  
+**plakar&nbsp;pkg**
+**add**&nbsp;|&nbsp;**build**&nbsp;|&nbsp;**create**&nbsp;|&nbsp;**rm**
 
 # DESCRIPTION
 
@@ -26,6 +28,28 @@ The options are as follows:
 **-long**
 
 > Show the full package name.
+
+Alternatively, the following subcommands are available:
+
+**add**
+
+> Install Plakar plugins, documented in
+> plakar-pkg-add(1).
+
+**build**
+
+> Build Plakar plugins from source, documented in
+> plakar-pkg-build(1).
+
+**create**
+
+> Package a plugin, documented in
+> plakar-pkg-create(1).
+
+**rm**
+
+> Uninstall Plakar plugins, documented in
+> plakar-pkg-rm(1).
 
 # FILES
 
@@ -48,4 +72,4 @@ The options are as follows:
 plakar-pkg-add(1),
 plakar-pkg-rm(1)
 
-Plakar - July 11, 2025
+Plakar - July 11, 2025 - PLAKAR-PKG(1)

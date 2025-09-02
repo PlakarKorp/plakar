@@ -32,42 +32,42 @@ The options are as follows:
 
 **-name** *string*
 
-> Only apply command to snapshots that match
+> Only synchronize snapshots matching
 > *name*.
 
 **-category** *string*
 
-> Only apply command to snapshots that match
+> Only synchronize snapshots matching
 > *category*.
 
 **-environment** *string*
 
-> Only apply command to snapshots that match
+> Only synchronize snapshots matching
 > *environment*.
 
 **-perimeter** *string*
 
-> Only apply command to snapshots that match
+> Only synchronize snapshots matching
 > *perimeter*.
 
 **-job** *string*
 
-> Only apply command to snapshots that match
+> Only synchronize snapshots matching
 > *job*.
 
 **-tag** *string*
 
-> Only apply command to snapshots that match
+> Only synchronize snapshots matching
 > *tag*.
 
 **-latest**
 
-> Only apply command to latest snapshot matching filters.
+> Only synchronize the latest snapshot.
 
 **-before** *date*
 
-> Only apply command to snapshots matching filters and older than the specified
-> date.
+> Only synchronize snapshots older than
+> *before*.
 > Accepted formats include relative durations
 > (e.g. 2d for two days, 1w for one week)
 > or specific dates in various formats
@@ -75,8 +75,8 @@ The options are as follows:
 
 **-since** *date*
 
-> Only apply command to snapshots matching filters and created since the specified
-> date, included.
+> Only synchronize snapshots newer than
+> *since*.
 > Accepted formats include relative durations
 > (e.g. 2d for two days, 1w for one week)
 > or specific dates in various formats
@@ -119,6 +119,10 @@ Bi-directional synchronization with peer repository of recent snapshots:
 
 	$ plakar sync -since 7d with @peer
 
+Synchronize all snapshots of @peer to @repo:
+
+	$ plakar at @repo sync from @peer
+
 # DIAGNOSTICS
 
 The **plakar-sync** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
@@ -136,4 +140,4 @@ The **plakar-sync** utility exits&#160;0 on success, and&#160;&gt;0 if an error 
 
 plakar(1)
 
-Plakar - July 3, 2025
+Plakar - August 6, 2025 - PLAKAR-SYNC(1)
