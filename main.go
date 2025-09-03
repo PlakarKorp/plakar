@@ -64,7 +64,11 @@ import (
 	_ "github.com/PlakarKorp/integration-fs/exporter"
 	_ "github.com/PlakarKorp/integration-fs/importer"
 	_ "github.com/PlakarKorp/integration-fs/storage"
+	_ "github.com/PlakarKorp/integration-gcs"
 	_ "github.com/PlakarKorp/integration-ptar/storage"
+	_ "github.com/PlakarKorp/integration-s3/exporter"
+	_ "github.com/PlakarKorp/integration-s3/importer"
+	_ "github.com/PlakarKorp/integration-s3/storage"
 	_ "github.com/PlakarKorp/integration-stdio/exporter"
 	_ "github.com/PlakarKorp/integration-stdio/importer"
 )
