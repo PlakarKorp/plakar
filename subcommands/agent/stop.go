@@ -19,38 +19,33 @@ package agent
 import (
 	"flag"
 	"fmt"
-	"runtime"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
 )
 
-func init() {
-	if runtime.GOOS != "windows" {
-		subcommands.Register(func() subcommands.Subcommand { return &AgentStop{} },
-			subcommands.BeforeRepositoryOpen|subcommands.AgentSupport|subcommands.IgnoreVersion, "agent", "stop")
-		subcommands.Register(func() subcommands.Subcommand { return &AgentStart{} },
-			subcommands.BeforeRepositoryOpen, "agent", "start")
-		subcommands.Register(func() subcommands.Subcommand { return &Agent{} },
-			subcommands.BeforeRepositoryOpen, "agent")
-	}
-}
-
-func (cmd *Agent) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("agent", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s start | stop\n", flags.Name())
-	}
-	flags.Parse(args)
-
-	return fmt.Errorf("no action specified")
-}
-
-type Agent struct {
+type AgentStop struct {
 	subcommands.SubcommandBase
 }
 
-func (cmd *Agent) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	return 0, fmt.Errorf("no action specified")
+func (cmd *AgentStop) Parse(ctx *appcontext.AppContext, args []string) error {
+	flags := flag.NewFlagSet("agent stop", flag.ExitOnError)
+	flags.Usage = func() {
+		fmt.Fprintf(flags.Output(), "Usage: %s\n", flags.Name())
+		flags.PrintDefaults()
+	}
+	flags.Parse(args)
+	if flags.NArg() != 0 {
+		return fmt.Errorf("too many arguments")
+	}
+
+	return nil
+}
+
+func (cmd *AgentStop) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+	if err := kill_self(); err != nil {
+		return 1, err
+	}
+	return 0, nil
 }

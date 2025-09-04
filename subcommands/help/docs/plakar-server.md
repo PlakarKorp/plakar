@@ -16,7 +16,7 @@ The
 **plakar server**
 command starts a Plakar server instance at the provided
 *address*,
-allowing remote interaction with a Plakar repository over a network.
+allowing remote interaction with a Kloset store over a network.
 
 The options are as follows:
 
@@ -67,4 +67,4 @@ When a host name is provided,
 uses only one of the IP addresses it resolves to,
 preferably IPv4 .
 
-Plakar - July 3, 2025 - PLAKAR-SERVER(1)
+Plakar - July 3, 2025

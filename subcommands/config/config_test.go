@@ -12,6 +12,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func configure(ctx *appcontext.AppContext, cmd string, args []string) error {
+	subcmd := "show"
+	if len(args) > 0 {
+		subcmd = args[0]
+		args = args[1:]
+	}
+
+	err := dispatchSubcommand(ctx, cmd, subcmd, args)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func TestConfigEmpty(t *testing.T) {
 	bufOut := bytes.NewBuffer(nil)
 	bufErr := bytes.NewBuffer(nil)
@@ -35,6 +49,11 @@ func TestConfigEmpty(t *testing.T) {
 	args := []string{}
 
 	subcommand := &ConfigStoreCmd{}
+	err = subcommand.Parse(ctx, args)
+	require.Error(t, err, "no action specified")
+
+	subcommand = &ConfigStoreCmd{}
+	args = []string{"show"}
 	err = subcommand.Parse(ctx, args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)

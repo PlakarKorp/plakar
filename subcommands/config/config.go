@@ -55,20 +55,6 @@ func normalizeLocation(location string) string {
 	return strings.TrimPrefix(location, "location=")
 }
 
-func configure(ctx *appcontext.AppContext, cmd string, args []string) error {
-	subcmd := "show"
-	if len(args) > 0 {
-		subcmd = args[0]
-		args = args[1:]
-	}
-
-	err := dispatchSubcommand(ctx, cmd, subcmd, args)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func MarshalINISections(sectionName string, kv map[string]string, w io.Writer) error {
 	cfg := ini.Empty()
 

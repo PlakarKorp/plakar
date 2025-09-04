@@ -1,19 +1,17 @@
 .Dd July 11, 2025
-.Dt PLAKAR-PKG 1
+.Dt PLAKAR-PKG-LIST 1
 .Os
 .Sh NAME
-.Nm plakar-pkg
+.Nm plakar-pkg-list
 .Nd List installed Plakar plugins
 .Sh SYNOPSIS
-.Nm plakar pkg
+.Nm plakar pkg list
 .Op Fl available
 .Op Fl long
-.Nm plakar pkg
-.Cm add | build | create | rm
 .Sh DESCRIPTION
 The
-.Nm plakar pkg
-lists the currently installed plugins.
+.Nm plakar pkg list
+command shows the currently installed plugins.
 .Pp
 The options are as follows:
 .Bl -tag -width Ds
@@ -22,23 +20,6 @@ Instead of installed packages,
 list the set of prebuilt packages available for this system.
 .It Fl long
 Show the full package name.
-.El
-.Pp
-Alternatively, the following subcommands are available:
-.Pp
-.Bl -tag -width Ds -compact
-.It Cm add
-Install Plakar plugins, documented in
-.Xr plakar-pkg-add 1 .
-.It Cm build
-Build Plakar plugins from source, documented in
-.Xr plakar-pkg-build 1 .
-.It Cm create
-Package a plugin, documented in
-.Xr plakar-pkg-create 1 .
-.It Cm rm
-Uninstall Plakar plugins, documented in
-.Xr plakar-pkg-rm 1 .
 .El
 .Sh FILES
 .Bl -tag -width Ds
@@ -55,4 +36,6 @@ if set.
 .El
 .Sh SEE ALSO
 .Xr plakar-pkg-add 1 ,
+.Xr plakar-pkg-build 1 ,
+.Xr plakar-pkg-create 1 ,
 .Xr plakar-pkg-rm 1

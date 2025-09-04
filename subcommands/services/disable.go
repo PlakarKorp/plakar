@@ -44,6 +44,7 @@ func (cmd *ServicesDisable) Parse(ctx *appcontext.AppContext, args []string) err
 	}
 
 	cmd.Service = flags.Arg(0)
+	cmd.RepositorySecret = ctx.GetSecret()
 
 	return nil
 }

@@ -29,7 +29,7 @@ func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &ServicesStatus{} }, subcommands.AgentSupport, "services", "status")
 	subcommands.Register(func() subcommands.Subcommand { return &ServicesEnable{} }, subcommands.AgentSupport, "services", "enable")
 	subcommands.Register(func() subcommands.Subcommand { return &ServicesDisable{} }, subcommands.AgentSupport, "services", "disable")
-	subcommands.Register(func() subcommands.Subcommand { return &Services{} }, subcommands.AgentSupport, "services")
+	subcommands.Register(func() subcommands.Subcommand { return &Services{} }, subcommands.BeforeRepositoryOpen, "services")
 }
 
 type Services struct {
@@ -39,20 +39,13 @@ type Services struct {
 func (_ *Services) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags := flag.NewFlagSet("services", flag.ExitOnError)
 	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s status SERVICE\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s enable SERVICE\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s disable SERVICE\n", flags.Name())
+		fmt.Fprintf(flags.Output(), "Usage: %s status | enable | disable\n", flags.Name())
 	}
 	flags.Parse(args)
 
-	if flags.NArg() != 0 {
-		flags.Usage()
-		return fmt.Errorf("invalid number of arguments")
-	}
-
-	return nil
+	return fmt.Errorf("no action specified")
 }
 
 func (cmd *Services) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	return 0, nil
+	return 1, fmt.Errorf("no action specified")
 }

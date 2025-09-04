@@ -31,13 +31,15 @@ func (cmd *ConfigStoreCmd) Parse(ctx *appcontext.AppContext, args []string) erro
 	}
 
 	flags.Parse(args)
+	if flags.NArg() == 0 {
+		return fmt.Errorf("no action specified")
+	}
 	cmd.args = flags.Args()
-
 	return nil
 }
 
 func (cmd *ConfigStoreCmd) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	err := configure(ctx, "store", cmd.args)
+	err := dispatchSubcommand(ctx, "store", cmd.args[0], cmd.args[1:])
 	if err != nil {
 		return 1, err
 	}

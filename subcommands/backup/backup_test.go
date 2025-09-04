@@ -132,14 +132,14 @@ func TestExecuteCmdCreateDefault(t *testing.T) {
 	require.Contains(t, lastline, "created unsigned snapshot")
 }
 
-func TestExecuteCmdCreateDefaultWithExcludes(t *testing.T) {
+func TestExecuteCmdCreateDefaultWithIgnores(t *testing.T) {
 	bufOut := bytes.NewBuffer(nil)
 	bufErr := bytes.NewBuffer(nil)
 
 	repo, tmpBackupDir, ctx := generateFixtures(t, bufOut, bufErr)
 
 	ctx.MaxConcurrency = 1
-	args := []string{"-exclude-file", tmpBackupDir + "/subdir/to_exclude", tmpBackupDir}
+	args := []string{"-ignore", "**/subdir", tmpBackupDir}
 
 	subcommand := &Backup{}
 	err := subcommand.Parse(ctx, args)
@@ -150,20 +150,6 @@ func TestExecuteCmdCreateDefaultWithExcludes(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 0, status)
 
-	// output should be something like:
-	// info: 9a383818: OK ✓ /tmp/tmp_to_backup2103009254/subdir/foo.txt
-	// info: 9a383818: OK ✓ /tmp/tmp_to_backup2103009254/another_subdir/bar
-	// info: 9a383818: OK ✓ /tmp/tmp_to_backup2103009254/subdir/dummy.txt
-	// info: 9a383818: OK ✓ /tmp/tmp_to_backup2103009254/subdir
-	// info: 9a383818: OK ✓ /tmp/tmp_to_backup2103009254/another_subdir
-	// info: 9a383818: OK ✓ /tmp/tmp_to_backup2103009254
-	// info: 9a383818: OK ✓ /tmp
-	// info: 9a383818: OK ✓ /
-	// info: created unsigned snapshot 9a383818 with root PoRwWDCajeHqDG0vkZu13jOAWo3U/Wr9e/Hecg4IJoU of size 29 B in 10.961071ms
-
 	output := bufOut.String()
-	lines := strings.Split(strings.Trim(output, "\n"), "\n")
-	// last line should have the summary
-	lastline := lines[len(lines)-1]
-	require.Contains(t, lastline, "created unsigned snapshot")
+	require.NotContains(t, output, "/subdir")
 }

@@ -77,7 +77,7 @@ func _TestCmdAgentForegroundInit(t *testing.T) {
 	defer os.Remove(logFile)
 
 	args := []string{"-foreground", "-log", logFile}
-	subcommand := &Agent{}
+	subcommand := &AgentStart{}
 	err := subcommand.Parse(ctx, args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)

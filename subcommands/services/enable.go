@@ -44,6 +44,7 @@ func (cmd *ServicesEnable) Parse(ctx *appcontext.AppContext, args []string) erro
 	}
 
 	cmd.Service = flags.Arg(0)
+	cmd.RepositorySecret = ctx.GetSecret()
 
 	return nil
 }

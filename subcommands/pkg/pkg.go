@@ -22,7 +22,6 @@ import (
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/plugins"
 	"github.com/PlakarKorp/plakar/subcommands"
 )
 
@@ -43,6 +42,10 @@ func init() {
 		subcommands.BeforeRepositoryOpen,
 		"pkg", "build")
 
+	subcommands.Register(func() subcommands.Subcommand { return &PkgList{} },
+		subcommands.BeforeRepositoryOpen,
+		"pkg", "list")
+
 	subcommands.Register(func() subcommands.Subcommand { return &Pkg{} },
 		subcommands.BeforeRepositoryOpen,
 		"pkg")
@@ -50,59 +53,19 @@ func init() {
 
 type Pkg struct {
 	subcommands.SubcommandBase
-	LongName bool
-	ListAll  bool
 }
 
 func (cmd *Pkg) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags := flag.NewFlagSet("pkg", flag.ExitOnError)
-	flags.BoolVar(&cmd.LongName, "long", false, "show full package name")
-	flags.BoolVar(&cmd.ListAll, "available", false, "list available prebuilt packages")
 	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s [-available] [-long]\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s add | build | create | rm\n",
+		fmt.Fprintf(flags.Output(), "Usage: %s list | add | build | create | rm\n",
 			flags.Name())
 	}
-
 	flags.Parse(args)
 
-	if flags.NArg() != 0 {
-		return fmt.Errorf("too many arguments")
-	}
-
-	return nil
+	return fmt.Errorf("no action specified")
 }
 
 func (cmd *Pkg) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (int, error) {
-	var packages []plugins.Package
-	var err error
-
-	if cmd.ListAll {
-		var filter plugins.IntegrationFilter
-		integrations, err := ctx.GetPlugins().ListIntegrations(filter)
-		if err != nil {
-			return 1, err
-		}
-		for _, int := range integrations {
-			if int.Installation.Available {
-				pkg := ctx.GetPlugins().IntegrationAsPackage(&int)
-				packages = append(packages, pkg)
-			}
-		}
-	} else {
-		packages, err = ctx.GetPlugins().ListInstalledPackages()
-		if err != nil {
-			return 1, err
-		}
-	}
-
-	for _, pkg := range packages {
-		if cmd.LongName {
-			fmt.Fprintln(ctx.Stdout, pkg.PkgName())
-		} else {
-			fmt.Fprintln(ctx.Stdout, pkg.PkgNameAndVersion())
-		}
-	}
-
-	return 0, nil
+	return 1, fmt.Errorf("no action specified")
 }
