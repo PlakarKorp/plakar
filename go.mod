@@ -12,7 +12,7 @@ require (
 	github.com/PlakarKorp/integration-ptar v1.0.0
 	github.com/PlakarKorp/integration-s3 v1.0.1-0.20250903144756-ed10cf7be2cc
 	github.com/PlakarKorp/integration-stdio v1.0.0
-	github.com/PlakarKorp/kloset v1.0.3-0.20250904123057-6bab4adff998
+	github.com/PlakarKorp/kloset v1.0.3-0.20250905144317-5502591a6b09
 	github.com/alecthomas/chroma v0.10.0
 	github.com/anacrolix/fuse v0.3.1
 	github.com/charmbracelet/bubbletea v1.3.6
