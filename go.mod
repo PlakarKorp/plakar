@@ -1,6 +1,6 @@
 module github.com/PlakarKorp/plakar
 
-go 1.23.4
+go 1.24.0
 
 require (
 	github.com/PlakarKorp/go-human2duration v0.1.6
@@ -29,7 +29,7 @@ require (
 	go.omarpolo.com/ttlmap v0.0.0-20231012080932-0154c95c7516
 	go.yaml.in/yaml/v3 v3.0.4
 	golang.org/x/mod v0.27.0
-	golang.org/x/sync v0.16.0
+	golang.org/x/sync v0.17.0
 	golang.org/x/sys v0.35.0
 	golang.org/x/term v0.34.0
 	golang.org/x/tools v0.36.0
