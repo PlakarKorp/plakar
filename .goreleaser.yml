@@ -98,10 +98,6 @@ nfpms:
     # Packages your package depends on. (overridable)
     dependencies: []
 
-    # Packages it provides. (overridable)
-    provides:
-      - plakar
-
     # Packages your package recommends installing. (overridable)
     recommends: []
 
