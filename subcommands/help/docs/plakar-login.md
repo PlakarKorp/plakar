@@ -21,7 +21,7 @@ Login is optional for most
 **plakar**
 commands but required to enable certain services, such as alerting.
 See also
-plakar-services(1).
+plakar-service(1).
 
 Only one authentication method may be specified per invocation: the
 **-email**
@@ -70,6 +70,6 @@ Authenticate via GitHub (default, opens browser):
 
 plakar(1),
 plakar-logout(1),
-plakar-services(1)
+plakar-service(1)
 
-Plakar - July 8, 2025 - PLAKAR-LOGIN(1)
+Plakar - July 8, 2025

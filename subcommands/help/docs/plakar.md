@@ -166,10 +166,10 @@ The following commands are available:
 > Create a .ptar archive, documented in
 > plakar-ptar(1).
 
-**pkg**
+**pkg show**
 
 > List installed plugins, documented in
-> plakar-pkg(1).
+> plakar-pkg-show(1).
 
 **pkg add**
 
@@ -294,4 +294,4 @@ Remove snapshots older than 30 days:
 
 	$ plakar rm -before 30d
 
-Plakar - July 8, 2025 - PLAKAR(1)
+Plakar - July 8, 2025

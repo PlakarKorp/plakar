@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"hash"
 	"io"
-	"os"
 	"strings"
 
 	"github.com/PlakarKorp/kloset/compression"
@@ -75,15 +74,11 @@ func (cmd *Create) Parse(ctx *appcontext.AppContext, args []string) error {
 		var passphrase []byte
 
 		if ctx.KeyFromFile == "" {
-			for range 3 {
-				tmp, err := utils.GetPassphraseConfirm("repository", minEntropBits)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "%s\n", err)
-					continue
-				}
-				passphrase = tmp
-				break
+			tmp, err := utils.GetPassphraseConfirm("repository", minEntropBits, 3)
+			if err != nil {
+				return err
 			}
+			passphrase = tmp
 		} else {
 			passphrase = []byte(ctx.KeyFromFile)
 		}

@@ -1,0 +1,104 @@
+.Dd August 7, 2025
+.Dt PLAKAR-SERVICE 1
+.Os
+.Sh NAME
+.Nm plakar-service
+.Nd Manage optional Plakar-connected services
+.Sh SYNOPSIS
+.Nm plakar service Cm list
+.Nm plakar service Cm add Ar name Op Ar key Ns = Ns Ar value ...
+.Nm plakar service Cm rm Ar name
+.Nm plakar service Cm status Ar name
+.Nm plakar service Cm show Ar name
+.Nm plakar service Cm enable Ar name
+.Nm plakar service Cm disable Ar name
+.Nm plakar service Cm set Ar name Op Ar key Ns = Ns Ar value ...
+.Nm plakar service Cm unset Ar name Op Ar key ...
+.Sh DESCRIPTION
+The
+.Nm plakar service
+command allows you to enable, disable, and inspect additional services that
+integrate with the
+.Nm plakar
+platform via
+.Xr plakar-login 1
+authentication.
+These services connect to the plakar.io infrastructure, and should only be
+enabled if you agree to transmit non-sensitive operational data to plakar.io.
+.Pp
+All subcommands require prior authentication via
+.Xr plakar-login 1 .
+.Pp
+Services are managed by the backend and discovered at runtime.
+For example, when the
+.Dq alerting
+service is enable, it will:
+.Bl -enum
+.It
+Send email notifications when operations fail.
+.It
+Expose the latest alerting reports in the Plakar UI
+.Pq see Xr plakar-ui 1 .
+.El
+.Pp
+By default, all services are disabled.
+.Sh SUBCOMMANDS
+.Bl -tag -width Ds
+.It Cm list
+Display the list of available services.
+.It Cm add Ar name Op Ar key Ns = Ns Ar value ...
+Set the configuration for the service identified by
+.Ar name
+and enable it.
+The configuration is defined by the given set of
+.Ar key Ns / Ns Ar value
+pairs.
+The existing configuration, if any, is discarded.
+.It Cm rm Ar name
+Disable the service identified by
+.Ar name
+and discard its configuration.
+.It Cm status Ar name
+Display the current status (enabled or disabled) of the named
+service.
+.It Cm show Ar name
+Display the configuration for the specified service.
+.It Cm enable Ar name
+Enable the specified service.
+.It Cm disable Ar name
+Disable the specified service.
+.It Cm set Ar name Op Ar key Ns = Ns Ar value ...
+Set the configuration
+.Ar key
+to
+.Ar value
+for the service identified by
+.Ar name .
+Multiple
+.Ar key Ns / Ns Ar value
+pairs can be specified.
+.It Cm unset Ar name Op Ar key ...
+Unset the configuration
+.Ar key
+for the service identified by
+.Ar name .
+Multiple keys can be specified.
+.El
+.Sh EXAMPLES
+Check the status of the alerting service:
+.Bd -literal -offset indent
+$ plakar service status alerting
+.Ed
+.Pp
+Enable alerting:
+.Bd -literal -offset indent
+$ plakar service enable alerting
+.Ed
+.Pp
+Disable alerting:
+.Bd -literal -offset indent
+$ plakar service disable alerting
+.Ed
+.Sh SEE ALSO
+.Xr plakar-login 1 ,
+.Xr plakar-ui 1

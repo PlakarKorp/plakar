@@ -35,10 +35,10 @@ current working directory.
 
 # SEE ALSO
 
-plakar-pkg(1),
 plakar-pkg-add(1),
 plakar-pkg-create(1),
 plakar-pkg-rm(1),
+plakar-pkg-show(1),
 plakar-pkg-recipe.yaml(5)
 
-Plakar - July 11, 2025 - PLAKAR-PKG-BUILD(1)
+Plakar - July 11, 2025

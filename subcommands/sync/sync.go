@@ -80,7 +80,7 @@ func (cmd *Sync) Parse(ctx *appcontext.AppContext, args []string) error {
 
 	storeConfig, err := ctx.Config.GetRepository(peerRepositoryPath)
 	if err != nil {
-		return fmt.Errorf("peer repository: %w", err)
+		return fmt.Errorf("peer store: %w", err)
 	}
 
 	peerStore, peerStoreSerializedConfig, err := storage.Open(ctx.GetInner(), storeConfig)
@@ -106,7 +106,7 @@ func (cmd *Sync) Parse(ctx *appcontext.AppContext, args []string) error {
 			peerSecret = key
 		} else {
 			for {
-				passphrase, err := utils.GetPassphrase("destination repository")
+				passphrase, err := utils.GetPassphrase("destination store")
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "%s\n", err)
 					continue
@@ -154,7 +154,7 @@ type Sync struct {
 func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	storeConfig, err := ctx.Config.GetRepository(cmd.PeerRepositoryLocation)
 	if err != nil {
-		return 1, fmt.Errorf("peer repository: %w", err)
+		return 1, fmt.Errorf("peer store: %w", err)
 	}
 
 	peerStore, peerStoreSerializedConfig, err := storage.Open(ctx.GetInner(), storeConfig)
@@ -166,7 +166,7 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 	peerCtx.SetSecret(cmd.PeerRepositorySecret)
 	peerRepository, err := repository.New(peerCtx.GetInner(), peerCtx.GetSecret(), peerStore, peerStoreSerializedConfig)
 	if err != nil {
-		return 1, fmt.Errorf("could not open peer repository %s: %s", cmd.PeerRepositoryLocation, err)
+		return 1, fmt.Errorf("could not open peer store %s: %s", cmd.PeerRepositoryLocation, err)
 	}
 
 	var srcRepository *repository.Repository
@@ -197,12 +197,12 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 
 	srcSnapshots, err := srcRepository.GetSnapshots()
 	if err != nil {
-		return 1, fmt.Errorf("could not get list of snapshots from source repository %s: %s", srcLocation, err)
+		return 1, fmt.Errorf("could not get list of snapshots from source store %s: %s", srcLocation, err)
 	}
 
 	dstSnapshots, err := dstRepository.GetSnapshots()
 	if err != nil {
-		return 1, fmt.Errorf("could not get list of snapshots from peer repository %s: %s", dstLocation, err)
+		return 1, fmt.Errorf("could not get list of snapshots from peer store %s: %s", dstLocation, err)
 	}
 
 	srcSnapshotsMap := make(map[objects.MAC]struct{})
@@ -220,7 +220,13 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 
 	srcSnapshotIDs, err := locate.LocateSnapshotIDs(srcRepository, cmd.SrcLocateOptions)
 	if err != nil {
-		return 1, fmt.Errorf("could not locate snapshots in source repository %s: %s", dstLocation, err)
+		return 1, fmt.Errorf("could not locate snapshots in store %s: %s", dstLocation, err)
+	}
+	if cmd.Direction != "with" {
+		if len(srcSnapshotIDs) == 0 {
+			ctx.GetLogger().Info("No matching snapshot found in store %s", srcLocation)
+			return 0, nil
+		}
 	}
 
 	for _, snapshotID := range srcSnapshotIDs {
@@ -236,7 +242,7 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 
 		err := synchronize(ctx, srcRepository, dstRepository, snapshotID)
 		if err != nil {
-			ctx.GetLogger().Error("failed to synchronize snapshot %x from source repository %s: %s",
+			ctx.GetLogger().Error("failed to synchronize snapshot %x from store %s: %s",
 				snapshotID[:4], srcLocation, err)
 		}
 	}
@@ -244,7 +250,7 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 	if cmd.Direction == "with" {
 		dstSnapshotIDs, err := locate.LocateSnapshotIDs(dstRepository, cmd.SrcLocateOptions)
 		if err != nil {
-			return 1, fmt.Errorf("could not locate snapshots in peer repository %s: %s", dstLocation, err)
+			return 1, fmt.Errorf("could not locate snapshots in store %s: %s", dstLocation, err)
 		}
 
 		dstSyncList := make([]objects.MAC, 0)
@@ -260,7 +266,7 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 			}
 			err := synchronize(ctx, dstRepository, srcRepository, snapshotID)
 			if err != nil {
-				ctx.GetLogger().Error("failed to synchronize snapshot %x from peer repository %s: %s",
+				ctx.GetLogger().Error("failed to synchronize snapshot %x from peer store %s: %s",
 					snapshotID[:4], dstLocation, err)
 			}
 		}

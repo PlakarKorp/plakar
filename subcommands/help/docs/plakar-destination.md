@@ -7,7 +7,7 @@ PLAKAR-DESTINATION(1) - General Commands Manual
 # SYNOPSIS
 
 **plakar&nbsp;destination**
-\[subcommand&nbsp;...]
+*subcommand&nbsp;...*
 
 # DESCRIPTION
 
@@ -84,10 +84,12 @@ The subcommands are as follows:
 > *name*.
 > Multiple option/value pairs can be specified.
 
-**show** \[name ...]
+**show** \[**-secrets**] \[name ...]
 
 > Display the current destinations configuration.
-> This is the default if no subcommand is specified.
+> If
+> **-secrets**
+> is specified, sensitive information such as passwords or tokens will be shown.
 
 **unset** *name* \[option ...]
 
@@ -104,4 +106,4 @@ The **plakar-destination** utility exits&#160;0 on success, and&#160;&gt;0 if an
 
 plakar(1)
 
-Plakar - July 3, 2025 - PLAKAR-DESTINATION(1)
+Plakar - July 3, 2025

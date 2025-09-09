@@ -43,6 +43,7 @@ import (
 	_ "github.com/PlakarKorp/plakar/subcommands/diag"
 	_ "github.com/PlakarKorp/plakar/subcommands/diff"
 	_ "github.com/PlakarKorp/plakar/subcommands/digest"
+	_ "github.com/PlakarKorp/plakar/subcommands/dup"
 	_ "github.com/PlakarKorp/plakar/subcommands/help"
 	_ "github.com/PlakarKorp/plakar/subcommands/info"
 	_ "github.com/PlakarKorp/plakar/subcommands/locate"
@@ -57,7 +58,7 @@ import (
 	_ "github.com/PlakarKorp/plakar/subcommands/rm"
 	_ "github.com/PlakarKorp/plakar/subcommands/scheduler"
 	_ "github.com/PlakarKorp/plakar/subcommands/server"
-	_ "github.com/PlakarKorp/plakar/subcommands/services"
+	_ "github.com/PlakarKorp/plakar/subcommands/service"
 	_ "github.com/PlakarKorp/plakar/subcommands/ui"
 	_ "github.com/PlakarKorp/plakar/subcommands/version"
 
@@ -584,7 +585,7 @@ func listCmds(out io.Writer, prefix string) {
 
 	all := subcommands.List()
 	for _, cmd := range all {
-		if len(cmd) == 0 {
+		if len(cmd) == 0 || cmd[0] == "diag" {
 			continue
 		}
 

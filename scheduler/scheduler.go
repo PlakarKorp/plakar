@@ -20,7 +20,7 @@ type ScheduledJob struct {
 	job       *Job
 }
 
-type AgentScheduler struct {
+type SchedulerService struct {
 	config   *Configuration
 	ctx      *appcontext.AppContext
 	wg       sync.WaitGroup
@@ -28,15 +28,15 @@ type AgentScheduler struct {
 	reporter *reporting.Reporter
 }
 
-func NewAgentScheduler(ctx *appcontext.AppContext, config *Configuration) *AgentScheduler {
-	return &AgentScheduler{
+func NewSchedulerService(ctx *appcontext.AppContext, config *Configuration) *SchedulerService {
+	return &SchedulerService{
 		ctx:    ctx,
 		config: config,
 		wg:     sync.WaitGroup{},
 	}
 }
 
-func (s *AgentScheduler) Run() {
+func (s *SchedulerService) Run() {
 	s.reporter = reporting.NewReporter(s.ctx)
 
 	runq := make(chan *ScheduledJob, 1000)
@@ -79,13 +79,13 @@ func (s *AgentScheduler) Run() {
 	}()
 }
 
-func (s *AgentScheduler) NextDay(date time.Time) time.Time {
+func (s *SchedulerService) NextDay(date time.Time) time.Time {
 	year, month, day := date.Date()
 	r := time.Date(year, month, day, 0, 0, 0, 0, date.Location())
 	return r.AddDate(0, 0, 1)
 }
 
-func (s *AgentScheduler) ScheduleForDate(date time.Time) {
+func (s *SchedulerService) ScheduleForDate(date time.Time) {
 	s.ctx.GetLogger().Debug("scheduling jobs for %v", date)
 	for name, job := range s.config.Jobs {
 		for _, schedule := range job.Schedules {

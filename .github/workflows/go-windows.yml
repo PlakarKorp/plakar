@@ -13,7 +13,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        go: [ '1.23.3' ]
+        go: [ '1.24.0' ]
     steps:
     - uses: actions/checkout@v4
 

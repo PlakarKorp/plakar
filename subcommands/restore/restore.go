@@ -31,6 +31,25 @@ import (
 	"github.com/PlakarKorp/plakar/subcommands"
 )
 
+type Restore struct {
+	subcommands.SubcommandBase
+
+	OptName            string
+	OptCategory        string
+	OptEnvironment     string
+	OptPerimeter       string
+	OptJob             string
+	OptTag             string
+	OptSkipPermissions bool
+
+	Target      string
+	Strip       string
+	Concurrency uint64
+	Quiet       bool
+	Silent      bool
+	Snapshots   []string
+}
+
 func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &Restore{} }, subcommands.AgentSupport, "restore")
 }
@@ -56,6 +75,7 @@ func (cmd *Restore) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags.StringVar(&pullPath, "to", "", "base directory where pull will restore")
 	flags.BoolVar(&cmd.Quiet, "quiet", false, "do not print progress")
 	flags.BoolVar(&cmd.Silent, "silent", false, "do not print ANY progress")
+	flags.BoolVar(&cmd.OptSkipPermissions, "skip-permissions", false, "do not restore file permissions")
 	flags.Parse(args)
 
 	if flags.NArg() != 0 {
@@ -75,24 +95,6 @@ func (cmd *Restore) Parse(ctx *appcontext.AppContext, args []string) error {
 	cmd.Snapshots = flags.Args()
 
 	return nil
-}
-
-type Restore struct {
-	subcommands.SubcommandBase
-
-	OptName        string
-	OptCategory    string
-	OptEnvironment string
-	OptPerimeter   string
-	OptJob         string
-	OptTag         string
-
-	Target      string
-	Strip       string
-	Concurrency uint64
-	Quiet       bool
-	Silent      bool
-	Snapshots   []string
 }
 
 func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
@@ -173,6 +175,9 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 
 	opts := &snapshot.RestoreOptions{
 		MaxConcurrency: cmd.Concurrency,
+	}
+	if cmd.OptSkipPermissions {
+		opts.SkipPermissions = true
 	}
 
 	root, err := exporterInstance.Root(ctx)

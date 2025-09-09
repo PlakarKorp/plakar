@@ -45,6 +45,9 @@ func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &PkgList{} },
 		subcommands.BeforeRepositoryOpen,
 		"pkg", "list")
+	subcommands.Register(func() subcommands.Subcommand { return &PkgList{} },
+		subcommands.BeforeRepositoryOpen,
+		"pkg", "show")
 
 	subcommands.Register(func() subcommands.Subcommand { return &Pkg{} },
 		subcommands.BeforeRepositoryOpen,
@@ -63,6 +66,9 @@ func (cmd *Pkg) Parse(ctx *appcontext.AppContext, args []string) error {
 	}
 	flags.Parse(args)
 
+	if flags.NArg() > 0 {
+		return fmt.Errorf("invalid argument: %s", flags.Arg(0))
+	}
 	return fmt.Errorf("no action specified")
 }
 

@@ -3,6 +3,14 @@ version: 2
 release:
   make_latest: "{{ .Env.MAKE_LATEST_RELEASE }}"
 
+archives:
+  - files:
+      - src: plakar.1
+        dst: man/plakar.1
+      - src: subcommands/**/*.1
+        dst: man
+        strip_parent: true
+
 builds:
   - # ID of the build.
     #
@@ -98,10 +106,6 @@ nfpms:
     # Packages your package depends on. (overridable)
     dependencies: []
 
-    # Packages it provides. (overridable)
-    provides:
-      - plakar
-
     # Packages your package recommends installing. (overridable)
     recommends: []
 
@@ -145,6 +149,197 @@ nfpms:
     # Templates: allowed.
     mtime: "{{ .CommitDate }}"
 
+    contents:
+      - src: ./plakar.1
+        dst: /usr/share/man/man1/plakar.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/cat/plakar-cat.1
+        dst: /usr/share/man/man1/plakar-cat.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/ui/plakar-ui.1
+        dst: /usr/share/man/man1/plakar-ui.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/locate/plakar-locate.1
+        dst: /usr/share/man/man1/plakar-locate.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/diag/plakar-diag.1
+        dst: /usr/share/man/man1/plakar-diag.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/archive/plakar-archive.1
+        dst: /usr/share/man/man1/plakar-archive.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/config/plakar-source.1
+        dst: /usr/share/man/man1/plakar-source.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/config/plakar-destination.1
+        dst: /usr/share/man/man1/plakar-destination.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/config/plakar-store.1
+        dst: /usr/share/man/man1/plakar-store.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/digest/plakar-digest.1
+        dst: /usr/share/man/man1/plakar-digest.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/scheduler/plakar-scheduler.1
+        dst: /usr/share/man/man1/plakar-scheduler.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/diff/plakar-diff.1
+        dst: /usr/share/man/man1/plakar-diff.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/server/plakar-server.1
+        dst: /usr/share/man/man1/plakar-server.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/ptar/plakar-ptar.1
+        dst: /usr/share/man/man1/plakar-ptar.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/agent/plakar-agent.1
+        dst: /usr/share/man/man1/plakar-agent.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/dup/plakar-dup.1
+        dst: /usr/share/man/man1/plakar-dup.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/info/plakar-info.1
+        dst: /usr/share/man/man1/plakar-info.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/clone/plakar-clone.1
+        dst: /usr/share/man/man1/plakar-clone.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/version/plakar-version.1
+        dst: /usr/share/man/man1/plakar-version.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/mount/plakar-mount.1
+        dst: /usr/share/man/man1/plakar-mount.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/maintenance/plakar-maintenance.1
+        dst: /usr/share/man/man1/plakar-maintenance.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/prune/plakar-prune.1
+        dst: /usr/share/man/man1/plakar-prune.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/ls/plakar-ls.1
+        dst: /usr/share/man/man1/plakar-ls.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/sync/plakar-sync.1
+        dst: /usr/share/man/man1/plakar-sync.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/service/plakar-service.1
+        dst: /usr/share/man/man1/plakar-service.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/backup/plakar-backup.1
+        dst: /usr/share/man/man1/plakar-backup.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/create/plakar-create.1
+        dst: /usr/share/man/man1/plakar-create.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/restore/plakar-restore.1
+        dst: /usr/share/man/man1/plakar-restore.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/check/plakar-check.1
+        dst: /usr/share/man/man1/plakar-check.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/rm/plakar-rm.1
+        dst: /usr/share/man/man1/plakar-rm.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/login/plakar-logout.1
+        dst: /usr/share/man/man1/plakar-logout.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/login/plakar-login.1
+        dst: /usr/share/man/man1/plakar-login.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/login/plakar-token.1
+        dst: /usr/share/man/man1/plakar-token.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/pkg/plakar-pkg-build.1
+        dst: /usr/share/man/man1/plakar-pkg-build.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/pkg/plakar-pkg-add.1
+        dst: /usr/share/man/man1/plakar-pkg-add.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/pkg/plakar-pkg-rm.1
+        dst: /usr/share/man/man1/plakar-pkg-rm.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/pkg/plakar-pkg-create.1
+        dst: /usr/share/man/man1/plakar-pkg-create.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/pkg/plakar-pkg-show.1
+        dst: /usr/share/man/man1/plakar-pkg-show.1
+        file_info:
+          mode: 0644
+
 homebrew_casks:
   - # Name of the cask
     #
@@ -158,6 +353,45 @@ homebrew_casks:
     # #
     # # Templates: allowed.
     # manpage: man/myapp.1
+    manpages:
+      - ./man/plakar-cat.1
+      - ./man/plakar-ui.1
+      - ./man/plakar-locate.1
+      - ./man/plakar-diag.1
+      - ./man/plakar-archive.1
+      - ./man/plakar-source.1
+      - ./man/plakar-destination.1
+      - ./man/plakar-store.1
+      - ./man/plakar-digest.1
+      - ./man/plakar-scheduler.1
+      - ./man/plakar-diff.1
+      - ./man/plakar-server.1
+      - ./man/plakar-ptar.1
+      - ./man/plakar-agent.1
+      - ./man/plakar-dup.1
+      - ./man/plakar-info.1
+      - ./man/plakar-clone.1
+      - ./man/plakar-version.1
+      - ./man/plakar-mount.1
+      - ./man/plakar-maintenance.1
+      - ./man/plakar-prune.1
+      - ./man/plakar-ls.1
+      - ./man/plakar-sync.1
+      - ./man/plakar-service.1
+      - ./man/plakar-backup.1
+      - ./man/plakar-create.1
+      - ./man/plakar-restore.1
+      - ./man/plakar-check.1
+      - ./man/plakar-rm.1
+      - ./man/plakar-logout.1
+      - ./man/plakar-login.1
+      - ./man/plakar-token.1
+      - ./man/plakar-pkg-build.1
+      - ./man/plakar-pkg-add.1
+      - ./man/plakar-pkg-rm.1
+      - ./man/plakar-pkg-create.1
+      - ./man/plakar-pkg-show.1
+      - ./man/plakar.1
 
     # # Completions for different shells
     # #

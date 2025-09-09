@@ -19,6 +19,7 @@ PLAKAR-RESTORE(1) - General Commands Manual
 \[**-concurrency**&nbsp;*number*]
 \[**-quiet**]
 \[**-to**&nbsp;*directory*]
+\[**-skip-permissions**]
 \[*snapshotID*:*path&nbsp;...*]
 
 # DESCRIPTION
@@ -77,8 +78,11 @@ The options are as follows:
 > Defaults to
 > `8 * CPU count + 1`.
 
-**-to** *directory*
+**-skip-permissions**
 
+> Skip restoring file permissions and ownership during restore,
+> defaulting to 0750 for directories and 0640 for files.
+> It Fl to Ar directory
 > Specify the base directory to which the files will be restored.
 > If omitted, files are restored to the current working directory.
 
@@ -130,4 +134,4 @@ The **plakar-restore** utility exits&#160;0 on success, and&#160;&gt;0 if an err
 plakar(1),
 plakar-backup(1)
 
-Plakar - July 3, 2025 - PLAKAR-RESTORE(1)
+Plakar - July 3, 2025

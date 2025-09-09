@@ -165,15 +165,11 @@ func (cmd *Ptar) Parse(ctx *appcontext.AppContext, args []string) error {
 			if ok {
 				passphrase = []byte(envPassphrase)
 			} else {
-				for attempt := 0; attempt < 3; attempt++ {
-					tmp, err := utils.GetPassphraseConfirm("repository", 0.)
-					if err != nil {
-						fmt.Fprintf(os.Stderr, "%s\n", err)
-						continue
-					}
-					passphrase = tmp
-					break
+				tmp, err := utils.GetPassphraseConfirm("repository", 0., 3)
+				if err != nil {
+					return err
 				}
+				passphrase = tmp
 			}
 		} else {
 			passphrase = []byte(ctx.KeyFromFile)

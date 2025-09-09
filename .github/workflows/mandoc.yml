@@ -25,7 +25,8 @@ jobs:
       - name: lint
         run: |
           dir=$(mktemp -d)
-          find . -type f -iname \*.[1-9] -exec cp {} "$dir" \;
+          find subcommands -type f -iname \*.[1-9] -exec cp {} "$dir" \;
+          cp plakar.1 "$dir"
           cd "$dir"
           mandoc -Tlint -Wstyle -l *
           rm -rf "$dir"

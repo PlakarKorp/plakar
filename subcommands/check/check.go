@@ -121,7 +121,7 @@ func (cmd *Check) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 	}
 	defer checkCache.Close()
 
-	failures := false
+	var failures int
 	for _, arg := range snapshots {
 		snap, pathname, err := locate.OpenSnapshotByPath(repo, arg)
 		if err != nil {
@@ -130,23 +130,27 @@ func (cmd *Check) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 
 		snap.SetCheckCache(checkCache)
 
+		var failed bool
 		if !cmd.NoVerify && snap.Header.Identity.Identifier != uuid.Nil {
 			if ok, err := snap.Verify(); err != nil {
 				ctx.GetLogger().Warn("%s", err)
 			} else if !ok {
 				ctx.GetLogger().Info("snapshot %x signature verification failed", snap.Header.Identifier)
-				failures = true
+				failed = true
 			} else {
 				ctx.GetLogger().Info("snapshot %x signature verification succeeded", snap.Header.Identifier)
 			}
 		}
 
 		if err := snap.Check(pathname, opts); err != nil {
-			ctx.GetLogger().Warn("%s", err)
-			failures = true
+			ctx.GetLogger().Warn("check failed for snapshot %x: %s",
+				snap.Header.GetIndexID(), err)
+			failed = true
 		}
 
-		if !failures {
+		if failed {
+			failures++
+		} else {
 			ctx.GetLogger().Info("check: verification of %x:%s completed successfully",
 				snap.Header.GetIndexShortID(),
 				pathname)
@@ -155,8 +159,13 @@ func (cmd *Check) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 		snap.Close()
 	}
 
-	if failures {
-		return 1, fmt.Errorf("check failed")
+	if failures != 0 {
+		snapshots := "snapshots"
+		if failures == 1 {
+			snapshots = "snapshot"
+		}
+		return 1, fmt.Errorf("check failed for %d %s",
+			failures, snapshots)
 	}
 
 	return 0, nil

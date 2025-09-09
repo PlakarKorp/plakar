@@ -1,0 +1,41 @@
+.Dd July 11, 2025
+.Dt PLAKAR-PKG-SHOW 1
+.Os
+.Sh NAME
+.Nm plakar-pkg-show
+.Nd Show installed Plakar plugins
+.Sh SYNOPSIS
+.Nm plakar pkg show
+.Op Fl available
+.Op Fl long
+.Sh DESCRIPTION
+The
+.Nm plakar pkg show
+command shows the currently installed plugins.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl available
+Instead of installed packages,
+show the set of prebuilt packages available for this system.
+.It Fl long
+Show the full package name.
+.El
+.Sh FILES
+.Bl -tag -width Ds
+.It Pa ~/.cache/plakar/plugins/
+Plugin cache directory.
+Respects
+.Ev XDG_CACHE_HOME
+if set.
+.It Pa ~/.local/share/plakar/plugins
+Plugin directory.
+Respects
+.Ev XDG_DATA_HOME
+if set.
+.El
+.Sh SEE ALSO
+.Xr plakar-pkg-add 1 ,
+.Xr plakar-pkg-build 1 ,
+.Xr plakar-pkg-create 1 ,
+.Xr plakar-pkg-rm 1

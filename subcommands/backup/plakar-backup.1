@@ -8,6 +8,7 @@
 .Nm plakar backup
 .Op Fl concurrency Ar number
 .Op Fl disk-based Ar path
+.Op Fl force-timestamp Ar timestamp
 .Op Fl ignore Ar pattern
 .Op Fl ignore-file Ar file
 .Op Fl check
@@ -48,6 +49,10 @@ Otherwise
 can be used to disable the feature.
 directories in the backup.
 This option can be repeated.
+.It Fl force-timestamp Ar timestamp
+Specify a fixed timestamp (in ISO 8601 or relative human format) to use
+for the snapshot.
+Could be used to reimport an existing backup with the same timestamp.
 .It Fl ignore Ar pattern
 Specify individual gitignore exclusion patterns to ignore files or
 .It Fl ignore-file Ar file

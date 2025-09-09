@@ -292,6 +292,7 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 		var opt_json bool
 		var opt_ini bool
 		var opt_yaml bool
+		var opt_show_secrets bool
 		p := flag.NewFlagSet("show", flag.ExitOnError)
 		p.Usage = func() {
 			fmt.Fprintf(ctx.Stdout, "Usage: plakar %s %s [<name>...]\n", cmd, p.Name())
@@ -301,21 +302,49 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 		p.BoolVar(&opt_json, "json", false, "output in JSON format")
 		p.BoolVar(&opt_ini, "ini", false, "output in INI format")
 		p.BoolVar(&opt_yaml, "yaml", false, "output in YAML format (default)")
+		p.BoolVar(&opt_show_secrets, "secrets", false, "show secret values instead of ********")
 		p.Parse(args)
 
 		names := make([]string, 0)
-		if len(args) == 0 {
+		if len(p.Args()) == 0 {
 			for name := range cfgMap {
 				names = append(names, name)
 			}
 		} else {
 			names = p.Args()
 		}
+
 		for _, name := range names {
 			name = normalizeName(name)
 			if !hasFunc(name) {
 				fmt.Fprintf(ctx.Stderr, "%s %q does not exist\n", cmd, name)
 				continue
+			}
+
+			// sensitive
+			sensitive := []string{
+				"access_key",
+				"secret_access_key",
+				"passphrase",
+				"password",
+				"token",
+				"client_id",
+				"client_secret",
+				"auth_token",
+			}
+
+			if !opt_show_secrets {
+				keys := make([]string, 0, len(cfgMap[name]))
+				for k := range cfgMap[name] {
+					keys = append(keys, k)
+				}
+				for _, k := range keys {
+					for _, s := range sensitive {
+						if strings.EqualFold(k, s) || strings.HasSuffix(k, "_"+s) {
+							cfgMap[name][k] = "********"
+						}
+					}
+				}
 			}
 
 			var err error

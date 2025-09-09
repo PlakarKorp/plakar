@@ -58,13 +58,15 @@ func (cmd *Ls) Parse(ctx *appcontext.AppContext, args []string) error {
 
 	flags.Parse(args)
 
-	if flags.NArg() > 1 {
+	switch flags.NArg() {
+	case 0: // nothing
+	case 1:
+		cmd.Path = []string{flags.Arg(0)}
+	default:
 		return fmt.Errorf("too many arguments")
 	}
 
 	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.Path = flags.Arg(0)
-
 	return nil
 }
 
@@ -74,20 +76,20 @@ type Ls struct {
 	LocateOptions *locate.LocateOptions
 	Recursive     bool
 	DisplayUUID   bool
-	Path          string
+	Path          []string
 
 	ShowTags bool
 }
 
 func (cmd *Ls) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	if cmd.Path == "" {
+	if len(cmd.Path) == 0 {
 		if err := cmd.list_snapshots(ctx, repo); err != nil {
 			return 1, err
 		}
 		return 0, nil
 	}
 
-	if err := cmd.list_snapshot(ctx, repo, cmd.Path, cmd.Recursive); err != nil {
+	if err := cmd.list_snapshot(ctx, repo, cmd.Path[0], cmd.Recursive); err != nil {
 		return 1, err
 	}
 	return 0, nil

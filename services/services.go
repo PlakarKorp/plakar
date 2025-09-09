@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/PlakarKorp/plakar/appcontext"
+	//"github.com/santhosh-tekuri/jsonschema/v6"
 )
 
 const SERVICE_ENDPOINT = "https://api.plakar.io"
@@ -16,6 +17,8 @@ type ServiceConnector struct {
 	appCtx    *appcontext.AppContext
 	authToken string
 	endpoint  string
+
+	servicesList []ServiceDescription
 }
 
 func NewServiceConnector(ctx *appcontext.AppContext, authToken string) *ServiceConnector {
@@ -24,6 +27,89 @@ func NewServiceConnector(ctx *appcontext.AppContext, authToken string) *ServiceC
 		authToken: authToken,
 		endpoint:  SERVICE_ENDPOINT,
 	}
+}
+
+type ServiceDescription struct {
+	Name         string         `json:"name"`
+	DisplayName  string         `json:"display_name"`
+	ConfigSchema map[string]any `json:"config_schema"`
+}
+
+func (sd *ServiceDescription) ValidateConfig(value any) error {
+	// not working for now
+	// c := jsonschema.NewCompiler()
+	// if err := c.AddResource(sd.Name+".json", sd.ConfigSchema); err != nil {
+	// 	return err
+	// }
+	// schema, err := c.Compile(sd.Name + ".json")
+	// if err != nil {
+	// 	return err
+	// }
+	// if err := schema.Validate(value); err != nil {
+	// 	return err
+	// }
+	return nil
+}
+
+func (sc *ServiceConnector) getServicesList() ([]ServiceDescription, error) {
+	if sc.servicesList != nil {
+		return sc.servicesList, nil
+	}
+
+	url := fmt.Sprintf("%s%s", sc.endpoint, "/v1/account/services")
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %v", err)
+	}
+	req.Header.Set("User-Agent", fmt.Sprintf("%s (%s/%s)", sc.appCtx.Client, sc.appCtx.OperatingSystem, sc.appCtx.Architecture))
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Accept-Encoding", "gzip")
+	req.Header.Set("Accept-Charset", "utf-8")
+	if sc.authToken != "" {
+		req.Header.Set("Authorization", "Bearer "+sc.authToken)
+	}
+
+	httpClient := http.DefaultClient
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get service list: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to get service list: %s", resp.Status)
+	}
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %v", err)
+	}
+
+	var res []ServiceDescription
+	if err := json.Unmarshal(data, &res); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal response: %v", err)
+	}
+
+	sc.servicesList = res
+	return res, nil
+}
+
+func (sc *ServiceConnector) ValidateServiceConfiguration(name string, config any) error {
+	svcs, err := sc.getServicesList()
+	if err != nil {
+		return err
+	}
+	for _, svc := range svcs {
+		if svc.Name == name {
+			return svc.ValidateConfig(config)
+		}
+	}
+
+	return fmt.Errorf("service not found")
+}
+
+func (sc *ServiceConnector) GetServiceList() ([]ServiceDescription, error) {
+	return sc.getServicesList()
 }
 
 func (sc *ServiceConnector) GetServiceStatus(name string) (bool, error) {
@@ -155,6 +241,11 @@ func (sc *ServiceConnector) GetServiceConfiguration(name string) (map[string]str
 }
 
 func (sc *ServiceConnector) SetServiceConfiguration(name string, configuration map[string]string) error {
+
+	if err := sc.ValidateServiceConfiguration(name, configuration); err != nil {
+		return fmt.Errorf("invalid configuration: %w", err)
+	}
+
 	uri := fmt.Sprintf("/v1/account/services/%s/configuration", name)
 	url := fmt.Sprintf("%s%s", sc.endpoint, uri)
 

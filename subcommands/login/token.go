@@ -42,10 +42,9 @@ func (_ *Token) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags.Parse(args)
 
 	if flags.NArg() > 0 {
-		return fmt.Errorf("Too many arguments")
+		return fmt.Errorf("invalid argument: %s", flags.Arg(0))
 	}
-
-	return nil
+	return fmt.Errorf("no action specified")
 }
 
 func (cmd *Token) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {

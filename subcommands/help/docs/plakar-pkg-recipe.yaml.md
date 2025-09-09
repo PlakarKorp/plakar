@@ -42,4 +42,4 @@ plugin is as follows:
 
 plakar-pkg-build(1)
 
-Plakar - July 11, 2025 - PLAKAR-PKG-RECIPE.YAML(5)
+Plakar - July 11, 2025

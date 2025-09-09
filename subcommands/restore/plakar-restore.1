@@ -18,6 +18,7 @@
 .Op Fl concurrency Ar number
 .Op Fl quiet
 .Op Fl to Ar directory
+.Op Fl skip-permissions
 .Op Ar snapshotID : Ns Ar path ...
 .Sh DESCRIPTION
 The
@@ -60,7 +61,10 @@ Set the maximum number of parallel tasks for faster
 processing.
 Defaults to
 .Dv 8 * CPU count + 1 .
-.It Fl to Ar directory
+.It Fl skip-permissions
+Skip restoring file permissions and ownership during restore,
+defaulting to 0750 for directories and 0640 for files.
+It Fl to Ar directory
 Specify the base directory to which the files will be restored.
 If omitted, files are restored to the current working directory.
 .It Fl quiet

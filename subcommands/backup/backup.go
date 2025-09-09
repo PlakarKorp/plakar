@@ -22,8 +22,10 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/PlakarKorp/kloset/exclude"
+	"github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
@@ -100,11 +102,18 @@ func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags.BoolVar(&cmd.OptCheck, "check", false, "check the snapshot after creating it")
 	flags.Var(utils.NewOptsFlag(cmd.Opts), "o", "specify extra importer options")
 	flags.BoolVar(&cmd.DryRun, "scan", false, "do not actually perform a backup, just list the files")
+	flags.Var(locate.NewTimeFlag(&cmd.ForcedTimestamp), "force-timestamp", "force a timestamp")
 	//flags.BoolVar(&opt_stdio, "stdio", false, "output one line per file to stdout instead of the default interactive output")
 	flags.Parse(args)
 
 	if flags.NArg() > 1 {
 		return fmt.Errorf("Too many arguments")
+	}
+
+	if !cmd.ForcedTimestamp.IsZero() {
+		if cmd.ForcedTimestamp.After(time.Now()) {
+			return fmt.Errorf("forced timestamp cannot be in the future")
+		}
 	}
 
 	if cmd.OnDiskPackfilePath == "off" {
@@ -113,26 +122,18 @@ func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
 		cmd.OnDiskPackfilePath = os.TempDir()
 	}
 
-	for _, item := range opt_ignore {
-		excludes = append(excludes, item)
-	}
-
 	if opt_ignore_file != "" {
-		fp, err := os.Open(opt_ignore_file)
+		lines, err := LoadIgnoreFile(opt_ignore_file)
 		if err != nil {
-			return fmt.Errorf("unable to open excludes file: %w", err)
-		}
-		defer fp.Close()
-
-		scanner := bufio.NewScanner(fp)
-		for scanner.Scan() {
-			line := scanner.Text()
-			excludes = append(excludes, line)
-		}
-		if err := scanner.Err(); err != nil {
-			ctx.GetLogger().Error("%s", err)
 			return err
 		}
+		for _, line := range lines {
+			excludes = append(excludes, line)
+		}
+	}
+
+	for _, item := range opt_ignore {
+		excludes = append(excludes, item)
 	}
 
 	cmd.RepositorySecret = ctx.GetSecret()
@@ -161,6 +162,7 @@ type Backup struct {
 	Opts               map[string]string
 	DryRun             bool
 	OnDiskPackfilePath string
+	ForcedTimestamp    time.Time
 }
 
 func (cmd *Backup) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
@@ -174,6 +176,10 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		Name:           "default",
 		Tags:           cmd.Tags,
 		Excludes:       cmd.Excludes,
+	}
+
+	if !cmd.ForcedTimestamp.IsZero() {
+		opts.ForcedTimestamp = cmd.ForcedTimestamp
 	}
 
 	scanDir := "fs:" + ctx.CWD
@@ -294,6 +300,31 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		warning = fmt.Errorf("%d errors during backup", totalErrors)
 	}
 	return 0, nil, snap.Header.Identifier, warning
+}
+
+func LoadIgnoreFile(filename string) ([]string, error) {
+	fp, err := os.Open(filename)
+	if err != nil {
+		return nil, fmt.Errorf("unable to open excludes file: %w", err)
+	}
+	defer fp.Close()
+
+	var lines []string
+	scanner := bufio.NewScanner(fp)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "#") {
+			continue
+		}
+		if strings.Trim(line, " \t\r") == "" {
+			continue
+		}
+		lines = append(lines, line)
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	return lines, nil
 }
 
 func dryrun(ctx *appcontext.AppContext, imp importer.Importer, excludePatterns []string) error {

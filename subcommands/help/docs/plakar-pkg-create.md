@@ -24,9 +24,10 @@ or in subdirectories.
 
 # SEE ALSO
 
-plakar-pkg(1),
 plakar-pkg-add(1),
+plakar-pkg-build(1),
 plakar-pkg-rm(1),
+plakar-pkg-show(1),
 plakar-pkg-manifest.yaml(5)
 
-Plakar - July 11, 2025 - PLAKAR-PKG-CREATE(1)
+Plakar - July 11, 2025

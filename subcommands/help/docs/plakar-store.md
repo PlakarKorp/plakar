@@ -7,7 +7,7 @@ PLAKAR-STORE(1) - General Commands Manual
 # SYNOPSIS
 
 **plakar&nbsp;store**
-\[subcommand&nbsp;...]
+*subcommand&nbsp;...*
 
 # DESCRIPTION
 
@@ -83,10 +83,12 @@ The subcommands are as follows:
 > *name*.
 > Multiple option/value pairs can be specified.
 
-**show** \[name ...]
+**show** \[**-secrets**] \[name ...]
 
 > Display the current stores configuration.
-> This is the default if no subcommand is specified.
+> If
+> **-secrets**
+> is specified, sensitive information such as passwords or tokens will be shown.
 
 **unset** *name* \[option ...]
 
@@ -103,4 +105,4 @@ The **plakar-store** utility exits&#160;0 on success, and&#160;&gt;0 if an error
 
 plakar(1)
 
-Plakar - July 3, 2025 - PLAKAR-STORE(1)
+Plakar - July 3, 2025

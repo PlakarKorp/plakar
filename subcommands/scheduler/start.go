@@ -31,6 +31,7 @@ import (
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/scheduler"
+	"github.com/PlakarKorp/plakar/scheduler/configparser"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
 	"github.com/vmihailenco/msgpack/v5"
@@ -92,7 +93,7 @@ func (cmd *SchedulerStart) Parse(ctx *appcontext.AppContext, args []string) erro
 	if err != nil {
 		return fmt.Errorf("failed to read configuration file: %w", err)
 	}
-	_, err = scheduler.ParseConfigBytes(configBytes)
+	_, err = configparser.ParseConfigString(string(configBytes))
 	if err != nil {
 		return err
 	}
@@ -269,7 +270,7 @@ func startTasks() (int, error) {
 
 	// this needs to execute in the agent context, not the client context
 	schedulerContextSingleton.schedulerCtx = appcontext.NewAppContextFrom(schedulerContextSingleton.agentCtx)
-	go scheduler.NewScheduler(schedulerContextSingleton.schedulerCtx, schedulerContextSingleton.schedulerConfig).Run()
+	go scheduler.NewSchedulerService(schedulerContextSingleton.schedulerCtx, schedulerContextSingleton.schedulerConfig).Run()
 
 	schedulerContextSingleton.schedulerState = AGENT_SCHEDULER_RUNNING
 
@@ -281,7 +282,7 @@ func terminate() (int, error) {
 }
 
 func configureTasks(schedConfigBytes []byte) (int, error) {
-	schedConfig, err := scheduler.ParseConfigBytes(schedConfigBytes)
+	schedConfig, err := configparser.ParseConfigString(string(schedConfigBytes))
 	if err != nil {
 		return 1, err
 	}
@@ -292,7 +293,7 @@ func configureTasks(schedConfigBytes []byte) (int, error) {
 	if schedulerContextSingleton.schedulerCtx != nil {
 		schedulerContextSingleton.schedulerCtx.Cancel()
 		schedulerContextSingleton.schedulerCtx = appcontext.NewAppContextFrom(schedulerContextSingleton.agentCtx)
-		go scheduler.NewScheduler(schedulerContextSingleton.schedulerCtx, schedConfig).Run()
+		go scheduler.NewSchedulerService(schedulerContextSingleton.schedulerCtx, schedConfig).Run()
 	}
 
 	schedulerContextSingleton.schedulerConfig = schedConfig

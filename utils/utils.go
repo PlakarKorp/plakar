@@ -227,7 +227,7 @@ func GetPassphraseFromCommand(cmd string) (string, error) {
 	return pass, nil
 }
 
-func GetPassphraseConfirm(prefix string, minEntropyBits float64) ([]byte, error) {
+func GetPassphraseConfirm(prefix string, minEntropyBits float64, retry int) ([]byte, error) {
 	var in, out = os.Stdin, os.Stderr
 
 	// use the tty for I/O if possible
@@ -237,27 +237,44 @@ func GetPassphraseConfirm(prefix string, minEntropyBits float64) ([]byte, error)
 		defer tty.Close()
 	}
 
-	passphrase1, err := readpassphrase(in, out, prefix+" passphrase: ")
-	if err != nil {
-		return nil, err
+	var previous []byte
+	first := true // avoid matching emtpty lines
+
+	for range retry {
+
+		passphrase1, err := readpassphrase(in, out, prefix+" passphrase: ")
+		if err != nil {
+			return nil, err
+		}
+
+		if first || string(passphrase1) != string(previous) {
+			previous = passphrase1
+			first = false
+			// keepass considers < 80 bits as weak
+			err = passwordvalidator.Validate(string(passphrase1), minEntropyBits)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s\n", err)
+				continue
+			}
+		}
+		// reset our force-weak state past this point.
+		previous = nil
+		first = true
+
+		passphrase2, err := readpassphrase(in, out, prefix+" passphrase (confirm): ")
+		if err != nil {
+			return nil, err
+		}
+
+		if string(passphrase1) != string(passphrase2) {
+			fmt.Fprintf(os.Stderr, "passphrases mismatch\n")
+			continue
+		}
+
+		return passphrase1, nil
 	}
 
-	// keepass considers < 80 bits as weak
-	err = passwordvalidator.Validate(string(passphrase1), minEntropyBits)
-	if err != nil {
-		return nil, fmt.Errorf("passphrase is too weak: %s", err)
-	}
-
-	passphrase2, err := readpassphrase(in, out, prefix+" passphrase (confirm): ")
-	if err != nil {
-		return nil, err
-	}
-
-	if string(passphrase1) != string(passphrase2) {
-		return nil, errors.New("passphrases mismatch")
-	}
-
-	return passphrase1, nil
+	return nil, errors.New("too many failed attempts")
 }
 
 func GetCacheDir(appName string) (string, error) {
@@ -363,7 +380,7 @@ func GetDataDir(appName string) (string, error) {
 }
 
 var VERSION = func() string {
-	version := "v1.0.3-devel"
+	version := "v1.0.5-devel"
 	if info, ok := debug.ReadBuildInfo(); ok {
 		for _, setting := range info.Settings {
 			if setting.Key == "vcs.revision" {

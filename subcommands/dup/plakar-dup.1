@@ -1,0 +1,31 @@
+.Dd July 3, 2025
+.Dt PLAKAR-DUP 1
+.Os
+.Sh NAME
+.Nm plakar-dup
+.Nd Duplicates an existing snapshot with a different ID
+.Sh SYNOPSIS
+.Nm plakar dup
+.Sh DESCRIPTION
+The
+.Nm plakar dup
+command creates a duplicate of an existing snapshot
+with a new snapshot ID.
+The new snapshot is an exact copy of the original,
+including all files and metadata.
+.Sh EXAMPLES
+Create a duplicate of a snapshot with ID "abc123":
+.Bd -literal -offset indent
+$ plakar dup abc123
+.Ed
+.Sh DIAGNOSTICS
+.Ex -std
+.Bl -tag -width Ds
+.It 0
+Command completed successfully.
+.It >0
+An error occurred, such as failure to retrieve existing snapshot or
+invalid snapshot ID.
+.El
+.Sh SEE ALSO
+.Xr plakar 1

@@ -23,23 +23,13 @@
 
 ## ⚙️ Requirement
 
-`plakar` requires Go 1.23.3 or higher,
+`plakar` requires Go 1.24.0 or higher,
 it may work on older versions but hasn't been tested.
 
 On systems that package older versions,
 such as Debian or Ubuntu,
-it is preferable to install the latest version from the official website:
+it is preferable to install the latest version from the [official website](https://go.dev/doc/install).
 
-```sh
-# Remove old version
-sudo apt remove golang-go
-
-# Install latest Go
-wget https://go.dev/dl/go1.23.4.linux-amd64.tar.gz
-sudo rm -rf /usr/local/go
-sudo tar -C /usr/local -xzf go1.23.4.linux-amd64.tar.gz
-export PATH=$PATH:/usr/local/go/bin
-```
 
 ## 📦 Installing the CLI
 

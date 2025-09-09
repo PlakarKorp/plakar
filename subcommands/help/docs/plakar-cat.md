@@ -60,4 +60,4 @@ The **plakar-cat** utility exits&#160;0 on success, and&#160;&gt;0 if an error o
 plakar(1),
 plakar-backup(1)
 
-Plakar - August 6, 2025 - PLAKAR-CAT(1)
+Plakar - August 6, 2025

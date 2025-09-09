@@ -367,7 +367,10 @@ func TestExecuteCmdDiagObject(t *testing.T) {
 
 	output = bufOut.String()
 	require.Contains(t, output, "object: ")
-	require.Contains(t, output, "type: text/plain; charset=utf-8")
+	if !strings.Contains(output, "type: text/plain; charset=utf-8") &&
+		!strings.Contains(output, "type: application/octet-stream") {
+		t.Error("nor a file nor a dirpack entry")
+	}
 	require.Contains(t, output, "chunks:")
 }
 

@@ -9,8 +9,9 @@ PLAKAR-BACKUP(1) - General Commands Manual
 **plakar&nbsp;backup**
 \[**-concurrency**&nbsp;*number*]
 \[**-disk-based**&nbsp;*path*]
-\[**-exclude**&nbsp;*pattern*]
-\[**-exclude-file**&nbsp;*file*]
+\[**-force-timestamp**&nbsp;*timestamp*]
+\[**-ignore**&nbsp;*pattern*]
+\[**-ignore-file**&nbsp;*file*]
 \[**-check**]
 \[**-o**&nbsp;*option*]
 \[**-quiet**]
@@ -26,7 +27,7 @@ The
 command creates a new snapshot of
 *place*,
 or the current directory.
-Snapshots can be filtered to exclude specific files or directories
+Snapshots can be filtered to ignore specific files or directories
 based on patterns provided through options.
 
 *place*
@@ -52,16 +53,22 @@ The options are as follows:
 > Otherwise
 > 'off'
 > can be used to disable the feature.
-
-**-exclude** *pattern*
-
-> Specify individual glob exclusion patterns to ignore files or
 > directories in the backup.
 > This option can be repeated.
 
-**-exclude-file** *file*
+**-force-timestamp** *timestamp*
 
-> Specify a file containing glob exclusion patterns, one per line, to
+> Specify a fixed timestamp (in ISO 8601 or relative human format) to use
+> for the snapshot.
+> Could be used to reimport an existing backup with the same timestamp.
+
+**-ignore** *pattern*
+
+> Specify individual gitignore exclusion patterns to ignore files or
+
+**-ignore-file** *file*
+
+> Specify a file containing gitignore exclusion patterns, one per line, to
 > ignore files or directories in the backup.
 
 **-check**
@@ -102,11 +109,11 @@ Create a snapshot of the current directory with two tags:
 
 Backup a specific directory with exclusion patterns from a file:
 
-	$ plakar backup -exclude-file ~/my-excludes-file /var/www
+	$ plakar backup -ignore-file ~/my-ignore-file /var/www
 
 Backup a directory with specific file exclusions:
 
-	$ plakar backup -exclude "*.tmp" -exclude "*.log" /var/www
+	$ plakar backup -ignore "*.tmp" -ignore "*.log" /var/www
 
 # DIAGNOSTICS
 
@@ -130,4 +137,4 @@ The **plakar-backup** utility exits&#160;0 on success, and&#160;&gt;0 if an erro
 plakar(1),
 plakar-source(1)
 
-Plakar - July 3, 2025 - PLAKAR-BACKUP(1)
+Plakar - July 3, 2025

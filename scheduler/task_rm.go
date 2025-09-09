@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/PlakarKorp/kloset/events"
-	"github.com/PlakarKorp/plakar/locate"
+	"github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/plakar/subcommands/rm"
 )
 
@@ -23,8 +23,8 @@ func (task *RmTask) Run(ctx *TaskContext) {
 	if task.Cmd.LocateOptions == nil {
 		task.Cmd.LocateOptions = locate.NewDefaultLocateOptions()
 	}
-	task.Cmd.LocateOptions.Job = ctx.JobName
-	task.Cmd.LocateOptions.Before = time.Now().Add(-task.Retention)
+	task.Cmd.LocateOptions.Filters.Job = ctx.JobName
+	task.Cmd.LocateOptions.Filters.Before = time.Now().Add(-task.Retention)
 
 	if retval, err := task.Cmd.Execute(ctx.AppContext, ctx.Repository); err != nil || retval != 0 {
 		ctx.GetLogger().Error("Error removing snapshots: %s", err)
