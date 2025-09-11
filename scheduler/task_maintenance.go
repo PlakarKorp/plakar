@@ -1,15 +1,12 @@
 package scheduler
 
 import (
-	"time"
-
 	"github.com/PlakarKorp/kloset/events"
 	"github.com/PlakarKorp/plakar/subcommands/maintenance"
 )
 
 type MaintenanceTask struct {
 	TaskBase
-	Retention time.Duration
 	Cmd       maintenance.Maintenance
 }
 
@@ -25,10 +22,6 @@ func (task *MaintenanceTask) Run(ctx *TaskContext) {
 		return
 	}
 	ctx.GetLogger().Info("maintenance of repository %s succeeded", task.Repository)
-
-	if task.Retention != 0 {
-		runRmTask(ctx, task.Repository, task.Retention)
-	}
 }
 
 func (task MaintenanceTask) Event(ctx *TaskContext, event events.Event) {

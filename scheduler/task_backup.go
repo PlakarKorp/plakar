@@ -2,7 +2,6 @@ package scheduler
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/PlakarKorp/kloset/events"
 	"github.com/PlakarKorp/plakar/subcommands/backup"
@@ -10,8 +9,9 @@ import (
 
 type BackupTask struct {
 	TaskBase
-	Retention time.Duration
-	Cmd       backup.Backup
+	IgnoreFile string
+	Ignore     []string
+	Cmd        backup.Backup
 }
 
 func (task *BackupTask) Base() *TaskBase {
@@ -21,15 +21,27 @@ func (task *BackupTask) Base() *TaskBase {
 func (task *BackupTask) Run(ctx *TaskContext) {
 	task.Cmd.Job = ctx.JobName
 
+	var excludes []string
+	if task.IgnoreFile != "" {
+		lines, err := backup.LoadIgnoreFile(task.IgnoreFile)
+		if err != nil {
+			ctx.GetLogger().Error("Failed to load ignore file: %s", err)
+			ctx.ReportFailure("Failed to load ignore file: %s", err)
+			return
+		}
+		for _, line := range lines {
+			excludes = append(excludes, line)
+		}
+	}
+	for _, line := range task.Ignore {
+		excludes = append(excludes, line)
+	}
+	task.Cmd.Excludes = excludes
+
 	retval, err := task.Cmd.Execute(ctx.AppContext, ctx.Repository)
 	if err != nil || retval != 0 {
 		ctx.GetLogger().Error("Error creating backup: %s", err)
 		ctx.ReportFailure("Error creating backup: retval=%d, err=%s", retval, err)
-		return
-	}
-
-	if task.Retention != 0 {
-		runRmTask(ctx, task.Repository, task.Retention)
 	}
 }
 

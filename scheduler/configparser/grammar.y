@@ -102,7 +102,7 @@ task:
   }
 | MAINTENANCE ON repository {
     Parser(yylex).MakeMaintenanceTask($3)
-  } maintenance_opts { $$ = Parser(yylex).currentTask }
+  } { $$ = Parser(yylex).currentTask }
 | RESTORE repository TO destination {
     $$ = Parser(yylex).MakeRestoreTask($2, $4)
   }
@@ -144,10 +144,6 @@ backup_opt:
     task := Parser(yylex).currentTask.(*scheduler.BackupTask)
     task.Cmd.Excludes = append(task.Cmd.Excludes, $2)
   }
-| RETENTION duration {
-    task := Parser(yylex).currentTask.(*scheduler.BackupTask)
-    task.Retention = $2
-  }
 ;
 
 maintenance_opts:
@@ -155,10 +151,6 @@ maintenance_opts:
 ;
 
 maintenance_opt:
-  RETENTION duration {
-    task := Parser(yylex).currentTask.(*scheduler.MaintenanceTask)
-    task.Retention = $2
-  }
 ;
 
 sync_direction:

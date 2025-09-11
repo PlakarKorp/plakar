@@ -79,79 +79,79 @@ const (
 	yyErrCode   = 57345
 
 	yyMaxDepth = 200
-	yyTabOfs   = -56
+	yyTabOfs   = -55
 )
 
 var (
 	yyPrec = map[int]int{}
 
 	yyXLAT = map[int]int{
-		57370: 0,  // AT (41x)
-		57371: 1,  // EVERY (41x)
+		57370: 0,  // AT (37x)
+		57371: 1,  // EVERY (37x)
 		57344: 2,  // $end (26x)
 		57358: 3,  // JOB (26x)
 		57346: 4,  // REPORTING (26x)
-		57364: 5,  // RETENTION (17x)
-		57374: 6,  // STRING (15x)
-		57347: 7,  // ON (13x)
-		57363: 8,  // EXCLUDE (12x)
-		57359: 9,  // TAG (12x)
-		44:    10, // ',' (11x)
-		57375: 11, // REFERENCE (11x)
-		57366: 12, // TO (7x)
-		57397: 13, // repository (6x)
-		57365: 14, // FROM (5x)
-		57372: 15, // UNTIL (5x)
-		57379: 16, // TIME (4x)
-		57408: 17, // time (4x)
-		57378: 18, // DURATION (3x)
-		57388: 19, // duration (3x)
-		57367: 20, // WITH (3x)
-		57398: 21, // schedule (2x)
-		57401: 22, // schedule_time (2x)
-		57380: 23, // WEEKDAY (2x)
-		57411: 24, // weekday (2x)
-		57382: 25, // $@1 (1x)
-		57383: 26, // $@2 (1x)
-		57349: 27, // BACKUP (1x)
-		57385: 28, // backup_opt (1x)
-		57386: 29, // backup_opts (1x)
-		57350: 30, // CHECK (1x)
-		57387: 31, // destination (1x)
-		57389: 32, // from_time (1x)
-		57390: 33, // grammar (1x)
-		57391: 34, // job (1x)
-		57353: 35, // MAINTENANCE (1x)
-		57392: 36, // maintenance_opt (1x)
-		57393: 37, // maintenance_opts (1x)
-		57348: 38, // OFF (1x)
-		57395: 39, // on_off (1x)
-		57396: 40, // reporting (1x)
-		57351: 41, // RESTORE (1x)
-		57399: 42, // schedule_days (1x)
-		57400: 43, // schedule_list (1x)
-		57403: 44, // source (1x)
-		57405: 45, // string_list (1x)
-		57352: 46, // SYNC (1x)
-		57406: 47, // sync_direction (1x)
-		57407: 48, // task (1x)
-		57409: 49, // time_list (1x)
-		57410: 50, // until_time (1x)
-		57412: 51, // weekday_list (1x)
-		57384: 52, // $default (0x)
-		57368: 53, // AND (0x)
-		57361: 54, // BEFORE (0x)
-		57355: 55, // CATEGORY (0x)
-		57369: 56, // DAY (0x)
-		57356: 57, // ENVIRONMENT (0x)
-		57376: 58, // ERROR (0x)
-		57345: 59, // error (0x)
-		57373: 60, // INTEGER (0x)
-		57360: 61, // LATEST (0x)
+		57374: 5,  // STRING (15x)
+		57347: 6,  // ON (13x)
+		44:    7,  // ',' (11x)
+		57375: 8,  // REFERENCE (11x)
+		57363: 9,  // EXCLUDE (10x)
+		57359: 10, // TAG (10x)
+		57366: 11, // TO (7x)
+		57397: 12, // repository (6x)
+		57365: 13, // FROM (5x)
+		57372: 14, // UNTIL (5x)
+		57379: 15, // TIME (4x)
+		57408: 16, // time (4x)
+		57367: 17, // WITH (3x)
+		57398: 18, // schedule (2x)
+		57401: 19, // schedule_time (2x)
+		57380: 20, // WEEKDAY (2x)
+		57411: 21, // weekday (2x)
+		57382: 22, // $@1 (1x)
+		57383: 23, // $@2 (1x)
+		57349: 24, // BACKUP (1x)
+		57385: 25, // backup_opt (1x)
+		57386: 26, // backup_opts (1x)
+		57350: 27, // CHECK (1x)
+		57387: 28, // destination (1x)
+		57388: 29, // duration (1x)
+		57378: 30, // DURATION (1x)
+		57389: 31, // from_time (1x)
+		57390: 32, // grammar (1x)
+		57391: 33, // job (1x)
+		57353: 34, // MAINTENANCE (1x)
+		57348: 35, // OFF (1x)
+		57395: 36, // on_off (1x)
+		57396: 37, // reporting (1x)
+		57351: 38, // RESTORE (1x)
+		57399: 39, // schedule_days (1x)
+		57400: 40, // schedule_list (1x)
+		57403: 41, // source (1x)
+		57405: 42, // string_list (1x)
+		57352: 43, // SYNC (1x)
+		57406: 44, // sync_direction (1x)
+		57407: 45, // task (1x)
+		57409: 46, // time_list (1x)
+		57410: 47, // until_time (1x)
+		57412: 48, // weekday_list (1x)
+		57384: 49, // $default (0x)
+		57368: 50, // AND (0x)
+		57361: 51, // BEFORE (0x)
+		57355: 52, // CATEGORY (0x)
+		57369: 53, // DAY (0x)
+		57356: 54, // ENVIRONMENT (0x)
+		57345: 55, // error (0x)
+		57376: 56, // ERROR (0x)
+		57373: 57, // INTEGER (0x)
+		57360: 58, // LATEST (0x)
+		57392: 59, // maintenance_opt (0x)
+		57393: 60, // maintenance_opts (0x)
+		57381: 61, // MONTH (0x)
 		57394: 62, // month (0x)
-		57381: 63, // MONTH (0x)
-		57354: 64, // NAME (0x)
-		57357: 65, // PERIMETER (0x)
+		57354: 63, // NAME (0x)
+		57357: 64, // PERIMETER (0x)
+		57364: 65, // RETENTION (0x)
 		57362: 66, // SINCE (0x)
 		57402: 67, // size (0x)
 		57377: 68, // SIZE (0x)
@@ -164,21 +164,18 @@ var (
 		"$end",
 		"JOB",
 		"REPORTING",
-		"RETENTION",
 		"STRING",
 		"ON",
-		"EXCLUDE",
-		"TAG",
 		"','",
 		"REFERENCE",
+		"EXCLUDE",
+		"TAG",
 		"TO",
 		"repository",
 		"FROM",
 		"UNTIL",
 		"TIME",
 		"time",
-		"DURATION",
-		"duration",
 		"WITH",
 		"schedule",
 		"schedule_time",
@@ -191,12 +188,12 @@ var (
 		"backup_opts",
 		"CHECK",
 		"destination",
+		"duration",
+		"DURATION",
 		"from_time",
 		"grammar",
 		"job",
 		"MAINTENANCE",
-		"maintenance_opt",
-		"maintenance_opts",
 		"OFF",
 		"on_off",
 		"reporting",
@@ -217,14 +214,17 @@ var (
 		"CATEGORY",
 		"DAY",
 		"ENVIRONMENT",
-		"ERROR",
 		"error",
+		"ERROR",
 		"INTEGER",
 		"LATEST",
-		"month",
+		"maintenance_opt",
+		"maintenance_opts",
 		"MONTH",
+		"month",
 		"NAME",
 		"PERIMETER",
+		"RETENTION",
 		"SINCE",
 		"size",
 		"SIZE",
@@ -235,160 +235,152 @@ var (
 
 	yyReductions = map[int]struct{ xsym, components int }{
 		0:  {0, 1},
-		1:  {33, 0},
-		2:  {33, 2},
-		3:  {33, 2},
-		4:  {40, 2},
-		5:  {34, 4},
-		6:  {25, 0},
-		7:  {48, 6},
-		8:  {48, 2},
-		9:  {26, 0},
-		10: {48, 5},
-		11: {48, 4},
-		12: {48, 4},
-		13: {44, 1},
-		14: {44, 1},
+		1:  {32, 0},
+		2:  {32, 2},
+		3:  {32, 2},
+		4:  {37, 2},
+		5:  {33, 4},
+		6:  {22, 0},
+		7:  {45, 6},
+		8:  {45, 2},
+		9:  {23, 0},
+		10: {45, 4},
+		11: {45, 4},
+		12: {45, 4},
+		13: {41, 1},
+		14: {41, 1},
 		15: {69, 1},
 		16: {69, 2},
-		17: {31, 1},
-		18: {31, 1},
-		19: {13, 1},
-		20: {13, 1},
-		21: {29, 0},
-		22: {29, 2},
-		23: {28, 2},
-		24: {28, 2},
-		25: {28, 2},
-		26: {37, 0},
-		27: {37, 2},
-		28: {36, 2},
-		29: {47, 1},
-		30: {47, 1},
-		31: {47, 1},
-		32: {43, 1},
-		33: {43, 2},
-		34: {21, 2},
-		35: {22, 2},
-		36: {22, 4},
-		37: {32, 0},
-		38: {32, 2},
-		39: {50, 0},
-		40: {50, 2},
-		41: {42, 0},
-		42: {42, 2},
-		43: {51, 1},
-		44: {51, 3},
-		45: {49, 1},
-		46: {49, 3},
-		47: {45, 1},
-		48: {45, 3},
-		49: {67, 1},
-		50: {19, 1},
-		51: {17, 1},
-		52: {24, 1},
-		53: {62, 1},
-		54: {39, 1},
-		55: {39, 1},
+		17: {28, 1},
+		18: {28, 1},
+		19: {12, 1},
+		20: {12, 1},
+		21: {26, 0},
+		22: {26, 2},
+		23: {25, 2},
+		24: {25, 2},
+		25: {60, 0},
+		26: {60, 2},
+		27: {59, 0},
+		28: {44, 1},
+		29: {44, 1},
+		30: {44, 1},
+		31: {40, 1},
+		32: {40, 2},
+		33: {18, 2},
+		34: {19, 2},
+		35: {19, 4},
+		36: {31, 0},
+		37: {31, 2},
+		38: {47, 0},
+		39: {47, 2},
+		40: {39, 0},
+		41: {39, 2},
+		42: {48, 1},
+		43: {48, 3},
+		44: {46, 1},
+		45: {46, 3},
+		46: {42, 1},
+		47: {42, 3},
+		48: {67, 1},
+		49: {29, 1},
+		50: {16, 1},
+		51: {21, 1},
+		52: {62, 1},
+		53: {36, 1},
+		54: {36, 1},
 	}
 
 	yyXErrors = map[yyXError]string{}
 
-	yyParseTab = [80][]uint16{
+	yyParseTab = [74][]uint16{
 		// 0
-		{2: 55, 55, 55, 33: 57},
-		{2: 56, 61, 60, 34: 59, 40: 58},
-		{2: 54, 54, 54},
+		{2: 54, 54, 54, 32: 56},
+		{2: 55, 60, 59, 33: 58, 37: 57},
 		{2: 53, 53, 53},
-		{7: 134, 38: 135, 133},
-		// 5
-		{6: 62},
-		{27: 64, 30: 65, 35: 66, 41: 67, 46: 68, 48: 63},
-		{111, 112, 21: 109, 110, 43: 108},
-		{6: 92, 11: 93, 44: 91},
-		{6: 70, 11: 71, 13: 90},
-		// 10
-		{7: 82},
-		{6: 70, 11: 71, 13: 77},
-		{6: 70, 11: 71, 13: 69},
-		{12: 73, 14: 74, 20: 75, 47: 72},
-		{37, 37, 5: 37, 8: 37, 37, 12: 37, 14: 37, 20: 37},
-		// 15
-		{36, 36, 5: 36, 8: 36, 36, 12: 36, 14: 36, 20: 36},
-		{6: 70, 11: 71, 13: 76},
-		{6: 27, 11: 27},
-		{6: 26, 11: 26},
-		{6: 25, 11: 25},
-		// 20
-		{44, 44},
-		{12: 78},
-		{6: 80, 11: 81, 31: 79},
-		{45, 45},
-		{39, 39},
-		// 25
-		{38, 38},
-		{6: 70, 11: 71, 13: 83},
-		{47, 47, 5: 47, 26: 84},
-		{30, 30, 5: 30, 37: 85},
-		{46, 46, 5: 87, 36: 86},
-		// 30
-		{29, 29, 5: 29},
-		{18: 89, 88},
-		{28, 28, 5: 28},
-		{6, 6, 6, 6, 6, 6, 7: 6, 6, 6, 14: 6, 6},
-		{48, 48},
-		// 35
-		{12: 94},
-		{12: 43},
-		{12: 42},
-		{6: 70, 11: 71, 13: 95},
-		{50, 50, 5: 50, 8: 50, 50, 25: 96},
-		// 40
-		{35, 35, 5: 35, 8: 35, 35, 29: 97},
-		{49, 49, 5: 101, 8: 100, 99, 28: 98},
-		{34, 34, 5: 34, 8: 34, 34},
-		{6: 105, 45: 104},
-		{6: 103},
-		// 45
-		{18: 89, 102},
-		{31, 31, 5: 31, 8: 31, 31},
-		{32, 32, 5: 32, 8: 32, 32},
-		{33, 33, 5: 33, 8: 33, 33, 106},
-		{9, 9, 5: 9, 8: 9, 9, 9},
-		// 50
-		{6: 107},
-		{8, 8, 5: 8, 8: 8, 8, 8},
-		{111, 112, 51, 51, 51, 21: 132, 110},
-		{24, 24, 24, 24, 24},
-		{15, 15, 15, 15, 15, 7: 126, 42: 125},
-		// 55
-		{16: 117, 122, 49: 121},
-		{18: 89, 113},
-		{19, 19, 19, 19, 19, 7: 19, 14: 115, 19, 32: 114},
-		{17, 17, 17, 17, 17, 7: 17, 15: 119, 50: 118},
-		{16: 117, 116},
-		// 60
-		{18, 18, 18, 18, 18, 7: 18, 15: 18},
-		{5, 5, 5, 5, 5, 7: 5, 10: 5, 15: 5},
-		{20, 20, 20, 20, 20, 7: 20},
-		{16: 117, 120},
-		{16, 16, 16, 16, 16, 7: 16},
-		// 65
-		{21, 21, 21, 21, 21, 7: 21, 10: 123},
-		{11, 11, 11, 11, 11, 7: 11, 10: 11},
-		{16: 117, 124},
-		{10, 10, 10, 10, 10, 7: 10, 10: 10},
-		{22, 22, 22, 22, 22},
-		// 70
-		{23: 129, 128, 51: 127},
-		{14, 14, 14, 14, 14, 10: 130},
-		{13, 13, 13, 13, 13, 10: 13},
-		{4, 4, 4, 4, 4, 10: 4},
-		{23: 129, 131},
-		// 75
-		{12, 12, 12, 12, 12, 10: 12},
-		{23, 23, 23, 23, 23},
 		{2: 52, 52, 52},
+		{6: 127, 35: 128, 126},
+		// 5
+		{5: 61},
+		{24: 63, 27: 64, 34: 65, 38: 66, 43: 67, 45: 62},
+		{103, 104, 18: 101, 102, 40: 100},
+		{5: 86, 8: 87, 41: 85},
+		{5: 69, 8: 70, 12: 84},
+		// 10
+		{6: 81},
+		{5: 69, 8: 70, 12: 76},
+		{5: 69, 8: 70, 12: 68},
+		{11: 72, 13: 73, 17: 74, 44: 71},
+		{36, 36, 9: 36, 36, 36, 13: 36, 17: 36},
+		// 15
+		{35, 35, 9: 35, 35, 35, 13: 35, 17: 35},
+		{5: 69, 8: 70, 12: 75},
+		{5: 27, 8: 27},
+		{5: 26, 8: 26},
+		{5: 25, 8: 25},
+		// 20
+		{43, 43},
+		{11: 77},
+		{5: 79, 8: 80, 28: 78},
+		{44, 44},
+		{38, 38},
+		// 25
+		{37, 37},
+		{5: 69, 8: 70, 12: 82},
+		{46, 46, 23: 83},
+		{45, 45},
+		{47, 47},
+		// 30
+		{11: 88},
+		{11: 42},
+		{11: 41},
+		{5: 69, 8: 70, 12: 89},
+		{49, 49, 9: 49, 49, 22: 90},
+		// 35
+		{34, 34, 9: 34, 34, 26: 91},
+		{48, 48, 9: 94, 93, 25: 92},
+		{33, 33, 9: 33, 33},
+		{5: 97, 42: 96},
+		{5: 95},
+		// 40
+		{31, 31, 9: 31, 31},
+		{32, 32, 7: 98, 9: 32, 32},
+		{9, 9, 7: 9, 9: 9, 9},
+		{5: 99},
+		{8, 8, 7: 8, 9: 8, 8},
+		// 45
+		{103, 104, 50, 50, 50, 18: 125, 102},
+		{24, 24, 24, 24, 24},
+		{15, 15, 15, 15, 15, 6: 119, 39: 118},
+		{15: 110, 115, 46: 114},
+		{29: 105, 106},
+		// 50
+		{19, 19, 19, 19, 19, 6: 19, 13: 108, 19, 31: 107},
+		{6, 6, 6, 6, 6, 6: 6, 13: 6, 6},
+		{17, 17, 17, 17, 17, 6: 17, 14: 112, 47: 111},
+		{15: 110, 109},
+		{18, 18, 18, 18, 18, 6: 18, 14: 18},
+		// 55
+		{5, 5, 5, 5, 5, 6: 5, 5, 14: 5},
+		{20, 20, 20, 20, 20, 6: 20},
+		{15: 110, 113},
+		{16, 16, 16, 16, 16, 6: 16},
+		{21, 21, 21, 21, 21, 6: 21, 116},
+		// 60
+		{11, 11, 11, 11, 11, 6: 11, 11},
+		{15: 110, 117},
+		{10, 10, 10, 10, 10, 6: 10, 10},
+		{22, 22, 22, 22, 22},
+		{20: 122, 121, 48: 120},
+		// 65
+		{14, 14, 14, 14, 14, 7: 123},
+		{13, 13, 13, 13, 13, 7: 13},
+		{4, 4, 4, 4, 4, 7: 4},
+		{20: 122, 124},
+		{12, 12, 12, 12, 12, 7: 12},
+		// 70
+		{23, 23, 23, 23, 23},
+		{2: 51, 51, 51},
 		{2: 2, 2, 2},
 		{2: 1, 1, 1},
 	}
@@ -431,7 +423,7 @@ func yylex1(yylex yyLexer, lval *yySymType) (n int) {
 }
 
 func yyParse(yylex yyLexer) int {
-	const yyError = 59
+	const yyError = 55
 
 	yyEx, _ := yylex.(yyLexerEx)
 	var yyn int
@@ -701,121 +693,111 @@ yynewstate:
 			task := Parser(yylex).currentTask.(*scheduler.BackupTask)
 			task.Cmd.Excludes = append(task.Cmd.Excludes, yyS[yypt-0].s)
 		}
-	case 25:
-		{
-			task := Parser(yylex).currentTask.(*scheduler.BackupTask)
-			task.Retention = yyS[yypt-0].duration
-		}
 	case 28:
-		{
-			task := Parser(yylex).currentTask.(*scheduler.MaintenanceTask)
-			task.Retention = yyS[yypt-0].duration
-		}
-	case 29:
 		{
 			yyVAL.s = "to"
 		}
-	case 30:
+	case 29:
 		{
 			yyVAL.s = "from"
 		}
-	case 31:
+	case 30:
 		{
 			yyVAL.s = "with"
 		}
-	case 32:
+	case 31:
 		{
 			yyVAL.schedules = append(yyVAL.schedules, yyS[yypt-0].schedule)
 		}
-	case 33:
+	case 32:
 		{
 			yyVAL.schedules = append(yyS[yypt-1].schedules, yyS[yypt-0].schedule)
 		}
-	case 34:
+	case 33:
 		{
 			yyVAL.schedule = yyS[yypt-1].schedule.WithDateMask(yyS[yypt-0].datemask)
 		}
-	case 35:
+	case 34:
 		{
 			yyVAL.schedule = Parser(yylex).MakeScheduleAt(yyS[yypt-0].times)
 		}
-	case 36:
+	case 35:
 		{
 			yyVAL.schedule = Parser(yylex).MakeScheduleEvery(yyS[yypt-2].duration, yyS[yypt-1].time, yyS[yypt-0].time)
 		}
-	case 37:
+	case 36:
 		{
 			yyVAL.time = scheduler.UndefinedTime
+		}
+	case 37:
+		{
+			yyVAL.time = yyS[yypt-0].time
 		}
 	case 38:
 		{
-			yyVAL.time = yyS[yypt-0].time
+			yyVAL.time = scheduler.UndefinedTime
 		}
 	case 39:
 		{
-			yyVAL.time = scheduler.UndefinedTime
+			yyVAL.time = yyS[yypt-0].time
 		}
 	case 40:
 		{
-			yyVAL.time = yyS[yypt-0].time
+			yyVAL.datemask = scheduler.EveryDay
 		}
 	case 41:
 		{
-			yyVAL.datemask = scheduler.EveryDay
+			yyVAL.datemask = scheduler.EveryDay.SetWeekdayMask(yyS[yypt-0].datemask)
 		}
 	case 42:
 		{
-			yyVAL.datemask = scheduler.EveryDay.SetWeekdayMask(yyS[yypt-0].datemask)
+			yyVAL.datemask = yyS[yypt-0].datemask
 		}
 	case 43:
 		{
-			yyVAL.datemask = yyS[yypt-0].datemask
+			yyVAL.datemask = yyS[yypt-2].datemask | yyS[yypt-0].datemask
 		}
 	case 44:
 		{
-			yyVAL.datemask = yyS[yypt-2].datemask | yyS[yypt-0].datemask
+			yyVAL.times = append(make([]scheduler.Time, 0, 1), yyS[yypt-0].time)
 		}
 	case 45:
 		{
-			yyVAL.times = append(make([]scheduler.Time, 0, 1), yyS[yypt-0].time)
+			yyVAL.times = append(yyS[yypt-2].times, yyS[yypt-0].time)
 		}
 	case 46:
 		{
-			yyVAL.times = append(yyS[yypt-2].times, yyS[yypt-0].time)
+			yyVAL.strings = append(make([]string, 0, 1), yyS[yypt-0].s)
 		}
 	case 47:
 		{
-			yyVAL.strings = append(make([]string, 0, 1), yyS[yypt-0].s)
+			yyVAL.strings = append(yyS[yypt-2].strings, yyS[yypt-0].s)
 		}
 	case 48:
 		{
-			yyVAL.strings = append(yyS[yypt-2].strings, yyS[yypt-0].s)
+			yyVAL.size = yyS[yypt-0].size
 		}
 	case 49:
 		{
-			yyVAL.size = yyS[yypt-0].size
+			yyVAL.duration = yyS[yypt-0].duration
 		}
 	case 50:
 		{
-			yyVAL.duration = yyS[yypt-0].duration
+			yyVAL.time = yyS[yypt-0].time
 		}
 	case 51:
 		{
-			yyVAL.time = yyS[yypt-0].time
+			yyVAL.datemask = yyS[yypt-0].datemask
 		}
 	case 52:
 		{
-			yyVAL.datemask = yyS[yypt-0].datemask
+			yyVAL.month = yyS[yypt-0].month
 		}
 	case 53:
 		{
-			yyVAL.month = yyS[yypt-0].month
-		}
-	case 54:
-		{
 			yyVAL.b = true
 		}
-	case 55:
+	case 54:
 		{
 			yyVAL.b = false
 		}
