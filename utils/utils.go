@@ -29,7 +29,6 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
-	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -381,14 +380,6 @@ func GetDataDir(appName string) (string, error) {
 
 var VERSION = func() string {
 	version := "v1.0.4"
-	if info, ok := debug.ReadBuildInfo(); ok {
-		for _, setting := range info.Settings {
-			if setting.Key == "vcs.revision" {
-				version += "." + setting.Value
-			}
-		}
-	}
-
 	return version
 }()
 
