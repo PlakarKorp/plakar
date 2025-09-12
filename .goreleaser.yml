@@ -155,6 +155,11 @@ nfpms:
         file_info:
           mode: 0644
 
+      - src: ./plakar-query.7
+        dst: /usr/share/man/man7/plakar-query.7
+        file_info:
+          mode: 0644
+
       - src: ./subcommands/cat/plakar-cat.1
         dst: /usr/share/man/man1/plakar-cat.1
         file_info:
@@ -408,6 +413,7 @@ homebrew_casks:
       - ./man/plakar-pkg-show.1
       - ./man/plakar-policy.1
       - ./man/plakar.1
+      - ./man/plakar-query.7
       - ./man/plakar-pkg-manifest.yaml.5
       - ./man/plakar-pkg-recipe.yaml.5
 
