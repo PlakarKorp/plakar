@@ -26,6 +26,7 @@ import (
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
+	"github.com/PlakarKorp/kloset/snapshot/header"
 	"github.com/PlakarKorp/kloset/storage"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
@@ -327,8 +328,20 @@ func synchronize(ctx *appcontext.AppContext, srcRepository, dstRepository *repos
 	}
 	defer dstSnapshot.Close()
 
-	// overwrite the header, we want to keep the original snapshot info
-	dstSnapshot.Header = srcSnapshot.Header
+	// We need to deep copy the header as we are going to mutate it.
+	// Since it's a deeply nested struct, going through serialize is the
+	// "simplest" approach.
+	srcHeaderBytes, err := srcSnapshot.Header.Serialize()
+	if err != nil {
+		return err
+	}
+
+	dstHeader, err := header.NewFromBytes(srcHeaderBytes)
+	if err != nil {
+		return err
+	}
+
+	dstSnapshot.Header = dstHeader
 
 	if err := srcSnapshot.Synchronize(dstSnapshot); err != nil {
 		return err
