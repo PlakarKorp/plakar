@@ -1,4 +1,4 @@
-.Dd July 3, 2025
+.Dd September 11, 2025
 .Dt PLAKAR-SOURCE 1
 .Os
 .Sh NAME
@@ -20,7 +20,7 @@ to use, and some importer-specific parameters.
 .Pp
 The subcommands are as follows:
 .Bl -tag -width Ds
-.It Cm add Ar name Ar location Op option=value ...
+.It Cm add Ar name Ar location Op Ar option Ns No = Ns Ar value ...
 Create a new source entry identified by
 .Ar name
 with the specified
@@ -33,7 +33,13 @@ parameters.
 Check wether the importer for the source identified by
 .Ar name
 is properly configured.
-.It Cm import Oo Fl config Ar location Oc Oo Fl overwrite Oc Oo Fl rclone Oc Oo Ar sections ... Oc
+.It Xo
+.Cm import
+.Op Fl config Ar location
+.Op Fl overwrite
+.Op Fl rclone
+.Op Ar sections ...
+.Xc
 Import a configuration from either stdin (default),
 a file, or a URL.
 .Pp
@@ -61,7 +67,7 @@ to make sure it is reachable.
 Remove the source identified by
 .Ar name
 from the configuration.
-.It Cm set Ar name Op option=value ...
+.It Cm set Ar name Op Ar option Ns No = Ns Ar value ...
 Set the
 .Ar option
 to
@@ -69,18 +75,18 @@ to
 for the source identified by
 .Ar name .
 Multiple option/value pairs can be specified.
-.It Cm show Oo Fl secrets Oc Op name ...
+.It Cm show Oo Fl secrets Oc Op Ar name ...
 Display the current sources configuration.
 If
 .Fl secrets
 is specified, sensitive information such as passwords or tokens will be shown.
-.It Cm unset Ar name Op option ...
+.It Cm unset Ar name Op Ar option ...
 Remove the
 .Ar option
 for the source entry identified by
 .Ar name .
 .El
-.Sh DIAGNOSTICS
+.Sh EXIT STATUS
 .Ex -std
 .Sh SEE ALSO
 .Xr plakar 1

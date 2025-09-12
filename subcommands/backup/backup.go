@@ -96,7 +96,7 @@ func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags.Var(&opt_tags, "tag", "comma-separated list of tags to apply to the snapshot")
 	flags.StringVar(&opt_ignore_file, "ignore-file", "", "path to a file containing newline-separated gitignore patterns, treated as -ignore")
 	flags.Var(&opt_ignore, "ignore", "gitignore pattern to exclude files, can be specified multiple times to add several exclusion patterns")
-	flags.StringVar(&cmd.OnDiskPackfilePath, "disk-based", "off", "on or off or a path where to put temporary packfiles")
+	flags.StringVar(&cmd.PackfileTempStorage, "packfiles", "memory", "memory or a path to a directory to store temporary packfiles")
 	flags.BoolVar(&cmd.Quiet, "quiet", false, "suppress output")
 	flags.BoolVar(&cmd.Silent, "silent", false, "suppress ALL output")
 	flags.BoolVar(&cmd.OptCheck, "check", false, "check the snapshot after creating it")
@@ -114,12 +114,6 @@ func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
 		if cmd.ForcedTimestamp.After(time.Now()) {
 			return fmt.Errorf("forced timestamp cannot be in the future")
 		}
-	}
-
-	if cmd.OnDiskPackfilePath == "off" {
-		cmd.OnDiskPackfilePath = ""
-	} else if cmd.OnDiskPackfilePath == "on" {
-		cmd.OnDiskPackfilePath = os.TempDir()
 	}
 
 	if opt_ignore_file != "" {
@@ -151,18 +145,18 @@ func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
 type Backup struct {
 	subcommands.SubcommandBase
 
-	Job                string
-	Concurrency        uint64
-	Tags               []string
-	Excludes           []string
-	Silent             bool
-	Quiet              bool
-	Path               string
-	OptCheck           bool
-	Opts               map[string]string
-	DryRun             bool
-	OnDiskPackfilePath string
-	ForcedTimestamp    time.Time
+	Job                 string
+	Concurrency         uint64
+	Tags                []string
+	Excludes            []string
+	Silent              bool
+	Quiet               bool
+	Path                string
+	OptCheck            bool
+	Opts                map[string]string
+	DryRun              bool
+	PackfileTempStorage string
+	ForcedTimestamp     time.Time
 }
 
 func (cmd *Backup) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
@@ -197,7 +191,7 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		} else {
 			// inherit all the options -- but the ones
 			// specified in the command line takes the
-			// precendence.
+			// precedence.
 			for k, v := range remote {
 				if _, found := cmd.Opts[k]; !found {
 					cmd.Opts[k] = v
@@ -224,7 +218,18 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		return 0, nil, objects.MAC{}, nil
 	}
 
-	snap, err := snapshot.Create(repo, repository.DefaultType, cmd.OnDiskPackfilePath)
+	if cmd.PackfileTempStorage != "memory" {
+		tmpDir, err := os.MkdirTemp(cmd.PackfileTempStorage, "plakar-backup-"+repo.Configuration().RepositoryID.String()+"-*")
+		if err != nil {
+			return 1, err, objects.NilMac, nil
+		}
+		cmd.PackfileTempStorage = tmpDir
+		defer os.RemoveAll(cmd.PackfileTempStorage)
+	} else {
+		cmd.PackfileTempStorage = ""
+	}
+
+	snap, err := snapshot.Create(repo, repository.DefaultType, cmd.PackfileTempStorage)
 	if err != nil {
 		ctx.GetLogger().Error("%s", err)
 		return 1, err, objects.MAC{}, nil

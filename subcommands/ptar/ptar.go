@@ -391,11 +391,7 @@ func (cmd *Ptar) synchronize(ctx *appcontext.AppContext, srcRepository *reposito
 		// overwrite the header, we want to keep the original snapshot info
 		dstSnapshot.Header = srcSnapshot.Header
 
-		if err := srcSnapshot.Synchronize(dstSnapshot); err != nil {
-			return err
-		}
-
-		if err := dstSnapshot.Commit(nil, false); err != nil {
+		if err := srcSnapshot.Synchronize(dstSnapshot, false); err != nil {
 			return err
 		}
 	}

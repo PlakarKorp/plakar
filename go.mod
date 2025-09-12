@@ -4,14 +4,15 @@ go 1.24.0
 
 require (
 	github.com/PlakarKorp/go-human2duration v0.1.6
-	github.com/PlakarKorp/integration-fs v1.0.8
-	github.com/PlakarKorp/integration-grpc v1.0.14
-	github.com/PlakarKorp/integration-ptar v1.0.3
-	github.com/PlakarKorp/integration-stdio v1.0.2
-	github.com/PlakarKorp/kloset v1.0.5
+	github.com/PlakarKorp/integration-fs v1.0.9
+	github.com/PlakarKorp/integration-grpc v1.0.15
+	github.com/PlakarKorp/integration-ptar v1.0.4
+	github.com/PlakarKorp/integration-stdio v1.0.3
+	github.com/PlakarKorp/integration-tar v1.0.0-beta.6
+	github.com/PlakarKorp/kloset v1.0.7
 	github.com/alecthomas/chroma v0.10.0
 	github.com/anacrolix/fuse v0.3.1
-	github.com/charmbracelet/bubbletea v1.3.6
+	github.com/charmbracelet/bubbletea v1.3.7
 	github.com/charmbracelet/glamour v0.10.0
 	github.com/charmbracelet/lipgloss v1.1.1-0.20250404203927-76690c660834
 	github.com/denisbrodbeck/machineid v1.0.1
@@ -46,7 +47,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/charmbracelet/colorprofile v0.3.0 // indirect
-	github.com/charmbracelet/x/ansi v0.9.3 // indirect
+	github.com/charmbracelet/x/ansi v0.10.1 // indirect
 	github.com/charmbracelet/x/cellbuf v0.0.13 // indirect
 	github.com/charmbracelet/x/exp/golden v0.0.0-20240815200342-61de596daa2b // indirect
 	github.com/charmbracelet/x/exp/slice v0.0.0-20250327172914-2fdc97757edf // indirect

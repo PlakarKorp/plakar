@@ -89,10 +89,9 @@ func (imp *pkgerImporter) dofile(p string, ch chan<- *importer.ScanResult, mustE
 
 	if mustExe {
 		var isexe bool
-		switch runtime.GOOS {
-		case "windows":
+		if os.Getenv("GOOS") == "windows" || runtime.GOOS == "windows" {
 			isexe = strings.HasSuffix(fi.Name(), ".exe")
-		default:
+		} else {
 			isexe = (fi.Mode() & 0111) != 0
 		}
 

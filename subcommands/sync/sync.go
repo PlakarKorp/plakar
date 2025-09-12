@@ -32,6 +32,18 @@ import (
 	"github.com/PlakarKorp/plakar/utils"
 )
 
+type Sync struct {
+	subcommands.SubcommandBase
+
+	PeerRepositoryLocation string
+	PeerRepositorySecret   []byte
+
+	Direction           string
+	PackfileTempStorage string
+
+	SrcLocateOptions *locate.LocateOptions
+}
+
 func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &Sync{} }, subcommands.AgentSupport, "sync")
 }
@@ -46,7 +58,9 @@ func (cmd *Sync) Parse(ctx *appcontext.AppContext, args []string) error {
 		fmt.Fprintf(flags.Output(), "       %s [SNAPSHOT] with REPOSITORY\n", flags.Name())
 		flags.PrintDefaults()
 	}
+
 	cmd.SrcLocateOptions.InstallLocateFlags(flags)
+	flags.StringVar(&cmd.PackfileTempStorage, "packfiles", "memory", "memory or a path to a directory to store temporary packfiles")
 
 	flags.Parse(args)
 
@@ -140,17 +154,6 @@ func (cmd *Sync) Parse(ctx *appcontext.AppContext, args []string) error {
 	return nil
 }
 
-type Sync struct {
-	subcommands.SubcommandBase
-
-	PeerRepositoryLocation string
-	PeerRepositorySecret   []byte
-
-	Direction string
-
-	SrcLocateOptions *locate.LocateOptions
-}
-
 func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	storeConfig, err := ctx.Config.GetRepository(cmd.PeerRepositoryLocation)
 	if err != nil {
@@ -167,6 +170,17 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 	peerRepository, err := repository.New(peerCtx.GetInner(), peerCtx.GetSecret(), peerStore, peerStoreSerializedConfig)
 	if err != nil {
 		return 1, fmt.Errorf("could not open peer store %s: %s", cmd.PeerRepositoryLocation, err)
+	}
+
+	if cmd.PackfileTempStorage != "memory" {
+		tmpDir, err := os.MkdirTemp(cmd.PackfileTempStorage, "plakar-sync-"+repo.Configuration().RepositoryID.String()+"-*")
+		if err != nil {
+			return 1, err
+		}
+		cmd.PackfileTempStorage = tmpDir
+		defer os.RemoveAll(cmd.PackfileTempStorage)
+	} else {
+		cmd.PackfileTempStorage = ""
 	}
 
 	var srcRepository *repository.Repository
@@ -235,15 +249,18 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 		}
 	}
 
+	srcSynced := 0
 	for _, snapshotID := range srcSyncList {
 		if err := ctx.Err(); err != nil {
 			return 1, err
 		}
 
-		err := synchronize(ctx, srcRepository, dstRepository, snapshotID)
+		err := synchronize(ctx, srcRepository, dstRepository, snapshotID, cmd.PackfileTempStorage)
 		if err != nil {
 			ctx.GetLogger().Error("failed to synchronize snapshot %x from store %s: %s",
 				snapshotID[:4], srcLocation, err)
+		} else {
+			srcSynced++
 		}
 	}
 
@@ -260,36 +277,39 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 			}
 		}
 
+		dstSynced := 0
 		for _, snapshotID := range dstSyncList {
 			if err := ctx.Err(); err != nil {
 				return 1, err
 			}
-			err := synchronize(ctx, dstRepository, srcRepository, snapshotID)
+			err := synchronize(ctx, dstRepository, srcRepository, snapshotID, cmd.PackfileTempStorage)
 			if err != nil {
 				ctx.GetLogger().Error("failed to synchronize snapshot %x from peer store %s: %s",
 					snapshotID[:4], dstLocation, err)
+			} else {
+				dstSynced++
 			}
 		}
 		ctx.GetLogger().Info("sync: synchronization between %s and %s completed: %d snapshots synchronized",
 			srcLocation,
 			dstLocation,
-			len(srcSyncList)+len(dstSyncList))
+			srcSynced+dstSynced)
 	} else if cmd.Direction == "to" {
 		ctx.GetLogger().Info("sync: synchronization from %s to %s completed: %d snapshots synchronized",
 			srcLocation,
 			dstLocation,
-			len(srcSyncList))
+			srcSynced)
 	} else {
 		ctx.GetLogger().Info("sync: synchronization from %s to %s completed: %d snapshots synchronized",
 			dstLocation,
 			srcLocation,
-			len(srcSyncList))
+			srcSynced)
 	}
 
 	return 0, nil
 }
 
-func synchronize(ctx *appcontext.AppContext, srcRepository, dstRepository *repository.Repository, snapshotID objects.MAC) error {
+func synchronize(ctx *appcontext.AppContext, srcRepository, dstRepository *repository.Repository, snapshotID objects.MAC, packfileDir string) error {
 	srcLocation, err := srcRepository.Location()
 	if err != nil {
 		return err
@@ -307,7 +327,7 @@ func synchronize(ctx *appcontext.AppContext, srcRepository, dstRepository *repos
 	}
 	defer srcSnapshot.Close()
 
-	dstSnapshot, err := snapshot.Create(dstRepository, repository.DefaultType, "")
+	dstSnapshot, err := snapshot.Create(dstRepository, repository.DefaultType, packfileDir)
 	if err != nil {
 		return err
 	}
@@ -316,11 +336,9 @@ func synchronize(ctx *appcontext.AppContext, srcRepository, dstRepository *repos
 	// overwrite the header, we want to keep the original snapshot info
 	dstSnapshot.Header = srcSnapshot.Header
 
-	if err := srcSnapshot.Synchronize(dstSnapshot); err != nil {
+	if err := srcSnapshot.Synchronize(dstSnapshot, true); err != nil {
 		return err
 	}
-
-	err = dstSnapshot.Commit(nil, true)
 
 	ctx.GetLogger().Info("Synchronization of %x finished", snapshotID)
 	return err

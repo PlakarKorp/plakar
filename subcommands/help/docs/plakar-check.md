@@ -8,15 +8,6 @@ PLAKAR-CHECK(1) - General Commands Manual
 
 **plakar&nbsp;check**
 \[**-concurrency**&nbsp;*number*]
-\[**-name**&nbsp;*name*]
-\[**-category**&nbsp;*category*]
-\[**-environment**&nbsp;*environment*]
-\[**-perimeter**&nbsp;*perimeter*]
-\[**-job**&nbsp;*job*]
-\[**-tag**&nbsp;*tag*]
-\[**-latest**]
-\[**-before**&nbsp;*date*]
-\[**-since**&nbsp;*date*]
 \[**-fast**]
 \[**-no-verify**]
 \[**-quiet**]
@@ -31,61 +22,15 @@ It checks the given paths inside the snapshots for consistency and
 validates file macs to ensure no corruption has occurred, or all
 the data in the repository if no
 *snapshotID*
-is given.
+or location flags is given.
+
+In addition to the flags described below,
+**plakar check**
+supports the location flags documented in
+plakar-query(7)
+to precisely select snapshots.
 
 The options are as follows:
-
-**-name** *string*
-
-> Only apply command to snapshots that match
-> *name*.
-
-**-category** *string*
-
-> Only apply command to snapshots that match
-> *category*.
-
-**-environment** *string*
-
-> Only apply command to snapshots that match
-> *environment*.
-
-**-perimeter** *string*
-
-> Only apply command to snapshots that match
-> *perimeter*.
-
-**-job** *string*
-
-> Only apply command to snapshots that match
-> *job*.
-
-**-tag** *string*
-
-> Only apply command to snapshots that match
-> *tag*.
-
-**-latest**
-
-> Only apply command to latest snapshot matching filters.
-
-**-before** *date*
-
-> Only apply command to snapshots matching filters and older than the specified
-> date.
-> Accepted formats include relative durations
-> (e.g. 2d for two days, 1w for one week)
-> or specific dates in various formats
-> (e.g. 2006-01-02 15:04:05).
-
-**-since** *date*
-
-> Only apply command to snapshots matching filters and created since the specified
-> date, included.
-> Accepted formats include relative durations
-> (e.g. 2d for two days, 1w for one week)
-> or specific dates in various formats
-> (e.g. 2006-01-02 15:04:05).
 
 **-concurrency** *number*
 
@@ -134,6 +79,7 @@ The **plakar-check** utility exits&#160;0 on success, and&#160;&gt;0 if an error
 
 # SEE ALSO
 
-plakar(1)
+plakar(1),
+plakar-query(7)
 
-Plakar - July 3, 2025
+Plakar - September 10, 2025

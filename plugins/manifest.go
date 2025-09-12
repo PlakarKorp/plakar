@@ -48,7 +48,7 @@ func ParseManifestFile(path string, manifest *Manifest) error {
 	}
 
 	// Windows really want executables to end with .exe
-	if runtime.GOOS == "windows" {
+	if os.Getenv("GOOS") == "windows" || runtime.GOOS == "windows" {
 		for i := range manifest.Connectors {
 			if !strings.HasSuffix(manifest.Connectors[i].Executable, ".exe") {
 				manifest.Connectors[i].Executable += ".exe"

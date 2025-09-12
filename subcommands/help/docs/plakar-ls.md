@@ -8,16 +8,6 @@ PLAKAR-LS(1) - General Commands Manual
 
 **plakar&nbsp;ls**
 \[**-uuid**]
-\[**-name**&nbsp;*name*]
-\[**-category**&nbsp;*category*]
-\[**-environment**&nbsp;*environment*]
-\[**-perimeter**&nbsp;*perimeter*]
-\[**-job**&nbsp;*job*]
-\[**-tag**&nbsp;*tag*]
-\[**-tags**]
-\[**-latest**]
-\[**-before**&nbsp;*date*]
-\[**-since**&nbsp;*date*]
 \[**-recursive**]
 \[*snapshotID*:*path*]
 
@@ -30,63 +20,13 @@ displays the contents of
 *path*
 in a specified snapshot.
 
+In addition to the flags described below,
+**plakar ls**
+supports the location flags documented in
+plakar-query(7)
+to precisely select snapshots.
+
 The options are as follows:
-
-**-name** *name*
-
-> Only apply command to snapshots that match
-> *name*.
-
-**-category** *category*
-
-> Only apply command to snapshots that match
-> *category*.
-
-**-environment** *environment*
-
-> Only apply command to snapshots that match
-> *environment*.
-
-**-perimeter** *perimeter*
-
-> Only apply command to snapshots that match
-> *perimeter*.
-
-**-job** *job*
-
-> Only apply command to snapshots that match
-> *job*.
-
-**-tag** *tag*
-
-> Filter snapshots by the specified tag, listing only those that contain
-> the given tag.
-
-**-tags**
-
-> Display tags when listing snapshots.
-
-**-latest**
-
-> Only apply command to latest snapshot matching filters.
-
-**-before** *date*
-
-> Only apply command to snapshots matching filters and older than the specified
-> date.
-> Accepted formats include relative durations
-> (e.g. 2d for two days, 1w for one week)
-> or specific dates in various formats
-> (e.g. 2006-01-02 15:04:05).
-
-**-since** *date*
-
-> Only apply command to snapshots matching filters and created since the specified
-> date, included.
-> Accepted formats include relative durations
-> (e.g. 2d for two days, 1w for one week)
-> or specific dates in various formats
-> (e.g. 2006-01-02 15:04:05).
 
 **-uuid**
 
@@ -134,6 +74,7 @@ The **plakar-ls** utility exits&#160;0 on success, and&#160;&gt;0 if an error oc
 
 # SEE ALSO
 
-plakar(1)
+plakar(1),
+plakar-query(7)
 
-Plakar - July 3, 2025
+Plakar - September 10, 2025

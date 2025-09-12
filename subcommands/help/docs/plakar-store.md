@@ -23,14 +23,14 @@ implementation to use, and some storage-specific parameters.
 
 The subcommands are as follows:
 
-**add** *name* *location* \[option=value ...]
+**add** *name* *location* \[*option*=*value ...*]
 
 > Create a new store entry identified by
 > *name*
 > with the specified
 > *location*.
 > Specific additional configuration parameters can be set by adding
-> *option=value*
+> *option*=*value*
 > parameters.
 
 **check** *name*
@@ -39,7 +39,11 @@ The subcommands are as follows:
 > *name*
 > is properly configured.
 
-**import** \[**-config** *location*] \[**-overwrite**] \[**-rclone**] \[*sections ...*]
+**import**
+\[**-config** *location*]
+\[**-overwrite**]
+\[**-rclone**]
+\[*sections ...*]
 
 > Import a configuration from either stdin (default),
 > a file, or a URL.
@@ -73,7 +77,7 @@ The subcommands are as follows:
 > *name*
 > from the configuration.
 
-**set** *name* \[option=value ...]
+**set** *name* \[*option*=*value ...*]
 
 > Set the
 > *option*
@@ -83,14 +87,14 @@ The subcommands are as follows:
 > *name*.
 > Multiple option/value pairs can be specified.
 
-**show** \[**-secrets**] \[name ...]
+**show** \[**-secrets**] \[*name ...*]
 
 > Display the current stores configuration.
 > If
 > **-secrets**
 > is specified, sensitive information such as passwords or tokens will be shown.
 
-**unset** *name* \[option ...]
+**unset** *name* \[*option ...*]
 
 > Remove the
 > *option*
@@ -105,4 +109,4 @@ The **plakar-store** utility exits&#160;0 on success, and&#160;&gt;0 if an error
 
 plakar(1)
 
-Plakar - July 3, 2025
+Plakar - September 11, 2025

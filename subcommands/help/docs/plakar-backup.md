@@ -8,12 +8,12 @@ PLAKAR-BACKUP(1) - General Commands Manual
 
 **plakar&nbsp;backup**
 \[**-concurrency**&nbsp;*number*]
-\[**-disk-based**&nbsp;*path*]
 \[**-force-timestamp**&nbsp;*timestamp*]
 \[**-ignore**&nbsp;*pattern*]
 \[**-ignore-file**&nbsp;*file*]
 \[**-check**]
 \[**-o**&nbsp;*option*]
+\[**-packfiles**&nbsp;*path*]
 \[**-quiet**]
 \[**-silent**]
 \[**-tag**&nbsp;*tag*]
@@ -44,18 +44,6 @@ The options are as follows:
 > Defaults to
 > `8 * CPU count + 1`.
 
-**-disk-based** *path*
-
-> Path where to put the temporary packfiles instead of building them in memory.
-> If the special value
-> 'on'
-> is specified then the system temporary directory is used.
-> Otherwise
-> 'off'
-> can be used to disable the feature.
-> directories in the backup.
-> This option can be repeated.
-
 **-force-timestamp** *timestamp*
 
 > Specify a fixed timestamp (in ISO 8601 or relative human format) to use
@@ -65,6 +53,8 @@ The options are as follows:
 **-ignore** *pattern*
 
 > Specify individual gitignore exclusion patterns to ignore files or
+> directories in the backup.
+> This option can be repeated.
 
 **-ignore-file** *file*
 
@@ -85,6 +75,13 @@ The options are as follows:
 **-quiet**
 
 > Suppress output to standard input, only logging errors and warnings.
+
+**-packfiles** *path*
+
+> Path where to put the temporary packfiles instead of building them in memory.
+> If the special value
+> 'memory'
+> is specified then the packfiles are build in memory (the default value)
 
 **-silent**
 

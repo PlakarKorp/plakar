@@ -3,6 +3,7 @@
 cd $(dirname $0)
 
 mandoc -I os=Plakar -T markdown ../plakar.1 > "help/docs/plakar.md"
+mandoc -I os=Plakar -T markdown ../plakar-query.7 > "help/docs/plakar-query.md"
 find . -type f -iname \*.[1-9] -exec sh -c '
 	for file; do
 		base="${file##*/}"

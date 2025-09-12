@@ -162,7 +162,7 @@ func (cmd *Maintenance) colourPass(ctx *appcontext.AppContext, cache *caching.Ma
 		// we must take some care as it might be from an in progress backup. In
 		// order to avoid deleting those we rely on the grace period. Sadly
 		// this means we have to load the packfile from the repository,
-		// hopefuly those are rare enough that it's not a problem in practice.
+		// hopefully those are rare enough that it's not a problem in practice.
 		packfile, err := cmd.repository.GetPackfile(packfileMAC)
 		if err != nil {
 			return err

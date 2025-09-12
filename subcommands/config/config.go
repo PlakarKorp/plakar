@@ -139,7 +139,7 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 		case "source":
 			cfg, ok := ctx.Config.GetSource(name)
 			if !ok {
-				return fmt.Errorf("failed to retreive configuration for source %q", name)
+				return fmt.Errorf("failed to retrieve configuration for source %q", name)
 			}
 			imp, err := importer.NewImporter(ctx.GetInner(), ctx.ImporterOpts(), cfg)
 			if err != nil {
@@ -150,7 +150,7 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 		case "destination":
 			cfg, ok := ctx.Config.GetDestination(name)
 			if !ok {
-				return fmt.Errorf("failed to retreive configuration for destination %q", name)
+				return fmt.Errorf("failed to retrieve configuration for destination %q", name)
 			}
 			exp, err := exporter.NewExporter(ctx.GetInner(), cfg)
 			if err != nil {

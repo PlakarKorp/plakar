@@ -23,6 +23,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
@@ -81,7 +82,13 @@ func (cmd *PkgBuild) Execute(ctx *appcontext.AppContext, repo *repository.Reposi
 		return 1, fmt.Errorf("failed to clone %s: %s: %w", recipe.Repository, recipe.Version, err)
 	}
 
-	make := exec.Command("make", "-C", datadir)
+	args := []string{"-C", datadir}
+
+	if os.Getenv("GOOS") == "windows" || runtime.GOOS == "windows" {
+		args = append(args, "EXT=.exe")
+	}
+
+	make := exec.Command("make", args...)
 	fmt.Fprintln(ctx.Stderr, make.String())
 	if err := make.Run(); err != nil {
 		return 1, fmt.Errorf("make failed: %w", err)

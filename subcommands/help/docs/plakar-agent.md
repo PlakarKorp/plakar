@@ -7,20 +7,43 @@ PLAKAR-AGENT(1) - General Commands Manual
 # SYNOPSIS
 
 **plakar&nbsp;agent**
-\[**start**&nbsp;**-teardown**&nbsp;*delay*]
-\[**stop**]
+\[**start**
+\[**-foreground**]
+\[**-log**&nbsp;*logfile*]
+\[**-teardown**&nbsp;*delay*]]  
+**plakar&nbsp;agent**
+**stop**
 
 # DESCRIPTION
 
 The
 **plakar agent start**
-command starts the Plakar agent which will execute subsequent
+command, which is the default, starts the Plakar agent which will
+execute subsequent
 plakar(1)
 commands on their behalfs for faster processing.
-**plakar agent**
-continues is auto-spawned and terminates when idle for too long.
 
-The options are as follows:
+**plakar agent**
+is executed automatically by most
+plakar(1)
+commands and terminates by itself when idle for too long, so usually
+there's no need to manually start it.
+
+The options for
+**plakar agent**
+**start**
+are as follows:
+
+**-foreground**
+
+> Do not daemonize, run in the foreground and log to standard error.
+
+**-log** *logfile*
+
+> Write log output to the given
+> *logfile*
+> which is created if it does not exist.
+> The default is to log to syslog.
 
 **-teardown** *delay*
 
@@ -30,14 +53,14 @@ The options are as follows:
 > parameter must be given as a sequence of decimal value,
 > each followed by a time unit
 > (e.g. "1m30s").
-> Delaults to 5 seconds.
+> Defaults to 5 seconds.
 
+**plakar agent**
 **stop**
-
-> Force the currently running agent to stop.
-> This is useful when upgrading from an older
-> plakar(1)
-> version were the agent was always running.
+forces the currently running agent to stop.
+This is useful when upgrading from an older
+plakar(1)
+version were the agent was always running.
 
 # DIAGNOSTICS
 
