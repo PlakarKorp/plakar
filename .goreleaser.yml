@@ -5,9 +5,9 @@ release:
 
 archives:
   - files:
-      - src: plakar.1
-        dst: man/plakar.1
-      - src: subcommands/**/*.1
+      - src: plakar*.[1-9]
+        dst: man
+      - src: subcommands/**/*.[1-9]
         dst: man
         strip_parent: true
 
