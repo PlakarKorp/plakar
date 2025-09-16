@@ -47,6 +47,7 @@ builds:
       - linux
       - openbsd
       - freebsd
+      - windows
 
     # GOARCH to build for.
     # For more info refer to: https://pkg.go.dev/cmd/go#hdr-Environment_variables
