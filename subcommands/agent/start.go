@@ -32,7 +32,7 @@ import (
 	"time"
 
 	"github.com/PlakarKorp/kloset/encryption"
-	"github.com/PlakarKorp/kloset/logging"
+	"github.com/PlakarKorp/plakar/logging"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/storage"
 	"github.com/PlakarKorp/plakar/agent"
