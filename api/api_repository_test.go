@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/PlakarKorp/kloset/caching"
+	"github.com/PlakarKorp/kloset/caching/pebble"
 	"github.com/PlakarKorp/kloset/hashing"
 	"github.com/PlakarKorp/kloset/logging"
 	"github.com/PlakarKorp/kloset/repository"
@@ -28,6 +29,12 @@ func init() {
 
 // XXX: re-add once we move to non-mocked state object.
 func _Test_RepositoryConfiguration(t *testing.T) {
+	tmpCacheDir, err := os.MkdirTemp("", "tmp_cache")
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		os.RemoveAll(tmpCacheDir)
+	})
+
 	ctx := appcontext.NewAppContext()
 
 	config := ptesting.NewConfiguration()
@@ -42,7 +49,7 @@ func _Test_RepositoryConfiguration(t *testing.T) {
 	lstore, err := storage.Create(ctx.GetInner(), map[string]string{"location": "mock:///test/location"}, wrappedConfig)
 	require.NoError(t, err, "creating storage")
 
-	cache := caching.NewManager("/tmp/test_plakar")
+	cache := caching.NewManager(pebble.Constructor(tmpCacheDir))
 	defer cache.Close()
 	ctx.SetCache(cache)
 	ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
@@ -308,6 +315,11 @@ func _Test_RepositorySnapshots(t *testing.T) {
 
 	for _, c := range testCases {
 		t.Run(c.name, func(t *testing.T) {
+			tmpCacheDir, err := os.MkdirTemp("", "tmp_cache")
+			require.NoError(t, err)
+			t.Cleanup(func() {
+				os.RemoveAll(tmpCacheDir)
+			})
 
 			serializedConfig, err := c.config.ToBytes()
 			require.NoError(t, err)
@@ -320,7 +332,7 @@ func _Test_RepositorySnapshots(t *testing.T) {
 			require.NoError(t, err)
 
 			ctx := appcontext.NewAppContext()
-			cache := caching.NewManager("/tmp/test_plakar")
+			cache := caching.NewManager(pebble.Constructor(tmpCacheDir))
 			defer cache.Close()
 			ctx.SetCache(cache)
 			ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
@@ -407,6 +419,12 @@ func _Test_RepositorySnapshotsErrors(t *testing.T) {
 
 	for _, c := range testCases {
 		t.Run(c.name, func(t *testing.T) {
+			tmpCacheDir, err := os.MkdirTemp("", "tmp_cache")
+			require.NoError(t, err)
+			t.Cleanup(func() {
+				os.RemoveAll(tmpCacheDir)
+			})
+
 			config := ptesting.NewConfiguration()
 
 			serializedConfig, err := config.ToBytes()
@@ -420,7 +438,7 @@ func _Test_RepositorySnapshotsErrors(t *testing.T) {
 			require.NoError(t, err)
 
 			ctx := appcontext.NewAppContext()
-			cache := caching.NewManager("/tmp/test_plakar")
+			cache := caching.NewManager(pebble.Constructor(tmpCacheDir))
 			defer cache.Close()
 			ctx.SetCache(cache)
 			ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
@@ -483,6 +501,11 @@ func _Test_RepositoryStates(t *testing.T) {
 
 	for _, c := range testCases {
 		t.Run(c.name, func(t *testing.T) {
+			tmpCacheDir, err := os.MkdirTemp("", "tmp_cache")
+			require.NoError(t, err)
+			t.Cleanup(func() {
+				os.RemoveAll(tmpCacheDir)
+			})
 
 			serializedConfig, err := c.config.ToBytes()
 			require.NoError(t, err)
@@ -495,7 +518,7 @@ func _Test_RepositoryStates(t *testing.T) {
 			require.NoError(t, err)
 
 			ctx := appcontext.NewAppContext()
-			cache := caching.NewManager("/tmp/test_plakar")
+			cache := caching.NewManager(pebble.Constructor(tmpCacheDir))
 			defer cache.Close()
 			ctx.SetCache(cache)
 			ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
@@ -552,6 +575,11 @@ func _Test_RepositoryState(t *testing.T) {
 
 	for _, c := range testCases {
 		t.Run(c.name, func(t *testing.T) {
+			tmpCacheDir, err := os.MkdirTemp("", "tmp_cache")
+			require.NoError(t, err)
+			t.Cleanup(func() {
+				os.RemoveAll(tmpCacheDir)
+			})
 
 			serializedConfig, err := c.config.ToBytes()
 			require.NoError(t, err)
@@ -564,7 +592,7 @@ func _Test_RepositoryState(t *testing.T) {
 			require.NoError(t, err)
 
 			ctx := appcontext.NewAppContext()
-			cache := caching.NewManager("/tmp/test_plakar")
+			cache := caching.NewManager(pebble.Constructor(tmpCacheDir))
 			defer cache.Close()
 			ctx.SetCache(cache)
 			ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
@@ -625,6 +653,12 @@ func Test_RepositoryStateErrors(t *testing.T) {
 
 	for _, c := range testCases {
 		t.Run(c.name, func(t *testing.T) {
+			tmpCacheDir, err := os.MkdirTemp("", "tmp_cache")
+			require.NoError(t, err)
+			t.Cleanup(func() {
+				os.RemoveAll(tmpCacheDir)
+			})
+
 			config := ptesting.NewConfiguration()
 
 			serializedConfig, err := config.ToBytes()
@@ -638,7 +672,7 @@ func Test_RepositoryStateErrors(t *testing.T) {
 			require.NoError(t, err)
 
 			ctx := appcontext.NewAppContext()
-			cache := caching.NewManager("/tmp/test_plakar")
+			cache := caching.NewManager(pebble.Constructor(tmpCacheDir))
 			defer cache.Close()
 			ctx.SetCache(cache)
 			ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))

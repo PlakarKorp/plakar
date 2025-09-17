@@ -11,6 +11,7 @@ import (
 	_ "github.com/PlakarKorp/integration-fs/importer"
 	bfs "github.com/PlakarKorp/integration-fs/storage"
 	"github.com/PlakarKorp/kloset/caching"
+	"github.com/PlakarKorp/kloset/caching/pebble"
 	"github.com/PlakarKorp/kloset/hashing"
 	"github.com/PlakarKorp/kloset/logging"
 	"github.com/PlakarKorp/kloset/repository"
@@ -79,7 +80,7 @@ func generateFixtures(t *testing.T, bufOut *bytes.Buffer, bufErr *bytes.Buffer) 
 	require.NoError(t, err)
 
 	// create a repository
-	cache := caching.NewManager(tmpCacheDir)
+	cache := caching.NewManager(pebble.Constructor(tmpCacheDir))
 	ctx.SetCache(cache)
 	ctx.Client = "plakar-test/1.0.0"
 
