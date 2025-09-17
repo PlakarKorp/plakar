@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"time"
@@ -142,6 +143,7 @@ func (cmd *Maintenance) colourPass(ctx *appcontext.AppContext, cache *caching.Ma
 
 	orphanedPackfiles := 0
 	for _, packfileMAC := range repoPackfiles {
+		log.Printf("considering packfile %x", packfileMAC)
 		_, ok := packfiles[packfileMAC]
 		if ok {
 			continue
@@ -188,9 +190,12 @@ func (cmd *Maintenance) colourPass(ctx *appcontext.AppContext, cache *caching.Ma
 
 	coloredPackfiles := 0
 	for packfile := range packfiles {
+		log.Println("->", string(packfile[:]))
 		if cache.HasPackfile(packfile) {
+			log.Printf("cache has the packfile %x", packfile)
 			continue
 		}
+		//log.Printf("cache doesn't have the packfile %x", packfile)
 
 		has, err := cmd.repository.HasDeletedPackfile(packfile)
 		if err != nil {
