@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/PlakarKorp/kloset/caching"
+	"github.com/PlakarKorp/kloset/caching/pebble"
 	"github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/kloset/logging"
 	"github.com/PlakarKorp/kloset/repository"
@@ -51,7 +52,7 @@ func initContext(t *testing.T, bufout *bytes.Buffer, buferr *bytes.Buffer) (*app
 		ctx.Stdout = bufout
 		ctx.Stderr = buferr
 	}
-	cache := caching.NewManager(tmpCacheDir)
+	cache := caching.NewManager(pebble.Constructor(tmpCacheDir))
 	ctx.SetCache(cache)
 	ctx.MaxConcurrency = 1
 	ctx.Client = "plakar-test/1.0.0"
