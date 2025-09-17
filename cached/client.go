@@ -8,23 +8,9 @@ import (
 	"os/exec"
 	"time"
 
+	"github.com/PlakarKorp/kloset/caching"
 	"golang.org/x/sys/unix"
 )
-
-// to be moved to the caching package in kloset once it's ready
-type Option = int
-
-type Cache interface {
-	Put([]byte, []byte) error
-	Has([]byte) (bool, error)
-	Get([]byte) ([]byte, error)
-	Delete([]byte) error
-	Close() error
-
-	// reverse is only to accomodate EnumerateKeysWithPrefix, once
-	// that doesn't need it anymore this can become simpler again.
-	//Scan([]byte, bool) iter.Seq2[[]byte, []byte]
-}
 
 // implements caching.Cache
 type Cached struct {
@@ -102,7 +88,8 @@ func NewClient(socket string) (*Cached, error) {
 	}
 }
 
-func (c *Cached) Constructor(version, name, repoid string, opts int) (Cache, error) {
+func (c *Cached) Constructor(version, name, repoid string, opts int) (caching.Cache, error) {
+	panic("unimplemented")
 }
 
 func (c *Cached) Close() error {
