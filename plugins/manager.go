@@ -45,7 +45,7 @@ type Manager struct {
 
 	PackagesUrl string // Where prebuilt packages are retrieved from
 
-	pluginsMtx   sync.Mutex
+	pluginsMtx   sync.RWMutex
 	plugins      map[Package]*Plugin  // list of loaded plugins
 	packages     Cache[[]Package]     // list of available packages
 	integrations Cache[[]Integration] // list of integrations
@@ -326,6 +326,26 @@ func (mgr *Manager) ForceReloadPlugins(ctx *kcontext.KContext) error {
 
 	mgr.doUnloadPlugins(ctx)
 	return mgr.doLoadPlugins(ctx)
+}
+
+func (mgr *Manager) GetLoadedPlugins() []Package {
+	mgr.pluginsMtx.RLock()
+	defer mgr.pluginsMtx.RUnlock()
+
+	packages := make([]Package, 0, len(mgr.plugins))
+	for pkg := range mgr.plugins {
+		packages = append(packages, pkg)
+	}
+	slices.SortFunc(packages, PackageCmp)
+	return packages
+}
+
+func (mgr *Manager) IsPluginLoaded(pkg Package) bool {
+	mgr.pluginsMtx.RLock()
+	defer mgr.pluginsMtx.RUnlock()
+
+	_, ok := mgr.plugins[pkg]
+	return ok
 }
 
 func (mgr *Manager) UninstallPackage(ctx *kcontext.KContext, pkg Package) error {

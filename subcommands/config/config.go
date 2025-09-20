@@ -37,13 +37,13 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &ConfigStoreCmd{} },
+	subcommands.MustRegister(func() subcommands.Subcommand { return &ConfigStoreCmd{} },
 		subcommands.BeforeRepositoryOpen, "store")
-	subcommands.Register(func() subcommands.Subcommand { return &ConfigSourceCmd{} },
+	subcommands.MustRegister(func() subcommands.Subcommand { return &ConfigSourceCmd{} },
 		subcommands.BeforeRepositoryOpen, "source")
-	subcommands.Register(func() subcommands.Subcommand { return &ConfigDestinationCmd{} },
+	subcommands.MustRegister(func() subcommands.Subcommand { return &ConfigDestinationCmd{} },
 		subcommands.BeforeRepositoryOpen, "destination")
-	subcommands.Register(func() subcommands.Subcommand { return &ConfigPolicyCmd{} },
+	subcommands.MustRegister(func() subcommands.Subcommand { return &ConfigPolicyCmd{} },
 		subcommands.BeforeRepositoryOpen, "policy")
 }
 

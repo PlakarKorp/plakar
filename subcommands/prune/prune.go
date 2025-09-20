@@ -45,7 +45,7 @@ type Prune struct {
 }
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Prune{} }, subcommands.AgentSupport, "prune")
+	subcommands.MustRegister(func() subcommands.Subcommand { return &Prune{} }, subcommands.AgentSupport, "prune")
 }
 
 func (cmd *Prune) Parse(ctx *appcontext.AppContext, args []string) error {

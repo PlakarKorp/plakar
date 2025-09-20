@@ -37,7 +37,7 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Ls{} }, subcommands.AgentSupport, "ls")
+	subcommands.MustRegister(func() subcommands.Subcommand { return &Ls{} }, subcommands.AgentSupport, "ls")
 }
 
 func (cmd *Ls) Parse(ctx *appcontext.AppContext, args []string) error {

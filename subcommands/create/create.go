@@ -37,7 +37,7 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Create{} }, subcommands.BeforeRepositoryWithStorage, "create")
+	subcommands.MustRegister(func() subcommands.Subcommand { return &Create{} }, subcommands.BeforeRepositoryWithStorage, "create")
 }
 
 func (cmd *Create) Parse(ctx *appcontext.AppContext, args []string) error {
