@@ -160,8 +160,8 @@ func (c *Client) SendCommand(ctx *appcontext.AppContext, name []string, cmd subc
 		return 1, fmt.Errorf("command %v doesn't support execution through agent", strings.Join(name, " "))
 	}
 
-	cmd.SetLogInfo(ctx.GetLogger().EnabledInfo)
-	cmd.SetLogTraces(ctx.GetLogger().EnabledTracing)
+	cmd.SetLogInfo(ctx.GetLogger().InfoEnabled())
+	cmd.SetLogTraces(ctx.GetLogger().TracingEnabled())
 
 	if err := subcommands.EncodeRPC(c.enc, name, cmd, storeConfig); err != nil {
 		return 1, err
