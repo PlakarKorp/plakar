@@ -1,6 +1,7 @@
 package subcommands
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -102,17 +103,69 @@ type subcmd struct {
 
 var subcommands []subcmd = make([]subcmd, 0)
 
-func Register(factory CmdFactory, flags CommandFlags, args ...string) {
+var (
+	errNilFactory       = errors.New("subcommands: factory cannot be nil")
+	errNoArguments      = errors.New("subcommands: at least one argument must be provided")
+	errDuplicateCommand = errors.New("subcommands: command already registered")
+)
+
+func validateArgs(args []string) error {
 	if len(args) == 0 {
-		panic("can't register commands with zero arguments")
+		return errNoArguments
+	}
+
+	for idx, arg := range args {
+		trimmed := strings.TrimSpace(arg)
+		if trimmed == "" {
+			return fmt.Errorf("subcommands: argument %d is empty", idx)
+		}
+		if trimmed != arg {
+			return fmt.Errorf("subcommands: argument %q contains leading or trailing spaces", arg)
+		}
+		if strings.Contains(trimmed, " ") {
+			return fmt.Errorf("subcommands: argument %q contains spaces", arg)
+		}
+	}
+
+	return nil
+}
+
+func ensureUnique(args []string) error {
+	for _, cmd := range subcommands {
+		if len(cmd.args) != len(args) {
+			continue
+		}
+		if slices.Equal(cmd.args, args) {
+			return fmt.Errorf("%w: %s", errDuplicateCommand, strings.Join(args, " "))
+		}
+	}
+	return nil
+}
+
+func Register(factory CmdFactory, flags CommandFlags, args ...string) error {
+	if factory == nil {
+		return errNilFactory
+	}
+	if err := validateArgs(args); err != nil {
+		return err
+	}
+	if err := ensureUnique(args); err != nil {
+		return err
 	}
 
 	subcommands = append(subcommands, subcmd{
-		args:    args,
+		args:    slices.Clone(args),
 		nargs:   len(args),
 		flags:   flags,
 		factory: factory,
 	})
+	return nil
+}
+
+func MustRegister(factory CmdFactory, flags CommandFlags, args ...string) {
+	if err := Register(factory, flags, args...); err != nil {
+		panic(err)
+	}
 }
 
 func Lookup(arguments []string) (Subcommand, []string, []string) {

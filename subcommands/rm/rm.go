@@ -44,7 +44,7 @@ type Rm struct {
 }
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Rm{} }, subcommands.AgentSupport, "rm")
+	subcommands.MustRegister(func() subcommands.Subcommand { return &Rm{} }, subcommands.AgentSupport, "rm")
 }
 
 func (cmd *Rm) Parse(ctx *appcontext.AppContext, args []string) error {

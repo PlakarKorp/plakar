@@ -27,16 +27,16 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &ServiceList{} }, subcommands.AgentSupport, "service", "list")
-	subcommands.Register(func() subcommands.Subcommand { return &ServiceStatus{} }, subcommands.AgentSupport, "service", "status")
-	subcommands.Register(func() subcommands.Subcommand { return &ServiceEnable{} }, subcommands.AgentSupport, "service", "enable")
-	subcommands.Register(func() subcommands.Subcommand { return &ServiceDisable{} }, subcommands.AgentSupport, "service", "disable")
-	subcommands.Register(func() subcommands.Subcommand { return &ServiceSet{} }, subcommands.AgentSupport, "service", "set")
-	subcommands.Register(func() subcommands.Subcommand { return &ServiceUnset{} }, subcommands.AgentSupport, "service", "unset")
-	subcommands.Register(func() subcommands.Subcommand { return &ServiceAdd{} }, subcommands.AgentSupport, "service", "add")
-	subcommands.Register(func() subcommands.Subcommand { return &ServiceRm{} }, subcommands.AgentSupport, "service", "rm")
-	subcommands.Register(func() subcommands.Subcommand { return &ServiceShow{} }, subcommands.AgentSupport, "service", "show")
-	subcommands.Register(func() subcommands.Subcommand { return &Service{} }, subcommands.BeforeRepositoryOpen, "service")
+	subcommands.MustRegister(func() subcommands.Subcommand { return &ServiceList{} }, subcommands.AgentSupport, "service", "list")
+	subcommands.MustRegister(func() subcommands.Subcommand { return &ServiceStatus{} }, subcommands.AgentSupport, "service", "status")
+	subcommands.MustRegister(func() subcommands.Subcommand { return &ServiceEnable{} }, subcommands.AgentSupport, "service", "enable")
+	subcommands.MustRegister(func() subcommands.Subcommand { return &ServiceDisable{} }, subcommands.AgentSupport, "service", "disable")
+	subcommands.MustRegister(func() subcommands.Subcommand { return &ServiceSet{} }, subcommands.AgentSupport, "service", "set")
+	subcommands.MustRegister(func() subcommands.Subcommand { return &ServiceUnset{} }, subcommands.AgentSupport, "service", "unset")
+	subcommands.MustRegister(func() subcommands.Subcommand { return &ServiceAdd{} }, subcommands.AgentSupport, "service", "add")
+	subcommands.MustRegister(func() subcommands.Subcommand { return &ServiceRm{} }, subcommands.AgentSupport, "service", "rm")
+	subcommands.MustRegister(func() subcommands.Subcommand { return &ServiceShow{} }, subcommands.AgentSupport, "service", "show")
+	subcommands.MustRegister(func() subcommands.Subcommand { return &Service{} }, subcommands.BeforeRepositoryOpen, "service")
 }
 
 type Service struct {

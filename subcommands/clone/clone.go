@@ -34,7 +34,7 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Clone{} }, subcommands.AgentSupport, "clone")
+	subcommands.MustRegister(func() subcommands.Subcommand { return &Clone{} }, subcommands.AgentSupport, "clone")
 }
 
 func (cmd *Clone) Parse(ctx *appcontext.AppContext, args []string) error {
