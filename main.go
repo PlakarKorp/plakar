@@ -26,6 +26,7 @@ import (
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/cookies"
 	"github.com/PlakarKorp/plakar/plugins"
+	"github.com/PlakarKorp/plakar/procmon"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/task"
 	"github.com/PlakarKorp/plakar/utils"
@@ -121,11 +122,13 @@ func entryPoint() int {
 	var opt_agentless bool
 	var opt_enableSecurityCheck bool
 	var opt_disableSecurityCheck bool
+	var opt_procmon bool
 
 	flag.StringVar(&opt_configdir, "config", opt_configDefault, "configuration directory")
 	flag.IntVar(&opt_cpuCount, "cpu", opt_cpuDefault, "limit the number of usable cores")
 	flag.StringVar(&opt_cpuProfile, "profile-cpu", "", "profile CPU usage")
 	flag.StringVar(&opt_memProfile, "profile-mem", "", "profile MEM usage")
+	flag.BoolVar(&opt_procmon, "procmon", false, "enable process monitoring for diagnostics (debug)")
 	flag.BoolVar(&opt_time, "time", false, "display command execution time")
 	flag.StringVar(&opt_trace, "trace", "", "display trace logs, comma-separated (all, trace, repository, snapshot, server)")
 	flag.BoolVar(&opt_quiet, "quiet", false, "no output except errors")
@@ -148,6 +151,15 @@ func entryPoint() int {
 
 	ctx := appcontext.NewAppContext()
 	defer ctx.Close()
+
+	if opt_procmon {
+		defer procmon.Start(ctx)()
+		closehttp, err := procmon.StartHTTP(":8080", "", strings.Join(flag.Args(), " "))
+		if err != nil {
+			panic(err)
+		}
+		defer closehttp(ctx)
+	}
 
 	ctx.ConfigDir = opt_configdir
 	err = ctx.ReloadConfig()
@@ -398,6 +410,17 @@ func entryPoint() int {
 	c := make(chan os.Signal, 1)
 	go func() {
 		<-c
+
+		f, err := os.Create("/tmp/sigprofile.pprof")
+		if err != nil {
+			log.Fatal("could not create memory profile: ", err)
+		}
+		defer f.Close() // error handling omitted for example
+		runtime.GC()    // get up-to-date statistics
+		if err := pprof.WriteHeapProfile(f); err != nil {
+			fmt.Fprintf(os.Stderr, "%s: could not write MEM profile: %d\n", flag.CommandLine.Name(), err)
+		}
+
 		fmt.Fprintf(os.Stderr, "%s: Interrupting, it might take a while...\n", flag.CommandLine.Name())
 		ctx.Cancel()
 	}()
