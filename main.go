@@ -7,13 +7,11 @@ import (
 	"io"
 	"log"
 	"os"
-	"os/signal"
 	"os/user"
 	"path/filepath"
 	"runtime"
 	"runtime/pprof"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/PlakarKorp/kloset/caching"
@@ -406,25 +404,6 @@ func entryPoint() int {
 
 	cmd.SetCWD(ctx.CWD)
 	cmd.SetCommandLine(ctx.CommandLine)
-
-	c := make(chan os.Signal, 1)
-	go func() {
-		<-c
-
-		f, err := os.Create("/tmp/sigprofile.pprof")
-		if err != nil {
-			log.Fatal("could not create memory profile: ", err)
-		}
-		defer f.Close() // error handling omitted for example
-		runtime.GC()    // get up-to-date statistics
-		if err := pprof.WriteHeapProfile(f); err != nil {
-			fmt.Fprintf(os.Stderr, "%s: could not write MEM profile: %d\n", flag.CommandLine.Name(), err)
-		}
-
-		fmt.Fprintf(os.Stderr, "%s: Interrupting, it might take a while...\n", flag.CommandLine.Name())
-		ctx.Cancel()
-	}()
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
 	var status int
 
