@@ -1,6 +1,7 @@
 package procmon
 
 import (
+	"fmt"
 	"os"
 	"sync"
 	"time"
@@ -61,10 +62,8 @@ func Start(ctx *appcontext.AppContext) func() {
 				return
 			case evt := <-eventslistener:
 				switch evt.(type) {
-				//case *events.Start, *events.Done, *events.StartImporter, *events.DoneImporter, *events.StartCommit, *events.DoneCommit, *events.StartPersistVFS, *events.DonePersistVFS, *events.StartPersistIndexes, *events.DonePersistIndexes:
-				//	MarkAt(evt.GetTimestamp(), fmt.Sprintf("%T", evt))
-
-				case *events.File, *events.FileError, *events.FileOK, *events.Directory, *events.DirectoryError, *events.DirectoryOK, *events.Path, *events.PathError:
+				case events.Start, events.Done, events.StartImporter, events.DoneImporter:
+					MarkAt(time.Now(), fmt.Sprintf("%T", evt))
 
 				default:
 					//	fmt.Println("procmon: unhandled event type:", fmt.Sprintf("%T", evt)) // DEBUG

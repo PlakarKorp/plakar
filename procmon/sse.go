@@ -137,7 +137,6 @@ func StartHTTP(addr, base, title string) (func(context.Context) error, error) {
 	}
 	return stop, nil
 }
-
 func minUIHTML(base, title string) string {
 	tHTML := html.EscapeString(title)
 	return `<!doctype html>
@@ -148,16 +147,33 @@ func minUIHTML(base, title string) string {
  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:16px}
  #chartWrap{width:100%;height:420px}
  canvas{width:100%!important;height:100%!important;display:block}
- .row{display:flex;gap:12px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
- .badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#eee}
+ .row{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+ .badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#eee;font-variant-numeric:tabular-nums}
+ .section{margin-top:6px}
 </style>
 </head><body>
 <h2>` + tHTML + `</h2>
-<div class="row">
-  <span class="badge" id="peakcpu">peak CPU: –</span>
-  <span class="badge" id="peakram">peak RAM: –</span>
+
+<div class="row section">
   <span class="badge" id="status">connecting…</span>
 </div>
+
+<div class="row section">
+  <strong>CPU:</strong>
+  <span class="badge" id="cpu-min">min: –</span>
+  <span class="badge" id="cpu-max">max: –</span>
+  <span class="badge" id="cpu-avg">avg: –</span>
+  <span class="badge" id="cpu-med">med: –</span>
+</div>
+
+<div class="row section">
+  <strong>RAM:</strong>
+  <span class="badge" id="ram-min">min: –</span>
+  <span class="badge" id="ram-max">max: –</span>
+  <span class="badge" id="ram-avg">avg: –</span>
+  <span class="badge" id="ram-med">med: –</span>
+</div>
+
 <div id="chartWrap"><canvas id="chart"></canvas></div>
 
 <script>const BASE='` + base + `';</script>
@@ -175,10 +191,7 @@ const chart = new Chart(document.getElementById('chart').getContext('2d'), {
   options:{
     responsive:true, maintainAspectRatio:false, animation:false,
     layout:{ padding:{top:24} }, // room for labels
-    plugins:{
-      legend:{display:true},
-      annotation:{ annotations:{} }
-    },
+    plugins:{ legend:{display:true}, annotation:{ annotations:{} } },
     scales:{
       x:{type:'linear', title:{display:true,text:'Elapsed (s)'}},
       yCPU:{position:'left',  title:{display:true,text:'CPU %'}},
@@ -188,7 +201,43 @@ const chart = new Chart(document.getElementById('chart').getContext('2d'), {
   }
 });
 
-let peakCPU=0, peakMiB=0, t0=null;
+// ----- stats helpers -----
+const state = {
+  cpu: [],  // floats
+  ram: [],  // floats (MiB)
+};
+
+function format1(n){ return (Math.round(n*10)/10).toFixed(1); }
+function computeStats(arr){
+  if(arr.length===0) return null;
+  let sum=0, min=arr[0], max=arr[0];
+  for(const v of arr){ sum+=v; if(v<min) min=v; if(v>max) max=v; }
+  const avg = sum/arr.length;
+  // median: sort copy
+  const tmp = arr.slice().sort((a,b)=>a-b);
+  const mid = Math.floor(tmp.length/2);
+  const med = (tmp.length%2)? tmp[mid] : (tmp[mid-1]+tmp[mid])/2;
+  return {min, max, avg, med};
+}
+function updateBadges(){
+  const cpuStats = computeStats(state.cpu);
+  const ramStats = computeStats(state.ram);
+  if(cpuStats){
+    document.getElementById('cpu-min').textContent = 'min: ' + format1(cpuStats.min) + '%';
+    document.getElementById('cpu-max').textContent = 'max: ' + format1(cpuStats.max) + '%';
+    document.getElementById('cpu-avg').textContent = 'avg: ' + format1(cpuStats.avg) + '%';
+    document.getElementById('cpu-med').textContent = 'med: ' + format1(cpuStats.med) + '%';
+  }
+  if(ramStats){
+    document.getElementById('ram-min').textContent = 'min: ' + format1(ramStats.min) + ' MiB';
+    document.getElementById('ram-max').textContent = 'max: ' + format1(ramStats.max) + ' MiB';
+    document.getElementById('ram-avg').textContent = 'avg: ' + format1(ramStats.avg) + ' MiB';
+    document.getElementById('ram-med').textContent = 'med: ' + format1(ramStats.med) + ' MiB';
+  }
+}
+
+// ----- samples / markers -----
+let t0=null;
 const statusEl = document.getElementById('status');
 
 function addSample(s){
@@ -197,55 +246,44 @@ function addSample(s){
   const x  = (ts - t0)/1000;
   const cpu = s.CPUPercent;
   const mib = s.RSSBytes/1048576;
+
   chart.data.datasets[0].data.push({x:x,y:cpu});
   chart.data.datasets[1].data.push({x:x,y:mib});
-  if(cpu>peakCPU){peakCPU=cpu; document.getElementById('peakcpu').textContent='peak CPU: '+peakCPU.toFixed(1)+'%';}
-  if(mib>peakMiB){peakMiB=mib; document.getElementById('peakram').textContent='peak RAM: '+peakMiB.toFixed(1)+' MiB';}
+
+  state.cpu.push(cpu);
+  state.ram.push(mib);
 }
 
 const markers = []; // {id,label,x,color}
 function addMarker(m){
   const ts = new Date(m.TS || m.time).getTime();
-  if(t0===null) return; // history will set t0 first
+  if(t0===null) return; // wait until we know t0
   const x = (ts - t0)/1000;
   const color = (m.Color || m.color || '#ff6f00');
   markers.push({id: (m.id || markers.length+1), label: m.Label || m.label || '', x, color});
   redrawMarkers();
 }
 
-// Build non-overlapping vertical line labels:
-// - convert each marker x to pixel
-// - sort by pixel x
-// - stack labels when closer than minDx
 function redrawMarkers(){
   const anns = {};
   const scale = chart.scales.x;
   const minDx = 12;           // min pixel gap to consider overlapping
-  const lineW = 1;            // line width
-  const baseYOffset = -12;    // label offset from top grid
-  const step = 14;            // vertical spacing between stacked labels
+  const lineW = 1;
+  const baseYOffset = -12;
+  const step = 14;
 
-  // prepare entries with pixelX
-  const entries = markers.map(m => ({
-    ...m,
-    pixelX: scale.getPixelForValue(m.x)
-  })).sort((a,b)=>a.pixelX-b.pixelX);
+  const entries = markers.map(m => ({...m, pixelX: scale.getPixelForValue(m.x)}))
+                         .sort((a,b)=>a.pixelX-b.pixelX);
 
-  // stack groups
-  const layers = []; // array of arrays; each inner array is a stack at roughly same x
+  const layers = [];
   for(const e of entries){
-    let placed = false;
+    let placed=false;
     for(const stack of layers){
-      // if far enough from last in this stack, create new stack; else add to same stack
       const last = stack[stack.length-1];
-      if (Math.abs(e.pixelX - last.pixelX) <= minDx){
-        stack.push(e); placed = true; break;
-      }
+      if(Math.abs(e.pixelX - last.pixelX) <= minDx){ stack.push(e); placed=true; break; }
     }
     if(!placed) layers.push([e]);
   }
-
-  // assign yAdjust per stack (0, -step, -2*step, …), alternate sides to reduce clutter
   let side = 1;
   for(const stack of layers){
     stack.forEach((e, i) => {
@@ -260,30 +298,26 @@ function redrawMarkers(){
           position: 'start',
           yAdjust: yAdjust,
           backgroundColor: 'rgba(0,0,0,0.6)',
-          color: '#fff',
-          padding: 2,
-          borderRadius: 3,
-          font: { size: 10 }
+          color: '#fff', padding: 2, borderRadius: 3, font: { size: 10 }
         },
         drawTime: 'afterDatasetsDraw'
       };
     });
-    side *= -1; // alternate stacking direction
+    side *= -1;
   }
-
   chart.options.plugins.annotation.annotations = anns;
 }
 
+// ----- initial load -----
 fetch(BASE + '/samples').then(r=>{
   if(!r.ok) throw new Error('HTTP '+r.status);
   return r.json();
 }).then(arr=>{
   if(arr.length>0){
-    // establish t0 based on first sample TS – elapsed(0)
-    const firstTs = new Date(arr[0].TS).getTime();
-    t0 = firstTs;
+    t0 = new Date(arr[0].TS).getTime();
   }
   arr.forEach(addSample);
+  updateBadges();
   chart.update();
   statusEl.textContent = 'loaded history';
 }).catch(err=>{
@@ -291,19 +325,22 @@ fetch(BASE + '/samples').then(r=>{
   console.error('samples fetch failed:', err);
 });
 
-// load existing markers, then draw
 fetch(BASE + '/marks').then(r=>r.json()).then(ms=>{
   ms.forEach(addMarker);
   chart.update();
 });
 
+// ----- live -----
 const es = new EventSource(BASE + '/events');
 es.onopen = () => statusEl.textContent = 'live';
 es.onerror = () => statusEl.textContent = 'disconnected';
+
 es.addEventListener('sample', ev=>{
   addSample(JSON.parse(ev.data));
+  updateBadges();
   chart.update();
 });
+
 es.addEventListener('mark', ev=>{
   addMarker(JSON.parse(ev.data));
   chart.update();
