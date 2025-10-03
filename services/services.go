@@ -9,6 +9,7 @@ import (
 
 	"github.com/PlakarKorp/plakar/appcontext"
 	//"github.com/santhosh-tekuri/jsonschema/v6"
+	errorspkg "github.com/PlakarKorp/plakar/internal/errors"
 )
 
 const SERVICE_ENDPOINT = "https://api.plakar.io"
@@ -22,11 +23,13 @@ type ServiceConnector struct {
 }
 
 func NewServiceConnector(ctx *appcontext.AppContext, authToken string) *ServiceConnector {
-	return &ServiceConnector{
+	sc := &ServiceConnector{
 		appCtx:    ctx,
 		authToken: authToken,
 		endpoint:  SERVICE_ENDPOINT,
 	}
+	registerServiceLogger(ctx.GetLogger())
+	return sc
 }
 
 type ServiceDescription struct {
@@ -59,7 +62,8 @@ func (sc *ServiceConnector) getServicesList() ([]ServiceDescription, error) {
 	url := fmt.Sprintf("%s%s", sc.endpoint, "/v1/account/services")
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %v", err)
+		return nil, errorspkg.Wrap(ErrBuildRequest, err, "failed to create request",
+			errorspkg.WithContext("url", url))
 	}
 	req.Header.Set("User-Agent", fmt.Sprintf("%s (%s/%s)", sc.appCtx.Client, sc.appCtx.OperatingSystem, sc.appCtx.Architecture))
 	req.Header.Set("Accept", "application/json")
@@ -72,22 +76,27 @@ func (sc *ServiceConnector) getServicesList() ([]ServiceDescription, error) {
 	httpClient := http.DefaultClient
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get service list: %v", err)
+		return nil, errorspkg.Wrap(ErrDoRequest, err, "failed to get service list",
+			errorspkg.WithContext("url", url))
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to get service list: %s", resp.Status)
+		return nil, errorspkg.New(ErrUnexpectedStatus, "failed to get service list",
+			errorspkg.WithContext("url", url),
+			errorspkg.WithContext("status", resp.Status))
 	}
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %v", err)
+		return nil, errorspkg.Wrap(ErrReadBody, err, "failed to read service list",
+			errorspkg.WithContext("url", url))
 	}
 
 	var res []ServiceDescription
 	if err := json.Unmarshal(data, &res); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %v", err)
+		return nil, errorspkg.Wrap(ErrDecodeResponse, err, "failed to decode service list",
+			errorspkg.WithContext("url", url))
 	}
 
 	sc.servicesList = res
@@ -101,11 +110,15 @@ func (sc *ServiceConnector) ValidateServiceConfiguration(name string, config any
 	}
 	for _, svc := range svcs {
 		if svc.Name == name {
-			return svc.ValidateConfig(config)
+			if err := svc.ValidateConfig(config); err != nil {
+				return errorspkg.Wrap(ErrValidateConfig, err, "invalid service configuration",
+					errorspkg.WithContext("service", name))
+			}
+			return nil
 		}
 	}
 
-	return fmt.Errorf("service not found")
+	return errorspkg.New(ErrServiceNotFound, "service not found", errorspkg.WithContext("service", name))
 }
 
 func (sc *ServiceConnector) GetServiceList() ([]ServiceDescription, error) {
@@ -118,7 +131,8 @@ func (sc *ServiceConnector) GetServiceStatus(name string) (bool, error) {
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return false, fmt.Errorf("failed to create request: %v", err)
+		return false, errorspkg.Wrap(ErrBuildRequest, err, "failed to create request",
+			errorspkg.WithContext("url", url), errorspkg.WithContext("service", name))
 	}
 	req.Header.Set("User-Agent", fmt.Sprintf("%s (%s/%s)", sc.appCtx.Client, sc.appCtx.OperatingSystem, sc.appCtx.Architecture))
 	req.Header.Set("Accept", "application/json")
@@ -133,24 +147,30 @@ func (sc *ServiceConnector) GetServiceStatus(name string) (bool, error) {
 	httpClient := http.DefaultClient
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return false, fmt.Errorf("failed to get service status: %v", err)
+		return false, errorspkg.Wrap(ErrDoRequest, err, "failed to get service status",
+			errorspkg.WithContext("url", url), errorspkg.WithContext("service", name))
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return false, fmt.Errorf("failed to get service status: %s", resp.Status)
+		return false, errorspkg.New(ErrUnexpectedStatus, "failed to get service status",
+			errorspkg.WithContext("url", url),
+			errorspkg.WithContext("service", name),
+			errorspkg.WithContext("status", resp.Status))
 	}
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return false, fmt.Errorf("failed to read response body: %v", err)
+		return false, errorspkg.Wrap(ErrReadBody, err, "failed to read service status",
+			errorspkg.WithContext("url", url), errorspkg.WithContext("service", name))
 	}
 
 	var response struct {
 		Enabled bool `json:"enabled"`
 	}
 	if err := json.Unmarshal(data, &response); err != nil {
-		return false, fmt.Errorf("failed to unmarshal response: %v", err)
+		return false, errorspkg.Wrap(ErrDecodeResponse, err, "failed to decode service status",
+			errorspkg.WithContext("url", url), errorspkg.WithContext("service", name))
 	}
 
 	return response.Enabled, nil
@@ -167,12 +187,14 @@ func (sc *ServiceConnector) SetServiceStatus(name string, enabled bool) error {
 	}
 	bodyBytes, err := json.Marshal(body)
 	if err != nil {
-		return fmt.Errorf("failed to marshal request body: %v", err)
+		return errorspkg.Wrap(ErrEncodeRequest, err, "failed to marshal service status body",
+			errorspkg.WithContext("service", name), errorspkg.WithContext("enabled", enabled))
 	}
 
 	req, err := http.NewRequest("PUT", url, bytes.NewReader(bodyBytes))
 	if err != nil {
-		return fmt.Errorf("failed to create request: %v", err)
+		return errorspkg.Wrap(ErrBuildRequest, err, "failed to create request",
+			errorspkg.WithContext("url", url), errorspkg.WithContext("service", name))
 	}
 	req.Header.Set("User-Agent", fmt.Sprintf("%s (%s/%s)", sc.appCtx.Client, sc.appCtx.OperatingSystem, sc.appCtx.Architecture))
 	req.Header.Set("Accept", "application/json")
@@ -187,12 +209,17 @@ func (sc *ServiceConnector) SetServiceStatus(name string, enabled bool) error {
 	httpClient := http.DefaultClient
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed to get service status: %v", err)
+		return errorspkg.Wrap(ErrDoRequest, err, "failed to set service status",
+			errorspkg.WithContext("url", url), errorspkg.WithContext("service", name), errorspkg.WithContext("enabled", enabled))
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
-		return fmt.Errorf("failed to set service status: %s", resp.Status)
+		return errorspkg.New(ErrUnexpectedStatus, "failed to set service status",
+			errorspkg.WithContext("url", url),
+			errorspkg.WithContext("service", name),
+			errorspkg.WithContext("enabled", enabled),
+			errorspkg.WithContext("status", resp.Status))
 	}
 
 	return nil
@@ -204,7 +231,8 @@ func (sc *ServiceConnector) GetServiceConfiguration(name string) (map[string]str
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %v", err)
+		return nil, errorspkg.Wrap(ErrBuildRequest, err, "failed to create request",
+			errorspkg.WithContext("url", url), errorspkg.WithContext("service", name))
 	}
 	req.Header.Set("User-Agent", fmt.Sprintf("%s (%s/%s)", sc.appCtx.Client, sc.appCtx.OperatingSystem, sc.appCtx.Architecture))
 	req.Header.Set("Accept", "application/json")
@@ -219,22 +247,28 @@ func (sc *ServiceConnector) GetServiceConfiguration(name string) (map[string]str
 	httpClient := http.DefaultClient
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get service status: %v", err)
+		return nil, errorspkg.Wrap(ErrDoRequest, err, "failed to get service configuration",
+			errorspkg.WithContext("url", url), errorspkg.WithContext("service", name))
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to get service status: %s", resp.Status)
+		return nil, errorspkg.New(ErrUnexpectedStatus, "failed to get service configuration",
+			errorspkg.WithContext("url", url),
+			errorspkg.WithContext("service", name),
+			errorspkg.WithContext("status", resp.Status))
 	}
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %v", err)
+		return nil, errorspkg.Wrap(ErrReadBody, err, "failed to read service configuration",
+			errorspkg.WithContext("url", url), errorspkg.WithContext("service", name))
 	}
 
 	var response map[string]string
 	if err := json.Unmarshal(data, &response); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %v", err)
+		return nil, errorspkg.Wrap(ErrDecodeResponse, err, "failed to decode service configuration",
+			errorspkg.WithContext("url", url), errorspkg.WithContext("service", name))
 	}
 
 	return response, nil
@@ -243,7 +277,7 @@ func (sc *ServiceConnector) GetServiceConfiguration(name string) (map[string]str
 func (sc *ServiceConnector) SetServiceConfiguration(name string, configuration map[string]string) error {
 
 	if err := sc.ValidateServiceConfiguration(name, configuration); err != nil {
-		return fmt.Errorf("invalid configuration: %w", err)
+		return err
 	}
 
 	uri := fmt.Sprintf("/v1/account/services/%s/configuration", name)
@@ -251,12 +285,14 @@ func (sc *ServiceConnector) SetServiceConfiguration(name string, configuration m
 
 	bodyBytes, err := json.Marshal(configuration)
 	if err != nil {
-		return fmt.Errorf("failed to marshal request body: %v", err)
+		return errorspkg.Wrap(ErrEncodeRequest, err, "failed to marshal service configuration",
+			errorspkg.WithContext("service", name))
 	}
 
 	req, err := http.NewRequest("PUT", url, bytes.NewReader(bodyBytes))
 	if err != nil {
-		return fmt.Errorf("failed to create request: %v", err)
+		return errorspkg.Wrap(ErrBuildRequest, err, "failed to create request",
+			errorspkg.WithContext("url", url), errorspkg.WithContext("service", name))
 	}
 	req.Header.Set("User-Agent", fmt.Sprintf("%s (%s/%s)", sc.appCtx.Client, sc.appCtx.OperatingSystem, sc.appCtx.Architecture))
 	req.Header.Set("Accept", "application/json")
@@ -271,12 +307,16 @@ func (sc *ServiceConnector) SetServiceConfiguration(name string, configuration m
 	httpClient := http.DefaultClient
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed to set service status: %v", err)
+		return errorspkg.Wrap(ErrDoRequest, err, "failed to set service configuration",
+			errorspkg.WithContext("url", url), errorspkg.WithContext("service", name))
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
-		return fmt.Errorf("failed to set service status: %s", resp.Status)
+		return errorspkg.New(ErrUnexpectedStatus, "failed to set service configuration",
+			errorspkg.WithContext("url", url),
+			errorspkg.WithContext("service", name),
+			errorspkg.WithContext("status", resp.Status))
 	}
 
 	return nil
