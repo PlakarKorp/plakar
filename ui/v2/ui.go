@@ -45,35 +45,25 @@ func Ui(repo *repository.Repository, ctx *appcontext.AppContext, addr string, op
 	server := http.NewServeMux()
 	api.SetupRoutes(server, repo, ctx, opts.Token)
 
+	statics, err := fs.Sub(content, "frontend")
+	if err != nil {
+		return err
+	}
+	staticsFS := http.FS(statics)
+
 	// Serve files from the ./frontend directory
 	server.HandleFunc("/{path...}", func(w http.ResponseWriter, r *http.Request) {
 		p := path.Join("frontend", r.PathValue("path"))
 
-		_, err := content.Open(p)
-		if os.IsNotExist(err) {
-			// File does not exist, serve index.html
-			index, err := content.ReadFile(path.Join("frontend", "index.html"))
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			w.WriteHeader(http.StatusAccepted)
-			_, _ = w.Write(index)
-			return
-		} else if err != nil {
-			// If we got an error (that wasn't that the file doesn't exist) stating the
-			// file, return a 500 internal server error and stop
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		// If the asset does not exist, serve index.html.
+		// All other errors are handled by the file server below.
+		_, err := fs.Stat(content, p)
+		if err != nil && os.IsNotExist(err) {
+			http.ServeFileFS(w, r, content, "frontend/index.html")
 			return
 		}
 
-		statics, err := fs.Sub(content, "frontend")
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		http.FileServer(http.FS(statics)).ServeHTTP(w, r)
+		http.FileServer(staticsFS).ServeHTTP(w, r)
 	})
 
 	if addr == "" {
