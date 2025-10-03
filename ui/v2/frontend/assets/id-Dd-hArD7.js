@@ -1,0 +1,1 @@
+import{j as t,b as l,T as c,bg as i}from"./index-Bg98_QeE.js";function m({wrap:e=s=>s,value:o,helpText:n="Copy full ID",size:a,weight:p,className:r}){const s=o.slice(0,8);return t.jsxs("span",{className:l("flex items-center gap-2 align-middle",r),children:[t.jsx(c,{as:"span",size:a,weight:p,monospace:!0,children:e(s)}),t.jsx(i,{content:o,tooltip:n})]})}export{m as I};
