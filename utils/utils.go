@@ -28,8 +28,10 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"runtime/debug"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -70,9 +72,38 @@ func HumanToDuration(human string) (time.Duration, error) {
 		return duration, nil
 	}
 
-	// TODO-handle iteratively constructed human readable strings
+	// handle human readable strings with custom units
+	re := regexp.MustCompile(`(\d+)([dwmy])`)
+	multipliers := map[string]int{
+		"d": 24,    // days to hours
+		"w": 168,   // weeks to hours (7*24)
+		"m": 720,   // months to hours (30*24)
+		"y": 8760,  // years to hours (365*24)
+	}
 
-	return 0, fmt.Errorf("invalid duration: %s", human)
+	converted := re.ReplaceAllStringFunc(human, func(match string) string {
+		parts := re.FindStringSubmatch(match)
+		if len(parts) != 3 {
+			return match
+		}
+		num, err := strconv.Atoi(parts[1])
+		if err != nil {
+			return match
+		}
+		unit := parts[2]
+		mult, ok := multipliers[unit]
+		if !ok {
+			return match
+		}
+		converted := num * mult
+		return strconv.Itoa(converted) + "h"
+	})
+
+	duration, err = time.ParseDuration(converted)
+	if err != nil {
+		return 0, fmt.Errorf("invalid duration: %s", human)
+	}
+	return duration, nil
 }
 
 type ReleaseUpdateSummary struct {
