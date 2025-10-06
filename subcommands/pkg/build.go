@@ -113,8 +113,18 @@ func clone(destdir string, recipe *plugins.Recipe) error {
 		return fmt.Errorf("git clone failed: %w", err)
 	}
 
-	// TODO: how to check the checksum?  should it be the commit
-	// id pointed by the tag?  (or the tag itself?)
+	if recipe.Checksum != "" {
+		revParse := exec.Command("git", "rev-parse", "HEAD")
+		revParse.Dir = destdir
+		output, err := revParse.Output()
+		if err != nil {
+			return fmt.Errorf("failed to get commit hash: %w", err)
+		}
+		commitHash := string(output[:len(output)-1]) // remove trailing newline
+		if commitHash != recipe.Checksum {
+			return fmt.Errorf("checksum mismatch: expected %s, got %s", recipe.Checksum, commitHash)
+		}
+	}
 
 	return nil
 }
