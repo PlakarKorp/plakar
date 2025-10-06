@@ -184,35 +184,49 @@ func DecodeRPC(decoder *msgpack.Decoder) ([]string, map[string]string, []byte, e
 		return nil, nil, nil, fmt.Errorf("failed to decode client request: %w", err)
 	}
 
-	rawRequest, err := msgpack.Marshal(request["Subcommand"])
+	subcommand, exists := request["Subcommand"]
+	if !exists {
+		return nil, nil, nil, fmt.Errorf("request does not contain a Subcommand field")
+	}
+	rawRequest, err := msgpack.Marshal(subcommand)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to marshal client request: %s", err)
+		return nil, nil, nil, fmt.Errorf("failed to marshal client request: %w", err)
 	}
 
-	// XXX: Not my proudest code lives below. We need to fix this later!
-	tmp, ok := request["Name"].([]interface{})
+	nameRaw, exists := request["Name"]
+	if !exists {
+		return nil, nil, nil, fmt.Errorf("request does not contain a Name field")
+	}
+	tmp, ok := nameRaw.([]interface{})
 	if !ok {
-		return nil, nil, nil, fmt.Errorf("request does not contain a Name string field")
+		return nil, nil, nil, fmt.Errorf("request Name field is not an array")
 	}
 
 	name := make([]string, 0, len(tmp))
-	for _, elm := range tmp {
-		tname, _ := elm.(string)
-		name = append(name, tname)
+	for i, elm := range tmp {
+		str, ok := elm.(string)
+		if !ok {
+			return nil, nil, nil, fmt.Errorf("request Name field element %d is not a string", i)
+		}
+		name = append(name, str)
 	}
 
-	storeConfig, ok := request["StoreConfig"].(map[string]interface{})
-	if !ok {
+	storeConfigRaw, exists := request["StoreConfig"]
+	if !exists {
 		return nil, nil, nil, fmt.Errorf("request does not contain a StoreConfig field")
+	}
+	storeConfig, ok := storeConfigRaw.(map[string]interface{})
+	if !ok {
+		return nil, nil, nil, fmt.Errorf("request StoreConfig field is not a map")
 	}
 
 	okStoreConfig := make(map[string]string)
 	for k, v := range storeConfig {
-		if str, ok := v.(string); ok {
-			okStoreConfig[k] = str
-		} else {
+		str, ok := v.(string)
+		if !ok {
 			return nil, nil, nil, fmt.Errorf("StoreConfig field %s is not a string", k)
 		}
+		okStoreConfig[k] = str
 	}
 
 	return name, okStoreConfig, rawRequest, nil
