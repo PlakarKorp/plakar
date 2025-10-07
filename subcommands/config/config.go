@@ -314,10 +314,12 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 			names = p.Args()
 		}
 
+		var hasErrors bool
 		for _, name := range names {
 			name = normalizeName(name)
 			if !hasFunc(name) {
 				fmt.Fprintf(ctx.Stderr, "%s %q does not exist\n", cmd, name)
+				hasErrors = true
 				continue
 			}
 
@@ -358,6 +360,9 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 			if err != nil {
 				return fmt.Errorf("failed to encode store %q: %w", name, err)
 			}
+		}
+		if hasErrors {
+			return fmt.Errorf("one or more %ss do not exist", cmd)
 		}
 		return nil
 
