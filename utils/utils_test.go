@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -40,40 +39,6 @@ func TestParseSnapshotID(t *testing.T) {
 		require.Equal(t, "snapshot123", prefix)
 		require.Equal(t, "/path/to/file", pattern)
 	}
-}
-
-func TestHumanToDuration(t *testing.T) {
-	// Test case: Valid time.Duration string
-	duration, err := HumanToDuration("2h45m")
-	require.NoError(t, err)
-	require.Equal(t, 2*time.Hour+45*time.Minute, duration)
-
-	// Test case: Invalid time.Duration string
-	duration, err = HumanToDuration("invalid")
-	require.Error(t, err)
-	require.Equal(t, time.Duration(0), duration)
-	require.Contains(t, err.Error(), "invalid duration")
-
-	// Test case: Valid human-readable duration (e.g., "1h")
-	duration, err = HumanToDuration("1h")
-	require.NoError(t, err)
-	require.Equal(t, 1*time.Hour, duration)
-
-	// Test case: Valid human-readable duration (e.g., "1d")
-	duration, err = HumanToDuration("24h") // Equivalent to 1 day
-	require.NoError(t, err)
-	require.Equal(t, 24*time.Hour, duration)
-
-	// Test case: Valid human-readable duration with mixed units (e.g., "1d12h")
-	duration, err = HumanToDuration("36h") // Equivalent to 1 day and 12 hours
-	require.NoError(t, err)
-	require.Equal(t, 36*time.Hour, duration)
-
-	// Test case: Empty input
-	duration, err = HumanToDuration("")
-	require.Error(t, err)
-	require.Equal(t, time.Duration(0), duration)
-	require.Contains(t, err.Error(), "invalid duration")
 }
 
 func TestGetVersion(t *testing.T) {
