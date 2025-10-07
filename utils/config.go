@@ -327,12 +327,19 @@ func GetConf(rd io.Reader, thirdParty string) (map[string]map[string]string, err
 		}
 	}
 
+	seenLocation := false
 	for _, section := range configMap {
 		for key, value := range section {
+			if key == "location" {
+				seenLocation = true
+			}
 			if value == "" {
 				delete(section, key)
 			}
 		}
+	}
+	if !seenLocation {
+		return nil, fmt.Errorf("missing 'location' key in config data, `-rclone` import option missing ?")
 	}
 	return configMap, nil
 }

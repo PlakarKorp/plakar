@@ -208,6 +208,25 @@ func (cmd *Maintenance) colourPass(ctx *appcontext.AppContext, cache *caching.Ma
 	fmt.Fprintf(ctx.Stdout, "maintenance: Coloured %d packfiles (%d orphaned) for deletion\n", coloredPackfiles, orphanedPackfiles)
 
 	if coloredPackfiles > 0 {
+		duration, err := time.ParseDuration(os.Getenv("PLAKAR_GRACEPERIOD"))
+		if err != nil {
+			duration = 30 * 24 * time.Hour
+		}
+
+		humanDuration := duration.String()
+		if duration.Hours() > 24 {
+			days := duration / (24 * time.Hour)
+			left := duration - (days * 24 * time.Hour)
+
+			humanDuration = fmt.Sprintf("%dd", days)
+
+			if left != 0 {
+				humanDuration += left.String()
+			}
+		}
+
+		fmt.Fprintf(ctx.Stdout, "Coloured packfiles are scheduled to be removed in %s\n", humanDuration)
+
 		if err := repoWriter.CommitTransaction(cmd.maintenanceID); err != nil {
 			return err
 		}
