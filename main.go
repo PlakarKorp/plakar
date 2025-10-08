@@ -68,6 +68,7 @@ import (
 	_ "github.com/PlakarKorp/integration-ptar/storage"
 	_ "github.com/PlakarKorp/integration-stdio/exporter"
 	_ "github.com/PlakarKorp/integration-stdio/importer"
+	_ "github.com/PlakarKorp/integration-tar/importer"
 )
 
 var ErrCantUnlock = errors.New("failed to unlock repository")
@@ -253,7 +254,7 @@ func entryPoint() int {
 	ctx.MachineID = opt_machineIdDefault
 	ctx.KeyFromFile = secretFromKeyfile
 	ctx.ProcessID = os.Getpid()
-	ctx.MaxConcurrency = opt_cpuCount*2 + 1
+	ctx.MaxConcurrency = opt_cpuCount
 
 	if flag.NArg() == 0 {
 		fmt.Fprintf(os.Stderr, "%s: a subcommand must be provided\n", filepath.Base(flag.CommandLine.Name()))

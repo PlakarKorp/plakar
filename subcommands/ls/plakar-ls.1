@@ -1,4 +1,4 @@
-.Dd July 3, 2025
+.Dd September 10, 2025
 .Dt PLAKAR-LS 1
 .Os
 .Sh NAME
@@ -7,16 +7,6 @@
 .Sh SYNOPSIS
 .Nm plakar ls
 .Op Fl uuid
-.Op Fl name Ar name
-.Op Fl category Ar category
-.Op Fl environment Ar environment
-.Op Fl perimeter Ar perimeter
-.Op Fl job Ar job
-.Op Fl tag Ar tag
-.Op Fl tags
-.Op Fl latest
-.Op Fl before Ar date
-.Op Fl since Ar date
 .Op Fl recursive
 .Op Ar snapshotID : Ns Ar path
 .Sh DESCRIPTION
@@ -27,44 +17,14 @@ displays the contents of
 .Ar path
 in a specified snapshot.
 .Pp
+In addition to the flags described below,
+.Nm plakar ls
+supports the location flags documented in
+.Xr plakar-query 7
+to precisely select snapshots.
+.Pp
 The options are as follows:
 .Bl -tag -width Ds
-.It Fl name Ar name
-Only apply command to snapshots that match
-.Ar name .
-.It Fl category Ar category
-Only apply command to snapshots that match
-.Ar category .
-.It Fl environment Ar environment
-Only apply command to snapshots that match
-.Ar environment .
-.It Fl perimeter Ar perimeter
-Only apply command to snapshots that match
-.Ar perimeter .
-.It Fl job Ar job
-Only apply command to snapshots that match
-.Ar job .
-.It Fl tag Ar tag
-Filter snapshots by the specified tag, listing only those that contain
-the given tag.
-.It Fl tags
-Display tags when listing snapshots.
-.It Fl latest
-Only apply command to latest snapshot matching filters.
-.It Fl before Ar date
-Only apply command to snapshots matching filters and older than the specified
-date.
-Accepted formats include relative durations
-.Pq e.g. "2d" for two days, "1w" for one week
-or specific dates in various formats
-.Pq e.g. "2006-01-02 15:04:05" .
-.It Fl since Ar date
-Only apply command to snapshots matching filters and created since the specified
-date, included.
-Accepted formats include relative durations
-.Pq e.g. "2d" for two days, "1w" for one week
-or specific dates in various formats
-.Pq e.g. "2006-01-02 15:04:05" .
 .It Fl uuid
 Display the full UUID for each snapshot instead of the shorter
 snapshot ID.
@@ -106,4 +66,5 @@ An error occurred, such as failure to retrieve snapshot information or
 invalid snapshot ID.
 .El
 .Sh SEE ALSO
-.Xr plakar 1
+.Xr plakar 1 ,
+.Xr plakar-query 7

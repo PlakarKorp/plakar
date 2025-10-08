@@ -1,4 +1,4 @@
-.Dd July 8, 2025
+.Dd September 9, 2025
 .Dt PLAKAR 1
 .Os
 .Sh NAME
@@ -131,7 +131,7 @@ Build a plugin from source, documented in
 Package a plugin, documented in
 .Xr plakar-pkg-create 1 .
 .It Cm pkg rm
-Unistall a plugin, documented in
+Uninstall a plugin, documented in
 .Xr plakar-pkg-rm 1 .
 .It Cm restore
 Restore files from a Kloset snapshot, documented in
@@ -173,10 +173,14 @@ Reference to the Kloset store.
 .El
 .Sh FILES
 .Bl -tag -width Ds
-.It Pa ~/.cache/plakar and Pa ~/.cache/plakar-agentless
+.It Pa ~/.cache/plakar No and Pa ~/.cache/plakar-agentless
 Plakar cache directories.
-.It Pa ~/.config/plakar/klosets.yml ~/.config/plakar/sources.yml ~/.config/plakar/destinations.yml
-Default configuration files.
+.It Pa ~/.config/plakar/destinations.yml
+Restore destinations configuration.
+.It Pa ~/.config/plakar/sources.yml
+Backup sources configuration.
+.It Pa ~/.config/plakar/stores.yml
+Kloset stores configuration.
 .It Pa ~/.plakar
 Default Kloset store location.
 .El
@@ -188,9 +192,9 @@ $ plakar create
 .Pp
 Create an encrypted Kloset store on AWS S3:
 .Bd -literal -offset indent
-$ plakar store add mys3bucket \\
+$ plakar store add mys3bucket \e
     location=s3://s3.eu-west-3.amazonaws.com/backups \e
-    access_key="access_key" \\
+    access_key="access_key" \e
     secret_access_key="secret_key"
 $ plakar at @mys3bucket create
 .Ed

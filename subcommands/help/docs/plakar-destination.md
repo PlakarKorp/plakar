@@ -23,7 +23,7 @@ to use, and some exporter-specific parameters.
 
 The subcommands are as follows:
 
-**add** *name* *location* \[option=value ...]
+**add** *name* *location* \[*option*=*value ...*]
 
 > Create a new destination entry identified by
 > *name*
@@ -31,7 +31,7 @@ The subcommands are as follows:
 > *location*
 > describing the exporter to use.
 > Additional exporter options can be set by adding
-> *option=value*
+> *option*=*value*
 > parameters.
 
 **check** *name*
@@ -40,7 +40,11 @@ The subcommands are as follows:
 > *name*
 > is properly configured.
 
-**import** \[**-config** *location*] \[**-overwrite**] \[**-rclone**] \[*sections ...*]
+**import**
+\[**-config** *location*]
+\[**-overwrite**]
+\[**-rclone**]
+\[*sections ...*]
 
 > Import a configuration from either stdin (default),
 > a file, or a URL.
@@ -74,7 +78,7 @@ The subcommands are as follows:
 > *name*
 > from the configuration.
 
-**set** *name* \[option=value ...]
+**set** *name* \[*option*=*value ...*]
 
 > Set the
 > *option*
@@ -84,21 +88,21 @@ The subcommands are as follows:
 > *name*.
 > Multiple option/value pairs can be specified.
 
-**show** \[**-secrets**] \[name ...]
+**show** \[**-secrets**] \[*name ...*]
 
 > Display the current destinations configuration.
 > If
 > **-secrets**
 > is specified, sensitive information such as passwords or tokens will be shown.
 
-**unset** *name* \[option ...]
+**unset** *name* \[*option ...*]
 
 > Remove the
 > *option*
 > for the destination entry identified by
 > *name*.
 
-# DIAGNOSTICS
+# EXIT STATUS
 
 The **plakar-destination** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
 
@@ -106,4 +110,4 @@ The **plakar-destination** utility exits&#160;0 on success, and&#160;&gt;0 if an
 
 plakar(1)
 
-Plakar - July 3, 2025
+Plakar - September 11, 2025

@@ -5,9 +5,9 @@ release:
 
 archives:
   - files:
-      - src: plakar.1
-        dst: man/plakar.1
-      - src: subcommands/**/*.1
+      - src: plakar*.[1-9]
+        dst: man
+      - src: subcommands/**/*.[1-9]
         dst: man
         strip_parent: true
 
@@ -47,6 +47,7 @@ builds:
       - linux
       - openbsd
       - freebsd
+      - windows
 
     # GOARCH to build for.
     # For more info refer to: https://pkg.go.dev/cmd/go#hdr-Environment_variables
@@ -155,6 +156,11 @@ nfpms:
         file_info:
           mode: 0644
 
+      - src: ./plakar-query.7
+        dst: /usr/share/man/man7/plakar-query.7
+        file_info:
+          mode: 0644
+
       - src: ./subcommands/cat/plakar-cat.1
         dst: /usr/share/man/man1/plakar-cat.1
         file_info:
@@ -192,6 +198,11 @@ nfpms:
 
       - src: ./subcommands/config/plakar-store.1
         dst: /usr/share/man/man1/plakar-store.1
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/config/plakar-policy.1
+        dst: /usr/share/man/man1/plakar-policy.1
         file_info:
           mode: 0644
 
@@ -340,6 +351,16 @@ nfpms:
         file_info:
           mode: 0644
 
+      - src: ./subcommands/pkg/plakar-pkg-manifest.yaml.5
+        dst: /usr/share/man/man5/plakar-pkg-manifest.yaml.5
+        file_info:
+          mode: 0644
+
+      - src: ./subcommands/pkg/plakar-pkg-recipe.yaml.5
+        dst: /usr/share/man/man5/plakar-pkg-recipe.yaml.5
+        file_info:
+          mode: 0644
+
 homebrew_casks:
   - # Name of the cask
     #
@@ -391,7 +412,11 @@ homebrew_casks:
       - ./man/plakar-pkg-rm.1
       - ./man/plakar-pkg-create.1
       - ./man/plakar-pkg-show.1
+      - ./man/plakar-policy.1
       - ./man/plakar.1
+      - ./man/plakar-query.7
+      - ./man/plakar-pkg-manifest.yaml.5
+      - ./man/plakar-pkg-recipe.yaml.5
 
     # # Completions for different shells
     # #

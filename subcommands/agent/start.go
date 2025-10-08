@@ -25,6 +25,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -63,6 +64,8 @@ func (cmd *AgentStart) Parse(ctx *appcontext.AppContext, args []string) error {
 	}
 
 	flags := flag.NewFlagSet("agent start", flag.ExitOnError)
+	flags.StringVar(&opt_logfile, "log", "", "log file")
+	flags.BoolVar(&opt_foreground, "foreground", false, "run in foreground")
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS]\n", flags.Name())
 		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
@@ -115,6 +118,19 @@ func isDisconnectError(err error) bool {
 }
 
 func (cmd *AgentStart) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+	// Since we are detaching, we loose all stack traces, with no possibility
+	// to recover them, try to log them to a known location.
+	crashLog := filepath.Join(ctx.GetInner().CacheDir, "crash.log")
+	f, err := os.OpenFile(crashLog, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		return 1, err
+	}
+
+	debug.SetCrashOutput(f, debug.CrashOptions{})
+
+	// Safe to ignore here.
+	f.Close()
+
 	if err := cmd.ListenAndServe(ctx); err != nil {
 		return 1, err
 	}

@@ -51,7 +51,7 @@ jobs:
         run: |
           rm -rf -- ./plakar/ui/v2/frontend
           mkdir -p ./plakar/ui/v2/frontend
-          cp -r ./plakar-ui/dist/* ./plakar/ui/v2/frontend/
+          cp -r ./plakar-ui/apps/oss/dist/* ./plakar/ui/v2/frontend/
 
       - name: Get plakar-ui commit SHA
         id: plakar_ui

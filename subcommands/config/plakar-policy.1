@@ -1,0 +1,83 @@
+.Dd September 11, 2025
+.Dt PLAKAR-POLICY 1
+.Os
+.Sh NAME
+.Nm plakar-policy
+.Nd Manage Plakar retention policies
+.Sh SYNOPSIS
+.Nm plakar policy
+.Ar subcommand ...
+.Sh DESCRIPTION
+The
+.Nm plakar policy
+command manages the retention policies for
+.Xr plakar-prune 1 .
+.Pp
+The configuration consists in a set of named entries, each of them
+describing a retention policy.
+.Pp
+The subcommands are as follows:
+.Bl -tag -width Ds
+.It Cm add Ar name Op Ar option Ns No = Ns Ar value ...
+Create a new source entry identified by
+.Ar name .
+Additional parameters can be set by adding
+.Ar option Ns No = Ns Ar value
+parameters.
+.It Cm rm Ar name
+Remove the policy identified by
+.Ar name
+from the configuration.
+.It Cm set Ar name Op Ar option Ns No = Ns Ar value ...
+Set the
+.Ar option
+to
+.Ar value
+for the source identified by
+.Ar name .
+Multiple option/value pairs can be specified.
+.It Xo
+.Cm show
+.Op Fl ini
+.Op Fl json
+.Op Fl yaml
+.Op Ar name ...
+.Xc
+Display the current sources configuration.
+.Fl ini ,
+.Fl json
+and
+.Fl yaml
+control the output format, which is YAML by default.
+.It Cm unset Ar name Op option ...
+Remove the
+.Ar option
+for the policy identified by
+.Ar name .
+.El
+.Pp
+The available options as described in
+.Xr plakar-query 7 :
+each option corresponds the similarly named flag.
+.Sh EXIT STATUS
+.Ex -std
+.Sh EXAMPLES
+Create a policy
+.Sq weekly
+that keeps one backup per week and discards backups older than three
+months:
+.Bd -literal
+$ plakar policy add weekly
+$ plakar policy set weekly since='3 months'
+$ plakar policy set weekly per-week=1
+.Ed
+.Pp
+Prune snapshots accordingly to the
+.Sq weekly
+policy:
+.Bd -literal
+$ plakar prune -policy weekly
+.Ed
+.Sh SEE ALSO
+.Xr plakar 1 ,
+.Xr plakar-prune 1

@@ -3,6 +3,7 @@ package diag
 import (
 	"flag"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/PlakarKorp/kloset/btree"
@@ -59,18 +60,34 @@ func (cmd *DiagXattr) Execute(ctx *appcontext.AppContext, repo *repository.Repos
 		return 1, err
 	}
 
+	fs, err := snap.Filesystem()
+	if err != nil {
+		return 1, err
+	}
+
 	it, err := tree.ScanFrom(pathname)
 	if err != nil {
 		return 1, err
 	}
 
 	for it.Next() {
-		path, _ := it.Current()
+		path, xattrmac := it.Current()
 		if !strings.HasPrefix(path, pathname) {
 			break
 		}
 
-		fmt.Fprintln(ctx.Stdout, path)
+		xattr, err := fs.ResolveXattr(xattrmac)
+		if err != nil {
+			return 1, err
+		}
+
+		rd := vfs.NewObjectReader(repo, xattr.ResolvedObject, xattr.Size)
+		value, err := io.ReadAll(rd)
+		if err != nil {
+			return 1, err
+		}
+
+		fmt.Fprintln(ctx.Stdout, xattr.Path, xattr.Name, string(value))
 	}
 	if err := it.Err(); err != nil {
 		return 1, err

@@ -22,6 +22,7 @@ import (
 
 func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &DiagSnapshot{} }, subcommands.AgentSupport, "diag", "snapshot")
+	subcommands.Register(func() subcommands.Subcommand { return &DiagBlobSearch{} }, subcommands.AgentSupport, "diag", "blobsearch")
 	subcommands.Register(func() subcommands.Subcommand { return &DiagState{} }, subcommands.AgentSupport, "diag", "state")
 	subcommands.Register(func() subcommands.Subcommand { return &DiagPackfile{} }, subcommands.AgentSupport, "diag", "packfile")
 	subcommands.Register(func() subcommands.Subcommand { return &DiagObject{} }, subcommands.AgentSupport, "diag", "object")

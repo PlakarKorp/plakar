@@ -1,27 +1,20 @@
-PLAKAR-RM(1) - General Commands Manual
+PLAKAR-PRUNE(1) - General Commands Manual
 
 # NAME
 
-**plakar-rm** - Remove snapshots from a Plakar repository
+**plakar-prune** - Prune snapshots according to a policy
 
 # SYNOPSIS
 
-**plakar&nbsp;rm**
-\[**-name**&nbsp;*name*]
-\[**-category**&nbsp;*category*]
-\[**-environment**&nbsp;*environment*]
-\[**-perimeter**&nbsp;*perimeter*]
-\[**-job**&nbsp;*job*]
-\[**-tag**&nbsp;*tag*]
-\[**-latest**]
-\[**-before**&nbsp;*date*]
-\[**-since**&nbsp;*date*]
+**plakar&nbsp;prune**
+\[**-apply**]
+\[**-policy**&nbsp;*name*]
 \[*snapshotID&nbsp;...*]
 
 # DESCRIPTION
 
 The
-**plakar rm**
+**plakar prune**
 command deletes snapshots from a Plakar repository.
 Snapshots can be filtered for deletion by age, by tag, or by
 specifying the snapshot IDs to remove.
@@ -33,80 +26,47 @@ or
 **-tag**
 must be specified to filter the snapshots to delete.
 
+**plakar prune**
+supports the location flags documented in
+plakar-query(7)
+to precisely select snapshots.
+
 The arguments are as follows:
 
-**-name** *name*
+**-apply**
 
-> Filter snapshots that match
-> *name*.
+> Delete matching snapshot.
+> The default is to just show the snapshot that would be removed but not
+> actually execute the operation.
 
-**-category** *category*
+**-policy** *name*
 
-> Filter snapshots that match
-> *category*.
-
-**-environment** *environment*
-
-> Filter snapshots that match
-> *environment*.
-
-**-perimeter** *perimeter*
-
-> Filter snapshots that match
-> *perimeter*.
-
-**-job** *job*
-
-> Filter snapshots that match
-> *job*.
-
-**-tag** *tag*
-
-> Filter snapshots that match
-> *tag*.
-
-**-latest**
-
-> Filter latest snapshot matching filters.
-
-**-before** *date*
-
-> Filter snapshots matching filters and older than the specified date.
-> Accepted formats include relative durations
-> (e.g. 2d for two days, 1w for one week)
-> or specific dates in various formats
-> (e.g. 2006-01-02 15:04:05).
-
-**-since** *date*
-
-> Filter snapshots matching filters and created since the specified date,
-> included.
-> Accepted formats include relative durations
-> (e.g. 2d for two days, 1w for one week)
-> or specific dates in various formats
-> (e.g. 2006-01-02 15:04:05).
+> Use the given policy.
+> See
+> plakar-policy(1)
+> for how policies are managed.
 
 # EXAMPLES
 
 Remove a specific snapshot by ID:
 
-	$ plakar rm abc123
+	$ plakar prune abc123
 
 Remove snapshots older than 30 days:
 
-	$ plakar rm -before 30d
+	$ plakar prune -days 30d
 
 Remove snapshots with a specific tag:
 
-	$ plakar rm -tag daily-backup
+	$ plakar prune -tag daily-backup
 
 Remove snapshots older than 1 year with a specific tag:
 
-	$ plakar rm -before 1y -tag daily-backup
+	$ plakar prune -years 1 -tag daily-backup
 
 # DIAGNOSTICS
 
-The **plakar-rm** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
+The **plakar-prune** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
 
 0
 
@@ -120,6 +80,8 @@ The **plakar-rm** utility exits&#160;0 on success, and&#160;&gt;0 if an error oc
 # SEE ALSO
 
 plakar(1),
-plakar-backup(1)
+plakar-backup(1),
+plakar-policy(1),
+plakar-query(7)
 
-Plakar - July 3, 2025
+Plakar - September 10, 2025

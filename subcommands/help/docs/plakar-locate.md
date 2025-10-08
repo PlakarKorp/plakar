@@ -7,15 +7,6 @@ PLAKAR-LOCATE(1) - General Commands Manual
 # SYNOPSIS
 
 **plakar&nbsp;locate**
-\[**-name**&nbsp;*name*]
-\[**-category**&nbsp;*category*]
-\[**-environment**&nbsp;*environment*]
-\[**-perimeter**&nbsp;*perimeter*]
-\[**-job**&nbsp;*job*]
-\[**-tag**&nbsp;*tag*]
-\[**-latest**]
-\[**-before**&nbsp;*date*]
-\[**-since**&nbsp;*date*]
 \[**-snapshot**&nbsp;*snapshotID*]
 *patterns&nbsp;...*
 
@@ -23,66 +14,25 @@ PLAKAR-LOCATE(1) - General Commands Manual
 
 The
 **plakar locate**
-command search all the snapshots to find file names matching any of
-the given
+command search snapshots to find file names matching any of the given
 *patterns*
 and prints the abbreviated snapshot ID and the full path of the
 matched files.
 Matching works according to the shell globbing rules.
 
+If no
+**-snapshot**
+nor location flags are given,
+**plakar locate**
+will search in all snapshots.
+
+In addition to the flags described below,
+**plakar locate**
+supports the location flags documented in
+plakar-query(7)
+to precisely select snapshots.
+
 The options are as follows:
-
-**-name** *string*
-
-> Only apply command to snapshots that match
-> *name*.
-
-**-category** *string*
-
-> Only apply command to snapshots that match
-> *category*.
-
-**-environment** *string*
-
-> Only apply command to snapshots that match
-> *environment*.
-
-**-perimeter** *string*
-
-> Only apply command to snapshots that match
-> *perimeter*.
-
-**-job** *string*
-
-> Only apply command to snapshots that match
-> *job*.
-
-**-tag** *string*
-
-> Only apply command to snapshots that match
-> *tag*.
-
-**-latest**
-
-> Only apply command to latest snapshot matching filters.
-
-**-before** *date*
-
-> Only apply command to snapshots matching filters and older than the specified
-> date.
-> Accepted formats include relative durations
-> (e.g. 2d for two days, 1w for one week)
-> or specific dates in various formats
-> (e.g. 2006-01-02 15:04:05).
-
-**-since** *date*
-
-> Only apply command to snapshots matching filters and created since the specified
-> date, included.
-> Accepted formats include relative durations
-> (e.g. 2d for two days, 1w for one week)
-> or specific dates in various formats
-> (e.g. 2006-01-02 15:04:05).
 
 **-snapshot** *snapshotID*
 
@@ -113,11 +63,12 @@ The **plakar-locate** utility exits&#160;0 on success, and&#160;&gt;0 if an erro
 # SEE ALSO
 
 plakar(1),
-plakar-backup(1)
+plakar-backup(1),
+plakar-query(7)
 
 # CAVEATS
 
 The patterns may have to be quoted to avoid the shell attempting to
 expand them.
 
-Plakar - July 3, 2025
+Plakar - September 10, 2025

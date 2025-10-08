@@ -5,7 +5,8 @@
 # plakar - Effortless backup & more
 
 [![Join our Discord community](https://img.shields.io/badge/Discord-Join%20Us-purple?logo=discord&logoColor=white&style=for-the-badge)](https://discord.gg/A2yvjS6r2C)
-
+[![Subscribe on YouTube](https://img.shields.io/badge/YouTube-Subscribe-red?logo=youtube&logoColor=white&style=for-the-badge)](https://www.youtube.com/@PlakarKorp)
+[![Join our Subreddit](https://img.shields.io/badge/Reddit-Join%20r%2Fplakar-orange?logo=reddit&logoColor=white&style=for-the-badge)](https://www.reddit.com/r/plakar/)
 
 [Deutsch](https://www.readme-i18n.com/PlakarKorp/plakar?lang=de) |
 [Español](https://www.readme-i18n.com/PlakarKorp/plakar?lang=es) |
@@ -18,41 +19,28 @@
 
 </div>
 
+## 🔄 Latest Release
 
+### **V1.0.4 - Major Release: Plugins, Windows, Packages, Performance** *(September 16, 2025)*
 
+- **Pre-packaged binaries** for easy installs: `.deb`, `.rpm`, `.apk`, plus static tarballs.  
+  Package repositories coming right after to install via `apt`, `yum`, or `apk`.
+- **Initial Windows support**: Plakar now runs natively on Windows, including CLI and UI.  
+  Current limitation: one concurrent operation per agent, as multi-agent support is coming next.
+- **Integrations as plugins** with `plakar pkg add <integration>`  
+  Example: `plakar pkg add s3`, `plakar pkg add sftp`, `plakar pkg add gcp`, `imap`, `ftp`, ...
+- **Smarter agent**: auto-spawn and auto-teardown after idle for frictionless concurrency.
+- **Cache improvements**: fewer disk hits, lower footprint, better accuracy on very large corpora.
+- **Performance boosts** across backup, check, restore: faster indexing, traversal, data access, and dedupe pipelines.  
+  From x2 to x10 depending on workloads.
+- **Policy-based lifecycle** via `plakar prune`  
+  Examples:  
+  `plakar prune -days 2 -per-day 3 -weeks 4 -per-week 5 -months 3 -per-month 2`  
+  `plakar prune -tags finance -per-day 5`
+- **UI refinements**: cleaner layouts, clearer hierarchy, better progress and error messages.  
+  Try the demo: https://demo.plakar.io
 
-## ⚙️ Requirement
-
-`plakar` requires Go 1.24.0 or higher,
-it may work on older versions but hasn't been tested.
-
-On systems that package older versions,
-such as Debian or Ubuntu,
-it is preferable to install the latest version from the [official website](https://go.dev/doc/install).
-
-
-## 📦 Installing the CLI
-
-```
-go install github.com/PlakarKorp/plakar@latest
-```
-
-
-## 🔄 Latest Releases
-
-### **V1.0.2 – Minor Release: S3 Performance Boost** *(June 2, 2025)*
-
-- Achieved a **60× performance improvement** for backups over S3.  
-  A backup that previously took ~14 minutes now completes in ~13 seconds.
-
-[📝 Tech blog post](https://www.plakar.io/posts/2025-06-03/plakar-v1.0.2-was-released-mostly-s3-improvements/)
-
-### **V1.0.1 – Major Release: Plakar is Production-Ready** *(May 15, 2025)*
-
-- **Plakar is now stable and production-ready**, marking a major milestone in our open-source journey.
-- Introduced **long-term support for our immutable storage engine**, [**Kloset**](https://www.plakar.io/posts/2025-04-29/kloset-the-immutable-data-store/).
-
-[📝 Tech blog post](https://www.plakar.io/posts/2025-05-01/introducing-plakar-v1.0-to-redefine-open-source-data-protection-with-3m-funding/)
+[📝 Release article](https://plakar.io/posts/2025-09-16/release-v1.0.4-a-new-milestone-for-plakar/)
 
 ## 🧭 Introduction
 
@@ -63,7 +51,7 @@ Plakar goes beyond file-level backups. It captures application data with its ful
 Data and context are stored using [Kloset](https://www.plakar.io/posts/2025-04-29/kloset-the-immutable-data-store/), an open-source, immutable data store that enables the implementation of advanced data protection scenarios.
 
 Plakar's main strengths:
-- **Effortless**: Easy to use, clean default. Check out our [quick start guide](https://docs.plakar.io/en/quickstart/).
+- **Effortless**: Easy to use, clean default. Check out our [quick start guide](https://www.plakar.io/docs/v1.0.4/quickstart/).
 - **Secure**: Provide audited end-to-end encryption for data and metadata. See our latest [crypto audit report](https://www.plakar.io/posts/2025-02-28/audit-of-plakar-cryptography/).
 - **Reliable**: Backups are stored in Kloset, an open-source immutable data store. Learn more about [Kloset](https://www.plakar.io/posts/2025-04-29/kloset-the-immutable-data-store/).
 - **Vertically scalable**: Backup and restore very large datasets with limited RAM usage.
@@ -102,9 +90,26 @@ Navigate the contents of each snapshot to inspect, compare, or selectively resto
 ![Snapshot browser](https://www.plakar.io/readme/snapshot-browser.png)
 
 
+
+
+## 📦 Installing the CLI
+
+### From binaries
+
+Visit https://www.plakar.io/download/
+
+### From source
+
+`plakar` requires Go 1.23.3 or higher,
+it may work on older versions but hasn't been tested.
+
+```
+go install github.com/PlakarKorp/plakar@latest
+```
+
 ## 🚀 Quickstart
 
-plakar quickstart: https://docs.plakar.io/en/quickstart/
+plakar quickstart: https://www.plakar.io/docs/v1.0.4/quickstart/
 
 A taste of plakar (please follow the quickstart to begin):
 ```
@@ -139,8 +144,10 @@ For installation, usage examples, and full documentation, see the [Kapsul reposi
 ## 📚 Documentation
 
 For the latest information,
-you can read the documentation available at https://docs.plakar.io
+you can read the documentation available at https://www.plakar.io/docs/v1.0.4/
 
 ## 💬 Community
 
-You can join our very active [Discord](https://discord.gg/uqdP9Wfzx3) to discuss the project !
+- 🗨️ Join our very active [Discord](https://discord.gg/uqdP9Wfzx3)
+- 📣 Follow our subreddit [r/plakar](https://www.reddit.com/r/plakar/)
+- ▶️ Subscribe to our YouTube channel [@PlakarKorp](https://www.youtube.com/@PlakarKorp)

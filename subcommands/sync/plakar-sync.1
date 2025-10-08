@@ -1,4 +1,4 @@
-.Dd August 6, 2025
+.Dd September 10, 2025
 .Dt PLAKAR-SYNC 1
 .Os
 .Sh NAME
@@ -6,15 +6,7 @@
 .Nd Synchronize snapshots between Plakar repositories
 .Sh SYNOPSIS
 .Nm plakar sync
-.Op Fl name Ar name
-.Op Fl category Ar category
-.Op Fl environment Ar environment
-.Op Fl perimeter Ar perimeter
-.Op Fl job Ar job
-.Op Fl tag Ar tag
-.Op Fl latest
-.Op Fl before Ar date
-.Op Fl since Ar date
+.Op Fl packfiles Ar path
 .Op Ar snapshotID
 .Cm to | from | with
 .Ar repository
@@ -25,42 +17,18 @@ command synchronize snapshots between two Plakar repositories.
 If a specific snapshot ID is provided, only snapshots with matching
 IDs will be synchronized.
 .Pp
+.Nm plakar sync
+supports the location flags documented in
+.Xr plakar-query 7
+to precisely select snapshots.
+.Pp
 The options are as follows:
 .Bl -tag -width Ds
-.It Fl name Ar string
-Only synchronize snapshots matching
-.Ar name .
-.It Fl category Ar string
-Only synchronize snapshots matching
-.Ar category .
-.It Fl environment Ar string
-Only synchronize snapshots matching
-.Ar environment .
-.It Fl perimeter Ar string
-Only synchronize snapshots matching
-.Ar perimeter .
-.It Fl job Ar string
-Only synchronize snapshots matching
-.Ar job .
-.It Fl tag Ar string
-Only synchronize snapshots matching
-.Ar tag .
-.It Fl latest
-Only synchronize the latest snapshot.
-.It Fl before Ar date
-Only synchronize snapshots older than
-.Ar before .
-Accepted formats include relative durations
-.Pq e.g. "2d" for two days, "1w" for one week
-or specific dates in various formats
-.Pq e.g. "2006-01-02 15:04:05" .
-.It Fl since Ar date
-Only synchronize snapshots newer than
-.Ar since .
-Accepted formats include relative durations
-.Pq e.g. "2d" for two days, "1w" for one week
-or specific dates in various formats
-.Pq e.g. "2006-01-02 15:04:05" .
+.It Fl packfiles Ar path
+Path where to put the temporary packfiles instead of building them in memory.
+If the special value
+.Sq memory
+is specified then the packfiles are build in memory (the default value)
 .El
 .Pp
 The arguments are as follows:
@@ -108,4 +76,5 @@ General failure occurred, such as an invalid repository path, snapshot
 ID mismatch, or network error.
 .El
 .Sh SEE ALSO
-.Xr plakar 1
+.Xr plakar 1 ,
+.Xr plakar-query 7

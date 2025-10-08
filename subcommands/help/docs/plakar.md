@@ -188,7 +188,7 @@ The following commands are available:
 
 **pkg rm**
 
-> Unistall a plugin, documented in
+> Uninstall a plugin, documented in
 > plakar-pkg-rm(1).
 
 **restore**
@@ -249,13 +249,21 @@ The following commands are available:
 
 # FILES
 
-*~/.cache/plakar and* *~/.cache/plakar-agentless*
+*~/.cache/plakar* and *~/.cache/plakar-agentless*
 
 > Plakar cache directories.
 
-*~/.config/plakar/klosets.yml ~/.config/plakar/sources.yml ~/.config/plakar/destinations.yml*
+*~/.config/plakar/destinations.yml*
 
-> Default configuration files.
+> Restore destinations configuration.
+
+*~/.config/plakar/sources.yml*
+
+> Backup sources configuration.
+
+*~/.config/plakar/stores.yml*
+
+> Kloset stores configuration.
 
 *~/.plakar*
 
@@ -294,4 +302,4 @@ Remove snapshots older than 30 days:
 
 	$ plakar rm -before 30d
 
-Plakar - July 8, 2025
+Plakar - September 9, 2025

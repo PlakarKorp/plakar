@@ -6,19 +6,40 @@
 .Nd Run the Plakar agent
 .Sh SYNOPSIS
 .Nm plakar agent
-.Op Cm start Fl teardown Ar delay
-.Op Cm stop
+.Oo
+.Cm start
+.Op Fl foreground
+.Op Fl log Ar logfile
+.Op Fl teardown Ar delay
+.Oc
+.Nm plakar agent
+.Cm stop
 .Sh DESCRIPTION
 The
 .Nm plakar agent start
-command starts the Plakar agent which will execute subsequent
+command, which is the default, starts the Plakar agent which will
+execute subsequent
 .Xr plakar 1
 commands on their behalfs for faster processing.
-.Nm plakar agent
-continues is auto-spawned and terminates when idle for too long.
 .Pp
-The options are as follows:
+.Nm plakar agent
+is executed automatically by most
+.Xr plakar 1
+commands and terminates by itself when idle for too long, so usually
+there's no need to manually start it.
+.Pp
+The options for
+.Nm plakar agent
+.Cm start
+are as follows:
 .Bl -tag -width Ds
+.It Fl foreground
+Do not daemonize, run in the foreground and log to standard error.
+.It Fl log Ar logfile
+Write log output to the given
+.Ar logfile
+which is created if it does not exist.
+The default is to log to syslog.
 .It Fl teardown Ar delay
 Specify the delay after which the idle agent terminate.
 The
@@ -26,13 +47,15 @@ The
 parameter must be given as a sequence of decimal value,
 each followed by a time unit
 .Pq e.g. Dq 1m30s .
-Delaults to 5 seconds.
-.It Cm stop
-Force the currently running agent to stop.
+Defaults to 5 seconds.
+.El
+.Pp
+.Nm plakar agent
+.Cm stop
+forces the currently running agent to stop.
 This is useful when upgrading from an older
 .Xr plakar 1
 version were the agent was always running.
-.El
 .Sh DIAGNOSTICS
 .Ex -std
 .Bl -tag -width Ds

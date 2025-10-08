@@ -7,12 +7,12 @@
 .Sh SYNOPSIS
 .Nm plakar backup
 .Op Fl concurrency Ar number
-.Op Fl disk-based Ar path
 .Op Fl force-timestamp Ar timestamp
 .Op Fl ignore Ar pattern
 .Op Fl ignore-file Ar file
 .Op Fl check
 .Op Fl o Ar option
+.Op Fl packfiles Ar path
 .Op Fl quiet
 .Op Fl silent
 .Op Fl tag Ar tag
@@ -39,22 +39,14 @@ The options are as follows:
 Set the maximum number of parallel tasks for faster processing.
 Defaults to
 .Dv 8 * CPU count + 1 .
-.It Fl disk-based Ar path
-Path where to put the temporary packfiles instead of building them in memory.
-If the special value
-.Sq on
-is specified then the system temporary directory is used.
-Otherwise
-.Sq off
-can be used to disable the feature.
-directories in the backup.
-This option can be repeated.
 .It Fl force-timestamp Ar timestamp
 Specify a fixed timestamp (in ISO 8601 or relative human format) to use
 for the snapshot.
 Could be used to reimport an existing backup with the same timestamp.
 .It Fl ignore Ar pattern
 Specify individual gitignore exclusion patterns to ignore files or
+directories in the backup.
+This option can be repeated.
 .It Fl ignore-file Ar file
 Specify a file containing gitignore exclusion patterns, one per line, to
 ignore files or directories in the backup.
@@ -67,6 +59,11 @@ The given
 takes precedence over the configuration file.
 .It Fl quiet
 Suppress output to standard input, only logging errors and warnings.
+.It Fl packfiles Ar path
+Path where to put the temporary packfiles instead of building them in memory.
+If the special value
+.Sq memory
+is specified then the packfiles are build in memory (the default value)
 .It Fl silent
 Suppress all output.
 .It Fl tag Ar tag
