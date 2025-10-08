@@ -102,6 +102,8 @@ func TestExecuteCmdCreateDefault(t *testing.T) {
 	repo, tmpBackupDir, ctx := generateFixtures(t, bufOut, bufErr)
 
 	ctx.MaxConcurrency = 1
+	ctx.Stdout = bufOut
+	ctx.Stderr = bufErr
 	args := []string{tmpBackupDir}
 
 	subcommand := &Backup{}
@@ -130,6 +132,38 @@ func TestExecuteCmdCreateDefault(t *testing.T) {
 	// last line should have the summary
 	lastline := lines[len(lines)-1]
 	require.Contains(t, lastline, "created unsigned snapshot")
+}
+
+func TestExecuteCmdCreateWithHooks(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+
+	repo, tmpBackupDir, ctx := generateFixtures(t, bufOut, bufErr)
+
+	ctx.MaxConcurrency = 1
+	ctx.Stdout = bufOut
+	ctx.Stderr = bufErr
+	args := []string{tmpBackupDir}
+
+	subcommand := &Backup{}
+	err := subcommand.Parse(ctx, args)
+	require.NoError(t, err)
+	require.NotNil(t, subcommand)
+
+	// Set hooks
+	subcommand.PreHook = "echo 'pre-hook executed'"
+	subcommand.PostHook = "echo 'post-hook executed'"
+
+	status, err := subcommand.Execute(ctx, repo)
+	require.NoError(t, err)
+	require.Equal(t, 0, status)
+
+	output := bufOut.String()
+	require.Contains(t, output, "executing hook: echo 'pre-hook executed'")
+	require.Contains(t, output, "pre-hook executed")
+	require.Contains(t, output, "executing hook: echo 'post-hook executed'")
+	require.Contains(t, output, "post-hook executed")
+	require.Contains(t, output, "created unsigned snapshot")
 }
 
 func TestExecuteCmdCreateDefaultWithIgnores(t *testing.T) {

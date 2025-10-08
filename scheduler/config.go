@@ -42,6 +42,8 @@ type BackupConfig struct {
 	Retention  time.Duration
 	Ignore     []string
 	IgnoreFile string `yaml:"ignoreFile"`
+	PreHook    string `yaml:"preHook"`
+	PostHook   string `yaml:"postHook"`
 }
 
 // CheckDecodeHook is a mapstructure decode hook to allow users to specify

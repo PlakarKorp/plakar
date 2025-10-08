@@ -21,6 +21,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -103,6 +104,8 @@ func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags.Var(utils.NewOptsFlag(cmd.Opts), "o", "specify extra importer options")
 	flags.BoolVar(&cmd.DryRun, "scan", false, "do not actually perform a backup, just list the files")
 	flags.Var(locate.NewTimeFlag(&cmd.ForcedTimestamp), "force-timestamp", "force a timestamp")
+	flags.StringVar(&cmd.PreHook, "pre-hook", "", "command to execute before backup")
+	flags.StringVar(&cmd.PostHook, "post-hook", "", "command to execute after successful backup")
 	//flags.BoolVar(&opt_stdio, "stdio", false, "output one line per file to stdout instead of the default interactive output")
 	flags.Parse(args)
 
@@ -157,6 +160,8 @@ type Backup struct {
 	DryRun              bool
 	PackfileTempStorage string
 	ForcedTimestamp     time.Time
+	PreHook             string
+	PostHook            string
 }
 
 func (cmd *Backup) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
@@ -216,6 +221,11 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 			return 1, err, objects.MAC{}, nil
 		}
 		return 0, nil, objects.MAC{}, nil
+	}
+
+	// Execute pre-backup hook
+	if err := executeHook(ctx, cmd.PreHook); err != nil {
+		return 1, fmt.Errorf("pre-backup hook failed: %w", err), objects.MAC{}, nil
 	}
 
 	if cmd.PackfileTempStorage != "memory" {
@@ -285,6 +295,11 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		}
 	}
 
+	// Execute post-backup hook
+	if err := executeHook(ctx, cmd.PostHook); err != nil {
+		ctx.GetLogger().Warn("post-backup hook failed: %s", err)
+	}
+
 	totalSize := snap.Header.GetSource(0).Summary.Directory.Size + snap.Header.GetSource(0).Summary.Below.Size
 
 	ctx.GetLogger().Info("backup: created %s snapshot %x of size %s in %s (wrote %s)",
@@ -330,6 +345,17 @@ func LoadIgnoreFile(filename string) ([]string, error) {
 		return nil, err
 	}
 	return lines, nil
+}
+
+func executeHook(ctx *appcontext.AppContext, hook string) error {
+	if hook == "" {
+		return nil
+	}
+	ctx.GetLogger().Info("executing hook: %s", hook)
+	cmd := exec.Command("sh", "-c", hook)
+	cmd.Stdout = ctx.Stdout
+	cmd.Stderr = ctx.Stderr
+	return cmd.Run()
 }
 
 func dryrun(ctx *appcontext.AppContext, imp importer.Importer, excludePatterns []string) error {
