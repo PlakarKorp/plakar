@@ -30,7 +30,6 @@ type Plugin struct {
 }
 
 func (plugin *Plugin) SetUp(ctx *kcontext.KContext, pluginFile, pluginName, cacheDir string) error {
-
 	if err := os.MkdirAll(cacheDir, 0755); err != nil {
 		return err
 	}
@@ -67,11 +66,11 @@ func (plugin *Plugin) SetUp(ctx *kcontext.KContext, pluginFile, pluginName, cach
 		for _, proto := range conn.Protocols {
 			switch conn.Type {
 			case "importer":
-				err = plugin.registerImporter(ctx, proto, flags, exe, conn.Args)
+				err = plugin.registerImporter(proto, flags, exe, conn.Args)
 			case "exporter":
-				err = plugin.registerExporter(ctx, proto, flags, exe, conn.Args)
+				err = plugin.registerExporter(proto, flags, exe, conn.Args)
 			case "storage":
-				err = plugin.registerStorage(ctx, proto, flags, exe, conn.Args)
+				err = plugin.registerStorage(proto, flags, exe, conn.Args)
 			default:
 				err = fmt.Errorf("unknown plugin type: %s", conn.Type)
 			}
@@ -95,7 +94,7 @@ func (plugin *Plugin) TearDown(ctx *kcontext.KContext) {
 	plugin.teardown = nil
 }
 
-func (plugin *Plugin) registerStorage(ctx *kcontext.KContext, proto string, flags location.Flags, exe string, args []string) error {
+func (plugin *Plugin) registerStorage(proto string, flags location.Flags, exe string, args []string) error {
 	err := storage.Register(proto, flags, func(ctx context.Context, s string, config map[string]string) (storage.Store, error) {
 		client, err := connectPlugin(ctx, exe, args)
 		if err != nil {
@@ -112,7 +111,7 @@ func (plugin *Plugin) registerStorage(ctx *kcontext.KContext, proto string, flag
 	return nil
 }
 
-func (plugin *Plugin) registerImporter(ctx *kcontext.KContext, proto string, flags location.Flags, exe string, args []string) error {
+func (plugin *Plugin) registerImporter(proto string, flags location.Flags, exe string, args []string) error {
 	err := importer.Register(proto, flags, func(ctx context.Context, o *importer.Options, s string, config map[string]string) (importer.Importer, error) {
 		client, err := connectPlugin(ctx, exe, args)
 		if err != nil {
@@ -127,7 +126,7 @@ func (plugin *Plugin) registerImporter(ctx *kcontext.KContext, proto string, fla
 	return nil
 }
 
-func (plugin *Plugin) registerExporter(ctx *kcontext.KContext, proto string, flags location.Flags, exe string, args []string) error {
+func (plugin *Plugin) registerExporter(proto string, flags location.Flags, exe string, args []string) error {
 	err := exporter.Register(proto, flags, func(ctx context.Context, o *exporter.Options, s string, config map[string]string) (exporter.Exporter, error) {
 		client, err := connectPlugin(ctx, exe, args)
 		if err != nil {
