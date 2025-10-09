@@ -69,13 +69,13 @@ func (pkg Package) Validate() error {
 	}
 
 	for i := 0; i < len(pkg.Os); i++ {
-		if !isNameChar(pkg.Os[i]) {
+		if !isOsArchChar(pkg.Os[i]) {
 			return fmt.Errorf("package OS contains invalid char '%c'", pkg.Os[i])
 		}
 	}
 
 	for i := 0; i < len(pkg.Arch); i++ {
-		if !isNameChar(pkg.Arch[i]) {
+		if !isOsArchChar(pkg.Arch[i]) {
 			return fmt.Errorf("package Arch contains invalid char '%c'", pkg.Arch[i])
 		}
 	}
