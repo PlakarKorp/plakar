@@ -31,7 +31,7 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Ui{} }, subcommands.AgentSupport, "ui")
+	subcommands.MustRegister(func() subcommands.Subcommand { return &Ui{} }, subcommands.AgentSupport, "ui")
 }
 
 func (cmd *Ui) Parse(ctx *appcontext.AppContext, args []string) error {

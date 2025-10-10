@@ -37,7 +37,7 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Backup{} }, subcommands.AgentSupport, "backup")
+	subcommands.MustRegister(func() subcommands.Subcommand { return &Backup{} }, subcommands.AgentSupport, "backup")
 }
 
 type ignoreFlags []string

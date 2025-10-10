@@ -28,11 +28,11 @@ import (
 
 func init() {
 	if runtime.GOOS != "windows" {
-		subcommands.Register(func() subcommands.Subcommand { return &AgentStop{} },
+		subcommands.MustRegister(func() subcommands.Subcommand { return &AgentStop{} },
 			subcommands.BeforeRepositoryOpen|subcommands.AgentSupport|subcommands.IgnoreVersion, "agent", "stop")
-		subcommands.Register(func() subcommands.Subcommand { return &AgentStart{} },
+		subcommands.MustRegister(func() subcommands.Subcommand { return &AgentStart{} },
 			subcommands.BeforeRepositoryOpen, "agent", "start")
-		subcommands.Register(func() subcommands.Subcommand { return &Agent{} },
+		subcommands.MustRegister(func() subcommands.Subcommand { return &Agent{} },
 			subcommands.BeforeRepositoryOpen, "agent")
 	}
 }

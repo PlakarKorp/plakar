@@ -16,8 +16,10 @@ func TestNewManager(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	// Test creating a new manager
-	manager := NewManager(tmpDir)
+	manager, err := NewManager(tmpDir)
+	require.NoError(t, err)
 	require.NotNil(t, manager)
+	defer manager.Close()
 
 	// Verify the cookies directory was created with correct permissions
 	info, err := os.Stat(filepath.Join(tmpDir, "cookies", COOKIES_VERSION))
@@ -26,13 +28,28 @@ func TestNewManager(t *testing.T) {
 	require.Equal(t, os.FileMode(0700), info.Mode().Perm())
 }
 
+func TestNewManagerErrors(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "cookies_test")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	blockingPath := filepath.Join(tmpDir, "block")
+	require.NoError(t, os.WriteFile(blockingPath, []byte("block"), 0600))
+
+	manager, err := NewManager(blockingPath)
+	require.Error(t, err)
+	require.Nil(t, manager)
+}
+
 func TestAuthTokenOperations(t *testing.T) {
 	// Create a temporary directory for testing
 	tmpDir, err := os.MkdirTemp("", "cookies_test")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
-	manager := NewManager(tmpDir)
+	manager, err := NewManager(tmpDir)
+	require.NoError(t, err)
+	defer manager.Close()
 
 	// Test initial state
 	hasToken := manager.HasAuthToken()
@@ -68,7 +85,9 @@ func TestRepositoryCookieOperations(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
-	manager := NewManager(tmpDir)
+	manager, err := NewManager(tmpDir)
+	require.NoError(t, err)
+	defer manager.Close()
 	repoID := uuid.New()
 	cookieName := "test/cookie"
 
@@ -95,7 +114,9 @@ func TestFirstRunOperations(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
-	manager := NewManager(tmpDir)
+	manager, err := NewManager(tmpDir)
+	require.NoError(t, err)
+	defer manager.Close()
 
 	// Test initial state
 	isFirstRun := manager.IsFirstRun()
@@ -115,7 +136,9 @@ func TestSecurityCheckOperations(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
-	manager := NewManager(tmpDir)
+	manager, err := NewManager(tmpDir)
+	require.NoError(t, err)
+	defer manager.Close()
 
 	// Test initial state
 	isDisabled := manager.IsDisabledSecurityCheck()
