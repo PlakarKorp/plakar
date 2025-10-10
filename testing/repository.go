@@ -9,6 +9,7 @@ import (
 
 	bfs "github.com/PlakarKorp/integration-fs/storage"
 	"github.com/PlakarKorp/kloset/caching"
+	"github.com/PlakarKorp/kloset/caching/pebble"
 	"github.com/PlakarKorp/kloset/encryption"
 	"github.com/PlakarKorp/kloset/hashing"
 	"github.com/PlakarKorp/kloset/logging"
@@ -83,7 +84,7 @@ func GenerateRepository(t *testing.T, bufout *bytes.Buffer, buferr *bytes.Buffer
 		ctx.Stdout = bufout
 		ctx.Stderr = buferr
 	}
-	cache := caching.NewManager(tmpCacheDir)
+	cache := caching.NewManager(pebble.Constructor(tmpCacheDir))
 	ctx.SetCache(cache)
 
 	if passphrase != nil {
@@ -145,7 +146,7 @@ func GenerateRepositoryWithoutConfig(t *testing.T, bufout *bytes.Buffer, buferr 
 		ctx.Stdout = bufout
 		ctx.Stderr = buferr
 	}
-	cache := caching.NewManager(tmpCacheDir)
+	cache := caching.NewManager(pebble.Constructor(tmpCacheDir))
 	ctx.SetCache(cache)
 
 	if passphrase != nil {

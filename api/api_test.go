@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/PlakarKorp/kloset/caching"
+	"github.com/PlakarKorp/kloset/caching/pebble"
 	"github.com/PlakarKorp/kloset/hashing"
 	"github.com/PlakarKorp/kloset/logging"
 	"github.com/PlakarKorp/kloset/repository"
@@ -32,6 +33,12 @@ func TestNewRouter(t *testing.T) {
 }
 
 func TestAuthMiddleware(t *testing.T) {
+	tmpCacheDir, err := os.MkdirTemp("", "tmp_cache")
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		os.RemoveAll(tmpCacheDir)
+	})
+
 	config := ptesting.NewConfiguration()
 
 	serializedConfig, err := config.ToBytes()
@@ -45,7 +52,7 @@ func TestAuthMiddleware(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := appcontext.NewAppContext()
-	cache := caching.NewManager("/tmp/test_plakar")
+	cache := caching.NewManager(pebble.Constructor(tmpCacheDir))
 	defer cache.Close()
 	ctx.SetCache(cache)
 	ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
@@ -92,6 +99,12 @@ func TestAuthMiddleware(t *testing.T) {
 }
 
 func Test_UnknownEndpoint(t *testing.T) {
+	tmpCacheDir, err := os.MkdirTemp("", "tmp_cache")
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		os.RemoveAll(tmpCacheDir)
+	})
+
 	config := ptesting.NewConfiguration()
 
 	serializedConfig, err := config.ToBytes()
@@ -105,7 +118,7 @@ func Test_UnknownEndpoint(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := appcontext.NewAppContext()
-	cache := caching.NewManager("/tmp/test_plakar")
+	cache := caching.NewManager(pebble.Constructor(tmpCacheDir))
 	defer cache.Close()
 	ctx.SetCache(cache)
 	ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))

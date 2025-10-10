@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/PlakarKorp/kloset/caching"
+	"github.com/PlakarKorp/kloset/caching/pebble"
 	"github.com/PlakarKorp/kloset/encryption"
 	"github.com/PlakarKorp/kloset/logging"
 	"github.com/PlakarKorp/kloset/repository"
@@ -185,7 +186,7 @@ func entryPoint() int {
 		return 1
 	}
 	ctx.CacheDir = cacheDir
-	ctx.SetCache(caching.NewManager(cacheDir))
+	ctx.SetCache(caching.NewManager(pebble.Constructor(cacheDir)))
 	defer ctx.GetCache().Close()
 
 	dataDir, err := utils.GetDataDir("plakar")
