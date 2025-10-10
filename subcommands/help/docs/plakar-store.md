@@ -45,25 +45,34 @@ The subcommands are as follows:
 \[**-rclone**]
 \[*sections ...*]
 
-> Import a configuration from either stdin (default),
-> a file, or a URL.
+> Import store configurations from various sources including files,
+> piped input, or rclone configurations.
 
-> If
-> *location*
-> is specified, the input will be read from that file or URL.
+> By default, reads from stdin, allowing for piped input from other commands.
 
-> If
+> The
+> **-config**
+> option specifies a file or URL to read the configuration from.
+
+> The
 > **-overwrite**
-> is specified, existing sections will be overwritten by new ones.
+> option allows overwriting existing store configurations with
+> the same names.
 
-> If
+> The
 > **-rclone**
-> is specified, the input will be treated as an rclone configuration.
+> option treats the input as an rclone configuration, useful for
+> importing rclone remotes as Plakar stores.
 
-> If
-> *sections*
-> are specified, only those sections will be imported.
-> A section can be renamed on import by appending a colon and the new name.
+> Specific sections can be imported by listing their names.
+
+> Sections can be renamed during import by appending
+> **:**&zwnj;*newname*.
+
+> For detailed examples and usage patterns, see the
+> [https://docs.plakar.io/en/guides/importing-configurations/](https://docs.plakar.io/en/guides/importing-configurations/)
+> Importing Configurations
+> guide.
 
 **ping** *name*
 

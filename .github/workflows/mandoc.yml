@@ -33,5 +33,5 @@ jobs:
 
       - name: Ensure man pages are listed in .goreleaser.yml
         run: |
-          diff -u <(find ./plakar.1 ./subcommands -name '*.[1-9]' -print0 | xargs -0 -L1 basename | sort) <(cat .goreleaser.yml | yq -r '.nfpms[0].contents[].src' | xargs -L1 basename | sort) || (echo ">> Missing man pages in .gotreleaser.yml for nfpms" && exit 1)
-          diff -u <(find ./plakar.1 ./subcommands -name '*.[1-9]' -print0 | xargs -0 -L1 basename | sort) <(cat .goreleaser.yml | yq -r '.homebrew_casks[].manpages[]' | xargs -L1 basename | sort) || (echo ">> Missing man pages in .gotreleaser.yml for homebrew_casks" && exit 1)
+          diff -u <(find ./plakar.1 ./plakar-query.7 ./subcommands -name '*.[1-9]' -print0 | xargs -0 -L1 basename | sort) <(cat .goreleaser.yml | yq -r '.nfpms[0].contents[].src' | xargs -L1 basename | sort) || (echo ">> Missing man pages in .gotreleaser.yml for nfpms" && exit 1)
+          diff -u <(find ./plakar.1 ./plakar-query.7 ./subcommands -name '*.[1-9]' -print0 | xargs -0 -L1 basename | sort) <(cat .goreleaser.yml | yq -r '.homebrew_casks[].manpages[]' | xargs -L1 basename | sort) || (echo ">> Missing man pages in .gotreleaser.yml for homebrew_casks" && exit 1)

@@ -40,25 +40,34 @@ is properly configured.
 .Op Fl rclone
 .Op Ar sections ...
 .Xc
-Import a configuration from either stdin (default),
-a file, or a URL.
+Import source configurations from various sources including files,
+piped input, or rclone configurations.
 .Pp
-If
-.Ar location
-is specified, the input will be read from that file or URL.
+By default, reads from stdin, allowing for piped input from other commands.
 .Pp
-If
+The
+.Fl config
+option specifies a file or URL to read the configuration from.
+.Pp
+The
 .Fl overwrite
-is specified, existing sections will be overwritten by new ones.
+option allows overwriting existing source configurations with
+the same names.
 .Pp
-If
+The
 .Fl rclone
-is specified, the input will be treated as an rclone configuration.
+option treats the input as an rclone configuration, useful for
+importing rclone remotes as Plakar sources.
 .Pp
-If
-.Ar sections
-are specified, only those sections will be imported.
-A section can be renamed on import by appending a colon and the new name.
+Specific sections can be imported by listing their names.
+.Pp
+Sections can be renamed during import by appending
+.Cm \&: Ns Ar newname .
+.Pp
+For detailed examples and usage patterns, see the
+.Lk https://docs.plakar.io/en/guides/importing-configurations/
+Importing Configurations
+guide.
 .It Cm ping Ar name
 Try to open the data source identified by
 .Ar name
