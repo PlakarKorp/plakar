@@ -1,4 +1,4 @@
-.Dd July 3, 2025
+.Dd October 13, 2025
 .Dt PLAKAR-BACKUP 1
 .Os
 .Sh NAME
@@ -13,6 +13,8 @@
 .Op Fl check
 .Op Fl o Ar option
 .Op Fl packfiles Ar path
+.Op Fl post-hook Ar command
+.Op Fl pre-hook Ar command
 .Op Fl quiet
 .Op Fl silent
 .Op Fl tag Ar tag
@@ -64,6 +66,14 @@ Path where to put the temporary packfiles instead of building them in memory.
 If the special value
 .Sq memory
 is specified then the packfiles are build in memory (the default value)
+.It Fl post-hook Ar command
+Execute
+.Ar command
+after a successful backup.
+.It Fl pre-hook Ar command
+Execute
+.Ar command
+before the backup.
 .It Fl silent
 Suppress all output.
 .It Fl tag Ar tag
