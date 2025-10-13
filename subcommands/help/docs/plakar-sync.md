@@ -93,4 +93,4 @@ The **plakar-sync** utility exits&#160;0 on success, and&#160;&gt;0 if an error 
 plakar(1),
 plakar-query(7)
 
-Plakar - September 10, 2025
+Plakar - September 10, 2025 - PLAKAR-SYNC(1)

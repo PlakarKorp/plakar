@@ -122,4 +122,4 @@ Disable alerting:
 plakar-login(1),
 plakar-ui(1)
 
-Plakar - August 7, 2025
+Plakar - August 7, 2025 - PLAKAR-SERVICE(1)

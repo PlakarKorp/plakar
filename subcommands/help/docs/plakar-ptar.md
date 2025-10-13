@@ -100,4 +100,4 @@ plakar(1),
 plakar-backup(1),
 plakar-create(1)
 
-Plakar - July 3, 2025
+Plakar - July 3, 2025 - PLAKAR-PTAR(1)

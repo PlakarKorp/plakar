@@ -26,4 +26,4 @@ Tokens are not currently usable and exist only for future features.
 
 plakar(1)
 
-Plakar - August 6, 2025
+Plakar - August 6, 2025 - PLAKAR-TOKEN(1)

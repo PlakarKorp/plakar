@@ -57,4 +57,4 @@ The **plakar-info** utility exits&#160;0 on success, and&#160;&gt;0 if an error 
 plakar(1),
 plakar-backup(1)
 
-Plakar - July 3, 2025
+Plakar - July 3, 2025 - PLAKAR-INFO(1)

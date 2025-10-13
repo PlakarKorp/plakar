@@ -118,4 +118,4 @@ The **plakar-store** utility exits&#160;0 on success, and&#160;&gt;0 if an error
 
 plakar(1)
 
-Plakar - September 11, 2025
+Plakar - September 11, 2025 - PLAKAR-STORE(1)

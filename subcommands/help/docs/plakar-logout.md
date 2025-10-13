@@ -26,4 +26,4 @@ plakar(1),
 plakar-login(1),
 plakar-service(1)
 
-Plakar - July 8, 2025
+Plakar - July 8, 2025 - PLAKAR-LOGOUT(1)

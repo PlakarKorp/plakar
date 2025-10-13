@@ -40,4 +40,4 @@ The **plakar-dup** utility exits&#160;0 on success, and&#160;&gt;0 if an error o
 
 plakar(1)
 
-Plakar - July 3, 2025
+Plakar - July 3, 2025 - PLAKAR-DUP(1)

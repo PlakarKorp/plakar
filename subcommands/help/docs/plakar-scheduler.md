@@ -53,4 +53,4 @@ The **plakar-scheduler** utility exits&#160;0 on success, and&#160;&gt;0 if an e
 
 plakar(1)
 
-Plakar - July 3, 2025
+Plakar - July 3, 2025 - PLAKAR-SCHEDULER(1)

@@ -122,4 +122,4 @@ plugin is as follows:
 
 plakar-pkg-create(1)
 
-Plakar - July 20, 2025
+Plakar - July 20, 2025 - PLAKAR-PKG-MANIFEST.YAML(5)

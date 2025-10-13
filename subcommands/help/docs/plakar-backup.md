@@ -14,6 +14,8 @@ PLAKAR-BACKUP(1) - General Commands Manual
 \[**-check**]
 \[**-o**&nbsp;*option*]
 \[**-packfiles**&nbsp;*path*]
+\[**-post-hook**&nbsp;*command*]
+\[**-pre-hook**&nbsp;*command*]
 \[**-quiet**]
 \[**-silent**]
 \[**-tag**&nbsp;*tag*]
@@ -83,6 +85,18 @@ The options are as follows:
 > 'memory'
 > is specified then the packfiles are build in memory (the default value)
 
+**-post-hook** *command*
+
+> Execute
+> *command*
+> after a successful backup.
+
+**-pre-hook** *command*
+
+> Execute
+> *command*
+> before the backup.
+
 **-silent**
 
 > Suppress all output.
@@ -134,4 +148,4 @@ The **plakar-backup** utility exits&#160;0 on success, and&#160;&gt;0 if an erro
 plakar(1),
 plakar-source(1)
 
-Plakar - July 3, 2025
+Plakar - October 13, 2025 - PLAKAR-BACKUP(1)

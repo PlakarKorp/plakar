@@ -48,4 +48,4 @@ plakar-pkg-create(1),
 plakar-pkg-rm(1),
 plakar-pkg-show(1)
 
-Plakar - July 11, 2025
+Plakar - July 11, 2025 - PLAKAR-PKG-ADD(1)

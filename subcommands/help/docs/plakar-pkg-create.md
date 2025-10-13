@@ -30,4 +30,4 @@ plakar-pkg-rm(1),
 plakar-pkg-show(1),
 plakar-pkg-manifest.yaml(5)
 
-Plakar - July 11, 2025
+Plakar - July 11, 2025 - PLAKAR-PKG-CREATE(1)

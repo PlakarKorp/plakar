@@ -175,4 +175,4 @@ The filters are:
 > May be specified multiple times, and multiple tags may be given at the
 > same time if comma-separated.
 
-Plakar - September 10, 2025
+Plakar - September 10, 2025 - PLAKAR-QUERY(7)
