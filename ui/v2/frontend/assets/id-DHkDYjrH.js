@@ -1,1 +1,0 @@
-import{j as t,i as r,T as l,bi as c}from"./index-BX768Frx.js";function m({wrap:e=s=>s,value:o,helpText:n="Copy full ID",size:a,weight:i,className:p}){const s=o.slice(0,8);return t.jsxs("span",{className:r("flex items-center gap-2 align-middle",p),children:[t.jsx(l,{as:"span",size:a,weight:i,monospace:!0,children:e(s)}),t.jsx(c,{content:o,tooltip:n})]})}export{m as I};

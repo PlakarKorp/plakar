@@ -1,0 +1,1 @@
+import{ab as o,j as r,z as e}from"./index-B0DqJE3o.js";import{a as n}from"./use-api-DvXWeTH-.js";import"./useQuery-CBlBOqcp.js";import"./useBaseQuery-D2USDR2u.js";function p(){const{returnUrl:t}=o.useSearch();return n({status:"logged_in",returnUrl:t}),r.jsx(e,{})}export{p as component};
