@@ -20,8 +20,8 @@ import (
 	"flag"
 	"fmt"
 
+	"github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/locate"
 	"github.com/PlakarKorp/plakar/subcommands"
 )
 
@@ -36,7 +36,7 @@ func (cmd *Mount) Parse(ctx *appcontext.AppContext, args []string) error {
 		fmt.Fprintf(flags.Output(), "Usage: %s PATH\n", flags.Name())
 	}
 	flags.StringVar(&cmd.Mountpoint, "to", "", "Mountpoint to use for the FUSE filesystem")
-	cmd.LocateOptions.InstallFlags(flags)
+	cmd.LocateOptions.InstallLocateFlags(flags)
 	flags.Parse(args)
 
 	if cmd.Mountpoint == "" {

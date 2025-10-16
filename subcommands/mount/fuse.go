@@ -51,6 +51,7 @@ func (cmd *Mount) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 		fuse.Subtype("plakarfs"),
 		fuse.LocalVolume(),
 	)
+
 	if err != nil {
 		return 1, fmt.Errorf("mount: %v", err)
 	}

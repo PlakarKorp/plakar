@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"syscall"
 	"time"
 
@@ -14,6 +15,11 @@ import (
 	"github.com/anacrolix/fuse"
 	"github.com/anacrolix/fuse/fs"
 )
+
+var _ fs.Handle = (*fileHandle)(nil)
+var _ fs.HandleReader = (*fileHandle)(nil) // must compile
+var _ fs.Node = (*File)(nil)
+var _ fs.NodeOpener = (*File)(nil)
 
 type fileHandle struct {
 	f   io.ReadCloser
@@ -31,38 +37,48 @@ type File struct {
 	ino      uint64
 }
 
+func (f *File) Forget() {
+	f.fs.muFiles.Lock()
+	defer f.fs.muFiles.Unlock()
+
+	if f.fs.files[f.ino] == f {
+		delete(f.fs.files, f.ino)
+	}
+}
+
 func (f *File) Attr(ctx context.Context, a *fuse.Attr) error {
-	fmt.Println("File.Attr() called on", f.fullpath, f.name)
 	entry, err := f.vfs.GetEntry(f.fullpath)
 	if err != nil {
 		return syscall.ENOENT
 	}
-
 	if entry.Stat().IsDir() {
 		panic(fmt.Sprintf("unexpected type %T", entry))
 	}
 
-	full := canon(f.fullpath)
-	f.ino = f.fs.inodeFor("path", fmt.Sprintf("%x", f.parent.snap.Header.Identifier), full, f.name)
 	a.Inode = f.ino
 	a.Valid = time.Minute
 	a.Rdev = 0
-	a.Mode = entry.Stat().Mode()
+	a.Mode = entry.Stat().Mode() // regular file bits (type=0) + perms
 	a.Uid = uint32(entry.Stat().Uid())
 	a.Gid = uint32(entry.Stat().Gid())
 	a.Ctime = entry.Stat().ModTime()
 	a.Mtime = entry.Stat().ModTime()
-	a.Size = uint64(entry.Stat().Size())
+	a.Size = uint64(entry.Stat().Size()) // must be correct and >0 when applicable
 	a.Nlink = uint32(entry.Stat().Nlink())
 
-	fmt.Printf("ATTR name=%q ino=%d mode=%#o size=%d full=%q\n",
-		f.name, a.Inode, a.Mode, a.Size, f.fullpath,
-	)
 	return nil
 }
 
+func (h *File) Listxattr(_ context.Context, req *fuse.ListxattrRequest, resp *fuse.ListxattrResponse) error {
+	return nil
+}
+
+func (h *File) Getxattr(_ context.Context, req *fuse.GetxattrRequest, resp *fuse.GetxattrResponse) error {
+	return fuse.ErrNoXattr
+
+}
+
 func (f *File) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenResponse) (fs.Handle, error) {
-	fmt.Println("File.Open() called on", f.name, f.ino)
 	resp.Flags |= fuse.OpenDirectIO
 	resp.Flags |= fuse.OpenKeepCache
 
@@ -71,15 +87,14 @@ func (f *File) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 		return nil, err
 	}
 
-	return &fileHandle{f: rd, ino: f.ino}, nil
-}
-
-func (h *fileHandle) ReadAll(ctx context.Context) ([]byte, error) {
-	return io.ReadAll(h.f)
+	h := &fileHandle{f: rd, ino: f.ino}
+	if _, ok := interface{}(h).(fs.HandleReader); !ok {
+		panic("handle does not implement fs.HandleReader")
+	}
+	return h, nil
 }
 
 func (h *fileHandle) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.ReadResponse) error {
-	fmt.Println("File.Read()")
 	b, err := io.ReadAll(h.f)
 	if err != nil {
 		return err
@@ -96,14 +111,15 @@ func (h *fileHandle) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse
 	}
 	resp.Data = b[off:end]
 	return nil
+
 }
 
 func (h *fileHandle) Release(ctx context.Context, req *fuse.ReleaseRequest) error {
-	fmt.Println("Releasing handle")
+	log.Println("Releasing handle")
 	return h.f.Close()
 }
 
 func (h *fileHandle) Access(ctx context.Context, req *fuse.AccessRequest) error {
-	fmt.Println("ACCESS")
+	log.Println("Access")
 	return nil // allow
 }

@@ -5,18 +5,17 @@ package plakarfs
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
-	"path"
 	"path/filepath"
-	"strings"
 	"syscall"
 	"time"
 
+	"github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/kloset/snapshot/vfs"
-	"github.com/PlakarKorp/plakar/locate"
 	"github.com/anacrolix/fuse"
 	"github.com/anacrolix/fuse/fs"
 )
@@ -32,13 +31,17 @@ type Dir struct {
 	ino      uint64
 }
 
-func canon(p string) string {
-	// ensure leading slash and no duplicate separators
-	return path.Clean("/" + strings.TrimPrefix(p, "/"))
+func (d *Dir) Forget() {
+	d.fs.muDirectories.Lock()
+	defer d.fs.muDirectories.Unlock()
+	log.Println("Forgetting directory", d.name, d.ino)
+	if d.fs.directories[d.ino] == d {
+		delete(d.fs.files, d.ino)
+	}
 }
 
 func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
-	fmt.Println("Dir.Attr() called on", d.fullpath)
+	log.Println("Dir.Attr() called on", d.fullpath)
 	if d.name == "/" {
 		d.fullpath = d.name
 		a.Valid = time.Minute
@@ -63,7 +66,6 @@ func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
 		d.fullpath = "/"
 
 		a.Valid = time.Minute
-		a.Inode = d.fs.inodeFor("snapRoot", fmt.Sprintf("%x", d.snap.Header.Identifier))
 		a.Mode = os.ModeDir | 0o700
 		a.Uid = uint32(os.Geteuid())
 		a.Gid = uint32(os.Getgid())
@@ -90,7 +92,6 @@ func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
 		}
 
 		a.Valid = time.Minute
-		a.Inode = d.fs.inodeFor("path", fmt.Sprintf("%x", d.snap.Header.Identifier), filepath.Clean(d.fullpath))
 		a.Mode = fi.Stat().Mode()
 		a.Uid = uint32(fi.Stat().Uid())
 		a.Gid = uint32(fi.Stat().Gid())
@@ -103,34 +104,76 @@ func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
 }
 
 func (d *Dir) Lookup(ctx context.Context, name string) (fs.Node, error) {
-	fmt.Println("Dir.Lookup() called on", name)
-	if d.name == "/" {
-		return &Dir{parent: d, name: name, repo: d.repo, fs: d.fs, ino: 1}, nil
-	} else if d.parent.name == "/" {
-		return &Dir{parent: d, name: name, fs: d.fs}, nil
-	} else {
-		cleanpath := filepath.Clean(d.fullpath + "/" + name)
-		entry, err := d.vfs.GetEntry(cleanpath)
-		if err != nil {
-			return nil, err
-		}
+	log.Println("Dir.Lookup() called on", name)
 
-		if entry.Stat().IsDir() {
-			return &Dir{parent: d, name: name, fs: d.fs}, nil
+	if d.name == "/" {
+		d.fs.muDirectories.Lock()
+		defer d.fs.muDirectories.Unlock()
+		if child, ok := d.fs.directories[stableIno("snapdir", name)]; ok {
+			return child, nil
+		} else {
+			child := &Dir{parent: d, name: name, repo: d.repo, fs: d.fs}
+			child.fullpath = "/" // top of that snapshot's vfs
+			child.ino = stableIno("snapdir", name)
+			d.fs.directories[child.ino] = child
+			return child, nil
 		}
-		return &File{
+	} else if d.parent != nil && d.parent.name == "/" {
+		d.fs.muDirectories.Lock()
+		defer d.fs.muDirectories.Unlock()
+
+		if child, ok := d.fs.directories[stableIno("dir", d.fullpath, name)]; ok {
+			return child, nil
+		} else {
+			// within a snapshot; this `name` is a path component
+			child := &Dir{parent: d, name: name, fs: d.fs}
+			child.ino = stableIno("dir", d.fullpath, name)
+			d.fs.directories[child.ino] = child
+			return child, nil
+		}
+	}
+
+	cleanpath := filepath.Clean(d.fullpath + "/" + name)
+	entry, err := d.vfs.GetEntry(cleanpath)
+	if err != nil {
+		return nil, err
+	}
+
+	if entry.Stat().IsDir() {
+		d.fs.muDirectories.Lock()
+		defer d.fs.muDirectories.Unlock()
+		if dir, ok := d.fs.directories[stableIno("dir", cleanpath)]; ok {
+			return dir, nil
+		} else {
+			dir := &Dir{parent: d, name: name, fs: d.fs}
+			dir.ino = stableIno("dir", cleanpath)
+			d.fs.directories[dir.ino] = dir
+			return dir, nil
+		}
+	}
+
+	d.fs.muFiles.Lock()
+	defer d.fs.muFiles.Unlock()
+	if f, ok := d.fs.files[stableIno("file", cleanpath)]; ok {
+		return f, nil
+	} else {
+		log.Println("Dir.Lookup(): file not in cache, creating new")
+		f := &File{
 			parent:   d,
 			name:     name,
 			fs:       d.fs,
 			repo:     d.repo,
 			vfs:      d.vfs,
-			fullpath: filepath.Clean(d.fullpath + "/" + name),
-		}, nil
+			fullpath: cleanpath,
+		}
+		f.ino = stableIno("file", cleanpath)
+		f.fs.files[f.ino] = f
+		return f, nil
 	}
 }
 
 func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
-	fmt.Println("Dir.ReadDirAll() called on")
+	log.Println("Dir.ReadDirAll() called on")
 	if d.name == "/" {
 
 		d.repo.RebuildState()
@@ -156,9 +199,8 @@ func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 		for _, snapshotID := range snapshots {
 			idHex := fmt.Sprintf("%x", snapshotID) // preferably full id
 			dirDirs = append(dirDirs, fuse.Dirent{
-				Inode: d.fs.inodeFor("snapRoot", idHex), // must match Dir.Attr
-				Name:  idHex[:8],                        // your display choice
-				Type:  fuse.DT_Dir,
+				Name: idHex[:8], // your display choice
+				Type: fuse.DT_Dir,
 			})
 		}
 		return dirDirs, nil
@@ -175,13 +217,9 @@ func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 			return nil, err
 		}
 
-		childFull := canon(d.fullpath + "/" + entry.Name())
-		ino := d.fs.inodeFor("path", fmt.Sprintf("%x", d.snap.Header.Identifier), childFull)
-		fmt.Println("DIR ATTR inode", ino, "name", entry.Name())
 		dirEnt := fuse.Dirent{
-			Inode: ino,
-			Name:  entry.Name(),
-			Type:  fuse.DT_File,
+			Name: entry.Name(),
+			Type: fuse.DT_File,
 		}
 		if entry.Stat().IsDir() {
 			dirEnt.Type = fuse.DT_Dir
