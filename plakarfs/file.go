@@ -94,17 +94,11 @@ func (f *File) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 }
 
 func (h *fileHandle) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.ReadResponse) error {
-	if rs, ok := h.f.(io.ReadSeeker); !ok {
-		panic("file handle reader is not seekable")
+	if rs, ok := h.f.(io.ReaderAt); !ok {
+		return syscall.EIO
 	} else {
-		fmt.Println("Reading file handle", h.ino, "at offset", req.Offset, "size", req.Size)
-		_, err := rs.Seek(req.Offset, io.SeekStart)
-		if err != nil {
-			return err
-		}
-
 		buf := make([]byte, req.Size)
-		n, err := rs.Read(buf)
+		n, err := rs.ReadAt(buf, req.Offset)
 		if err != nil && err != io.EOF {
 			return err
 		}
