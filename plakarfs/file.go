@@ -75,7 +75,6 @@ func (h *File) Listxattr(_ context.Context, req *fuse.ListxattrRequest, resp *fu
 
 func (h *File) Getxattr(_ context.Context, req *fuse.GetxattrRequest, resp *fuse.GetxattrResponse) error {
 	return fuse.ErrNoXattr
-
 }
 
 func (f *File) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenResponse) (fs.Handle, error) {
@@ -95,23 +94,23 @@ func (f *File) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 }
 
 func (h *fileHandle) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.ReadResponse) error {
-	b, err := io.ReadAll(h.f)
-	if err != nil {
-		return err
-	}
+	if rs, ok := h.f.(io.ReadSeeker); !ok {
+		panic("file handle reader is not seekable")
+	} else {
+		fmt.Println("Reading file handle", h.ino, "at offset", req.Offset, "size", req.Size)
+		_, err := rs.Seek(req.Offset, io.SeekStart)
+		if err != nil {
+			return err
+		}
 
-	off := int(req.Offset)
-	if off >= len(b) {
-		resp.Data = nil
+		buf := make([]byte, req.Size)
+		n, err := rs.Read(buf)
+		if err != nil && err != io.EOF {
+			return err
+		}
+		resp.Data = buf[:n]
 		return nil
 	}
-	end := off + req.Size
-	if end > len(b) {
-		end = len(b)
-	}
-	resp.Data = b[off:end]
-	return nil
-
 }
 
 func (h *fileHandle) Release(ctx context.Context, req *fuse.ReleaseRequest) error {
