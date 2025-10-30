@@ -26,8 +26,8 @@ import (
 	"runtime"
 
 	"github.com/PlakarKorp/kloset/repository"
+	"github.com/PlakarKorp/pkg"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/plugins"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"golang.org/x/mod/semver"
 )
@@ -37,7 +37,7 @@ var namere = regexp.MustCompile("^[_a-zA-Z0-9]+$")
 type PkgBuild struct {
 	subcommands.SubcommandBase
 
-	Recipe plugins.Recipe
+	Recipe pkg.Recipe
 }
 
 func (cmd *PkgBuild) Parse(ctx *appcontext.AppContext, args []string) error {
@@ -106,7 +106,7 @@ func (cmd *PkgBuild) Execute(ctx *appcontext.AppContext, repo *repository.Reposi
 	return create.Execute(ctx, repo)
 }
 
-func clone(destdir string, recipe *plugins.Recipe) error {
+func clone(destdir string, recipe *pkg.Recipe) error {
 	git := exec.Command("git", "clone", "--depth=1", "--branch", recipe.Version,
 		recipe.Repository, destdir)
 	if err := git.Run(); err != nil {
