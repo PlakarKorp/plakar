@@ -51,7 +51,7 @@ type Restore struct {
 }
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Restore{} }, subcommands.AgentSupport, "restore")
+	subcommands.MustRegister(func() subcommands.Subcommand { return &Restore{} }, subcommands.AgentSupport, "restore")
 }
 
 func (cmd *Restore) Parse(ctx *appcontext.AppContext, args []string) error {

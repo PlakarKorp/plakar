@@ -174,7 +174,12 @@ func entryPoint() int {
 		return 1
 	}
 
-	ctx.SetCookies(cookies.NewManager(cookiesDir))
+	cookieManager, err := cookies.NewManager(cookiesDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s: could not initialize cookies manager: %s\n", flag.CommandLine.Name(), err)
+		return 1
+	}
+	ctx.SetCookies(cookieManager)
 	defer ctx.GetCookies().Close()
 
 	if opt_agentless {

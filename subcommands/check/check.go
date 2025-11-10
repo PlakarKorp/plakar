@@ -30,7 +30,7 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Check{} }, subcommands.AgentSupport, "check")
+	subcommands.MustRegister(func() subcommands.Subcommand { return &Check{} }, subcommands.AgentSupport, "check")
 }
 
 func (cmd *Check) Parse(ctx *appcontext.AppContext, args []string) error {

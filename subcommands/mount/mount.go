@@ -25,7 +25,7 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Mount{} }, subcommands.AgentSupport, "mount")
+	subcommands.MustRegister(func() subcommands.Subcommand { return &Mount{} }, subcommands.AgentSupport, "mount")
 }
 
 func (cmd *Mount) Parse(ctx *appcontext.AppContext, args []string) error {

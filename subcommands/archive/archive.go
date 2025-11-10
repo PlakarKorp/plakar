@@ -30,7 +30,7 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Archive{} }, subcommands.AgentSupport, "archive")
+	subcommands.MustRegister(func() subcommands.Subcommand { return &Archive{} }, subcommands.AgentSupport, "archive")
 }
 
 func (cmd *Archive) Parse(ctx *appcontext.AppContext, args []string) error {

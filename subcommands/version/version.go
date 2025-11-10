@@ -27,7 +27,7 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Version{} }, subcommands.BeforeRepositoryOpen, "version")
+	subcommands.MustRegister(func() subcommands.Subcommand { return &Version{} }, subcommands.BeforeRepositoryOpen, "version")
 }
 
 func (_ *Version) Parse(ctx *appcontext.AppContext, args []string) error {

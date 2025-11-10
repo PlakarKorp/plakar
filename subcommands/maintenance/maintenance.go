@@ -35,7 +35,7 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Maintenance{} }, subcommands.AgentSupport, "maintenance")
+	subcommands.MustRegister(func() subcommands.Subcommand { return &Maintenance{} }, subcommands.AgentSupport, "maintenance")
 }
 
 func (cmd *Maintenance) Parse(ctx *appcontext.AppContext, args []string) error {

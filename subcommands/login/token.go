@@ -26,8 +26,8 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &TokenCreate{} }, subcommands.BeforeRepositoryOpen, "token", "create")
-	subcommands.Register(func() subcommands.Subcommand { return &Token{} }, subcommands.BeforeRepositoryOpen, "token")
+	subcommands.MustRegister(func() subcommands.Subcommand { return &TokenCreate{} }, subcommands.BeforeRepositoryOpen, "token", "create")
+	subcommands.MustRegister(func() subcommands.Subcommand { return &Token{} }, subcommands.BeforeRepositoryOpen, "token")
 }
 
 type Token struct {

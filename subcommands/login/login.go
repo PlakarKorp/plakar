@@ -29,7 +29,7 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Login{} }, subcommands.BeforeRepositoryOpen, "login")
+	subcommands.MustRegister(func() subcommands.Subcommand { return &Login{} }, subcommands.BeforeRepositoryOpen, "login")
 }
 
 func (cmd *Login) Parse(ctx *appcontext.AppContext, args []string) error {

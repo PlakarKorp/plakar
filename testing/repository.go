@@ -35,10 +35,11 @@ func GenerateRepository(t *testing.T, bufout *bytes.Buffer, buferr *bytes.Buffer
 		os.RemoveAll(tmpRepoDirRoot)
 	})
 
-	cookies := cookies.NewManager(tmpCacheDir)
+	cookiesManager, err := cookies.NewManager(tmpCacheDir)
+	require.NoError(t, err)
 
 	ctx := appcontext.NewAppContext()
-	ctx.SetCookies(cookies)
+	ctx.SetCookies(cookiesManager)
 
 	ctx.Client = "plakar-test/1.0.0"
 
@@ -122,10 +123,11 @@ func GenerateRepositoryWithoutConfig(t *testing.T, bufout *bytes.Buffer, buferr 
 		os.RemoveAll(tmpRepoDirRoot)
 	})
 
-	cookies := cookies.NewManager(tmpCacheDir)
+	cookiesManager, err := cookies.NewManager(tmpCacheDir)
+	require.NoError(t, err)
 
 	ctx := appcontext.NewAppContext()
-	ctx.SetCookies(cookies)
+	ctx.SetCookies(cookiesManager)
 	ctx.Client = "plakar-test/1.0.0"
 	ctx.MaxConcurrency = 1
 

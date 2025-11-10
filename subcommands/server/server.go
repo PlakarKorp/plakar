@@ -27,7 +27,7 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Server{} }, subcommands.BeforeRepositoryWithStorage, "server")
+	subcommands.MustRegister(func() subcommands.Subcommand { return &Server{} }, subcommands.BeforeRepositoryWithStorage, "server")
 }
 
 func (cmd *Server) Parse(ctx *appcontext.AppContext, args []string) error {

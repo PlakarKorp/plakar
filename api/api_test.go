@@ -57,8 +57,10 @@ func TestAuthMiddleware(t *testing.T) {
 	ctx.SetCache(cache)
 	ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
 
-	cookies := cookies.NewManager("/tmp/test_plakar")
-	ctx.SetCookies(cookies)
+	cookieManager, err := cookies.NewManager("/tmp/test_plakar")
+	require.NoError(t, err)
+	defer cookieManager.Close()
+	ctx.SetCookies(cookieManager)
 	ctx.Client = "plakar-test/1.0.0"
 
 	lstore, err := storage.Create(ctx.GetInner(), map[string]string{"location": "mock:///test/location"}, wrappedConfig)
@@ -123,8 +125,10 @@ func Test_UnknownEndpoint(t *testing.T) {
 	ctx.SetCache(cache)
 	ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
 
-	cookies := cookies.NewManager("/tmp/test_plakar")
-	ctx.SetCookies(cookies)
+	cookieManager, err := cookies.NewManager("/tmp/test_plakar")
+	require.NoError(t, err)
+	defer cookieManager.Close()
+	ctx.SetCookies(cookieManager)
 	ctx.Client = "plakar-test/1.0.0"
 
 	lstore, err := storage.Create(ctx.GetInner(), map[string]string{"location": "mock:///test/location"}, wrappedConfig)

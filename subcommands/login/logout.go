@@ -27,7 +27,7 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Logout{} }, subcommands.BeforeRepositoryOpen, "logout")
+	subcommands.MustRegister(func() subcommands.Subcommand { return &Logout{} }, subcommands.BeforeRepositoryOpen, "logout")
 }
 
 func (cmd *Logout) Parse(ctx *appcontext.AppContext, args []string) error {
