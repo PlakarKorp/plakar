@@ -31,10 +31,10 @@ import (
 	"runtime"
 	"runtime/debug"
 	"strings"
-	"sync"
 	"time"
 	"unicode"
 
+	"github.com/PlakarKorp/plakar/internal/pools"
 	passwordvalidator "github.com/wagslane/go-password-validator"
 	"golang.org/x/mod/semver"
 	"golang.org/x/term"
@@ -386,11 +386,11 @@ func GetVersion() string {
 	return VERSION
 }
 
-var sbuilderPool = sync.Pool{
-	New: func() any {
-		return new(strings.Builder)
-	},
-}
+var sbuilderPool = pools.NewReportPool(func() *strings.Builder {
+	return new(strings.Builder)
+}, func(sb *strings.Builder) {
+	sb.Reset()
+})
 
 func issafe(str string) bool {
 	for _, r := range str {
@@ -406,7 +406,7 @@ func SanitizeText(input string) string {
 		return input
 	}
 
-	sb := sbuilderPool.Get().(*strings.Builder)
+	sb := sbuilderPool.Get()
 	defer sbuilderPool.Put(sb)
 	sb.Reset()
 

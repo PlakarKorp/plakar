@@ -11,6 +11,7 @@ import (
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/plakar/appcontext"
+	errorspkg "github.com/PlakarKorp/plakar/internal/errors"
 	"github.com/PlakarKorp/plakar/services"
 )
 
@@ -28,6 +29,7 @@ type Reporter struct {
 	done            chan any
 	emitter         Emitter
 	emitter_timeout time.Time
+	errors          *errorspkg.Manager
 }
 
 func NewReporter(ctx *appcontext.AppContext) *Reporter {
@@ -36,7 +38,9 @@ func NewReporter(ctx *appcontext.AppContext) *Reporter {
 		reports: make(chan *Report, 100),
 		stop:    make(chan any),
 		done:    make(chan any),
+		errors:  Errors(),
 	}
+	registerLoggerObserver(ctx.GetLogger())
 
 	go func() {
 		var rp *Report
@@ -72,15 +76,34 @@ func (reporter *Reporter) Process(report *Report) {
 
 	attempts := 3
 	backoffUnit := time.Minute
+	var lastErr *errorspkg.Error
 	for i := range attempts {
 		err := reporter.getEmitter().Emit(reporter.ctx, report)
 		if err == nil {
 			return
 		}
-		reporter.ctx.GetLogger().Warn("failed to emit report: %s", err)
+		message := fmt.Sprintf("failed to emit report (attempt %d/%d)", i+1, attempts)
+		options := []errorspkg.Option{
+			errorspkg.WithContext("attempt", i+1),
+			errorspkg.WithContext("max_attempts", attempts),
+		}
+		if report.Task != nil {
+			options = append(options,
+				errorspkg.WithContext("task", report.Task.Name),
+				errorspkg.WithContext("task_type", report.Task.Type),
+			)
+		}
+		if report.Repository != nil {
+			options = append(options, errorspkg.WithContext("repository", report.Repository.Name))
+		}
+		lastErr = reporter.errors.Emit(errorspkg.Wrap(ErrEmitReport, err, message, options...))
 		time.Sleep(backoffUnit << i)
 	}
-	reporter.ctx.GetLogger().Error("failed to emit report after %d attempts", attempts)
+	if lastErr != nil {
+		reporter.ctx.GetLogger().Error("failed to emit report after %d attempts: %s", attempts, lastErr.Format())
+	} else {
+		reporter.ctx.GetLogger().Error("failed to emit report after %d attempts", attempts)
+	}
 }
 
 func (reporter *Reporter) StopAndWait() {
