@@ -43,6 +43,8 @@ func (cmd *Repair) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags := flag.NewFlagSet("repair", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s\n", flags.Name())
+		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
+		flags.PrintDefaults()
 	}
 	flags.BoolVar(&cmd.Apply, "apply", false, "do the actual repair")
 	flags.Parse(args)
