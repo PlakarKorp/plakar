@@ -1,4 +1,4 @@
-.Dd September 10, 2025
+.Dd November 28, 2025
 .Dt PLAKAR-QUERY 7
 .Os
 .Sh NAME
@@ -137,4 +137,8 @@ Select snapshots tagged with
 .Ar name .
 May be specified multiple times, and multiple tags may be given at the
 same time if comma-separated.
+If a tag name is prefixed with an exclamation mark
+.Sq \&! ,
+the matching is inverted and the snapshot is ignored if it contains
+said tag.
 .El

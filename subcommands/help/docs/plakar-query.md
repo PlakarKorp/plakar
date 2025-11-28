@@ -174,5 +174,9 @@ The filters are:
 > *name*.
 > May be specified multiple times, and multiple tags may be given at the
 > same time if comma-separated.
+> If a tag name is prefixed with an exclamation mark
+> '!',
+> the matching is inverted and the snapshot is ignored if it contains
+> said tag.
 
-Plakar - September 10, 2025 - PLAKAR-QUERY(7)
+Plakar - November 28, 2025 - PLAKAR-QUERY(7)
