@@ -5,11 +5,11 @@ go 1.24.0
 require (
 	github.com/PlakarKorp/go-human2duration v0.1.6
 	github.com/PlakarKorp/integration-fs v1.0.11
-	github.com/PlakarKorp/integration-grpc v1.0.16
+	github.com/PlakarKorp/integration-grpc v1.0.17
 	github.com/PlakarKorp/integration-ptar v1.0.4
 	github.com/PlakarKorp/integration-stdio v1.0.3
 	github.com/PlakarKorp/integration-tar v1.0.0-beta.6
-	github.com/PlakarKorp/kloset v1.0.10-0.20251121150934-31f4bc57b25f
+	github.com/PlakarKorp/kloset v1.0.11
 	github.com/alecthomas/chroma v0.10.0
 	github.com/anacrolix/fuse v0.3.1
 	github.com/charmbracelet/glamour v0.10.0
@@ -56,7 +56,7 @@ require (
 	github.com/cockroachdb/crlib v0.0.0-20250718215705-7ff5051265b9 // indirect
 	github.com/cockroachdb/errors v1.12.0 // indirect
 	github.com/cockroachdb/logtags v0.0.0-20241215232642-bb51bb14a506 // indirect
-	github.com/cockroachdb/pebble/v2 v2.1.1 // indirect
+	github.com/cockroachdb/pebble/v2 v2.1.2 // indirect
 	github.com/cockroachdb/redact v1.1.6 // indirect
 	github.com/cockroachdb/swiss v0.0.0-20250624142022-d6e517c1d961 // indirect
 	github.com/cockroachdb/tokenbucket v0.0.0-20250429170803-42689b6311bb // indirect
@@ -67,7 +67,7 @@ require (
 	github.com/getsentry/sentry-go v0.35.1 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.6.2 // indirect
-	github.com/go-git/go-git/v5 v5.16.3 // indirect
+	github.com/go-git/go-git/v5 v5.16.4 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
