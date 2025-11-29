@@ -87,7 +87,7 @@ func (cmd *Restore) Parse(ctx *appcontext.AppContext, args []string) error {
 	}
 
 	if pullPath == "" {
-		pullPath = fmt.Sprintf("%s/plakar-%s", ctx.CWD, time.Now().Format(time.RFC3339))
+		pullPath = fmt.Sprintf("%s/plakar-%s", ctx.CWD, time.Now().Format("20060102150405"))
 	}
 
 	cmd.RepositorySecret = ctx.GetSecret()
