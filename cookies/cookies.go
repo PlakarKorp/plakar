@@ -1,6 +1,7 @@
 package cookies
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,6 +11,11 @@ import (
 )
 
 const COOKIES_VERSION = "1.0.0"
+
+var (
+	ErrNotLoggedIn    = errors.New("not logged in")
+	ErrDeleteEnvToken = errors.New("cannot delete auth token: it is set in the environment variable")
+)
 
 type Manager struct {
 	cookiesDir string
@@ -55,13 +61,15 @@ func (c *Manager) GetAuthToken() (string, error) {
 	return string(data), nil
 }
 
-func (c *Manager) HasAuthToken() bool {
-	_, err := os.Stat(filepath.Join(c.cookiesDir, ".auth-token"))
-	return err == nil
-}
-
 func (c *Manager) DeleteAuthToken() error {
-	return os.Remove(filepath.Join(c.cookiesDir, ".auth-token"))
+	if token := os.Getenv("PLAKAR_TOKEN"); token != "" {
+		return ErrDeleteEnvToken
+	}
+	err := os.Remove(filepath.Join(c.cookiesDir, ".auth-token"))
+	if errors.Is(err, os.ErrNotExist) {
+		return ErrNotLoggedIn
+	}
+	return err
 }
 
 func (c *Manager) PutAuthToken(token string) error {

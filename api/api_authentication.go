@@ -80,8 +80,5 @@ func (ui *uiserver) servicesLoginEmail(w http.ResponseWriter, r *http.Request) e
 }
 
 func (ui *uiserver) servicesLogout(w http.ResponseWriter, r *http.Request) error {
-	if ui.ctx.GetCookies().HasAuthToken() {
-		return ui.ctx.GetCookies().DeleteAuthToken()
-	}
-	return nil
+	return ui.ctx.GetCookies().DeleteAuthToken()
 }
