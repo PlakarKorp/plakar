@@ -8,6 +8,7 @@
 .Nm plakar login
 .Op Fl email Ar email
 .Op Fl github
+.Op Fl env
 .Op Fl no-spawn
 .Op Fl status
 .Sh DESCRIPTION
@@ -21,9 +22,10 @@ See also
 .Xr plakar-service 1 .
 .Pp
 Only one authentication method may be specified per invocation: the
-.Fl email
-and
+.Fl email ,
 .Fl github
+and
+.Fl env
 options are mutually exclusive.
 If neither is provided,
 .Fl github
@@ -40,6 +42,12 @@ Use GitHub OAuth to authenticate.
 A browser will be spawned to initiate the OAuth flow unless
 .Fl no-spawn
 is specified.
+.It Fl env
+Persist the value of the
+.Ev PLAKAR_TOKEN
+environment variable into the configuration.
+Generate this token with
+.Xr plakar-token 1 .
 .It Fl no-spawn
 Do not automatically open a browser window for authentication flows.
 .It Fl status

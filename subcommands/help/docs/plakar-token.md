@@ -14,7 +14,11 @@ PLAKAR-TOKEN(1) - General Commands Manual
 The
 **plakar token**
 command manages tokens used to authenticate to Plakar services.
-Tokens are not currently usable and exist only for future features.
+Set the
+`PLAKAR_TOKEN`
+environment variable to use a token, and see
+plakar-login(1)
+to persist it in the configuration.
 
 # SUBCOMMANDS
 
@@ -24,6 +28,7 @@ Tokens are not currently usable and exist only for future features.
 
 # SEE ALSO
 
-plakar(1)
+plakar(1),
+plakar-login(1)
 
 Plakar - August 6, 2025

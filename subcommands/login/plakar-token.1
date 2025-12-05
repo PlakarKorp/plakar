@@ -11,11 +11,16 @@
 The
 .Nm plakar token
 command manages tokens used to authenticate to Plakar services.
-Tokens are not currently usable and exist only for future features.
+Set the
+.Ev PLAKAR_TOKEN
+environment variable to use a token, and see
+.Xr plakar-login 1
+to persist it in the configuration.
 .Sh SUBCOMMANDS
 .Bl -tag -width Ds
 .It Cm create
 Create a new token.
 .El
 .Sh SEE ALSO
-.Xr plakar 1
+.Xr plakar 1 ,
+.Xr plakar-login 1

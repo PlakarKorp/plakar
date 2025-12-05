@@ -9,6 +9,7 @@ PLAKAR-LOGIN(1) - General Commands Manual
 **plakar&nbsp;login**
 \[**-email**&nbsp;*email*]
 \[**-github**]
+\[**-env**]
 \[**-no-spawn**]
 \[**-status**]
 
@@ -24,9 +25,10 @@ See also
 plakar-service(1).
 
 Only one authentication method may be specified per invocation: the
-**-email**
-and
+**-email**,
 **-github**
+and
+**-env**
 options are mutually exclusive.
 If neither is provided,
 **-github**
@@ -46,6 +48,14 @@ The options are as follows:
 > A browser will be spawned to initiate the OAuth flow unless
 > **-no-spawn**
 > is specified.
+
+**-env**
+
+> Persist the value of the
+> `PLAKAR_TOKEN`
+> environment variable into the configuration.
+> Generate this token with
+> plakar-token(1).
 
 **-no-spawn**
 
