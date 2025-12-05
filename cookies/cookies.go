@@ -14,7 +14,7 @@ const COOKIES_VERSION = "1.0.0"
 
 var (
 	ErrNotLoggedIn    = errors.New("not logged in")
-	ErrDeleteEnvToken = errors.New("cannot delete auth token: it is set in the environment variable")
+	ErrDeleteEnvToken = errors.New("cannot delete auth token: authentication is managed via PLAKAR_TOKEN environment variable")
 )
 
 type Manager struct {
