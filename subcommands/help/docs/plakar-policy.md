@@ -95,4 +95,4 @@ policy:
 plakar(1),
 plakar-prune(1)
 
-Plakar - September 11, 2025 - PLAKAR-POLICY(1)
+Plakar - September 11, 2025
