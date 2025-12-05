@@ -64,11 +64,11 @@ func (cmd *Login) Parse(ctx *appcontext.AppContext, args []string) error {
 			if cmd.Env {
 				return fmt.Errorf("the -email option cannot be used with -env")
 			}
-			if addr, err := utils.ValidateEmail(cmd.Email); err != nil {
+			addr, err := utils.ValidateEmail(cmd.Email)
+			if err != nil {
 				return fmt.Errorf("invalid email address: %w", err)
-			} else {
-				cmd.Email = addr
 			}
+			cmd.Email = addr
 		} else if !cmd.Env {
 			fmt.Println("no provided login method, defaulting to GitHub")
 			cmd.Github = true

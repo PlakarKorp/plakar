@@ -26,7 +26,7 @@ func TestNewManager(t *testing.T) {
 	require.Equal(t, os.FileMode(0700), info.Mode().Perm())
 }
 
-func hasAuthToken(c *Manager) bool {
+func hasAuthTokenFile(c *Manager) bool {
 	_, err := os.Stat(filepath.Join(c.cookiesDir, ".auth-token"))
 	return err == nil
 }
@@ -40,7 +40,7 @@ func TestAuthTokenOperations(t *testing.T) {
 	manager := NewManager(tmpDir)
 
 	// Test initial state
-	hasToken := hasAuthToken(manager)
+	hasToken := hasAuthTokenFile(manager)
 	require.False(t, hasToken)
 
 	// Test putting and getting auth token
@@ -48,7 +48,7 @@ func TestAuthTokenOperations(t *testing.T) {
 	err = manager.PutAuthToken(token)
 	require.NoError(t, err)
 
-	hasToken = hasAuthToken(manager)
+	hasToken = hasAuthTokenFile(manager)
 	require.True(t, hasToken)
 
 	retrievedToken, err := manager.GetAuthToken()
@@ -59,7 +59,7 @@ func TestAuthTokenOperations(t *testing.T) {
 	err = manager.DeleteAuthToken()
 	require.NoError(t, err)
 
-	hasToken = hasAuthToken(manager)
+	hasToken = hasAuthTokenFile(manager)
 	require.False(t, hasToken)
 
 	// Test getting non-existent token
