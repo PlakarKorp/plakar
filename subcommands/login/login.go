@@ -64,6 +64,11 @@ func (cmd *Login) Parse(ctx *appcontext.AppContext, args []string) error {
 			if cmd.Github || cmd.Env {
 				return fmt.Errorf("the -email option cannot be used with -github or -env")
 			}
+			if addr, err := utils.ValidateEmail(cmd.Email); err != nil {
+				return fmt.Errorf("invalid email address: %w", err)
+			} else {
+				cmd.Email = addr
+			}
 		} else if cmd.Env {
 			if cmd.Github || cmd.Email != "" {
 				return fmt.Errorf("the -env option cannot be used with -github or -email")
@@ -108,14 +113,6 @@ func (cmd *Login) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 			return 1, fmt.Errorf("no auth token found in environment variable PLAKAR_TOKEN")
 		}
 	} else {
-		if cmd.Email != "" {
-			if addr, err := utils.ValidateEmail(cmd.Email); err != nil {
-				return 1, fmt.Errorf("invalid email address: %w", err)
-			} else {
-				cmd.Email = addr
-			}
-		}
-
 		flow, err := plogin.NewLoginFlow(ctx, cmd.NoSpawn)
 		if err != nil {
 			return 1, err
