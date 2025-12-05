@@ -37,6 +37,11 @@ func (m *Manager) GetDir() string {
 }
 
 func (c *Manager) GetAuthToken() (string, error) {
+	token := os.Getenv("PLAKAR_TOKEN")
+	if token != "" {
+		return token, nil
+	}
+
 	data, err := os.ReadFile(filepath.Join(c.cookiesDir, ".auth-token"))
 	if err != nil {
 		if os.IsNotExist(err) {
