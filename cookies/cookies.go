@@ -42,9 +42,12 @@ func (m *Manager) GetDir() string {
 	return m.cookiesDir
 }
 
+func (c *Manager) GetAuthEnvToken() string {
+	return os.Getenv("PLAKAR_TOKEN")
+}
+
 func (c *Manager) GetAuthToken() (string, error) {
-	token := os.Getenv("PLAKAR_TOKEN")
-	if token != "" {
+	if token := c.GetAuthEnvToken(); token != "" {
 		return token, nil
 	}
 
@@ -62,7 +65,7 @@ func (c *Manager) GetAuthToken() (string, error) {
 }
 
 func (c *Manager) DeleteAuthToken() error {
-	if token := os.Getenv("PLAKAR_TOKEN"); token != "" {
+	if token := c.GetAuthEnvToken(); token != "" {
 		return ErrDeleteEnvToken
 	}
 	err := os.Remove(filepath.Join(c.cookiesDir, ".auth-token"))
