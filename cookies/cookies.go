@@ -1,6 +1,7 @@
 package cookies
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,6 +11,11 @@ import (
 )
 
 const COOKIES_VERSION = "1.0.0"
+
+var (
+	ErrNotLoggedIn    = errors.New("not logged in")
+	ErrDeleteEnvToken = errors.New("cannot delete auth token: authentication is managed via PLAKAR_TOKEN environment variable")
+)
 
 type Manager struct {
 	cookiesDir string
@@ -36,7 +42,15 @@ func (m *Manager) GetDir() string {
 	return m.cookiesDir
 }
 
+func (c *Manager) GetAuthEnvToken() string {
+	return os.Getenv("PLAKAR_TOKEN")
+}
+
 func (c *Manager) GetAuthToken() (string, error) {
+	if token := c.GetAuthEnvToken(); token != "" {
+		return token, nil
+	}
+
 	data, err := os.ReadFile(filepath.Join(c.cookiesDir, ".auth-token"))
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -50,13 +64,15 @@ func (c *Manager) GetAuthToken() (string, error) {
 	return string(data), nil
 }
 
-func (c *Manager) HasAuthToken() bool {
-	_, err := os.Stat(filepath.Join(c.cookiesDir, ".auth-token"))
-	return err == nil
-}
-
 func (c *Manager) DeleteAuthToken() error {
-	return os.Remove(filepath.Join(c.cookiesDir, ".auth-token"))
+	if token := c.GetAuthEnvToken(); token != "" {
+		return ErrDeleteEnvToken
+	}
+	err := os.Remove(filepath.Join(c.cookiesDir, ".auth-token"))
+	if errors.Is(err, os.ErrNotExist) {
+		return ErrNotLoggedIn
+	}
+	return err
 }
 
 func (c *Manager) PutAuthToken(token string) error {

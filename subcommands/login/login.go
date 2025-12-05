@@ -44,6 +44,7 @@ func (cmd *Login) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags.BoolVar(&cmd.NoSpawn, "no-spawn", false, "don't spawn browser")
 	flags.BoolVar(&cmd.Github, "github", false, "login with GitHub")
 	flags.StringVar(&cmd.Email, "email", "", "login with email")
+	flags.BoolVar(&cmd.Env, "env", false, "use token from environment variable PLAKAR_TOKEN")
 	flags.Parse(args)
 
 	if flags.NArg() > 0 {
@@ -51,19 +52,27 @@ func (cmd *Login) Parse(ctx *appcontext.AppContext, args []string) error {
 	}
 
 	if cmd.Status {
-		if cmd.Github || cmd.Email != "" || cmd.NoSpawn {
+		if cmd.Github || cmd.Email != "" || cmd.NoSpawn || cmd.Env {
 			return fmt.Errorf("the -status option must be used alone")
 		}
 	} else {
-		if cmd.Github && cmd.Email != "" {
-			return fmt.Errorf("specify either -github or -email, not both")
-		}
-
-		if !cmd.Github && cmd.Email == "" {
+		if cmd.Github {
+			if cmd.Email != "" || cmd.Env {
+				return fmt.Errorf("the -github option cannot be used with -email or -env")
+			}
+		} else if cmd.Email != "" {
+			if cmd.Env {
+				return fmt.Errorf("the -email option cannot be used with -env")
+			}
+			addr, err := utils.ValidateEmail(cmd.Email)
+			if err != nil {
+				return fmt.Errorf("invalid email address: %w", err)
+			}
+			cmd.Email = addr
+		} else if !cmd.Env {
 			fmt.Println("no provided login method, defaulting to GitHub")
 			cmd.Github = true
 		}
-
 		if cmd.NoSpawn && !cmd.Github {
 			return fmt.Errorf("the -no-spawn option is only valid with -github")
 		}
@@ -78,12 +87,11 @@ type Login struct {
 	Status  bool
 	Github  bool
 	Email   string
+	Env     bool
 	NoSpawn bool
 }
 
 func (cmd *Login) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	var err error
-
 	if cmd.Status {
 		token, _ := ctx.GetCookies().GetAuthToken()
 		status := "not logged in"
@@ -94,30 +102,29 @@ func (cmd *Login) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 		return 0, nil
 	}
 
-	if cmd.Email != "" {
-		if addr, err := utils.ValidateEmail(cmd.Email); err != nil {
-			return 1, fmt.Errorf("invalid email address: %w", err)
-		} else {
-			cmd.Email = addr
-		}
-	}
-
-	flow, err := plogin.NewLoginFlow(ctx, cmd.NoSpawn)
-	if err != nil {
-		return 1, err
-	}
-	defer flow.Close()
-
 	var token string
-	if cmd.Github {
-		token, err = flow.Run("github", map[string]string{})
-	} else if cmd.Email != "" {
-		token, err = flow.Run("email", map[string]string{"email": cmd.Email})
+
+	if cmd.Env {
+		if token = ctx.GetCookies().GetAuthEnvToken(); token == "" {
+			return 1, fmt.Errorf("no auth token found in environment variable PLAKAR_TOKEN")
+		}
 	} else {
-		return 1, fmt.Errorf("invalid login method")
-	}
-	if err != nil {
-		return 1, err
+		flow, err := plogin.NewLoginFlow(ctx, cmd.NoSpawn)
+		if err != nil {
+			return 1, err
+		}
+		defer flow.Close()
+
+		if cmd.Github {
+			token, err = flow.Run("github", map[string]string{})
+		} else if cmd.Email != "" {
+			token, err = flow.Run("email", map[string]string{"email": cmd.Email})
+		} else {
+			return 1, fmt.Errorf("invalid login method")
+		}
+		if err != nil {
+			return 1, err
+		}
 	}
 
 	if err := ctx.GetCookies().PutAuthToken(token); err != nil {

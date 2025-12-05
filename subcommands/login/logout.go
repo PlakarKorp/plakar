@@ -49,9 +49,8 @@ type Logout struct {
 }
 
 func (cmd *Logout) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	if !ctx.GetCookies().HasAuthToken() {
-		return 1, fmt.Errorf("not logged in")
+	if err := ctx.GetCookies().DeleteAuthToken(); err != nil {
+		return 1, err
 	}
-	ctx.GetCookies().DeleteAuthToken()
 	return 0, nil
 }

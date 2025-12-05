@@ -179,4 +179,4 @@ The filters are:
 > the matching is inverted and the snapshot is ignored if it contains
 > said tag.
 
-Plakar - November 28, 2025 - PLAKAR-QUERY(7)
+Plakar - November 28, 2025

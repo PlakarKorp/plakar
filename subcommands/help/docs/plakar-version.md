@@ -18,4 +18,4 @@ command displays the current version of Plakar.
 
 plakar(1)
 
-Plakar - July 3, 2025 - PLAKAR-VERSION(1)
+Plakar - July 3, 2025

@@ -34,14 +34,14 @@ type TokenResponse struct {
 }
 
 type loginFlow struct {
-	appCtx       *appcontext.AppContext
-	noSpawn      bool
+	appCtx  *appcontext.AppContext
+	noSpawn bool
 }
 
 func NewLoginFlow(appCtx *appcontext.AppContext, noSpawn bool) (*loginFlow, error) {
 	flow := &loginFlow{
-		appCtx:       appCtx,
-		noSpawn:      noSpawn,
+		appCtx:  appCtx,
+		noSpawn: noSpawn,
 	}
 	return flow, nil
 }

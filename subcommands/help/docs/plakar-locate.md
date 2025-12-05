@@ -71,4 +71,4 @@ plakar-query(7)
 The patterns may have to be quoted to avoid the shell attempting to
 expand them.
 
-Plakar - September 10, 2025 - PLAKAR-LOCATE(1)
+Plakar - September 10, 2025

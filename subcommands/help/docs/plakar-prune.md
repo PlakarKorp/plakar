@@ -84,4 +84,4 @@ plakar-backup(1),
 plakar-policy(1),
 plakar-query(7)
 
-Plakar - September 10, 2025 - PLAKAR-PRUNE(1)
+Plakar - September 10, 2025
