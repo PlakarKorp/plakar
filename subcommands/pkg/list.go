@@ -19,10 +19,10 @@ package pkg
 import (
 	"flag"
 	"fmt"
+	"runtime"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/plugins"
 	"github.com/PlakarKorp/plakar/subcommands"
 )
 
@@ -52,33 +52,29 @@ func (cmd *PkgList) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 func (cmd *PkgList) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (int, error) {
-	var packages []plugins.Package
-	var err error
-
-	if cmd.ListAll {
-		var filter plugins.IntegrationFilter
-		integrations, err := ctx.GetPlugins().ListIntegrations(filter)
-		if err != nil {
-			return 1, err
-		}
-		for _, int := range integrations {
-			if int.Installation.Available {
-				pkg := ctx.GetPlugins().IntegrationAsPackage(&int)
-				packages = append(packages, pkg)
-			}
-		}
-	} else {
-		packages, err = ctx.GetPlugins().ListInstalledPackages()
-		if err != nil {
-			return 1, err
+	print := func(name, version, os, arch string) {
+		if cmd.LongName {
+			fmt.Fprintf(ctx.Stdout, "%s_%s_%s_%s.ptar\n", name, version, os, arch)
+		} else {
+			fmt.Fprintf(ctx.Stdout, "%s@%s\n", name, version)
 		}
 	}
 
-	for _, pkg := range packages {
-		if cmd.LongName {
-			fmt.Fprintln(ctx.Stdout, pkg.PkgName())
-		} else {
-			fmt.Fprintln(ctx.Stdout, pkg.PkgNameAndVersion())
+	pkgmgr := ctx.GetPkgManager()
+	if cmd.ListAll {
+		for integration, err := range pkgmgr.Query() {
+			if err != nil {
+				return 1, err
+			}
+			print(integration.Name, integration.LatestVersion,
+				runtime.GOOS, runtime.GOARCH)
+		}
+	} else {
+		for pkg, err := range pkgmgr.List() {
+			if err != nil {
+				return 1, err
+			}
+			print(pkg.Name, pkg.Version, pkg.OperatingSystem, pkg.Architecture)
 		}
 	}
 
