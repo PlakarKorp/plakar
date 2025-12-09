@@ -11,9 +11,9 @@
 .Oo
 .Fl email Ar email
 |
-.Fl github
-|
 .Fl env
+|
+.Fl github
 .Oc
 .Sh DESCRIPTION
 The
@@ -27,9 +27,9 @@ See also
 .Pp
 Only one authentication method may be specified per invocation: the
 .Fl email ,
-.Fl github
+.Fl env ,
 and
-.Fl env
+.Fl github
 options are mutually exclusive.
 If neither is provided,
 .Fl github
@@ -41,17 +41,17 @@ The options are as follows:
 Send a login link to the specified email address.
 Clicking the link in the received email will authenticate
 .Nm plakar .
-.It Fl github
-Use GitHub OAuth to authenticate.
-A browser will be spawned to initiate the OAuth flow unless
-.Fl no-spawn
-is specified.
 .It Fl env
 Persist the value of the
 .Ev PLAKAR_TOKEN
 environment variable into the configuration.
 Generate this token with
 .Xr plakar-token 1 .
+.It Fl github
+Use GitHub OAuth to authenticate.
+A browser will be spawned to initiate the OAuth flow unless
+.Fl no-spawn
+is specified.
 .It Fl no-spawn
 Do not automatically open a browser window for authentication flows.
 .It Fl status

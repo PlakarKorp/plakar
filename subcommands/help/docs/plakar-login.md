@@ -7,11 +7,13 @@ PLAKAR-LOGIN(1) - General Commands Manual
 # SYNOPSIS
 
 **plakar&nbsp;login**
-\[**-email**&nbsp;*email*]
-\[**-github**]
-\[**-env**]
 \[**-no-spawn**]
 \[**-status**]
+\[**-email**&nbsp;*email*
+|
+**-env**
+|
+**-github**]
 
 # DESCRIPTION
 
@@ -26,9 +28,9 @@ plakar-service(1).
 
 Only one authentication method may be specified per invocation: the
 **-email**,
-**-github**
+**-env**,
 and
-**-env**
+**-github**
 options are mutually exclusive.
 If neither is provided,
 **-github**
@@ -42,13 +44,6 @@ The options are as follows:
 > Clicking the link in the received email will authenticate
 > **plakar**.
 
-**-github**
-
-> Use GitHub OAuth to authenticate.
-> A browser will be spawned to initiate the OAuth flow unless
-> **-no-spawn**
-> is specified.
-
 **-env**
 
 > Persist the value of the
@@ -56,6 +51,13 @@ The options are as follows:
 > environment variable into the configuration.
 > Generate this token with
 > plakar-token(1).
+
+**-github**
+
+> Use GitHub OAuth to authenticate.
+> A browser will be spawned to initiate the OAuth flow unless
+> **-no-spawn**
+> is specified.
 
 **-no-spawn**
 
