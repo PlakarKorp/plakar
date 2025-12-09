@@ -27,7 +27,6 @@ import (
 	"github.com/PlakarKorp/plakar/agent"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/cookies"
-	"github.com/PlakarKorp/plakar/plugins"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/task"
 	"github.com/PlakarKorp/plakar/utils"
@@ -198,7 +197,6 @@ func entryPoint() int {
 		fmt.Fprintf(os.Stderr, "%s: could not get data directory: %s\n", flag.CommandLine.Name(), err)
 		return 1
 	}
-	ctx.SetPlugins(plugins.NewManager(dataDir, cookiesDir))
 
 	if opt_disableSecurityCheck {
 		ctx.GetCookies().SetDisabledSecurityCheck()
@@ -287,9 +285,8 @@ func entryPoint() int {
 
 	ctx.SetLogger(logger)
 
-	err = ctx.GetPlugins().LoadPlugins(ctx.GetInner())
-	if err != nil {
-		log.Fatalf("failed to load the plugins: %s", err)
+	if err := setupPkgManager(ctx, dataDir, cacheDir); err != nil {
+		log.Fatalln(err.Error())
 	}
 
 	var repositoryPath string

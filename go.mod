@@ -1,15 +1,16 @@
 module github.com/PlakarKorp/plakar
 
-go 1.24.0
+go 1.25.1
 
 require (
 	github.com/PlakarKorp/go-human2duration v0.1.6
 	github.com/PlakarKorp/integration-fs v1.0.14
 	github.com/PlakarKorp/integration-grpc v1.0.18
-	github.com/PlakarKorp/integration-ptar v1.0.5
+	github.com/PlakarKorp/integration-ptar v1.0.6-0.20251129124308-5ede9e09abfc
 	github.com/PlakarKorp/integration-stdio v1.0.4
 	github.com/PlakarKorp/integration-tar v1.0.0-beta.7
 	github.com/PlakarKorp/kloset v1.0.13-0.20251208145631-4f5b43e43a67
+	github.com/PlakarKorp/pkg v0.0.0-20251209081345-f195b5d9a04e
 	github.com/alecthomas/chroma v0.10.0
 	github.com/anacrolix/fuse v0.3.1
 	github.com/charmbracelet/glamour v0.10.0

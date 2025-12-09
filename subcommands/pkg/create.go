@@ -34,8 +34,8 @@ import (
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/kloset/storage"
 	"github.com/PlakarKorp/kloset/versioning"
+	"github.com/PlakarKorp/pkg"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/plugins"
 	"github.com/PlakarKorp/plakar/subcommands"
 )
 
@@ -44,7 +44,7 @@ type PkgCreate struct {
 
 	Base         string
 	Out          string
-	Manifest     plugins.Manifest
+	Manifest     pkg.Manifest
 	ManifestPath string
 }
 
@@ -71,7 +71,13 @@ func (cmd *PkgCreate) Parse(ctx *appcontext.AppContext, args []string) error {
 	cmd.Base = filepath.Dir(manifest)
 	cmd.ManifestPath = manifest
 
-	if err := plugins.ParseManifestFile(manifest, &cmd.Manifest); err != nil {
+	fp, err := os.Open(manifest)
+	if err != nil {
+		return fmt.Errorf("can't open %s: %w", manifest, err)
+	}
+	defer fp.Close()
+
+	if err := cmd.Manifest.Parse(fp); err != nil {
 		return fmt.Errorf("failed to parse the manifest %s: %w", manifest, err)
 	}
 

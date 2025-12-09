@@ -218,11 +218,3 @@ func SetupRoutes(server *http.ServeMux, repo *repository.Repository, ctx *appcon
 	server.Handle("POST /api/snapshot/vfs/downloader/{snapshot_path...}", authToken(JSONAPIView(ui.snapshotVFSDownloader)))
 	server.Handle("GET /api/snapshot/vfs/downloader-sign-url/{id}", JSONAPIView(ui.snapshotVFSDownloaderSigned))
 }
-
-func (ui *uiserver) reloadPlugins() {
-	// Installed packaged might have changed
-	err := ui.ctx.GetPlugins().ReloadPlugins(ui.ctx.GetInner())
-	if err != nil {
-		ui.ctx.GetLogger().Warn("failed to reload plugins: %w", err)
-	}
-}

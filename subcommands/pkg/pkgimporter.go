@@ -29,12 +29,12 @@ import (
 
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/snapshot/importer"
-	"github.com/PlakarKorp/plakar/plugins"
+	"github.com/PlakarKorp/pkg"
 )
 
 type pkgerImporter struct {
 	cwd          string
-	manifest     *plugins.Manifest
+	manifest     *pkg.Manifest
 	manifestPath string
 }
 
