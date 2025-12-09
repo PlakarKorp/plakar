@@ -248,6 +248,10 @@ The following commands are available:
 
 > Reference to the Kloset store.
 
+`PLAKAR_TOKEN`
+
+> Token to authenticate for Plakar services.
+
 # FILES
 
 *~/.cache/plakar* and *~/.cache/plakar-agentless*
@@ -303,4 +307,4 @@ Remove snapshots older than 30 days:
 
 	$ plakar rm -before 30d
 
-Plakar - September 9, 2025
+Plakar - December 9, 2025
