@@ -31,4 +31,4 @@ to persist it in the configuration.
 plakar(1),
 plakar-login(1)
 
-Plakar - August 6, 2025
+Plakar - December 9, 2025
