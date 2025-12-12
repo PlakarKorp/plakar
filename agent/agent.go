@@ -14,6 +14,7 @@ import (
 
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/PlakarKorp/plakar/subcommands/ls"
 	"github.com/PlakarKorp/plakar/utils"
 	"github.com/vmihailenco/msgpack/v5"
 )
@@ -54,6 +55,30 @@ func ExecuteRPC(ctx *appcontext.AppContext, name []string, cmd subcommands.Subco
 	return 0, nil
 }
 
+func RebuildStateFromCached(ctx *appcontext.AppContext, storeConfig map[string]string) (int, error) {
+	client, err := NewClient(filepath.Join(ctx.CacheDir, "cached.sock"), false)
+	if err != nil {
+		return 1, err
+	}
+	defer client.Close()
+
+	// XXX: Empty vessel for the secret, this will need to be trimmed down a
+	// lot.
+	cmd := ls.Ls{
+		SubcommandBase: subcommands.SubcommandBase{Flags: subcommands.AgentSupport, RepositorySecret: ctx.GetSecret()},
+	}
+
+	go func() {
+		<-ctx.Done()
+		client.Close()
+	}()
+
+	if status, err := client.SendCommand(ctx, []string{"n/a"}, &cmd, storeConfig); err != nil {
+		return status, err
+	}
+	return 0, nil
+}
+
 func NewClient(socketPath string, ignoreVersion bool) (*Client, error) {
 	var lockfile *os.File
 	var spawned bool
@@ -76,6 +101,7 @@ func NewClient(socketPath string, ignoreVersion bool) (*Client, error) {
 		if err == nil {
 			// connected successfully!
 			break
+		} else {
 		}
 
 		attempt++
@@ -110,7 +136,7 @@ func NewClient(socketPath string, ignoreVersion bool) (*Client, error) {
 				return nil, fmt.Errorf("failed to get executable: %w", err)
 			}
 
-			plakar := exec.Command(me, "agent", "start")
+			plakar := exec.Command(me, "cached")
 			if err := plakar.Start(); err != nil {
 				return nil, fmt.Errorf("failed to start the agent: %w", err)
 			}

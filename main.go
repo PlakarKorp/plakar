@@ -169,6 +169,9 @@ func entryPoint() int {
 		opt_agentless = true
 	}
 
+	// XXX: Temporary
+	opt_agentless = true
+
 	// default cachedir
 	cacheSubDir := "plakar"
 
@@ -385,7 +388,8 @@ func entryPoint() int {
 		}
 
 		if opt_agentless {
-			repo, err = repository.New(ctx.GetInner(), ctx.GetSecret(), store, serializedConfig)
+			// Actual rebuild is done by cached.
+			repo, err = repository.NewNoRebuild(ctx.GetInner(), ctx.GetSecret(), store, serializedConfig)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
 				return 1
@@ -420,7 +424,16 @@ func entryPoint() int {
 
 	runWithoutAgent := opt_agentless || cmd.GetFlags()&subcommands.AgentSupport == 0
 	if runWithoutAgent {
-		status, err = task.RunCommand(ctx, cmd, repo, "@agentless")
+		// If we are working on a repo, rebuild the state.
+		if cmd.GetFlags()&subcommands.BeforeRepositoryOpen == 0 && cmd.GetFlags()&subcommands.BeforeRepositoryWithStorage == 0 {
+			_, err = agent.RebuildStateFromCached(ctx, storeConfig)
+			if err == nil {
+				status, err = task.RunCommand(ctx, cmd, repo, "@agentless")
+			}
+		} else {
+			status, err = task.RunCommand(ctx, cmd, repo, "@agentless")
+		}
+
 	} else {
 		status, err = agent.ExecuteRPC(ctx, name, cmd, storeConfig)
 	}
