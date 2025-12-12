@@ -147,9 +147,7 @@ func (cmd *PkgCreate) Execute(ctx *appcontext.AppContext, _ *repository.Reposito
 		NoCommit:     true,
 	}
 
-	ep := startEventsProcessorStdio(ctx, false)
 	err = snap.Backup(imp, backupOptions)
-	ep.Close()
 
 	if err != nil {
 		return 1, fmt.Errorf("failed to populate the snapshot: %w", err)

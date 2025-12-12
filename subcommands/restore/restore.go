@@ -44,8 +44,6 @@ type Restore struct {
 
 	Target    string
 	Strip     string
-	Quiet     bool
-	Silent    bool
 	Snapshots []string
 }
 
@@ -71,8 +69,6 @@ func (cmd *Restore) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags.StringVar(&cmd.OptTag, "tag", "", "filter by tag")
 
 	flags.StringVar(&pullPath, "to", "", "base directory where pull will restore")
-	flags.BoolVar(&cmd.Quiet, "quiet", false, "do not print progress")
-	flags.BoolVar(&cmd.Silent, "silent", false, "do not print ANY progress")
 	flags.BoolVar(&cmd.OptSkipPermissions, "skip-permissions", false, "do not restore file permissions")
 	flags.Parse(args)
 
@@ -96,9 +92,6 @@ func (cmd *Restore) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	if !cmd.Silent {
-		go eventsProcessorStdio(ctx, cmd.Quiet)
-	}
 	var snapshots []string
 	if len(cmd.Snapshots) == 0 {
 		locateOptions := locate.NewDefaultLocateOptions()

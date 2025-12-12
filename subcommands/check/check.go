@@ -35,9 +35,7 @@ type Check struct {
 	LocateOptions *locate.LocateOptions
 	FastCheck     bool
 	NoVerify      bool
-	Quiet         bool
 	Snapshots     []string
-	Silent        bool
 }
 
 func init() {
@@ -56,8 +54,6 @@ func (cmd *Check) Parse(ctx *appcontext.AppContext, args []string) error {
 
 	flags.BoolVar(&cmd.NoVerify, "no-verify", false, "disable signature verification")
 	flags.BoolVar(&cmd.FastCheck, "fast", false, "enable fast checking (no digest verification)")
-	flags.BoolVar(&cmd.Quiet, "quiet", false, "suppress output")
-	flags.BoolVar(&cmd.Silent, "silent", false, "suppress ALL output")
 	cmd.LocateOptions.InstallLocateFlags(flags)
 
 	flags.Parse(args)
@@ -73,10 +69,6 @@ func (cmd *Check) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 func (cmd *Check) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	if !cmd.Silent {
-		go eventsProcessorStdio(ctx, cmd.Quiet)
-	}
-
 	var snapshots []string
 	if len(cmd.Snapshots) == 0 {
 		snapshotIDs, err := locate.LocateSnapshotIDs(repo, cmd.LocateOptions)
