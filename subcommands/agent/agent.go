@@ -34,6 +34,8 @@ func init() {
 			subcommands.BeforeRepositoryOpen, "agent", "start")
 		subcommands.Register(func() subcommands.Subcommand { return &Agent{} },
 			subcommands.BeforeRepositoryOpen, "agent")
+		subcommands.Register(func() subcommands.Subcommand { return &Cached{} },
+			subcommands.BeforeRepositoryOpen, "cached")
 	}
 }
 
