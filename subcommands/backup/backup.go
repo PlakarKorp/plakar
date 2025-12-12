@@ -32,6 +32,7 @@ import (
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/kloset/snapshot/importer"
+	"github.com/PlakarKorp/kloset/snapshot/vfs"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
@@ -56,6 +57,7 @@ type Backup struct {
 	PostHook            string
 	FailHook            string
 	NoXattr             bool
+	NoVFSCache          bool
 }
 
 func init() {
@@ -124,6 +126,7 @@ func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags.Var(utils.NewOptsFlag(cmd.Opts), "o", "specify extra importer options")
 	flags.BoolVar(&cmd.DryRun, "scan", false, "do not actually perform a backup, just list the files")
 	flags.BoolVar(&cmd.NoXattr, "no-xattr", false, "do not back up extended attributes")
+	flags.BoolVar(&cmd.NoVFSCache, "no-vfs-cache", false, "do not use VFS cache for this backup")
 	flags.Var(locate.NewTimeFlag(&cmd.ForcedTimestamp), "force-timestamp", "force a timestamp")
 	//flags.BoolVar(&opt_stdio, "stdio", false, "output one line per file to stdout instead of the default interactive output")
 	flags.Parse(args)
@@ -239,12 +242,61 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		cmd.PackfileTempStorage = ""
 	}
 
+	var parentVFS *vfs.Filesystem
+
+	if !cmd.NoVFSCache {
+		importerType, err := imp.Type(ctx)
+		if err != nil {
+			return 1, fmt.Errorf("failed to get importer type: %w", err), objects.MAC{}, nil
+		}
+
+		importerOrigin, err := imp.Origin(ctx)
+		if err != nil {
+			return 1, fmt.Errorf("failed to get importer origin: %w", err), objects.MAC{}, nil
+		}
+
+		parentID, _, err := locate.Match(repo, &locate.LocateOptions{
+			Filters: locate.LocateFilters{
+				Latest: true,
+				Roots: []string{
+					cmd.Path,
+				},
+				Types: []string{
+					importerType,
+				},
+				Origins: []string{
+					importerOrigin,
+				},
+				// XXX TO FIX: Source matching based on importer origin/type
+			},
+		})
+		if err != nil {
+			return 1, nil, objects.MAC{}, err
+		}
+
+		if len(parentID) != 0 {
+			parent, err := snapshot.Load(repo, parentID[0])
+			if err != nil {
+				return 1, nil, objects.MAC{}, err
+			}
+			defer parent.Close()
+
+			parentVFS, err = parent.Filesystem()
+			if err != nil {
+				return 1, nil, objects.MAC{}, err
+			}
+		}
+	}
+
 	snap, err := snapshot.Create(repo, repository.DefaultType, cmd.PackfileTempStorage, objects.NilMac)
 	if err != nil {
 		ctx.GetLogger().Error("%s", err)
 		return 1, err, objects.MAC{}, nil
 	}
 	defer snap.Close()
+
+	//snap.WithVFSCache(parentVFS)
+	_ = parentVFS
 
 	if cmd.Job != "" {
 		snap.Header.Job = cmd.Job
