@@ -193,10 +193,6 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 			return 1, err
 		}
 
-		ctx.GetLogger().Info("restore: restoration of %x:%s at %s completed successfully",
-			snap.Header.GetIndexShortID(),
-			pathname,
-			cmd.Target)
 		snap.Close()
 	}
 	return 0, nil
