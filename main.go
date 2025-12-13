@@ -121,6 +121,7 @@ func entryPoint() int {
 	var opt_time bool
 	var opt_trace string
 	var opt_quiet bool
+	var opt_silent bool
 	var opt_keyfile string
 	var opt_agentless bool
 	var opt_enableSecurityCheck bool
@@ -135,6 +136,7 @@ func entryPoint() int {
 	flag.BoolVar(&opt_time, "time", false, "display command execution time")
 	flag.StringVar(&opt_trace, "trace", "", "display trace logs, comma-separated (all, trace, repository, snapshot, server)")
 	flag.BoolVar(&opt_quiet, "quiet", false, "no output except errors")
+	flag.BoolVar(&opt_silent, "silent", false, "no output at all")
 	flag.StringVar(&opt_keyfile, "keyfile", "", "use passphrase from key file when prompted")
 	flag.BoolVar(&opt_agentless, "no-agent", false, "run without agent")
 	flag.BoolVar(&opt_enableSecurityCheck, "enable-security-check", false, "enable update check")
@@ -155,6 +157,9 @@ func entryPoint() int {
 	ctx := appcontext.NewAppContext()
 	defer stdio.Run(ctx)()
 	defer ctx.Close()
+
+	ctx.Quiet = opt_quiet
+	ctx.Silent = opt_silent
 
 	ctx.ConfigDir = opt_configdir
 	err = ctx.ReloadConfig()
