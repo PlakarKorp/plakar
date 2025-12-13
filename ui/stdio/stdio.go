@@ -65,9 +65,9 @@ func Run(ctx *appcontext.AppContext) func() {
 
 				case "object.error", "chunk.error":
 					snapshotID := e.Snapshot
-					mac := e.Data["mac"].(string)
-					errorMessage := e.Data["error"].(objects.MAC)
-					ctx.GetLogger().Stderr("%x: KO %s object %s: %s", snapshotID[:4], crossMark, mac, errorMessage)
+					mac := e.Data["mac"].(objects.MAC)
+					errorMessage := e.Data["error"].(error)
+					ctx.GetLogger().Stderr("%x: KO %s object=%x: %s", snapshotID[:4], crossMark, mac, errorMessage)
 
 				case "snapshot.backup.result":
 					snapshotID := e.Snapshot
@@ -76,7 +76,7 @@ func Run(ctx *appcontext.AppContext) func() {
 					rbytes := humanize.IBytes(uint64(e.Data["rbytes"].(int64)))
 					wbytes := humanize.IBytes(uint64(e.Data["wbytes"].(int64)))
 					errors := e.Data["errors"].(uint64)
-					ctx.GetLogger().Stdout("%x: created snapshot of logical size %s to %s in %s with %d errors (read: %s, wrote: %s)",
+					ctx.GetLogger().Stdout("%x: created snapshot of logical size %s to %s in %s with %d errors (in: %s, out: %s)",
 						snapshotID[:4], totalSize, e.Data["target"].(string), duration, errors, rbytes, wbytes)
 
 				case "snapshot.restore.result":
@@ -86,8 +86,22 @@ func Run(ctx *appcontext.AppContext) func() {
 					rbytes := humanize.IBytes(uint64(e.Data["rbytes"].(int64)))
 					wbytes := humanize.IBytes(uint64(e.Data["wbytes"].(int64)))
 					errors := e.Data["errors"].(uint64)
-					ctx.GetLogger().Stdout("%x: restored snapshot of logical size %s to %s in %s with %d errors (read: %s, wrote: %s)",
+					ctx.GetLogger().Stdout("%x: restored snapshot of logical size %s to %s in %s with %d errors (in: %s, out: %s)",
 						snapshotID[:4], totalSize, e.Data["target"].(string), duration, errors, rbytes, wbytes)
+
+				case "snapshot.check.result":
+					snapshotID := e.Snapshot
+					totalSize := humanize.IBytes(e.Data["size"].(uint64))
+					duration := e.Data["duration"]
+					rbytes := humanize.IBytes(uint64(e.Data["rbytes"].(int64)))
+					wbytes := humanize.IBytes(uint64(e.Data["wbytes"].(int64)))
+					errors := e.Data["errors"].(uint64)
+					success := "succeeded"
+					if errors != 0 {
+						success = "failed"
+					}
+					ctx.GetLogger().Stdout("%x: check %s snapshot of logical size %s in %s with %d errors (in: %s, out: %s)",
+						snapshotID[:4], success, totalSize, duration, errors, rbytes, wbytes)
 
 				default:
 					//fmt.Printf("%T: %s\n", e, e.Type)
