@@ -37,7 +37,6 @@ import (
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
-	"github.com/dustin/go-humanize"
 )
 
 type Backup struct {
@@ -346,16 +345,6 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 	if err := executeHook(ctx, cmd.PostHook); err != nil {
 		ctx.GetLogger().Warn("post-backup hook failed: %s", err)
 	}
-
-	totalSize := snap.Header.GetSource(0).Summary.Directory.Size + snap.Header.GetSource(0).Summary.Below.Size
-
-	ctx.GetLogger().Info("backup: created %s snapshot %x of size %s in %s (wrote %s)",
-		"unsigned",
-		snap.Header.GetIndexShortID(),
-		humanize.IBytes(totalSize),
-		snap.Header.Duration,
-		humanize.IBytes(uint64(snap.Repository().WBytes())),
-	)
 
 	totalErrors := uint64(0)
 	for i := 0; i < len(snap.Header.Sources); i++ {

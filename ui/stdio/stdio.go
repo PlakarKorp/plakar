@@ -5,6 +5,7 @@ import (
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/dustin/go-humanize"
 )
 
 type Event = events.Event
@@ -33,43 +34,49 @@ func Run(ctx *appcontext.AppContext) func() {
 					return
 				}
 
-				//	if ctx.Silent {
-				// even if silent, we still need to drive TUIs
-				// so only skip printing/logging here
-				//	}
+				if ctx.Silent {
+					continue
+				}
+
+				if ctx.Quiet && e.Level == "info" {
+					continue
+				}
 
 				switch e.Type {
-				case "snapshot.backup.path.error", "snapshot.backup.directory.error", "snapshot.backup.file.error":
-					snapshotID := e.Data["snapshot_id"].([]byte)
+				case "path", "directory", "file", "symlink":
+					// ignore, displayed as either success or failure
+
+				case "path.error", "directory.error", "file.error", "symlink.error":
+					snapshotID := e.Snapshot
 					pathname := e.Data["path"].(string)
-					errorMessage := e.Data["error"].(string)
+					errorMessage := e.Data["error"].(error)
 					ctx.GetLogger().Stderr("%x: KO %s %s: %s", snapshotID[:4], crossMark, pathname, errorMessage)
 
-				case "snapshot.backup.directory.ok", "snapshot.backup.file.ok":
-					snapshotID := e.Data["snapshot_id"].([]byte)
+				case "path.ok", "directory.ok", "file.ok", "symlink.ok":
+					snapshotID := e.Snapshot
 					pathname := e.Data["path"].(string)
 					ctx.GetLogger().Stdout("%x: OK %s %s", snapshotID[:4], checkMark, pathname)
 
-				case "snapshot.backup.commit.done":
-					snapshotID := e.Data["snapshot_id"].([]byte)
-					ctx.GetLogger().Stdout("%x: created unsigned snapshot", snapshotID[:4])
+				case "object", "chunk":
+					// ignore, too verbose for stdio
 
-				// CHECK / RESTORE etc -> keep your old cases here if you want
-				case "snapshot.check.directory.ok", "snapshot.check.file.ok":
-					snapshotID := e.Data["snapshot_id"].(objects.MAC)
-					pathname := e.Data["path"].(string)
-					ctx.GetLogger().Stdout("%x: OK %s %s", snapshotID[:4], checkMark, pathname)
+				case "object.ok", "chunk.ok":
+					// ignore, too verbose for stdio
 
-				case "snapshot.restore.path.error", "snapshot.restore.directory.error", "snapshot.restore.file.error", "snapshot.restore.symlink.error":
-					snapshotID := e.Data["snapshot_id"].(objects.MAC)
-					pathname := e.Data["path"].(string)
-					errorMessage := e.Data["error"].(string)
-					ctx.GetLogger().Stderr("%x: KO %s %s: %s", snapshotID[:4], crossMark, pathname, errorMessage)
+				case "object.error", "chunk.error":
+					snapshotID := e.Snapshot
+					mac := e.Data["mac"].(string)
+					errorMessage := e.Data["error"].(objects.MAC)
+					ctx.GetLogger().Stderr("%x: KO %s object %s: %s", snapshotID[:4], crossMark, mac, errorMessage)
 
-				case "snapshot.restore.directory.ok", "snapshot.restore.file.ok", "snapshot.restore.symlink.ok":
-					snapshotID := e.Data["snapshot_id"].(objects.MAC)
-					pathname := e.Data["path"].(string)
-					ctx.GetLogger().Stdout("%x: OK %s %s", snapshotID[:4], checkMark, pathname)
+				case "snapshot.commit":
+					snapshotID := e.Snapshot
+					totalSize := humanize.IBytes(e.Data["size"].(uint64))
+					duration := e.Data["duration"]
+					rbytes := humanize.IBytes(uint64(e.Data["rbytes"].(int64)))
+					wbytes := humanize.IBytes(uint64(e.Data["wbytes"].(int64)))
+					ctx.GetLogger().Stdout("%x: committed snapshot of size %s in %s (read: %s, wrote: %s)",
+						snapshotID[:4], totalSize, duration, rbytes, wbytes)
 
 				default:
 					//fmt.Printf("%T: %s\n", e, e.Type)
