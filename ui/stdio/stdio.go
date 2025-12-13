@@ -69,14 +69,25 @@ func Run(ctx *appcontext.AppContext) func() {
 					errorMessage := e.Data["error"].(objects.MAC)
 					ctx.GetLogger().Stderr("%x: KO %s object %s: %s", snapshotID[:4], crossMark, mac, errorMessage)
 
-				case "snapshot.commit":
+				case "snapshot.backup.result":
 					snapshotID := e.Snapshot
 					totalSize := humanize.IBytes(e.Data["size"].(uint64))
 					duration := e.Data["duration"]
 					rbytes := humanize.IBytes(uint64(e.Data["rbytes"].(int64)))
 					wbytes := humanize.IBytes(uint64(e.Data["wbytes"].(int64)))
-					ctx.GetLogger().Stdout("%x: committed snapshot of size %s in %s (read: %s, wrote: %s)",
-						snapshotID[:4], totalSize, duration, rbytes, wbytes)
+					errors := e.Data["errors"].(uint64)
+					ctx.GetLogger().Stdout("%x: created snapshot of logical size %s to %s in %s with %d errors (read: %s, wrote: %s)",
+						snapshotID[:4], totalSize, e.Data["target"].(string), duration, errors, rbytes, wbytes)
+
+				case "snapshot.restore.result":
+					snapshotID := e.Snapshot
+					totalSize := humanize.IBytes(e.Data["size"].(uint64))
+					duration := e.Data["duration"]
+					rbytes := humanize.IBytes(uint64(e.Data["rbytes"].(int64)))
+					wbytes := humanize.IBytes(uint64(e.Data["wbytes"].(int64)))
+					errors := e.Data["errors"].(uint64)
+					ctx.GetLogger().Stdout("%x: restored snapshot of logical size %s to %s in %s with %d errors (read: %s, wrote: %s)",
+						snapshotID[:4], totalSize, e.Data["target"].(string), duration, errors, rbytes, wbytes)
 
 				default:
 					//fmt.Printf("%T: %s\n", e, e.Type)
