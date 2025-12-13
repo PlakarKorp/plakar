@@ -132,17 +132,11 @@ func (cmd *Check) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 		}
 
 		if err := snap.Check(pathname, opts); err != nil {
-			ctx.GetLogger().Warn("check failed for snapshot %x: %s",
-				snap.Header.GetIndexID(), err)
 			failed = true
 		}
 
 		if failed {
 			failures++
-		} else {
-			ctx.GetLogger().Info("check: verification of %x:%s completed successfully",
-				snap.Header.GetIndexShortID(),
-				pathname)
 		}
 
 		snap.Close()
