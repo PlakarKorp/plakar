@@ -44,7 +44,7 @@ type Report struct {
 	Snapshot   *ReportSnapshot   `json:"report_snapshot,omitempty"`
 
 	repo     *repository.Repository `json:"-"`
-	logger   *logging.Logger        `json:"-"`
+	logger   logging.Logger         `json:"-"`
 	reporter chan *Report           `json:"-"`
 	ignore   bool                   `json:"-"`
 }
