@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 
+	"github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
@@ -29,7 +30,8 @@ import (
 type Mount struct {
 	subcommands.SubcommandBase
 
-	Mountpoint string
+	Mountpoint    string
+	LocateOptions *locate.LocateOptions
 }
 
 func init() {
@@ -37,10 +39,13 @@ func init() {
 }
 
 func (cmd *Mount) Parse(ctx *appcontext.AppContext, args []string) error {
+	cmd.LocateOptions = locate.NewDefaultLocateOptions()
+
 	flags := flag.NewFlagSet("mount", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s PATH\n", flags.Name())
 	}
+	cmd.LocateOptions.InstallLocateFlags(flags)
 	flags.Parse(args)
 
 	if flags.NArg() != 1 {
@@ -54,5 +59,5 @@ func (cmd *Mount) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 func (cmd *Mount) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	return fuse.ExecuteFUSE(ctx, repo, cmd.Mountpoint)
+	return fuse.ExecuteFUSE(ctx, repo, cmd.Mountpoint, cmd.LocateOptions)
 }

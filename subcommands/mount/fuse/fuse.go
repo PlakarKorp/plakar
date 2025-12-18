@@ -22,6 +22,7 @@ package fuse
 import (
 	"fmt"
 
+	"github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands/mount/fuse/plakarfs"
@@ -29,7 +30,7 @@ import (
 	"github.com/anacrolix/fuse/fs"
 )
 
-func ExecuteFUSE(ctx *appcontext.AppContext, repo *repository.Repository, mountpoint string) (int, error) {
+func ExecuteFUSE(ctx *appcontext.AppContext, repo *repository.Repository, mountpoint string, locateOptions *locate.LocateOptions) (int, error) {
 	c, err := fuse.Mount(
 		mountpoint,
 		fuse.FSName("plakar"),
@@ -52,7 +53,7 @@ func ExecuteFUSE(ctx *appcontext.AppContext, repo *repository.Repository, mountp
 		fuse.Unmount(mountpoint)
 	}()
 
-	err = fs.Serve(c, plakarfs.NewFS(repo, mountpoint))
+	err = fs.Serve(c, plakarfs.NewFS(repo, locateOptions, mountpoint))
 	if err != nil {
 		return 1, err
 	}
