@@ -26,10 +26,8 @@ var ErrCantUnlock = errors.New("failed to unlock repository")
 func (s *Scheduler) backupTask(taskset Task, task BackupConfig) {
 	backupSubcommand := &backup.Backup{}
 	backupSubcommand.Tags = task.Tags
-	backupSubcommand.Silent = true
 	backupSubcommand.Job = taskset.Name
 	backupSubcommand.Path = task.Path
-	backupSubcommand.Quiet = true
 	backupSubcommand.Opts = make(map[string]string)
 	backupSubcommand.PreHook = task.PreHook
 	backupSubcommand.PostHook = task.PostHook
@@ -113,7 +111,6 @@ func (s *Scheduler) checkTask(taskset Task, task CheckConfig) {
 		locate.WithJob(taskset.Name),
 		locate.WithLatest(task.Latest),
 	)
-	checkSubcommand.Silent = true
 	if task.Path != "" {
 		checkSubcommand.Snapshots = []string{":" + task.Path}
 	}
@@ -154,7 +151,6 @@ func (s *Scheduler) restoreTask(taskset Task, task RestoreConfig) {
 	restoreSubcommand := &restore.Restore{}
 	restoreSubcommand.OptJob = taskset.Name
 	restoreSubcommand.Target = task.Target
-	restoreSubcommand.Silent = true
 	if task.Path != "" {
 		restoreSubcommand.Snapshots = []string{":" + task.Path}
 	}

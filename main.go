@@ -30,6 +30,7 @@ import (
 	"github.com/PlakarKorp/plakar/plugins"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/task"
+	"github.com/PlakarKorp/plakar/ui/stdio"
 	"github.com/PlakarKorp/plakar/utils"
 	"github.com/denisbrodbeck/machineid"
 	"github.com/google/uuid"
@@ -150,6 +151,7 @@ func entryPoint() int {
 	flag.Parse()
 
 	ctx := appcontext.NewAppContext()
+	defer stdio.Run(ctx)()
 	defer ctx.Close()
 
 	ctx.ConfigDir = opt_configdir

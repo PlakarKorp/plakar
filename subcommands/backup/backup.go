@@ -46,8 +46,6 @@ type Backup struct {
 	Job                 string
 	Tags                []string
 	Excludes            []string
-	Silent              bool
-	Quiet               bool
 	Path                string
 	OptCheck            bool
 	Opts                map[string]string
@@ -121,8 +119,6 @@ func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags.StringVar(&opt_ignore_file, "ignore-file", "", "path to a file containing newline-separated gitignore patterns, treated as -ignore")
 	flags.Var(&opt_ignore, "ignore", "gitignore pattern to exclude files, can be specified multiple times to add several exclusion patterns")
 	flags.StringVar(&cmd.PackfileTempStorage, "packfiles", "memory", "memory or a path to a directory to store temporary packfiles")
-	flags.BoolVar(&cmd.Quiet, "quiet", false, "suppress output")
-	flags.BoolVar(&cmd.Silent, "silent", false, "suppress ALL output")
 	flags.BoolVar(&cmd.OptCheck, "check", false, "check the snapshot after creating it")
 	flags.Var(utils.NewOptsFlag(cmd.Opts), "o", "specify extra importer options")
 	flags.BoolVar(&cmd.DryRun, "scan", false, "do not actually perform a backup, just list the files")
@@ -307,28 +303,11 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		snap.Header.Job = cmd.Job
 	}
 
-	if cmd.Silent {
-		if err := snap.Backup(imp, opts); err != nil {
-			if err := executeHook(ctx, cmd.FailHook); err != nil {
-				ctx.GetLogger().Warn("post-backup fail hook failed: %s", err)
-			}
-			return 1, fmt.Errorf("failed to create snapshot: %w", err), objects.MAC{}, nil
+	if err := snap.Backup(imp, opts); err != nil {
+		if err := executeHook(ctx, cmd.FailHook); err != nil {
+			ctx.GetLogger().Warn("post-backup fail hook failed: %s", err)
 		}
-	} else {
-		root, err := imp.Root(ctx)
-		if err != nil {
-			return 1, fmt.Errorf("failed to get importer root: %w", err), objects.MAC{}, nil
-		}
-
-		ep := startEventsProcessor(ctx, root, true, cmd.Quiet)
-		if err := snap.Backup(imp, opts); err != nil {
-			ep.Close()
-			if err := executeHook(ctx, cmd.FailHook); err != nil {
-				ctx.GetLogger().Warn("post-backup fail hook failed: %s", err)
-			}
-			return 1, fmt.Errorf("failed to create snapshot: %w", err), objects.MAC{}, nil
-		}
-		ep.Close()
+		return 1, fmt.Errorf("failed to create snapshot: %w", err), objects.MAC{}, nil
 	}
 
 	if cmd.OptCheck {
