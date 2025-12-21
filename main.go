@@ -156,7 +156,6 @@ func entryPoint() int {
 	flag.Parse()
 
 	ctx := appcontext.NewAppContext()
-
 	if opt_stdio || opt_quiet || opt_silent {
 		defer stdio.Run(ctx)()
 	} else {
