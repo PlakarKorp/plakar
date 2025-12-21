@@ -31,6 +31,7 @@ import (
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/task"
 	"github.com/PlakarKorp/plakar/ui/stdio"
+	"github.com/PlakarKorp/plakar/ui/tui"
 	"github.com/PlakarKorp/plakar/utils"
 	"github.com/denisbrodbeck/machineid"
 	"github.com/google/uuid"
@@ -120,6 +121,7 @@ func entryPoint() int {
 	var opt_memProfile string
 	var opt_time bool
 	var opt_trace string
+	var opt_stdio bool
 	var opt_quiet bool
 	var opt_silent bool
 	var opt_keyfile string
@@ -134,6 +136,7 @@ func entryPoint() int {
 	flag.StringVar(&opt_memProfile, "profile-mem", "", "profile MEM usage")
 	flag.BoolVar(&opt_time, "time", false, "display command execution time")
 	flag.StringVar(&opt_trace, "trace", "", "display trace logs, comma-separated (all, trace, repository, snapshot, server)")
+	flag.BoolVar(&opt_stdio, "stdio", false, "use stdio user interface")
 	flag.BoolVar(&opt_quiet, "quiet", false, "no output except errors")
 	flag.BoolVar(&opt_silent, "silent", false, "no output at all")
 	flag.StringVar(&opt_keyfile, "keyfile", "", "use passphrase from key file when prompted")
@@ -153,7 +156,12 @@ func entryPoint() int {
 	flag.Parse()
 
 	ctx := appcontext.NewAppContext()
-	defer stdio.Run(ctx)()
+
+	if opt_stdio || opt_quiet || opt_silent {
+		defer stdio.Run(ctx)()
+	} else {
+		defer tui.Run(ctx)()
+	}
 	defer ctx.Close()
 
 	ctx.Quiet = opt_quiet
