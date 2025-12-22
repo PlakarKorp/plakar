@@ -221,6 +221,9 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 	}
 	defer imp.Close(ctx)
 
+	importerOpts := ctx.ImporterOpts()
+	importerOpts.Excludes = cmd.Excludes
+
 	if cmd.DryRun {
 		if err := dryrun(ctx, imp, cmd.Excludes); err != nil {
 			return 1, err, objects.MAC{}, nil
