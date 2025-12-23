@@ -318,11 +318,12 @@ func (cmd *Cached) rebuildJob(ctx *appcontext.AppContext, jobChan chan jobReq, s
 		return fmt.Errorf("failed to open storage: %w", err)
 	}
 
-	if err := setupSecret(ctx, subcommand, storeConfig, serializedConfig); err != nil {
+	key, err := getSecret(ctx, subcommand, storeConfig, serializedConfig)
+	if err != nil {
 		return fmt.Errorf("failed to setup secret: %w", err)
 	}
 
-	repo, err := repository.NewNoRebuild(ctx.GetInner(), ctx.GetSecret(), store, serializedConfig)
+	repo, err := repository.NewNoRebuild(ctx.GetInner(), key, store, serializedConfig)
 	if err != nil {
 		return fmt.Errorf("failed to open repository: %w", err)
 	}
@@ -365,50 +366,22 @@ func (cmd *Cached) rebuildJob(ctx *appcontext.AppContext, jobChan chan jobReq, s
 
 }
 
-func setupSecret(ctx *appcontext.AppContext, cmd subcommands.Subcommand, storeConfig map[string]string, storageConfig []byte) error {
+func getSecret(ctx *appcontext.AppContext, cmd subcommands.Subcommand, storeConfig map[string]string, storageConfig []byte) ([]byte, error) {
 	config, err := storage.NewConfigurationFromWrappedBytes(storageConfig)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if config.Encryption == nil {
-		return nil
+		return nil, nil
 	}
 
-	getKey := func() ([]byte, error) {
-		if key := cmd.GetRepositorySecret(); key != nil {
-			return key, nil
-		}
-
-		passphrase, ok := storeConfig["passphrase"]
-		if !ok {
-			cmd, ok := storeConfig["passphrase_cmd"]
-			if !ok {
-				return nil, fmt.Errorf("no passphrase specified")
-			}
-			passphrase, err = utils.GetPassphraseFromCommand(cmd)
-			if err != nil {
-				return nil, fmt.Errorf("failed to read passphrase from command: %w", err)
-			}
-		}
-
-		key, err := encryption.DeriveKey(config.Encryption.KDFParams, []byte(passphrase))
-		if err != nil {
-			return nil, fmt.Errorf("failed to derive key: %w", err)
-		}
-		return key, nil
-	}
-
-	key, err := getKey()
-	if err != nil {
-		return err
-	}
+	key := cmd.GetRepositorySecret()
 	if !encryption.VerifyCanary(config.Encryption, key) {
-		return fmt.Errorf("failed to verify key")
+		return nil, fmt.Errorf("failed to verify key")
 	}
 
-	ctx.SetSecret(key)
-	return nil
+	return key, nil
 }
 
 func isDisconnectError(err error) bool {
