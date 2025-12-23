@@ -218,9 +218,6 @@ func (cmd *Cached) handleCachedClient(ctx *appcontext.AppContext, conn net.Conn)
 	encoder := msgpack.NewEncoder(conn)
 	decoder := msgpack.NewDecoder(conn)
 
-	clientContext := appcontext.NewAppContextFrom(ctx)
-	defer clientContext.Close()
-
 	// handshake
 	var (
 		clientvers []byte
@@ -238,7 +235,7 @@ func (cmd *Cached) handleCachedClient(ctx *appcontext.AppContext, conn net.Conn)
 			return
 		}
 		select {
-		case <-clientContext.Done():
+		case <-ctx.Done():
 			return
 		default:
 			mu.Lock()
@@ -250,16 +247,6 @@ func (cmd *Cached) handleCachedClient(ctx *appcontext.AppContext, conn net.Conn)
 		}
 	}
 
-	stdinchan := make(chan agent.Packet, 1)
-	defer close(stdinchan)
-
-	processStderr := func(data string) {
-		write(agent.Packet{
-			Type: "stderr",
-			Data: []byte(data),
-		})
-	}
-
 	_, storeConfig, request, err := subcommands.DecodeRPC(decoder)
 	if err != nil {
 		if isDisconnectError(err) {
@@ -267,7 +254,6 @@ func (cmd *Cached) handleCachedClient(ctx *appcontext.AppContext, conn net.Conn)
 			return
 		}
 		ctx.GetLogger().Warn("Failed to decode RPC: %v", err)
-		fmt.Fprintf(clientContext.Stderr, "%s\n", err)
 		return
 	}
 
@@ -276,14 +262,7 @@ func (cmd *Cached) handleCachedClient(ctx *appcontext.AppContext, conn net.Conn)
 		for {
 			var pkt agent.Packet
 			if err := decoder.Decode(&pkt); err != nil {
-				if !isDisconnectError(err) {
-					processStderr(fmt.Sprintf("failed to decode: %s", err))
-				}
-				clientContext.Close()
 				return
-			}
-			if pkt.Type == "stdin" {
-				stdinchan <- pkt
 			}
 		}
 	}()
@@ -291,7 +270,6 @@ func (cmd *Cached) handleCachedClient(ctx *appcontext.AppContext, conn net.Conn)
 	subcommand := &cached.CachedReq{}
 	if err := msgpack.Unmarshal(request, subcommand); err != nil {
 		ctx.GetLogger().Warn("Failed to decode client request: %v", err)
-		fmt.Fprintf(clientContext.Stderr, "Failed to decode client request: %s\n", err)
 		return
 	}
 
