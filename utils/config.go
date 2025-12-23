@@ -11,7 +11,7 @@ import (
 
 	"gopkg.in/ini.v1"
 
-	"github.com/PlakarKorp/kloset/config"
+	"github.com/PlakarKorp/plakar/config"
 	"go.yaml.in/yaml/v3"
 )
 

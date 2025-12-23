@@ -3,6 +3,7 @@ package appcontext
 import (
 	"github.com/PlakarKorp/kloset/kcontext"
 	"github.com/PlakarKorp/kloset/snapshot/importer"
+	"github.com/PlakarKorp/plakar/config"
 	"github.com/PlakarKorp/plakar/cookies"
 	"github.com/PlakarKorp/plakar/plugins"
 	"github.com/PlakarKorp/plakar/utils"
@@ -13,6 +14,7 @@ type AppContext struct {
 
 	cookies *cookies.Manager `msgpack:"-"`
 	plugins *plugins.Manager `msgpack:"-"`
+	Config  *config.Config   `msgpack:"-"`
 
 	ConfigDir string
 	secret    []byte
