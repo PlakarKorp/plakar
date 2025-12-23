@@ -70,11 +70,6 @@ func (cmd *Cached) Parse(ctx *appcontext.AppContext, args []string) error {
 	var opt_foreground bool
 	var opt_logfile string
 
-	_, envAgentLess := os.LookupEnv("PLAKAR_AGENTLESS")
-	if envAgentLess {
-		return fmt.Errorf("agent can not be started when PLAKAR_AGENTLESS is set")
-	}
-
 	flags := flag.NewFlagSet("cached", flag.ExitOnError)
 	flags.StringVar(&opt_logfile, "log", "", "log file")
 	flags.BoolVar(&opt_foreground, "foreground", false, "run in foreground")
