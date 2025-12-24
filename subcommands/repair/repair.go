@@ -55,6 +55,12 @@ func (cmd *Repair) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 func (cmd *Repair) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+	oldCache, err := repo.AppContext().GetCache().Repository(repo.Configuration().RepositoryID)
+	if err != nil {
+		return 1, err
+	}
+
+	repo.RebuildStateWithCache(oldCache)
 	remoteStates, err := repo.GetStates()
 	if err != nil {
 		return 1, err
