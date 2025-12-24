@@ -65,7 +65,7 @@ func (cmd *DiagBlob) Execute(ctx *appcontext.AppContext, repo *repository.Reposi
 			return 1, fmt.Errorf("failed to deserialize %s %x: %w",
 				blobtype, mac, err)
 		}
-		fmt.Fprintf(ctx.Stdout, "%+v\n", hdr)
+		fmt.Printf("%+v\n", hdr)
 
 	case resources.RT_OBJECT:
 		obj, err := objects.NewObjectFromBytes(buf)
@@ -73,7 +73,7 @@ func (cmd *DiagBlob) Execute(ctx *appcontext.AppContext, repo *repository.Reposi
 			return 1, fmt.Errorf("failed to deserialize %s %x: %w",
 				blobtype, mac, err)
 		}
-		fmt.Fprintf(ctx.Stdout, "%+v\n", obj)
+		fmt.Printf("%+v\n", obj)
 
 	case resources.RT_CHUNK:
 		chunk, err := objects.NewChunkFromBytes(buf)
@@ -81,7 +81,7 @@ func (cmd *DiagBlob) Execute(ctx *appcontext.AppContext, repo *repository.Reposi
 			return 1, fmt.Errorf("failed to deserialize %s %x: %w",
 				blobtype, mac, err)
 		}
-		fmt.Fprintf(ctx.Stdout, "%+v\n", chunk)
+		fmt.Printf("%+v\n", chunk)
 
 	case resources.RT_VFS_ENTRY:
 		entry, err := vfs.EntryFromBytes(buf)
@@ -89,7 +89,7 @@ func (cmd *DiagBlob) Execute(ctx *appcontext.AppContext, repo *repository.Reposi
 			return 1, fmt.Errorf("failed to deserialize %s %x: %w",
 				blobtype, mac, err)
 		}
-		fmt.Fprintf(ctx.Stdout, "%+v\n", entry)
+		fmt.Printf("%+v\n", entry)
 
 	case resources.RT_ERROR_ENTRY:
 		error, err := vfs.ErrorItemFromBytes(buf)
@@ -97,7 +97,7 @@ func (cmd *DiagBlob) Execute(ctx *appcontext.AppContext, repo *repository.Reposi
 			return 1, fmt.Errorf("failed to deserialize %s %x: %w",
 				blobtype, mac, err)
 		}
-		fmt.Fprintf(ctx.Stdout, "%+v\n", error)
+		fmt.Printf("%+v\n", error)
 
 	case resources.RT_XATTR_ENTRY:
 		xattr, err := vfs.XattrFromBytes(buf)
@@ -105,7 +105,7 @@ func (cmd *DiagBlob) Execute(ctx *appcontext.AppContext, repo *repository.Reposi
 			return 1, fmt.Errorf("failed to deserialize %s %x: %w",
 				blobtype, mac, err)
 		}
-		fmt.Fprintf(ctx.Stdout, "%+v\n", xattr)
+		fmt.Printf("%+v\n", xattr)
 
 	default:
 		return 1, fmt.Errorf("don't know how to deserialize %s", blobtype)

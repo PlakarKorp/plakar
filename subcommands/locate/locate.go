@@ -115,7 +115,7 @@ func (cmd *Locate) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 						continue
 					}
 				}
-				fmt.Fprintf(ctx.Stdout, "%x:%s\n", snap.Header.Identifier[0:4], utils.SanitizeText(pathname))
+				fmt.Printf("%x:%s\n", snap.Header.Identifier[0:4], utils.SanitizeText(pathname))
 			}
 		}
 		snap.Close()

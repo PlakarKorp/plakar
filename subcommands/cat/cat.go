@@ -22,6 +22,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"os"
 
 	"github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/kloset/repository"
@@ -153,7 +154,7 @@ func (cmd *Cat) Execute(ctx *appcontext.AppContext, repo *repository.Repository)
 						break
 					}
 
-					errFormat := formatter.Format(ctx.Stdout, style, iterator)
+					errFormat := formatter.Format(os.Stdout, style, iterator)
 					if errFormat != nil {
 						ctx.GetLogger().Error("cat: %s: %s", pathname, errFormat)
 						errors++
@@ -173,7 +174,7 @@ func (cmd *Cat) Execute(ctx *appcontext.AppContext, repo *repository.Repository)
 				}
 			}
 		} else {
-			_, err = io.Copy(ctx.Stdout, rd)
+			_, err = io.Copy(os.Stdout, rd)
 		}
 		file.Close()
 		if err != nil {

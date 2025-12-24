@@ -98,7 +98,7 @@ func (cmd *Login) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 		if token != "" {
 			status = "logged in"
 		}
-		fmt.Fprintf(ctx.Stdout, "%s\n", status)
+		fmt.Printf("%s\n", status)
 		return 0, nil
 	}
 

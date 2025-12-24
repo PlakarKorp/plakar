@@ -130,13 +130,13 @@ func (cmd *Rm) Execute(ctx *appcontext.AppContext, repo *repository.Repository) 
 			}
 			return ti.After(tj)
 		})
-		fmt.Fprintf(ctx.Stdout, "rm: would remove these %d snapshot(s), run with -apply to proceed\n", len(matches))
+		fmt.Printf("rm: would remove these %d snapshot(s), run with -apply to proceed\n", len(matches))
 		l := 0
 		for _, e := range entries {
 			l = max(l, len(e.prefix))
 		}
 		for _, e := range entries {
-			fmt.Fprintf(ctx.Stdout, "%s\n", e.prefix)
+			fmt.Printf("%s\n", e.prefix)
 		}
 		return 0, nil
 	}

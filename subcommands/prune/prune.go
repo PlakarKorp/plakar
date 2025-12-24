@@ -185,7 +185,7 @@ func (cmd *Prune) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 			}
 			return ti.After(tj)
 		})
-		fmt.Fprintf(ctx.Stdout, "prune: would keep %d and delete %d snapshot(s), run with -apply to proceed\n", len(reasons)-len(toDelete), len(toDelete))
+		fmt.Printf("prune: would keep %d and delete %d snapshot(s), run with -apply to proceed\n", len(reasons)-len(toDelete), len(toDelete))
 		l := 0
 		for _, e := range entries {
 			l = max(l, len(e.prefix))
@@ -196,9 +196,9 @@ func (cmd *Prune) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 			}
 			r := e.reason
 			if r.Rule == "" {
-				fmt.Fprintf(ctx.Stdout, "%-8s %s  reason=%s\n", e.action, e.prefix, e.reason.Note)
+				fmt.Printf("%-8s %s  reason=%s\n", e.action, e.prefix, e.reason.Note)
 			} else {
-				fmt.Fprintf(ctx.Stdout, "%-8s %s  match=%s:%s rank=%d cap=%d\n",
+				fmt.Printf("%-8s %s  match=%s:%s rank=%d cap=%d\n",
 					e.action, e.prefix, r.Rule, r.Bucket, r.Rank, r.Cap)
 			}
 		}

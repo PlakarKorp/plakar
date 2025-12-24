@@ -76,9 +76,9 @@ func (cmd *PkgList) Execute(ctx *appcontext.AppContext, _ *repository.Repository
 
 	for _, pkg := range packages {
 		if cmd.LongName {
-			fmt.Fprintln(ctx.Stdout, pkg.PkgName())
+			fmt.Println(pkg.PkgName())
 		} else {
-			fmt.Fprintln(ctx.Stdout, pkg.PkgNameAndVersion())
+			fmt.Println(pkg.PkgNameAndVersion())
 		}
 	}
 

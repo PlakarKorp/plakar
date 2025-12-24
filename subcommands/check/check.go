@@ -20,6 +20,7 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
+	"os"
 
 	"github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/kloset/repository"
@@ -90,7 +91,7 @@ func (cmd *Check) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 			cmd.LocateOptions.Filters.IDs = []string{prefix}
 			snapshotIDs, err := locate.LocateSnapshotIDs(repo, cmd.LocateOptions)
 			if err != nil {
-				fmt.Fprintln(ctx.Stderr, err)
+				fmt.Fprintln(os.Stderr, err)
 				return 1, err
 			}
 

@@ -3,6 +3,7 @@ package config
 import (
 	"flag"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -57,7 +58,7 @@ func dispatchPolicy(ctx *appcontext.AppContext, cmd, subcmd string, args []strin
 	case "add":
 		p := flag.NewFlagSet("add", flag.ExitOnError)
 		p.Usage = func() {
-			fmt.Fprintf(ctx.Stdout, "Usage: plakar %s %s <name> [<key>=<value>...]\n", cmd, p.Name())
+			fmt.Printf("Usage: plakar %s %s <name> [<key>=<value>...]\n", cmd, p.Name())
 			p.PrintDefaults()
 		}
 		p.Parse(args)
@@ -85,7 +86,7 @@ func dispatchPolicy(ctx *appcontext.AppContext, cmd, subcmd string, args []strin
 	case "rm":
 		p := flag.NewFlagSet("rm", flag.ExitOnError)
 		p.Usage = func() {
-			fmt.Fprintf(ctx.Stdout, "Usage: plakar %s %s <name>\n", cmd, p.Name())
+			fmt.Printf("Usage: plakar %s %s <name>\n", cmd, p.Name())
 			p.PrintDefaults()
 		}
 		p.Parse(args)
@@ -104,7 +105,7 @@ func dispatchPolicy(ctx *appcontext.AppContext, cmd, subcmd string, args []strin
 	case "set":
 		p := flag.NewFlagSet("set", flag.ExitOnError)
 		p.Usage = func() {
-			fmt.Fprintf(ctx.Stdout, "Usage: plakar %s %s <name> <key>=<value>...\n", cmd, p.Name())
+			fmt.Printf("Usage: plakar %s %s <name> <key>=<value>...\n", cmd, p.Name())
 			p.PrintDefaults()
 		}
 		p.Parse(args)
@@ -133,7 +134,7 @@ func dispatchPolicy(ctx *appcontext.AppContext, cmd, subcmd string, args []strin
 		var opt_yaml bool
 		p := flag.NewFlagSet("show", flag.ExitOnError)
 		p.Usage = func() {
-			fmt.Fprintf(ctx.Stdout, "Usage: plakar %s %s [<name>...]\n", cmd, p.Name())
+			fmt.Printf("Usage: plakar %s %s [<name>...]\n", cmd, p.Name())
 			p.PrintDefaults()
 		}
 
@@ -154,12 +155,12 @@ func dispatchPolicy(ctx *appcontext.AppContext, cmd, subcmd string, args []strin
 			format = "ini"
 		}
 
-		return config.Dump(ctx.Stdout, format, names)
+		return config.Dump(os.Stdout, format, names)
 
 	case "unset":
 		p := flag.NewFlagSet("unset", flag.ExitOnError)
 		p.Usage = func() {
-			fmt.Fprintf(ctx.Stdout, "Usage: plakar %s %s <name> <key>...\n", cmd, p.Name())
+			fmt.Printf("Usage: plakar %s %s <name> <key>...\n", cmd, p.Name())
 			p.PrintDefaults()
 		}
 		p.Parse(args)

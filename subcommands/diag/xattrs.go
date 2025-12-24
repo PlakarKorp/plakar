@@ -87,7 +87,7 @@ func (cmd *DiagXattr) Execute(ctx *appcontext.AppContext, repo *repository.Repos
 			return 1, err
 		}
 
-		fmt.Fprintln(ctx.Stdout, xattr.Path, xattr.Name, string(value))
+		fmt.Println(xattr.Path, xattr.Name, string(value))
 	}
 	if err := it.Err(); err != nil {
 		return 1, err

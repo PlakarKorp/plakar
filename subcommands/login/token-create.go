@@ -49,6 +49,6 @@ func (cmd *TokenCreate) Execute(ctx *appcontext.AppContext, repo *repository.Rep
 		return 1, err
 	}
 
-	fmt.Fprintln(ctx.Stdout, token)
+	fmt.Println(token)
 	return 0, nil
 }

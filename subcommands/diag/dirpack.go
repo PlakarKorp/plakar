@@ -82,7 +82,7 @@ func (cmd *DiagDirPack) Execute(ctx *appcontext.AppContext, repo *repository.Rep
 			break
 		}
 
-		fmt.Fprintf(ctx.Stdout, "%s %x\n", path, dirpackmac)
+		fmt.Printf("%s %x\n", path, dirpackmac)
 
 		obj, err := snap.LookupObject(dirpackmac)
 		if err != nil {
@@ -116,7 +116,7 @@ func (cmd *DiagDirPack) Execute(ctx *appcontext.AppContext, repo *repository.Rep
 				return 1, fmt.Errorf("failed to read entry mac: %w", err)
 			}
 
-			fmt.Fprintf(ctx.Stdout, "vfs-entry %x %s %v %v %s\n", entry.MAC, path,
+			fmt.Printf("vfs-entry %x %s %v %v %s\n", entry.MAC, path,
 				siz, typ, entry.Name())
 		}
 	}
