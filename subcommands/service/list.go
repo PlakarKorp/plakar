@@ -54,7 +54,7 @@ func (cmd *ServiceList) Execute(ctx *appcontext.AppContext, repo *repository.Rep
 		return 1, err
 	}
 	for _, svc := range list {
-		fmt.Fprintf(ctx.Stdout, "%s\n", svc.Name)
+		fmt.Printf("%s\n", svc.Name)
 	}
 
 	return 0, nil

@@ -168,6 +168,6 @@ func (cmd *PkgCreate) Execute(ctx *appcontext.AppContext, _ *repository.Reposito
 		return 1, fmt.Errorf("failed to package all the files")
 	}
 
-	fmt.Fprintf(ctx.Stdout, "Plugin created successfully: %s\n", cmd.Out)
+	fmt.Printf("Plugin created successfully: %s\n", cmd.Out)
 	return 0, nil
 }

@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/resources"
+	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
 )
 
@@ -62,11 +62,11 @@ func (cmd *DiagObject) Execute(ctx *appcontext.AppContext, repo *repository.Repo
 		return 1, err
 	}
 
-	fmt.Fprintf(ctx.Stdout, "object: %x\n", object.ContentMAC)
-	fmt.Fprintln(ctx.Stdout, "  type:", object.ContentType)
-	fmt.Fprintln(ctx.Stdout, "  chunks:")
+	fmt.Printf("object: %x\n", object.ContentMAC)
+	fmt.Println("  type:", object.ContentType)
+	fmt.Println("  chunks:")
 	for _, chunk := range object.Chunks {
-		fmt.Fprintf(ctx.Stdout, "    MAC: %x\n", chunk.ContentMAC)
+		fmt.Printf("    MAC: %x\n", chunk.ContentMAC)
 	}
 	return 0, nil
 }

@@ -56,9 +56,6 @@ func (ctx *AppContext) ImporterOpts() *importer.Options {
 		Architecture:    ctx.Architecture,
 		CWD:             ctx.CWD,
 		MaxConcurrency:  ctx.MaxConcurrency,
-		Stdin:           ctx.Stdin,
-		Stdout:          ctx.Stdout,
-		Stderr:          ctx.Stderr,
 	}
 }
 

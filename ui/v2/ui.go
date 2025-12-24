@@ -90,7 +90,7 @@ func Ui(repo *repository.Repository, ctx *appcontext.AppContext, addr string, op
 			repo.Logger().Printf("you can access the webUI at %s", url)
 		}
 	}
-	fmt.Fprintf(repo.AppContext().Stdout, "launching webUI at %s\n", url)
+	fmt.Printf("launching webUI at %s\n", url)
 
 	var handler http.Handler = server
 	if opts.Cors {

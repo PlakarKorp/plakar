@@ -35,7 +35,7 @@ func (cmd *DiagBlobSearch) Parse(ctx *appcontext.AppContext, args []string) erro
 }
 
 func (cmd *DiagBlobSearch) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	fmt.Fprintf(ctx.Stdout, "Warning this command is slow and expensive. Use with caution.\n")
+	fmt.Printf("Warning this command is slow and expensive. Use with caution.\n")
 
 	if len(cmd.ObjectID) != 64 {
 		return 1, fmt.Errorf("invalid object hash: %s", cmd.ObjectID)
@@ -61,7 +61,7 @@ func (cmd *DiagBlobSearch) Execute(ctx *appcontext.AppContext, repo *repository.
 
 		for _, entry := range p.Index {
 			if entry.MAC == needleMAC {
-				fmt.Fprintf(ctx.Stdout, "Found candidate [%x] in packfile [%x] at : %d %d %s\n", entry.MAC, packfileMac, entry.Offset, entry.Length, entry.Type)
+				fmt.Printf("Found candidate [%x] in packfile [%x] at : %d %d %s\n", entry.MAC, packfileMac, entry.Offset, entry.Length, entry.Type)
 				if entry.Type == resources.RT_OBJECT {
 					rd, err := repo.GetPackfileBlob(state.Location{Packfile: packfileMac, Offset: entry.Offset, Length: entry.Length})
 					if err != nil {
@@ -78,8 +78,8 @@ func (cmd *DiagBlobSearch) Execute(ctx *appcontext.AppContext, repo *repository.
 						return 1, err
 					}
 
-					fmt.Fprintf(ctx.Stdout, "object: %x\n", object.ContentMAC)
-					fmt.Fprintln(ctx.Stdout, "  type:", object.ContentType)
+					fmt.Printf("object: %x\n", object.ContentMAC)
+					fmt.Println("  type:", object.ContentType)
 				}
 			}
 

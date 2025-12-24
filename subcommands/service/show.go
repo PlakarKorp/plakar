@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"os"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
@@ -54,9 +55,9 @@ func (cmd *ServiceShow) Execute(ctx *appcontext.AppContext, repo *repository.Rep
 	}
 
 	if cmd.AsJson {
-		err = json.NewEncoder(ctx.Stdout).Encode(map[string]any{cmd.Service: config})
+		err = json.NewEncoder(os.Stdout).Encode(map[string]any{cmd.Service: config})
 	} else {
-		err = yaml.NewEncoder(ctx.Stdout).Encode(map[string]any{cmd.Service: config})
+		err = yaml.NewEncoder(os.Stdout).Encode(map[string]any{cmd.Service: config})
 	}
 	if err != nil {
 		return 1, fmt.Errorf("failed to encode config: %w", err)

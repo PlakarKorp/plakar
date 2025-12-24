@@ -4,10 +4,11 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
+	"os"
 	"time"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/repository"
+	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
 )
 
@@ -35,7 +36,7 @@ func (cmd *DiagPackfile) Execute(ctx *appcontext.AppContext, repo *repository.Re
 		}
 
 		for _, packfile := range packfiles {
-			fmt.Fprintf(ctx.Stdout, "%x\n", packfile)
+			fmt.Printf("%x\n", packfile)
 		}
 	} else {
 		for _, arg := range cmd.Args {
@@ -58,13 +59,13 @@ func (cmd *DiagPackfile) Execute(ctx *appcontext.AppContext, repo *repository.Re
 				return 1, err
 			}
 
-			fmt.Fprintf(ctx.Stdout, "Version: %s\n", p.Footer.Version)
-			fmt.Fprintf(ctx.Stdout, "Timestamp: %s\n", time.Unix(0, p.Footer.Timestamp))
-			fmt.Fprintf(ctx.Stdout, "Index MAC: %x\n", p.Footer.IndexMAC)
-			fmt.Fprintln(ctx.Stdout)
+			fmt.Printf("Version: %s\n", p.Footer.Version)
+			fmt.Printf("Timestamp: %s\n", time.Unix(0, p.Footer.Timestamp))
+			fmt.Printf("Index MAC: %x\n", p.Footer.IndexMAC)
+			fmt.Fprintln(os.Stdout)
 
 			for i, entry := range p.Index {
-				fmt.Fprintf(ctx.Stdout, "blob[%d]: %x %d %d %x %s\n", i, entry.MAC, entry.Offset, entry.Length, entry.Flags, entry.Type)
+				fmt.Printf("blob[%d]: %x %d %d %x %s\n", i, entry.MAC, entry.Offset, entry.Length, entry.Flags, entry.Type)
 			}
 		}
 	}

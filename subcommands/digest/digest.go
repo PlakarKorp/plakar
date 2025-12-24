@@ -134,6 +134,6 @@ func (cmd *Digest) displayDigests(ctx *appcontext.AppContext, fs *vfs.Filesystem
 		return err
 	}
 	digest := hasher.Sum(nil)
-	fmt.Fprintf(ctx.Stdout, "%s (%s) = %x\n", algorithm, utils.SanitizeText(pathname), digest)
+	fmt.Printf("%s (%s) = %x\n", algorithm, utils.SanitizeText(pathname), digest)
 	return nil
 }

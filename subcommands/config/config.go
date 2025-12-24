@@ -87,7 +87,7 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 	case "add":
 		p := flag.NewFlagSet("add", flag.ExitOnError)
 		p.Usage = func() {
-			fmt.Fprintf(ctx.Stdout, "Usage: plakar %s %s <name> <location> [<key>=<value>...]\n", cmd, p.Name())
+			fmt.Printf("Usage: plakar %s %s <name> <location> [<key>=<value>...]\n", cmd, p.Name())
 			p.PrintDefaults()
 		}
 		p.Parse(args)
@@ -115,7 +115,7 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 	case "check":
 		p := flag.NewFlagSet("check", flag.ExitOnError)
 		p.Usage = func() {
-			fmt.Fprintf(ctx.Stdout, "Usage: plakar %s %s <name>\n", cmd, p.Name())
+			fmt.Printf("Usage: plakar %s %s <name>\n", cmd, p.Name())
 			p.PrintDefaults()
 		}
 		p.Parse(args)
@@ -170,12 +170,12 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 		flags.StringVar(&opt_config, "config", "", "import from a file")
 		flags.BoolVar(&opt_overwrite, "overwrite", false, "overwrite existing configurations")
 		flags.Usage = func() {
-			fmt.Fprintf(ctx.Stdout, "Usage: plakar %s %s [OPTIONS] <section>...\n", cmd, flags.Name())
+			fmt.Printf("Usage: plakar %s %s [OPTIONS] <section>...\n", cmd, flags.Name())
 			flags.PrintDefaults()
 		}
 		flags.Parse(args)
 
-		var rd io.Reader = ctx.Stdin
+		var rd io.Reader = os.Stdin
 		if opt_config != "" {
 			if strings.HasPrefix(opt_config, "http://") || strings.HasPrefix(opt_config, "https://") {
 				resp, err := http.Get(opt_config)
@@ -210,7 +210,7 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 		if flags.NArg() == 0 {
 			for name, section := range newConfMap {
 				if hasFunc(name) && !opt_overwrite {
-					fmt.Fprintf(ctx.Stderr, "%s %q already exists, skipping\n", cmd, name)
+					fmt.Fprintf(os.Stderr, "%s %q already exists, skipping\n", cmd, name)
 					continue
 				}
 				cfgMap[name] = make(map[string]string)
@@ -223,16 +223,16 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 					targetName = normalizeName(origName)
 				}
 				if origName == "" || targetName == "" {
-					fmt.Fprintf(ctx.Stderr, "%s empty section name in %q, skipping\n", cmd, requestedName)
+					fmt.Fprintf(os.Stderr, "%s empty section name in %q, skipping\n", cmd, requestedName)
 					continue
 				}
 
 				if hasFunc(targetName) && !opt_overwrite {
-					fmt.Fprintf(ctx.Stderr, "%s %q already exists, skipping\n", cmd, targetName)
+					fmt.Fprintf(os.Stderr, "%s %q already exists, skipping\n", cmd, targetName)
 					continue
 				}
 				if section, ok := newConfMap[origName]; !ok {
-					fmt.Fprintf(ctx.Stderr, "%s %q does not exist in config\n", cmd, origName)
+					fmt.Fprintf(os.Stderr, "%s %q does not exist in config\n", cmd, origName)
 					continue
 				} else {
 					cfgMap[targetName] = make(map[string]string)
@@ -248,7 +248,7 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 	case "rm":
 		p := flag.NewFlagSet("rm", flag.ExitOnError)
 		p.Usage = func() {
-			fmt.Fprintf(ctx.Stdout, "Usage: plakar %s %s <name>\n", cmd, p.Name())
+			fmt.Printf("Usage: plakar %s %s <name>\n", cmd, p.Name())
 			p.PrintDefaults()
 		}
 		p.Parse(args)
@@ -267,7 +267,7 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 	case "set":
 		p := flag.NewFlagSet("set", flag.ExitOnError)
 		p.Usage = func() {
-			fmt.Fprintf(ctx.Stdout, "Usage: plakar %s %s <name> <key>=<value>...\n", cmd, p.Name())
+			fmt.Printf("Usage: plakar %s %s <name> <key>=<value>...\n", cmd, p.Name())
 			p.PrintDefaults()
 		}
 		p.Parse(args)
@@ -295,7 +295,7 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 		var opt_show_secrets bool
 		p := flag.NewFlagSet("show", flag.ExitOnError)
 		p.Usage = func() {
-			fmt.Fprintf(ctx.Stdout, "Usage: plakar %s %s [<name>...]\n", cmd, p.Name())
+			fmt.Printf("Usage: plakar %s %s [<name>...]\n", cmd, p.Name())
 			p.PrintDefaults()
 		}
 
@@ -318,7 +318,7 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 		for _, name := range names {
 			name = normalizeName(name)
 			if !hasFunc(name) {
-				fmt.Fprintf(ctx.Stderr, "%s %q does not exist\n", cmd, name)
+				fmt.Fprintf(os.Stderr, "%s %q does not exist\n", cmd, name)
 				hasErrors = true
 				continue
 			}
@@ -352,11 +352,11 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 
 			var err error
 			if opt_json {
-				err = json.NewEncoder(ctx.Stdout).Encode(map[string]map[string]string{name: cfgMap[name]})
+				err = json.NewEncoder(os.Stdout).Encode(map[string]map[string]string{name: cfgMap[name]})
 			} else if opt_ini {
-				err = MarshalINISections(name, cfgMap[name], ctx.Stdout)
+				err = MarshalINISections(name, cfgMap[name], os.Stdout)
 			} else {
-				err = yaml.NewEncoder(ctx.Stdout).Encode(map[string]map[string]string{name: cfgMap[name]})
+				err = yaml.NewEncoder(os.Stdout).Encode(map[string]map[string]string{name: cfgMap[name]})
 			}
 			if err != nil {
 				return fmt.Errorf("failed to encode store %q: %w", name, err)
@@ -370,7 +370,7 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 	case "unset":
 		p := flag.NewFlagSet("unset", flag.ExitOnError)
 		p.Usage = func() {
-			fmt.Fprintf(ctx.Stdout, "Usage: plakar %s %s <name> <key>...\n", cmd, p.Name())
+			fmt.Printf("Usage: plakar %s %s <name> <key>...\n", cmd, p.Name())
 			p.PrintDefaults()
 		}
 		p.Parse(args)

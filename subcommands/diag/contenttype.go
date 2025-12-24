@@ -64,7 +64,7 @@ func (cmd *DiagContentType) Execute(ctx *appcontext.AppContext, repo *repository
 			break
 		}
 
-		fmt.Fprintln(ctx.Stdout, path)
+		fmt.Println(path)
 	}
 	if err := it.Err(); err != nil {
 		return 1, err
