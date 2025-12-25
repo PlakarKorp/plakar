@@ -7,7 +7,7 @@ import (
 
 	"go.yaml.in/yaml/v3"
 
-	"github.com/PlakarKorp/kloset/config"
+	"github.com/PlakarKorp/plakar/config"
 )
 
 type OldConfig struct {
