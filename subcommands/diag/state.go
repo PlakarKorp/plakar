@@ -37,7 +37,7 @@ func (cmd *DiagState) Execute(ctx *appcontext.AppContext, repo *repository.Repos
 		}
 
 		for _, state := range states {
-			fmt.Fprintf(ctx.Stdout, "%x\n", state)
+			fmt.Printf("%x\n", state)
 		}
 	} else {
 		for _, arg := range cmd.Args {
@@ -74,16 +74,16 @@ func (cmd *DiagState) Execute(ctx *appcontext.AppContext, repo *repository.Repos
 				return 1, err
 			}
 
-			fmt.Fprintf(ctx.Stdout, "Version: %s\n", st.Metadata.Version)
-			fmt.Fprintf(ctx.Stdout, "Creation: %s\n", st.Metadata.Timestamp)
-			fmt.Fprintf(ctx.Stdout, "State serial: %s\n", st.Metadata.Serial)
+			fmt.Printf("Version: %s\n", st.Metadata.Version)
+			fmt.Printf("Creation: %s\n", st.Metadata.Timestamp)
+			fmt.Printf("State serial: %s\n", st.Metadata.Serial)
 
 			printBlobs := func(name string, Type resources.Type) {
 				for snapshot, err := range st.ListObjectsOfType(Type) {
 					if err != nil {
-						fmt.Fprintf(ctx.Stdout, "Could not fetch blob entry for %s\n", name)
+						fmt.Printf("Could not fetch blob entry for %s\n", name)
 					} else {
-						fmt.Fprintf(ctx.Stdout, "%s %x : packfile %x, offset %d, length %d\n",
+						fmt.Printf("%s %x : packfile %x, offset %d, length %d\n",
 							name,
 							snapshot.Blob,
 							snapshot.Location.Packfile,
@@ -95,9 +95,9 @@ func (cmd *DiagState) Execute(ctx *appcontext.AppContext, repo *repository.Repos
 			printDeleted := func(name string, Type resources.Type) {
 				for deletedEntry, err := range st.ListDeletedResources(Type) {
 					if err != nil {
-						fmt.Fprintf(ctx.Stdout, "Could not fetch deleted blob entry for %s\n", name)
+						fmt.Printf("Could not fetch deleted blob entry for %s\n", name)
 					} else {
-						fmt.Fprintf(ctx.Stdout, "deleted %s: %x, when=%s\n",
+						fmt.Printf("deleted %s: %x, when=%s\n",
 							name,
 							deletedEntry.Blob,
 							deletedEntry.When)

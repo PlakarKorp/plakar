@@ -57,7 +57,7 @@ func (cmd *ServiceEnable) Execute(ctx *appcontext.AppContext, repo *repository.R
 	if err := sc.SetServiceStatus(cmd.Service, true); err != nil {
 		return 1, err
 	}
-	fmt.Fprintf(ctx.Stdout, "enabled\n")
+	fmt.Printf("enabled\n")
 
 	return 0, nil
 }

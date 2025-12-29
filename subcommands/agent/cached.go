@@ -272,7 +272,7 @@ func (cmd *Cached) handleCachedClient(ctx *appcontext.AppContext, conn net.Conn)
 			return
 		}
 		ctx.GetLogger().Warn("Failed to decode RPC: %v", err)
-		fmt.Fprintf(clientContext.Stderr, "%s\n", err)
+		//fmt.Fprintf(clientContext.Stderr, "%s\n", err)
 		return
 	}
 
@@ -296,7 +296,7 @@ func (cmd *Cached) handleCachedClient(ctx *appcontext.AppContext, conn net.Conn)
 	subcommand := &cached.CachedReq{}
 	if err := msgpack.Unmarshal(request, subcommand); err != nil {
 		ctx.GetLogger().Warn("Failed to decode client request: %v", err)
-		fmt.Fprintf(clientContext.Stderr, "Failed to decode client request: %s\n", err)
+		//fmt.Fprintf(clientContext.Stderr, "Failed to decode client request: %s\n", err)
 		return
 	}
 

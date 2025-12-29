@@ -428,8 +428,8 @@ func executeHook(ctx *appcontext.AppContext, hook string) error {
 		cmd = exec.Command("/bin/sh", "-c", hook)
 	}
 
-	cmd.Stdout = ctx.Stdout
-	cmd.Stderr = ctx.Stderr
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	return cmd.Run()
 }
 
@@ -469,10 +469,10 @@ func dryrun(ctx *appcontext.AppContext, imp importer.Importer, excludes *exclude
 		switch {
 		case record.Error != nil:
 			errors = true
-			fmt.Fprintf(ctx.Stderr, "%s: %s\n",
+			fmt.Fprintf(os.Stderr, "%s: %s\n",
 				record.Error.Pathname, record.Error.Err)
 		case record.Record != nil:
-			fmt.Fprintln(ctx.Stdout, record.Record.Pathname)
+			fmt.Println(record.Record.Pathname)
 			record.Record.Close()
 		}
 	}

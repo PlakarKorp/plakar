@@ -65,7 +65,7 @@ func (cmd *DiagSearch) Execute(ctx *appcontext.AppContext, repo *repository.Repo
 		if err != nil {
 			return 1, err
 		}
-		fmt.Fprintf(ctx.Stdout, "%x:%s\n", snap.Header.Identifier[0:4], entry.Path())
+		fmt.Printf("%x:%s\n", snap.Header.Identifier[0:4], entry.Path())
 	}
 
 	return 0, nil

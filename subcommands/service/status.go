@@ -59,9 +59,9 @@ func (cmd *ServiceStatus) Execute(ctx *appcontext.AppContext, repo *repository.R
 		return 1, err
 	}
 	if status {
-		fmt.Fprintf(ctx.Stdout, "status: enabled\n")
+		fmt.Printf("status: enabled\n")
 	} else {
-		fmt.Fprintf(ctx.Stdout, "status: disabled\n")
+		fmt.Printf("status: disabled\n")
 	}
 	return 0, nil
 }

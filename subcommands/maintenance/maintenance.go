@@ -205,7 +205,7 @@ func (cmd *Maintenance) colourPass(ctx *appcontext.AppContext, cache *caching.Ma
 		}
 	}
 
-	fmt.Fprintf(ctx.Stdout, "maintenance: Coloured %d packfiles (%d orphaned) for deletion\n", coloredPackfiles, orphanedPackfiles)
+	fmt.Printf("maintenance: Coloured %d packfiles (%d orphaned) for deletion\n", coloredPackfiles, orphanedPackfiles)
 
 	if coloredPackfiles > 0 {
 		duration, err := time.ParseDuration(os.Getenv("PLAKAR_GRACEPERIOD"))
@@ -225,7 +225,7 @@ func (cmd *Maintenance) colourPass(ctx *appcontext.AppContext, cache *caching.Ma
 			}
 		}
 
-		fmt.Fprintf(ctx.Stdout, "Coloured packfiles are scheduled to be removed in %s\n", humanDuration)
+		fmt.Printf("Coloured packfiles are scheduled to be removed in %s\n", humanDuration)
 
 		if err := repoWriter.CommitTransaction(cmd.maintenanceID); err != nil {
 			return err
@@ -250,7 +250,7 @@ func (cmd *Maintenance) sweepPass(ctx *appcontext.AppContext, cache *caching.Mai
 		// because we could have had a concurrent backup with the coloring
 		// phase.
 		if cache.HasPackfile(packfileMAC) {
-			fmt.Fprintf(ctx.Stderr, "maintenance: Concurrent backup used %x, uncolouring the packfile.\n", packfileMAC)
+			fmt.Fprintf(os.Stderr, "maintenance: Concurrent backup used %x, uncolouring the packfile.\n", packfileMAC)
 			cmd.repository.RemoveDeletedPackfile(packfileMAC)
 			continue
 		}
@@ -258,7 +258,7 @@ func (cmd *Maintenance) sweepPass(ctx *appcontext.AppContext, cache *caching.Mai
 		// First thing we remove the packfile entry from our state, this means
 		// that now effectively all of its blob are unreachable
 		if err := cmd.repository.RemovePackfile(packfileMAC); err != nil {
-			fmt.Fprintf(ctx.Stderr, "maintenance: Failed to remove packfile %s from state\n", packfileMAC)
+			fmt.Fprintf(os.Stderr, "maintenance: Failed to remove packfile %s from state\n", packfileMAC)
 			continue
 		}
 
@@ -270,18 +270,18 @@ func (cmd *Maintenance) sweepPass(ctx *appcontext.AppContext, cache *caching.Mai
 	// just orphaned plus potential orphan blobs from aborted backups etc.
 	for blob, err := range cmd.repository.ListOrphanBlobs() {
 		if err != nil {
-			fmt.Fprintf(ctx.Stderr, "maintenance: Failed to fetch orphaned blob\n")
+			fmt.Fprintf(os.Stderr, "maintenance: Failed to fetch orphaned blob\n")
 			continue
 		}
 
 		blobRemoved++
 		if err := cmd.repository.RemoveBlob(blob.Type, blob.Blob, blob.Location.Packfile); err != nil {
 			// No hurt in this failing, we just have cruft left around, but they are unreachable anyway.
-			fmt.Fprintf(ctx.Stderr, "maintenance: garbage orphaned blobs pass failed to remove blob %x, type %s\n", blob.Blob, blob.Type)
+			fmt.Fprintf(os.Stderr, "maintenance: garbage orphaned blobs pass failed to remove blob %x, type %s\n", blob.Blob, blob.Type)
 		}
 	}
 
-	fmt.Fprintf(ctx.Stdout, "maintenance: %d blobs and %d packfiles were removed\n", blobRemoved, len(toDelete))
+	fmt.Printf("maintenance: %d blobs and %d packfiles were removed\n", blobRemoved, len(toDelete))
 
 	if len(toDelete) > 0 {
 		if err := cmd.repository.PutCurrentState(); err != nil {
@@ -292,7 +292,7 @@ func (cmd *Maintenance) sweepPass(ctx *appcontext.AppContext, cache *caching.Mai
 	if doDeletion {
 		for packfileMAC := range toDelete {
 			if err := cmd.repository.DeletePackfile(packfileMAC); err != nil {
-				fmt.Fprintf(ctx.Stderr, "maintenance: Sweep pass failed to delete packfile %x, skipping it\n", packfileMAC)
+				fmt.Fprintf(os.Stderr, "maintenance: Sweep pass failed to delete packfile %x, skipping it\n", packfileMAC)
 			}
 		}
 	}
@@ -333,22 +333,22 @@ func (cmd *Maintenance) Execute(ctx *appcontext.AppContext, repo *repository.Rep
 
 	cache, err := repo.AppContext().GetCache().Maintenance(repo.Configuration().RepositoryID)
 	if err != nil {
-		fmt.Fprintf(ctx.Stderr, "maintenance: Failed to open local cache %s\n", err)
+		fmt.Fprintf(os.Stderr, "maintenance: Failed to open local cache %s\n", err)
 		return 1, err
 	}
 
 	if err := cmd.updateCache(ctx, cache); err != nil {
-		fmt.Fprintf(ctx.Stderr, "maintenance: Failed to update local cache %s\n", err)
+		fmt.Fprintf(os.Stderr, "maintenance: Failed to update local cache %s\n", err)
 		return 1, err
 	}
 
 	if err := cmd.colourPass(ctx, cache); err != nil {
-		fmt.Fprintf(ctx.Stderr, "maintenance: Colouring pass failed %s\n", err)
+		fmt.Fprintf(os.Stderr, "maintenance: Colouring pass failed %s\n", err)
 		return 1, err
 	}
 
 	if err := cmd.sweepPass(ctx, cache); err != nil {
-		fmt.Fprintf(ctx.Stderr, "maintenance: Sweep pass failed %s\n", err)
+		fmt.Fprintf(os.Stderr, "maintenance: Sweep pass failed %s\n", err)
 		return 1, err
 	}
 

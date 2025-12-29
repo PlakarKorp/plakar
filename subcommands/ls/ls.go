@@ -116,7 +116,7 @@ func (cmd *Ls) list_snapshots(ctx *appcontext.AppContext, repo *repository.Repos
 		}
 
 		if !cmd.DisplayUUID {
-			fmt.Fprintf(ctx.Stdout, "%s %10s%10s%10s %s%s\n",
+			fmt.Printf("%s %10s%10s%10s %s%s\n",
 				snap.Header.Timestamp.UTC().Format(time.RFC3339),
 				hex.EncodeToString(snap.Header.GetIndexShortID()),
 				humanize.IBytes(snap.Header.GetSource(0).Summary.Directory.Size+snap.Header.GetSource(0).Summary.Below.Size),
@@ -125,7 +125,7 @@ func (cmd *Ls) list_snapshots(ctx *appcontext.AppContext, repo *repository.Repos
 				tags)
 		} else {
 			indexID := snap.Header.GetIndexID()
-			fmt.Fprintf(ctx.Stdout, "%s %3s%10s%10s %s%s\n",
+			fmt.Printf("%s %3s%10s%10s %s%s\n",
 				snap.Header.Timestamp.UTC().Format(time.RFC3339),
 				hex.EncodeToString(indexID[:]),
 				humanize.IBytes(snap.Header.GetSource(0).Summary.Directory.Size+snap.Header.GetSource(0).Summary.Below.Size),
@@ -201,7 +201,7 @@ func (cmd *Ls) list_snapshot(ctx *appcontext.AppContext, repo *repository.Reposi
 			linkTarget = fmt.Sprintf(" -> %s", utils.SanitizeText(d.SymlinkTarget))
 		}
 
-		fmt.Fprintf(ctx.Stdout, "%s %s % 8s % 8s % 8s %s%s\n",
+		fmt.Printf("%s %s % 8s % 8s % 8s %s%s\n",
 			sb.ModTime().UTC().Format(time.RFC3339),
 			sb.Mode(),
 			username,

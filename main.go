@@ -210,7 +210,7 @@ func entryPoint() int {
 
 	if opt_disableSecurityCheck {
 		ctx.GetCookies().SetDisabledSecurityCheck()
-		fmt.Fprintln(ctx.Stdout, "security check disabled !")
+		fmt.Println("security check disabled !")
 		return 1
 	} else {
 		opt_disableSecurityCheck = ctx.GetCookies().IsDisabledSecurityCheck()
@@ -218,7 +218,7 @@ func entryPoint() int {
 
 	if opt_enableSecurityCheck {
 		ctx.GetCookies().RemoveDisabledSecurityCheck()
-		fmt.Fprintln(ctx.Stdout, "security check enabled !")
+		fmt.Println("security check enabled !")
 		return 1
 	}
 
@@ -486,20 +486,20 @@ func checkUpdate(ctx *appcontext.AppContext, disableSecurityCheck bool) {
 			return
 		}
 
-		fmt.Fprintln(ctx.Stdout, "Welcome to plakar !")
-		fmt.Fprintln(ctx.Stdout, "")
-		fmt.Fprintln(ctx.Stdout, "By default, plakar checks for security updates on the releases feed once every 24h.")
-		fmt.Fprintln(ctx.Stdout, "It will notify you if there are important updates that you need to install.")
-		fmt.Fprintln(ctx.Stdout, "")
-		fmt.Fprintln(ctx.Stdout, "If you prefer to watch yourself, you can disable this permanently by running:")
-		fmt.Fprintln(ctx.Stdout, "")
-		fmt.Fprintln(ctx.Stdout, "\tplakar -disable-security-check")
-		fmt.Fprintln(ctx.Stdout, "")
-		fmt.Fprintln(ctx.Stdout, "If you change your mind, run:")
-		fmt.Fprintln(ctx.Stdout, "")
-		fmt.Fprintln(ctx.Stdout, "\tplakar -enable-security-check")
-		fmt.Fprintln(ctx.Stdout, "")
-		fmt.Fprintln(ctx.Stdout, "EOT")
+		fmt.Println("Welcome to plakar !")
+		fmt.Println("")
+		fmt.Println("By default, plakar checks for security updates on the releases feed once every 24h.")
+		fmt.Println("It will notify you if there are important updates that you need to install.")
+		fmt.Println("")
+		fmt.Println("If you prefer to watch yourself, you can disable this permanently by running:")
+		fmt.Println("")
+		fmt.Println("\tplakar -disable-security-check")
+		fmt.Println("")
+		fmt.Println("If you change your mind, run:")
+		fmt.Println("")
+		fmt.Println("\tplakar -enable-security-check")
+		fmt.Println("")
+		fmt.Println("EOT")
 		return
 	}
 

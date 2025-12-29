@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/repository"
+	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/utils"
 	"github.com/stretchr/testify/require"
 )

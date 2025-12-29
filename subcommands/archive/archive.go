@@ -85,7 +85,7 @@ func (cmd *Archive) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 
 	var out io.Writer
 	if cmd.Output == "-" {
-		out = ctx.Stdout
+		out = os.Stdout
 	} else {
 		tmp, err := os.CreateTemp("", "plakar-archive-")
 		if err != nil {
