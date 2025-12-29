@@ -537,11 +537,6 @@ func getPassphraseFromEnv(ctx *appcontext.AppContext, params map[string]string) 
 		return pass, nil
 	}
 
-	if cmd, ok := params["passphrase_cmd"]; ok {
-		delete(params, "passphrase_cmd")
-		return utils.GetPassphraseFromCommand(cmd)
-	}
-
 	if pass, ok := os.LookupEnv("PLAKAR_PASSPHRASE"); ok {
 		return pass, nil
 	}

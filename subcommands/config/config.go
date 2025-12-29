@@ -137,9 +137,9 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 			store.Close(ctx)
 
 		case "source":
-			cfg, ok := ctx.Config.GetSource(name)
-			if !ok {
-				return fmt.Errorf("failed to retrieve configuration for source %q", name)
+			cfg, err := ctx.Config.GetSource(name)
+			if err != nil {
+				return err
 			}
 			imp, err := importer.NewImporter(ctx.GetInner(), ctx.ImporterOpts(), cfg)
 			if err != nil {
@@ -148,9 +148,9 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 			imp.Close(ctx)
 
 		case "destination":
-			cfg, ok := ctx.Config.GetDestination(name)
-			if !ok {
-				return fmt.Errorf("failed to retrieve configuration for destination %q", name)
+			cfg, err := ctx.Config.GetDestination(name)
+			if err != nil {
+				return err
 			}
 			exp, err := exporter.NewExporter(ctx.GetInner(), cfg)
 			if err != nil {
