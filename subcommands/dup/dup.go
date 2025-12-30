@@ -22,6 +22,7 @@ import (
 
 	"github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/kloset/repository"
+	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
 )
@@ -64,7 +65,7 @@ func (cmd *Dup) Execute(ctx *appcontext.AppContext, repo *repository.Repository)
 			continue
 		}
 
-		newSnap, err := snap.Dup()
+		newSnap, err := snap.Dup(&snapshot.BackupOptions{})
 		if err != nil {
 			ctx.GetLogger().Error("dup: %s: %s", pathname, err)
 			errors++
