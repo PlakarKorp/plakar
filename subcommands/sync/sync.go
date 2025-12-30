@@ -343,9 +343,13 @@ func synchronize(ctx *appcontext.AppContext, srcRepository, dstRepository *repos
 	}
 	defer srcSnapshot.Close()
 
-	dstSnapshot, err := snapshot.Create(dstRepository, repository.DefaultType, packfileDir, srcSnapshot.Header.Identifier, &snapshot.BackupOptions{
+	dstSnapshot, err := snapshot.Create(dstRepository, repository.DefaultType, packfileDir, srcSnapshot.Header.Identifier, &snapshot.BuilderOptions{
 		NoCommit:     false,
 		NoCheckpoint: false,
+		StateRefresher: func(mac objects.MAC) error {
+			_, err := cached.RebuildStateFromStateFile(ctx, mac, srcRepository.Configuration().RepositoryID, srcStoreConfig)
+			return err
+		},
 	})
 	if err != nil {
 		return err
@@ -355,12 +359,7 @@ func synchronize(ctx *appcontext.AppContext, srcRepository, dstRepository *repos
 	// overwrite the header, we want to keep the original snapshot info
 	dstSnapshot.Header = srcSnapshot.Header
 
-	StateRefresher := func(mac objects.MAC) error {
-		_, err := cached.RebuildStateFromStateFile(ctx, mac, srcRepository.Configuration().RepositoryID, srcStoreConfig)
-		return err
-	}
-
-	if err := srcSnapshot.Synchronize(dstSnapshot, true, true, StateRefresher); err != nil {
+	if err := srcSnapshot.Synchronize(dstSnapshot); err != nil {
 		return err
 	}
 

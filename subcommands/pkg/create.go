@@ -137,7 +137,7 @@ func (cmd *PkgCreate) Execute(ctx *appcontext.AppContext, _ *repository.Reposito
 		cwd:          cmd.Base,
 	}
 
-	backupOptions := &snapshot.BackupOptions{
+	backupOptions := &snapshot.BuilderOptions{
 		NoCheckpoint: true,
 		NoCommit:     true,
 	}

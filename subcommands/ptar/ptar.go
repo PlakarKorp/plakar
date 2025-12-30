@@ -338,7 +338,7 @@ func (cmd *Ptar) backup(ctx *appcontext.AppContext, repo *repository.RepositoryW
 			return err
 		}
 
-		backupOptions := &snapshot.BackupOptions{
+		backupOptions := &snapshot.BuilderOptions{
 			NoCheckpoint: true,
 			NoCommit:     true,
 		}
@@ -380,7 +380,7 @@ func (cmd *Ptar) synchronize(ctx *appcontext.AppContext, srcRepository *reposito
 		}
 		defer srcSnapshot.Close()
 
-		dstSnapshot, err := snapshot.CreateWithRepositoryWriter(dstRepository, &snapshot.BackupOptions{
+		dstSnapshot, err := snapshot.CreateWithRepositoryWriter(dstRepository, &snapshot.BuilderOptions{
 			NoCheckpoint: true,
 			NoCommit:     true,
 		})
@@ -392,7 +392,7 @@ func (cmd *Ptar) synchronize(ctx *appcontext.AppContext, srcRepository *reposito
 		// overwrite the header, we want to keep the original snapshot info
 		dstSnapshot.Header = srcSnapshot.Header
 
-		if err := srcSnapshot.Synchronize(dstSnapshot, false, false, nil); err != nil {
+		if err := srcSnapshot.Synchronize(dstSnapshot); err != nil {
 			return err
 		}
 	}

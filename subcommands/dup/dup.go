@@ -65,7 +65,7 @@ func (cmd *Dup) Execute(ctx *appcontext.AppContext, repo *repository.Repository)
 			continue
 		}
 
-		newSnap, err := snap.Dup(&snapshot.BackupOptions{})
+		newSnap, err := snap.Dup(&snapshot.BuilderOptions{})
 		if err != nil {
 			ctx.GetLogger().Error("dup: %s: %s", pathname, err)
 			errors++

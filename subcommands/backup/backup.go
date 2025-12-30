@@ -173,7 +173,7 @@ func (cmd *Backup) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 }
 
 func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Repository) (int, error, objects.MAC, error) {
-	opts := &snapshot.BackupOptions{
+	opts := &snapshot.BuilderOptions{
 		Name:     "default",
 		Tags:     cmd.Tags,
 		Excludes: cmd.Excludes,
