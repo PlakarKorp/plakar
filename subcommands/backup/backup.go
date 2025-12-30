@@ -338,7 +338,14 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		if err := executeHook(ctx, cmd.FailHook); err != nil {
 			ctx.GetLogger().Warn("post-backup fail hook failed: %s", err)
 		}
-		return 1, fmt.Errorf("failed to create snapshot: %w", err), objects.MAC{}, nil
+		return 1, fmt.Errorf("failed to backup source: %w", err), objects.MAC{}, nil
+	}
+
+	if err := snap.Commit(); err != nil {
+		if err := executeHook(ctx, cmd.FailHook); err != nil {
+			ctx.GetLogger().Warn("post-backup fail hook failed: %s", err)
+		}
+		return 1, fmt.Errorf("failed to commit snapshot: %w", err), objects.MAC{}, nil
 	}
 
 	if cmd.OptCheck {

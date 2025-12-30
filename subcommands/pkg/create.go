@@ -148,9 +148,13 @@ func (cmd *PkgCreate) Execute(ctx *appcontext.AppContext, _ *repository.Reposito
 	}
 
 	err = snap.Backup(imp)
-
 	if err != nil {
 		return 1, fmt.Errorf("failed to populate the snapshot: %w", err)
+	}
+
+	_, err = snap.PutSnapshot()
+	if err != nil {
+		return 1, fmt.Errorf("failed to commit snapshot: %w", err)
 	}
 
 	// We are done with everything we can now stop the backup routines.
