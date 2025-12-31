@@ -236,6 +236,11 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 	}
 	defer imp.Close(ctx)
 
+	source, err := snapshot.NewSource(ctx, imp)
+	if err != nil {
+		return 1, err, objects.MAC{}, nil
+	}
+
 	if cmd.DryRun {
 		if err := dryrun(ctx, imp, excludes); err != nil {
 			return 1, err, objects.MAC{}, nil
@@ -334,7 +339,7 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		snap.Header.Job = cmd.Job
 	}
 
-	if err := snap.Backup(imp); err != nil {
+	if err := snap.Backup(source); err != nil {
 		if err := executeHook(ctx, cmd.FailHook); err != nil {
 			ctx.GetLogger().Warn("post-backup fail hook failed: %s", err)
 		}
