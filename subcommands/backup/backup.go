@@ -20,6 +20,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"maps"
 	"os"
 	"os/exec"
 	"runtime"
@@ -33,7 +34,6 @@ import (
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/kloset/snapshot/importer"
-	"github.com/PlakarKorp/kloset/snapshot/vfs"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/cached"
 	"github.com/PlakarKorp/plakar/subcommands"
@@ -46,7 +46,6 @@ type Backup struct {
 	Job                 string
 	Tags                []string
 	Excludes            []string
-	Path                string
 	OptCheck            bool
 	Opts                map[string]string
 	DryRun              bool
@@ -58,6 +57,8 @@ type Backup struct {
 	NoXattr             bool
 	NoVFSCache          bool
 	NoProgress          bool
+
+	Sources []string
 }
 
 func init() {
@@ -131,10 +132,6 @@ func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
 	//flags.BoolVar(&opt_stdio, "stdio", false, "output one line per file to stdout instead of the default interactive output")
 	flags.Parse(args)
 
-	if flags.NArg() > 1 {
-		return fmt.Errorf("Too many arguments")
-	}
-
 	if !cmd.ForcedTimestamp.IsZero() {
 		if cmd.ForcedTimestamp.After(time.Now()) {
 			return fmt.Errorf("forced timestamp cannot be in the future")
@@ -157,11 +154,19 @@ func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
 
 	cmd.RepositorySecret = ctx.GetSecret()
 	cmd.Excludes = excludes
-	cmd.Path = flags.Arg(0)
+
+	cmd.Sources = flags.Args()
 	cmd.Tags = opt_tags.asList()
 
-	if cmd.Path == "" {
-		cmd.Path = "fs:" + ctx.CWD
+	localDir := "fs:" + ctx.CWD
+	if len(cmd.Sources) == 0 {
+		cmd.Sources = []string{localDir}
+	} else {
+		for i, source := range cmd.Sources {
+			if source == "" {
+				cmd.Sources[i] = localDir
+			}
+		}
 	}
 
 	return nil
@@ -173,6 +178,9 @@ func (cmd *Backup) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 }
 
 func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Repository) (int, error, objects.MAC, error) {
+	emitter := repo.Emitter("backup")
+	defer emitter.Close()
+
 	opts := &snapshot.BuilderOptions{
 		Name:     "default",
 		Tags:     cmd.Tags,
@@ -190,84 +198,74 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		opts.ForcedTimestamp = cmd.ForcedTimestamp
 	}
 
-	scanDir := "fs:" + ctx.CWD
-	if cmd.Path != "" {
-		scanDir = cmd.Path
-	}
+	sourcesMap := make(map[string]*snapshot.Source)
 
-	if strings.HasPrefix(scanDir, "@") {
-		remote, ok := ctx.Config.GetSource(scanDir[1:])
-		if !ok {
-			return 1, fmt.Errorf("could not resolve importer: %s", scanDir), objects.MAC{}, nil
+	for _, source := range cmd.Sources {
+		scanDir := "fs:" + ctx.CWD
+		if source != "" {
+			scanDir = source
 		}
-		if _, ok := remote["location"]; !ok {
-			return 1, fmt.Errorf("could not resolve importer location: %s", scanDir), objects.MAC{}, nil
-		} else {
-			// inherit all the options -- but the ones
-			// specified in the command line takes the
-			// precedence.
-			for k, v := range remote {
-				if _, found := cmd.Opts[k]; !found {
-					cmd.Opts[k] = v
+
+		cmdOptsCopy := make(map[string]string)
+		maps.Copy(cmdOptsCopy, cmd.Opts)
+
+		if strings.HasPrefix(scanDir, "@") {
+			remote, ok := ctx.Config.GetSource(scanDir[1:])
+			if !ok {
+				return 1, fmt.Errorf("could not resolve importer: %s", scanDir), objects.MAC{}, nil
+			}
+			if _, ok := remote["location"]; !ok {
+				return 1, fmt.Errorf("could not resolve importer location: %s", scanDir), objects.MAC{}, nil
+			} else {
+				// inherit all the options -- but the ones
+				// specified in the command line takes the
+				// precedence.
+				for k, v := range remote {
+					if _, found := cmdOptsCopy[k]; !found {
+						cmdOptsCopy[k] = v
+					}
 				}
 			}
 		}
-	}
-
-	// Now that we have resolved the possible @ syntax let's apply the scandir.
-	if _, found := cmd.Opts["location"]; !found {
-		cmd.Opts["location"] = scanDir
-	}
-
-	emitter := repo.Emitter("backup")
-	defer emitter.Close()
-
-	excludes := exclude.NewRuleSet()
-	if err := excludes.AddRulesFromArray(cmd.Excludes); err != nil {
-		return 1, fmt.Errorf("failed to setup exclude rules: %w", err), objects.MAC{}, nil
-	}
-
-	importerOpts := ctx.ImporterOpts()
-	importerOpts.Excludes = cmd.Excludes
-
-	imp, flags, err := importer.NewImporter(ctx.GetInner(), importerOpts, cmd.Opts)
-	if err != nil {
-		return 1, fmt.Errorf("failed to create an importer for %s: %s", scanDir, err), objects.MAC{}, nil
-	}
-	defer imp.Close(ctx)
-
-	source, err := snapshot.NewSource(ctx, imp)
-	if err != nil {
-		return 1, err, objects.MAC{}, nil
-	}
-
-	if cmd.DryRun {
-		if err := dryrun(ctx, imp, excludes); err != nil {
-			return 1, err, objects.MAC{}, nil
+		if _, found := cmdOptsCopy["location"]; !found {
+			cmdOptsCopy["location"] = scanDir
 		}
-		return 0, nil, objects.MAC{}, nil
-	}
 
-	if !cmd.NoProgress && (flags&location.FLAG_STREAM) == 0 {
-		scanner, err := imp.Scan(ctx)
+		excludes := exclude.NewRuleSet()
+		if err := excludes.AddRulesFromArray(cmd.Excludes); err != nil {
+			return 1, fmt.Errorf("failed to setup exclude rules: %w", err), objects.MAC{}, nil
+		}
+
+		importerOpts := ctx.ImporterOpts()
+		importerOpts.Excludes = cmd.Excludes
+		imp, flags, err := importer.NewImporter(ctx.GetInner(), importerOpts, cmdOptsCopy)
 		if err != nil {
-			return 1, fmt.Errorf("failed to scan: %w", err), objects.MAC{}, nil
+			return 1, fmt.Errorf("failed to create an importer for %s: %s", scanDir, err), objects.MAC{}, nil
+		}
+		defer imp.Close(ctx)
+
+		typ, err := imp.Type(ctx)
+		if err != nil {
+			return 1, fmt.Errorf("failed to create an importer for %s: %s", scanDir, err), objects.MAC{}, nil
 		}
 
-		go func() {
-			fsSummary := statistics(ctx, scanner, excludes)
-			emitter.FilesystemSummary(
-				fsSummary.FileCount,
-				fsSummary.DirCount,
-				fsSummary.SymlinkCount,
-				fsSummary.XattrCount,
-				fsSummary.TotalSize,
-			)
-		}()
+		origin, err := imp.Origin(ctx)
+		if err != nil {
+			return 1, fmt.Errorf("failed to create an importer for %s: %s", scanDir, err), objects.MAC{}, nil
+		}
+
+		key := typ + ":" + origin
+		if _, exists := sourcesMap[key]; !exists {
+			sourcesMap[key] = snapshot.NewSource(ctx, typ, origin, flags)
+		}
+		if err := sourcesMap[key].AddImporter(imp); err != nil {
+			return 1, fmt.Errorf("failed to create an importer for %s: %s", scanDir, err), objects.MAC{}, nil
+		}
 	}
-	// Execute pre-backup hook
-	if err := executeHook(ctx, cmd.PreHook); err != nil {
-		return 1, fmt.Errorf("pre-backup hook failed: %w", err), objects.MAC{}, nil
+
+	// XXX - until we unlock multi-source
+	if len(sourcesMap) != 1 {
+		return 1, fmt.Errorf("multi-source backup not supported yet"), objects.MAC{}, nil
 	}
 
 	if cmd.PackfileTempStorage != "memory" {
@@ -281,49 +279,8 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		cmd.PackfileTempStorage = ""
 	}
 
-	var parentVFS *vfs.Filesystem
-
-	if !cmd.NoVFSCache {
-		importerType, err := imp.Type(ctx)
-		if err != nil {
-			return 1, fmt.Errorf("failed to get importer type: %w", err), objects.MAC{}, nil
-		}
-
-		importerOrigin, err := imp.Origin(ctx)
-		if err != nil {
-			return 1, fmt.Errorf("failed to get importer origin: %w", err), objects.MAC{}, nil
-		}
-
-		parentID, _, err := locate.Match(repo, &locate.LocateOptions{
-			Filters: locate.LocateFilters{
-				Latest: true,
-				Roots: []string{
-					cmd.Path,
-				},
-				Types: []string{
-					importerType,
-				},
-				Origins: []string{
-					importerOrigin,
-				},
-			},
-		})
-		if err != nil {
-			return 1, nil, objects.MAC{}, err
-		}
-
-		if len(parentID) != 0 {
-			parent, err := snapshot.Load(repo, parentID[0])
-			if err != nil {
-				return 1, nil, objects.MAC{}, err
-			}
-			defer parent.Close()
-
-			parentVFS, err = parent.Filesystem()
-			if err != nil {
-				return 1, nil, objects.MAC{}, err
-			}
-		}
+	if err := executeHook(ctx, cmd.PreHook); err != nil {
+		return 1, fmt.Errorf("pre-backup hook failed: %w", err), objects.MAC{}, nil
 	}
 
 	snap, err := snapshot.Create(repo, repository.DefaultType, cmd.PackfileTempStorage, objects.NilMac, opts)
@@ -333,17 +290,89 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 	}
 	defer snap.Close()
 
-	snap.WithVFSCache(parentVFS)
+	// XXX - decide how to handle that
+	/*
+		if !cmd.NoVFSCache {
+				importerType, err := imp.Type(ctx)
+				if err != nil {
+					return 1, fmt.Errorf("failed to get importer type: %w", err), objects.MAC{}, nil
+				}
 
-	if cmd.Job != "" {
-		snap.Header.Job = cmd.Job
-	}
+				importerOrigin, err := imp.Origin(ctx)
+				if err != nil {
+					return 1, fmt.Errorf("failed to get importer origin: %w", err), objects.MAC{}, nil
+				}
 
-	if err := snap.Backup(source); err != nil {
-		if err := executeHook(ctx, cmd.FailHook); err != nil {
-			ctx.GetLogger().Warn("post-backup fail hook failed: %s", err)
+				parentID, _, err := locate.Match(repo, &locate.LocateOptions{
+					Filters: locate.LocateFilters{
+						Latest: true,
+						Roots: []string{
+							cmd.Path,
+						},
+						Types: []string{
+							importerType,
+						},
+						Origins: []string{
+							importerOrigin,
+						},
+					},
+				})
+				if err != nil {
+					return 1, nil, objects.MAC{}, err
+				}
+
+				if len(parentID) != 0 {
+					parent, err := snapshot.Load(repo, parentID[0])
+					if err != nil {
+						return 1, nil, objects.MAC{}, err
+					}
+					defer parent.Close()
+
+					parentVFS, err = parent.Filesystem()
+					if err != nil {
+						return 1, nil, objects.MAC{}, err
+					}
+				}
+			}
+	*/
+	//snap.WithVFSCache(parentVFS)
+
+	for _, source := range sourcesMap {
+		if cmd.DryRun {
+			if err := dryrun(ctx, source); err != nil {
+				return 1, err, objects.MAC{}, nil
+			}
+			return 0, nil, objects.MAC{}, nil
 		}
-		return 1, fmt.Errorf("failed to backup source: %w", err), objects.MAC{}, nil
+
+		if !cmd.NoProgress && (source.GetFlags()&location.FLAG_STREAM) == 0 {
+			scanner, err := source.GetScanner()
+			if err != nil {
+				return 1, fmt.Errorf("failed to scan: %w", err), objects.MAC{}, nil
+			}
+
+			go func() {
+				fsSummary := statistics(ctx, scanner, source.GetExcludes())
+				emitter.FilesystemSummary(
+					fsSummary.FileCount,
+					fsSummary.DirCount,
+					fsSummary.SymlinkCount,
+					fsSummary.XattrCount,
+					fsSummary.TotalSize,
+				)
+			}()
+		}
+
+		if cmd.Job != "" {
+			snap.Header.Job = cmd.Job
+		}
+
+		if err := snap.Backup(source); err != nil {
+			if err := executeHook(ctx, cmd.FailHook); err != nil {
+				ctx.GetLogger().Warn("post-backup fail hook failed: %s", err)
+			}
+			return 1, fmt.Errorf("failed to backup source: %w", err), objects.MAC{}, nil
+		}
 	}
 
 	if err := snap.Commit(); err != nil {
@@ -446,8 +475,8 @@ func executeHook(ctx *appcontext.AppContext, hook string) error {
 	return cmd.Run()
 }
 
-func dryrun(ctx *appcontext.AppContext, imp importer.Importer, excludes *exclude.RuleSet) error {
-	scanner, err := imp.Scan(ctx)
+func dryrun(ctx *appcontext.AppContext, source *snapshot.Source) error {
+	scanner, err := source.GetScanner()
 	if err != nil {
 		return fmt.Errorf("failed to scan: %w", err)
 	}
@@ -472,7 +501,7 @@ func dryrun(ctx *appcontext.AppContext, imp importer.Importer, excludes *exclude
 			isDir = false
 		}
 
-		if excludes.IsExcluded(pathname, isDir) {
+		if source.GetExcludes().IsExcluded(pathname, isDir) {
 			if record.Record != nil {
 				record.Record.Close()
 			}

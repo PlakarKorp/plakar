@@ -137,8 +137,18 @@ func (cmd *PkgCreate) Execute(ctx *appcontext.AppContext, _ *repository.Reposito
 		cwd:          cmd.Base,
 	}
 
-	source, err := snapshot.NewSource(ctx, imp)
+	typ, err := imp.Type(ctx)
 	if err != nil {
+		return 1, err
+	}
+
+	origin, err := imp.Origin(ctx)
+	if err != nil {
+		return 1, err
+	}
+
+	source := snapshot.NewSource(ctx, typ, origin, 0)
+	if err := source.AddImporter(imp); err != nil {
 		return 1, err
 	}
 

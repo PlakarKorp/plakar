@@ -27,7 +27,7 @@ func (s *Scheduler) backupTask(taskset Task, task BackupConfig) {
 	backupSubcommand := &backup.Backup{}
 	backupSubcommand.Tags = task.Tags
 	backupSubcommand.Job = taskset.Name
-	backupSubcommand.Path = task.Path
+	backupSubcommand.Sources = []string{task.Path}
 	backupSubcommand.Opts = make(map[string]string)
 	backupSubcommand.PreHook = task.PreHook
 	backupSubcommand.PostHook = task.PostHook
