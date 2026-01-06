@@ -83,6 +83,7 @@ func generateFixtures(t *testing.T, bufOut *bytes.Buffer, bufErr *bytes.Buffer) 
 	// create a repository
 	cache := caching.NewManager(pebble.Constructor(tmpCacheDir))
 	ctx.SetCache(cache)
+	ctx.CacheDir = tmpCacheDir
 	ctx.Client = "plakar-test/1.0.0"
 
 	// Create a new logger

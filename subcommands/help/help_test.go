@@ -57,6 +57,7 @@ func _TestParseCmdHelpDefault(t *testing.T) {
 	})
 
 	ctx := appcontext.NewAppContext()
+	ctx.CacheDir = tmpCacheDir
 
 	// create a storage
 	r, err := bfs.NewStore(ctx, "fs", map[string]string{"location": tmpRepoDir})
@@ -178,6 +179,7 @@ func TestParseCmdHelpCommand(t *testing.T) {
 	// create a repository
 	cache := caching.NewManager(pebble.Constructor(tmpCacheDir))
 	ctx.SetCache(cache)
+	ctx.CacheDir = tmpCacheDir
 	ctx.Client = "plakar-test/1.0.0"
 
 	// Create a new logger
