@@ -13,6 +13,7 @@ import (
 	grpc_exporter "github.com/PlakarKorp/integration-grpc/exporter"
 	grpc_importer "github.com/PlakarKorp/integration-grpc/importer"
 	grpc_storage "github.com/PlakarKorp/integration-grpc/storage"
+	"github.com/PlakarKorp/kloset/connectors"
 	"github.com/PlakarKorp/kloset/kcontext"
 	"github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/kloset/location"
@@ -170,7 +171,7 @@ func extractPlugin(ctx *kcontext.KContext, pluginFile, destDir string) error {
 		return err
 	}
 
-	fsexp, err := fsexporter.NewFSExporter(ctx, &exporter.Options{
+	fsexp, err := fsexporter.NewFSExporter(ctx, &connectors.Options{
 		MaxConcurrency: 1,
 	}, "fs", opts)
 	if err != nil {
@@ -184,7 +185,7 @@ func extractPlugin(ctx *kcontext.KContext, pluginFile, destDir string) error {
 	defer os.RemoveAll(tmpdir)
 
 	base := snap.Header.GetSource(0).Importer.Directory
-	err = snap.Restore(fsexp, tmpdir, base, &snapshot.RestoreOptions{
+	err = snap.Export(fsexp, tmpdir, base, &snapshot.RestoreOptions{
 		Strip: base,
 	})
 	if err != nil {

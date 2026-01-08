@@ -26,13 +26,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/PlakarKorp/kloset/connectors"
+	"github.com/PlakarKorp/kloset/connectors/importer"
 	"github.com/PlakarKorp/kloset/exclude"
 	"github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/kloset/location"
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
-	"github.com/PlakarKorp/kloset/snapshot/importer"
 	"github.com/PlakarKorp/kloset/snapshot/vfs"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/cached"
@@ -244,13 +245,16 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 	defer emitter.Close()
 
 	if !cmd.NoProgress && (flags&location.FLAG_STREAM) == 0 {
-		scanner, err := imp.Scan(ctx)
+		rows := make(chan *connectors.Row)
+		results := make(chan *connectors.Result)
+
+		err := imp.Import(ctx, rows, results)
 		if err != nil {
 			return 1, fmt.Errorf("failed to scan: %w", err), objects.MAC{}, nil
 		}
 
 		go func() {
-			fsSummary := statistics(ctx, scanner, excludes)
+			fsSummary := statistics(ctx, rows, excludes)
 			emitter.FilesystemSummary(
 				fsSummary.FileCount,
 				fsSummary.DirCount,
@@ -279,15 +283,9 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 	var parentVFS *vfs.Filesystem
 
 	if !cmd.NoVFSCache {
-		importerType, err := imp.Type(ctx)
-		if err != nil {
-			return 1, fmt.Errorf("failed to get importer type: %w", err), objects.MAC{}, nil
-		}
+		importerType := imp.Type()
 
-		importerOrigin, err := imp.Origin(ctx)
-		if err != nil {
-			return 1, fmt.Errorf("failed to get importer origin: %w", err), objects.MAC{}, nil
-		}
+		importerOrigin := imp.Origin()
 
 		parentID, _, err := locate.Match(repo, &locate.LocateOptions{
 			Filters: locate.LocateFilters{
@@ -435,14 +433,17 @@ func executeHook(ctx *appcontext.AppContext, hook string) error {
 }
 
 func dryrun(ctx *appcontext.AppContext, imp importer.Importer, excludes *exclude.RuleSet) error {
-	scanner, err := imp.Scan(ctx)
+	rows := make(chan *connectors.Row)
+	results := make(chan *connectors.Result)
+
+	err := imp.Import(ctx, rows, results)
 	if err != nil {
 		return fmt.Errorf("failed to scan: %w", err)
 	}
 
 	errors := false
 	i := 0
-	for record := range scanner {
+	for record := range rows {
 
 		if i%1000 == 0 && ctx.Err() != nil {
 			return ctx.Err()
@@ -492,7 +493,7 @@ type FilesystemSummary struct {
 	TotalSize    uint64
 }
 
-func statistics(ctx *appcontext.AppContext, scanner <-chan *importer.ScanResult, excludes *exclude.RuleSet) FilesystemSummary {
+func statistics(ctx *appcontext.AppContext, scanner <-chan *connectors.Row, excludes *exclude.RuleSet) FilesystemSummary {
 	errorCount := uint64(0)
 	directoryCount := uint64(0)
 	fileCount := uint64(0)

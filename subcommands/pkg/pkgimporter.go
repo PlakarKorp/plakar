@@ -27,8 +27,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/PlakarKorp/kloset/connectors"
 	"github.com/PlakarKorp/kloset/objects"
-	"github.com/PlakarKorp/kloset/snapshot/importer"
 	"github.com/PlakarKorp/plakar/plugins"
 )
 
@@ -38,9 +38,9 @@ type pkgerImporter struct {
 	manifestPath string
 }
 
-func (imp *pkgerImporter) Origin(ctx context.Context) (string, error) { return "", nil }
-func (imp *pkgerImporter) Type(ctx context.Context) (string, error)   { return "pkger", nil }
-func (imp *pkgerImporter) Root(ctx context.Context) (string, error)   { return "/", nil }
+func (imp *pkgerImporter) Origin() string { return "" }
+func (imp *pkgerImporter) Type() string   { return "pkger" }
+func (imp *pkgerImporter) Root() string   { return "/" }
 
 func absolutify(cwd, path string) string {
 	if filepath.IsAbs(path) {
@@ -49,19 +49,19 @@ func absolutify(cwd, path string) string {
 	return filepath.Join(cwd, path)
 }
 
-func mkstruct(p string, ch chan<- *importer.ScanResult) {
+func mkstruct(p string, ch chan<- *connectors.Row) {
 	dir := path.Dir(p)
 	for dir != "/" {
 		fi := objects.FileInfo{
 			Lname: path.Base(dir),
 			Lmode: 0700 | os.ModeDir,
 		}
-		ch <- importer.NewScanRecord(dir, "", fi, nil, nil)
+		ch <- connectors.NewRecord(dir, "", fi, nil, nil)
 		dir = path.Dir(dir)
 	}
 }
 
-func (imp *pkgerImporter) dofile(p string, ch chan<- *importer.ScanResult, mustExe bool) {
+func (imp *pkgerImporter) dofile(p string, ch chan<- *connectors.Row, mustExe bool) {
 	absolute := absolutify(imp.cwd, p)
 
 	relative := absolute
@@ -71,19 +71,19 @@ func (imp *pkgerImporter) dofile(p string, ch chan<- *importer.ScanResult, mustE
 	name := path.Join("/", relative)
 
 	if !strings.HasPrefix(absolute, imp.cwd) {
-		ch <- importer.NewScanError(name, fmt.Errorf("not below the manifest"))
+		ch <- connectors.NewError(name, fmt.Errorf("not below the manifest"))
 		return
 	}
 
 	fp, err := os.Open(absolute)
 	if err != nil {
-		ch <- importer.NewScanError(name, fmt.Errorf("Failed to open file: %w", err))
+		ch <- connectors.NewError(name, fmt.Errorf("Failed to open file: %w", err))
 		return
 	}
 
 	fi, err := fp.Stat()
 	if err != nil {
-		ch <- importer.NewScanError(name, fmt.Errorf("Failed to stat file: %w", err))
+		ch <- connectors.NewError(name, fmt.Errorf("Failed to stat file: %w", err))
 		return
 	}
 
@@ -96,14 +96,14 @@ func (imp *pkgerImporter) dofile(p string, ch chan<- *importer.ScanResult, mustE
 		}
 
 		if !isexe {
-			ch <- importer.NewScanError(name, fmt.Errorf("Not executable: %s", absolute))
+			ch <- connectors.NewError(name, fmt.Errorf("Not executable: %s", absolute))
 			return
 		}
 	}
 
 	mkstruct(name, ch)
-	ch <- &importer.ScanResult{
-		Record: &importer.ScanRecord{
+	ch <- &connectors.Row{
+		Record: &connectors.Record{
 			Pathname: name,
 			FileInfo: objects.FileInfoFromStat(fi),
 			Reader:   fp,
@@ -111,12 +111,12 @@ func (imp *pkgerImporter) dofile(p string, ch chan<- *importer.ScanResult, mustE
 	}
 }
 
-func (imp *pkgerImporter) scan(ch chan<- *importer.ScanResult) {
+func (imp *pkgerImporter) scan(ch chan<- *connectors.Row) {
 	defer close(ch)
 
 	info := objects.NewFileInfo("/", 0, 0700|os.ModeDir, time.Unix(0, 0), 0, 0, 0, 0, 1)
-	ch <- &importer.ScanResult{
-		Record: &importer.ScanRecord{
+	ch <- &connectors.Row{
+		Record: &connectors.Record{
 			Pathname: "/",
 			FileInfo: info,
 		},
@@ -131,10 +131,9 @@ func (imp *pkgerImporter) scan(ch chan<- *importer.ScanResult) {
 	}
 }
 
-func (imp *pkgerImporter) Scan(ctx context.Context) (<-chan *importer.ScanResult, error) {
-	ch := make(chan *importer.ScanResult, 1)
-	go imp.scan(ch)
-	return ch, nil
+func (imp *pkgerImporter) Import(ctx context.Context, records chan<- *connectors.Row, results <-chan *connectors.Result) error {
+	go imp.scan(records)
+	return nil
 }
 
 func (imp *pkgerImporter) Close(ctx context.Context) error {

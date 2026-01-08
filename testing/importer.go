@@ -4,20 +4,21 @@ import (
 	"context"
 	"strings"
 
-	"github.com/PlakarKorp/kloset/snapshot/importer"
+	"github.com/PlakarKorp/kloset/connectors"
+	"github.com/PlakarKorp/kloset/connectors/importer"
 )
 
 type MockImporter struct {
 	location string
 	files    map[string]MockFile
-	gen      func(chan<- *importer.ScanResult)
+	gen      func(chan<- *connectors.Row)
 }
 
 func init() {
 	importer.Register("mock", 0, NewMockImporter)
 }
 
-func NewMockImporter(appCtx context.Context, opts *importer.Options, name string, config map[string]string) (importer.Importer, error) {
+func NewMockImporter(appCtx context.Context, opts *connectors.Options, name string, config map[string]string) (importer.Importer, error) {
 	return &MockImporter{
 		location: config["location"],
 	}, nil
@@ -47,37 +48,36 @@ func (p *MockImporter) SetFiles(files []MockFile) {
 	}
 }
 
-func (p *MockImporter) SetGenerator(gen func(chan<- *importer.ScanResult)) {
+func (p *MockImporter) SetGenerator(gen func(chan<- *connectors.Row)) {
 	p.gen = gen
 }
 
-func (p *MockImporter) Origin(ctx context.Context) (string, error) {
-	return "mock", nil
+func (p *MockImporter) Origin() string {
+	return "mock"
 }
 
-func (p *MockImporter) Type(ctx context.Context) (string, error) {
-	return "mock", nil
+func (p *MockImporter) Type() string {
+	return "mock"
 }
 
-func (p *MockImporter) Scan(ctx context.Context) (<-chan *importer.ScanResult, error) {
-	ch := make(chan *importer.ScanResult)
+func (p *MockImporter) Import(ctx context.Context, records chan<- *connectors.Row, results <-chan *connectors.Result) error {
 	if p.gen != nil {
-		go p.gen(ch)
+		go p.gen(records)
 	} else {
 		go func() {
 			for _, file := range p.files {
-				ch <- file.ScanResult()
+				records <- file.ScanResult()
 			}
-			close(ch)
+			close(records)
 		}()
 	}
-	return ch, nil
+	return nil
 }
 
 func (p *MockImporter) Close(ctx context.Context) error {
 	return nil
 }
 
-func (p *MockImporter) Root(ctx context.Context) (string, error) {
-	return "/", nil
+func (p *MockImporter) Root() string {
+	return "/"
 }

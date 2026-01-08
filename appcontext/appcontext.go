@@ -1,8 +1,8 @@
 package appcontext
 
 import (
+	"github.com/PlakarKorp/kloset/connectors"
 	"github.com/PlakarKorp/kloset/kcontext"
-	"github.com/PlakarKorp/kloset/snapshot/importer"
 	"github.com/PlakarKorp/plakar/config"
 	"github.com/PlakarKorp/plakar/cookies"
 	"github.com/PlakarKorp/plakar/plugins"
@@ -51,8 +51,21 @@ func (c *AppContext) GetSecret() []byte {
 	return c.secret
 }
 
-func (ctx *AppContext) ImporterOpts() *importer.Options {
-	return &importer.Options{
+func (ctx *AppContext) ImporterOpts() *connectors.Options {
+	return &connectors.Options{
+		Hostname:        ctx.Hostname,
+		OperatingSystem: ctx.OperatingSystem,
+		Architecture:    ctx.Architecture,
+		CWD:             ctx.CWD,
+		MaxConcurrency:  ctx.MaxConcurrency,
+		Stdin:           ctx.Stdin,
+		Stdout:          ctx.Stdout,
+		Stderr:          ctx.Stderr,
+	}
+}
+
+func (ctx *AppContext) ExporterOpts() *connectors.Options {
+	return &connectors.Options{
 		Hostname:        ctx.Hostname,
 		OperatingSystem: ctx.OperatingSystem,
 		Architecture:    ctx.Architecture,

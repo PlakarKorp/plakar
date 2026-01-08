@@ -11,10 +11,10 @@ import (
 
 	_ "github.com/PlakarKorp/integration-fs/importer"
 
+	"github.com/PlakarKorp/kloset/connectors"
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
-	"github.com/PlakarKorp/kloset/snapshot/importer"
 	"github.com/stretchr/testify/require"
 )
 
@@ -41,11 +41,11 @@ func NewMockFile(path string, mode os.FileMode, content string) MockFile {
 	}
 }
 
-func (m *MockFile) ScanResult() *importer.ScanResult {
+func (m *MockFile) ScanResult() *connectors.Row {
 	switch {
 	case m.IsDir:
-		return &importer.ScanResult{
-			Record: &importer.ScanRecord{
+		return &connectors.Row{
+			Record: &connectors.Record{
 				Pathname: m.Path,
 				FileInfo: objects.FileInfo{
 					Lname:      path.Base(m.Path),
@@ -65,7 +65,7 @@ func (m *MockFile) ScanResult() *importer.ScanResult {
 			Lusername:  "flan",
 			Lgroupname: "hacker",
 		}
-		return importer.NewScanRecord(m.Path, "", info, nil, func() (io.ReadCloser, error) {
+		return connectors.NewRecord(m.Path, "", info, nil, func() (io.ReadCloser, error) {
 			if m.Mode&0400 == 0 {
 				return nil, os.ErrPermission
 			}
@@ -76,7 +76,7 @@ func (m *MockFile) ScanResult() *importer.ScanResult {
 
 type testingOptions struct {
 	name string
-	gen  func(chan<- *importer.ScanResult)
+	gen  func(chan<- *connectors.Row)
 }
 
 func newTestingOptions() *testingOptions {
@@ -112,7 +112,7 @@ func GenerateFiles(t *testing.T, files []MockFile) string {
 	return tmpBackupDir
 }
 
-func WithGenerator(gen func(chan<- *importer.ScanResult)) TestingOptions {
+func WithGenerator(gen func(chan<- *connectors.Row)) TestingOptions {
 	return func(o *testingOptions) {
 		o.gen = gen
 	}
@@ -129,7 +129,7 @@ func GenerateSnapshot(t *testing.T, repo *repository.Repository, files []MockFil
 	require.NoError(t, err)
 	require.NotNil(t, builder)
 
-	impopts := &importer.Options{
+	impopts := &connectors.Options{
 		Hostname:        "localhost",
 		OperatingSystem: runtime.GOOS,
 		Architecture:    runtime.GOARCH,

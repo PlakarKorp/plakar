@@ -23,10 +23,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/PlakarKorp/kloset/connectors/exporter"
 	"github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
-	"github.com/PlakarKorp/kloset/snapshot/exporter"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
 )
@@ -158,7 +158,9 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 
 	var exporterInstance exporter.Exporter
 	var err error
-	exporterInstance, err = exporter.NewExporter(ctx.GetInner(), exporterConfig)
+	options := ctx.ExporterOpts()
+
+	exporterInstance, _, err = exporter.NewExporter(ctx.GetInner(), options, exporterConfig)
 	if err != nil {
 		return 1, err
 	}
@@ -169,10 +171,7 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 		opts.SkipPermissions = true
 	}
 
-	root, err := exporterInstance.Root(ctx)
-	if err != nil {
-		return 1, err
-	}
+	root := exporterInstance.Root()
 
 	for _, snapPath := range snapshots {
 		snap, pathname, relative, err := locate.OpenSnapshotByPathRelative(repo, snapPath)
@@ -188,7 +187,7 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 			}
 		}
 
-		err = snap.Restore(exporterInstance, root, pathname, opts)
+		err = snap.Export(exporterInstance, root, pathname, opts)
 		if err != nil {
 			return 1, err
 		}
