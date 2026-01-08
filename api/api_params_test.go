@@ -333,6 +333,7 @@ func _TestSnapshotPathParam(t *testing.T) {
 			cache := caching.NewManager(pebble.Constructor(tmpCacheDir))
 			defer cache.Close()
 			ctx.SetCache(cache)
+			ctx.CacheDir = tmpCacheDir
 			ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
 			repo, err := repository.New(ctx.GetInner(), nil, lstore, wrappedConfig)
 			require.NoError(t, err, "creating repository")

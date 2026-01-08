@@ -39,6 +39,7 @@ func GenerateRepository(t *testing.T, bufout *bytes.Buffer, buferr *bytes.Buffer
 
 	ctx := appcontext.NewAppContext()
 	ctx.SetCookies(cookies)
+	ctx.CacheDir = tmpCacheDir
 
 	ctx.Client = "plakar-test/1.0.0"
 
@@ -128,6 +129,7 @@ func GenerateRepositoryWithoutConfig(t *testing.T, bufout *bytes.Buffer, buferr 
 	ctx.SetCookies(cookies)
 	ctx.Client = "plakar-test/1.0.0"
 	ctx.MaxConcurrency = 1
+	ctx.CacheDir = tmpCacheDir
 
 	// create a storage
 	r, err := bfs.NewStore(ctx, "fs", map[string]string{"location": tmpRepoDir})

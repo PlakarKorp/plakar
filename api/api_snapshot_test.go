@@ -235,6 +235,7 @@ func TestSnapshotHeaderErrors(t *testing.T) {
 			cache := caching.NewManager(pebble.Constructor(tmpCacheDir))
 			defer cache.Close()
 			ctx.SetCache(cache)
+			ctx.CacheDir = tmpCacheDir
 			ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
 			ctx.Client = "plakar-test/1.0.0"
 
