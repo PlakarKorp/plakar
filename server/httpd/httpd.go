@@ -8,9 +8,9 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/PlakarKorp/integration-http/storage/contract"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/storage"
-	"github.com/PlakarKorp/plakar/network"
 )
 
 type server struct {
@@ -20,7 +20,7 @@ type server struct {
 }
 
 func (s *server) openRepository(w http.ResponseWriter, r *http.Request) {
-	var reqOpen network.ReqOpen
+	var reqOpen contract.ReqOpen
 	if err := json.NewDecoder(r.Body).Decode(&reqOpen); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -32,7 +32,7 @@ func (s *server) openRepository(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var resOpen network.ResOpen
+	var resOpen contract.ResOpen
 	resOpen.Configuration = serializedConfig
 	resOpen.Err = ""
 	if err := json.NewEncoder(w).Encode(resOpen); err != nil {
@@ -43,13 +43,13 @@ func (s *server) openRepository(w http.ResponseWriter, r *http.Request) {
 
 // states
 func (s *server) getStates(w http.ResponseWriter, r *http.Request) {
-	var reqGetIndexes network.ReqGetStates
+	var reqGetIndexes contract.ReqGetStates
 	if err := json.NewDecoder(r.Body).Decode(&reqGetIndexes); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	var resGetStates network.ResGetStates
+	var resGetStates contract.ResGetStates
 	indexes, err := s.store.GetStates(r.Context())
 	if err != nil {
 		resGetStates.Err = err.Error()
@@ -63,13 +63,13 @@ func (s *server) getStates(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) putState(w http.ResponseWriter, r *http.Request) {
-	var reqPutState network.ReqPutState
+	var reqPutState contract.ReqPutState
 	if err := json.NewDecoder(r.Body).Decode(&reqPutState); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	var resPutIndex network.ResPutState
+	var resPutIndex contract.ResPutState
 	data := reqPutState.Data
 	_, err := s.store.PutState(r.Context(), reqPutState.MAC, bytes.NewBuffer(data))
 	if err != nil {
@@ -82,13 +82,13 @@ func (s *server) putState(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) getState(w http.ResponseWriter, r *http.Request) {
-	var reqGetState network.ReqGetState
+	var reqGetState contract.ReqGetState
 	if err := json.NewDecoder(r.Body).Decode(&reqGetState); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	var resGetState network.ResGetState
+	var resGetState contract.ResGetState
 	rd, err := s.store.GetState(r.Context(), reqGetState.MAC)
 	if err != nil {
 		resGetState.Err = err.Error()
@@ -114,13 +114,13 @@ func (s *server) deleteState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var reqDeleteState network.ReqDeleteState
+	var reqDeleteState contract.ReqDeleteState
 	if err := json.NewDecoder(r.Body).Decode(&reqDeleteState); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	var resDeleteState network.ResDeleteState
+	var resDeleteState contract.ResDeleteState
 	err := s.store.DeleteState(r.Context(), reqDeleteState.MAC)
 	if err != nil {
 		resDeleteState.Err = err.Error()
@@ -133,13 +133,13 @@ func (s *server) deleteState(w http.ResponseWriter, r *http.Request) {
 
 // packfiles
 func (s *server) getPackfiles(w http.ResponseWriter, r *http.Request) {
-	var reqGetPackfiles network.ReqGetPackfiles
+	var reqGetPackfiles contract.ReqGetPackfiles
 	if err := json.NewDecoder(r.Body).Decode(&reqGetPackfiles); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	var resGetPackfiles network.ResGetPackfiles
+	var resGetPackfiles contract.ResGetPackfiles
 	packfiles, err := s.store.GetPackfiles(r.Context())
 	if err != nil {
 		resGetPackfiles.Err = err.Error()
@@ -153,13 +153,13 @@ func (s *server) getPackfiles(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) putPackfile(w http.ResponseWriter, r *http.Request) {
-	var reqPutPackfile network.ReqPutPackfile
+	var reqPutPackfile contract.ReqPutPackfile
 	if err := json.NewDecoder(r.Body).Decode(&reqPutPackfile); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	var resPutPackfile network.ResPutPackfile
+	var resPutPackfile contract.ResPutPackfile
 	_, err := s.store.PutPackfile(r.Context(), reqPutPackfile.MAC, bytes.NewBuffer(reqPutPackfile.Data))
 	if err != nil {
 		resPutPackfile.Err = err.Error()
@@ -171,13 +171,13 @@ func (s *server) putPackfile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) getPackfile(w http.ResponseWriter, r *http.Request) {
-	var reqGetPackfile network.ReqGetPackfile
+	var reqGetPackfile contract.ReqGetPackfile
 	if err := json.NewDecoder(r.Body).Decode(&reqGetPackfile); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	var resGetPackfile network.ResGetPackfile
+	var resGetPackfile contract.ResGetPackfile
 	rd, err := s.store.GetPackfile(r.Context(), reqGetPackfile.MAC)
 	if err != nil {
 		resGetPackfile.Err = err.Error()
@@ -197,13 +197,13 @@ func (s *server) getPackfile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) GetPackfileBlob(w http.ResponseWriter, r *http.Request) {
-	var reqGetPackfileBlob network.ReqGetPackfileBlob
+	var reqGetPackfileBlob contract.ReqGetPackfileBlob
 	if err := json.NewDecoder(r.Body).Decode(&reqGetPackfileBlob); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	var resGetPackfileBlob network.ResGetPackfileBlob
+	var resGetPackfileBlob contract.ResGetPackfileBlob
 	rd, err := s.store.GetPackfileBlob(r.Context(), reqGetPackfileBlob.MAC, reqGetPackfileBlob.Offset, reqGetPackfileBlob.Length)
 	if err != nil {
 		resGetPackfileBlob.Err = err.Error()
@@ -229,13 +229,13 @@ func (s *server) deletePackfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var reqDeletePackfile network.ReqDeletePackfile
+	var reqDeletePackfile contract.ReqDeletePackfile
 	if err := json.NewDecoder(r.Body).Decode(&reqDeletePackfile); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	var resDeletePackfile network.ResDeletePackfile
+	var resDeletePackfile contract.ResDeletePackfile
 	err := s.store.DeletePackfile(r.Context(), reqDeletePackfile.MAC)
 	if err != nil {
 		resDeletePackfile.Err = err.Error()
@@ -247,14 +247,14 @@ func (s *server) deletePackfile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) getLocks(w http.ResponseWriter, r *http.Request) {
-	var req network.ReqGetLocks
+	var req contract.ReqGetLocks
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	locks, err := s.store.GetLocks(r.Context())
-	res := network.ResGetLocks{
+	res := contract.ResGetLocks{
 		Locks: locks,
 	}
 	if err != nil {
@@ -267,13 +267,13 @@ func (s *server) getLocks(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) putLock(w http.ResponseWriter, r *http.Request) {
-	var req network.ReqPutLock
+	var req contract.ReqPutLock
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	var res network.ResPutLock
+	var res contract.ResPutLock
 	if _, err := s.store.PutLock(r.Context(), req.Mac, bytes.NewReader(req.Data)); err != nil {
 		res.Err = err.Error()
 	}
@@ -285,13 +285,13 @@ func (s *server) putLock(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) getLock(w http.ResponseWriter, r *http.Request) {
-	var req network.ReqGetLock
+	var req contract.ReqGetLock
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	var res network.ResGetLock
+	var res contract.ResGetLock
 	rd, err := s.store.GetLock(r.Context(), req.Mac)
 	if err != nil {
 		res.Err = err.Error()
@@ -312,13 +312,13 @@ func (s *server) getLock(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) deleteLock(w http.ResponseWriter, r *http.Request) {
-	var req network.ReqDeleteLock
+	var req contract.ReqDeleteLock
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	var res network.ResDeleteLock
+	var res contract.ResDeleteLock
 	if err := s.store.DeleteLock(r.Context(), req.Mac); err != nil {
 		res.Err = err.Error()
 	}
@@ -339,6 +339,7 @@ func Server(ctx context.Context, repo *repository.Repository, addr string, noDel
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /", s.openRepository)
+	mux.HandleFunc("GET /config", s.openRepository)
 
 	mux.HandleFunc("GET /states", s.getStates)
 	mux.HandleFunc("PUT /state", s.putState)

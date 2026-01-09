@@ -43,6 +43,7 @@ require (
 require (
 	github.com/DataDog/zstd v1.5.7 // indirect
 	github.com/PlakarKorp/go-cdc-chunkers v1.0.2 // indirect
+	github.com/PlakarKorp/integration-http v1.0.6-0.20260109130651-2ffa728803c1 // indirect
 	github.com/RaduBerinde/axisds v0.0.0-20250419182453-5135a0650657 // indirect
 	github.com/RaduBerinde/btreemap v0.0.0-20250419174037-3d62b7205d54 // indirect
 	github.com/alecthomas/chroma/v2 v2.15.0 // indirect
