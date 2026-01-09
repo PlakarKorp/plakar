@@ -41,19 +41,17 @@ func NewMockFile(path string, mode os.FileMode, content string) MockFile {
 	}
 }
 
-func (m *MockFile) ScanResult() *connectors.Row {
+func (m *MockFile) ScanResult() *connectors.Record {
 	switch {
 	case m.IsDir:
-		return &connectors.Row{
-			Record: &connectors.Record{
-				Pathname: m.Path,
-				FileInfo: objects.FileInfo{
-					Lname:      path.Base(m.Path),
-					Lmode:      os.ModeDir | 0755,
-					Lnlink:     1,
-					Lusername:  "flan",
-					Lgroupname: "hacker",
-				},
+		return &connectors.Record{
+			Pathname: m.Path,
+			FileInfo: objects.FileInfo{
+				Lname:      path.Base(m.Path),
+				Lmode:      os.ModeDir | 0755,
+				Lnlink:     1,
+				Lusername:  "flan",
+				Lgroupname: "hacker",
 			},
 		}
 	default:
@@ -76,7 +74,7 @@ func (m *MockFile) ScanResult() *connectors.Row {
 
 type testingOptions struct {
 	name string
-	gen  func(chan<- *connectors.Row)
+	gen  func(chan<- *connectors.Record)
 }
 
 func newTestingOptions() *testingOptions {
@@ -112,7 +110,7 @@ func GenerateFiles(t *testing.T, files []MockFile) string {
 	return tmpBackupDir
 }
 
-func WithGenerator(gen func(chan<- *connectors.Row)) TestingOptions {
+func WithGenerator(gen func(chan<- *connectors.Record)) TestingOptions {
 	return func(o *testingOptions) {
 		o.gen = gen
 	}

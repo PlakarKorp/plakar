@@ -132,6 +132,10 @@ func (imp *pkgerImporter) Import(ctx context.Context, records chan<- *connectors
 	return nil
 }
 
+func (imp *pkgerImporter) Ping(ctx context.Context) error {
+	return nil
+}
+
 func (imp *pkgerImporter) Close(ctx context.Context) error {
 	return nil
 }

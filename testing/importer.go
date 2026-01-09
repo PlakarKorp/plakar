@@ -11,7 +11,7 @@ import (
 type MockImporter struct {
 	location string
 	files    map[string]MockFile
-	gen      func(chan<- *connectors.Row)
+	gen      func(chan<- *connectors.Record)
 }
 
 func init() {
@@ -48,7 +48,7 @@ func (p *MockImporter) SetFiles(files []MockFile) {
 	}
 }
 
-func (p *MockImporter) SetGenerator(gen func(chan<- *connectors.Row)) {
+func (p *MockImporter) SetGenerator(gen func(chan<- *connectors.Record)) {
 	p.gen = gen
 }
 
@@ -60,7 +60,7 @@ func (p *MockImporter) Type() string {
 	return "mock"
 }
 
-func (p *MockImporter) Import(ctx context.Context, records chan<- *connectors.Row, results <-chan *connectors.Result) error {
+func (p *MockImporter) Import(ctx context.Context, records chan<- *connectors.Record, results <-chan *connectors.Result) error {
 	if p.gen != nil {
 		go p.gen(records)
 	} else {
@@ -71,6 +71,10 @@ func (p *MockImporter) Import(ctx context.Context, records chan<- *connectors.Ro
 			close(records)
 		}()
 	}
+	return nil
+}
+
+func (p *MockImporter) Ping(ctx context.Context) error {
 	return nil
 }
 
