@@ -245,7 +245,7 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 	defer emitter.Close()
 
 	if !cmd.NoProgress && (flags&location.FLAG_STREAM) == 0 {
-		rows := make(chan *connectors.Row)
+		rows := make(chan *connectors.Record)
 		results := make(chan *connectors.Result)
 
 		err := imp.Import(ctx, rows, results)
@@ -433,7 +433,7 @@ func executeHook(ctx *appcontext.AppContext, hook string) error {
 }
 
 func dryrun(ctx *appcontext.AppContext, imp importer.Importer, excludes *exclude.RuleSet) error {
-	rows := make(chan *connectors.Row)
+	rows := make(chan *connectors.Record)
 	results := make(chan *connectors.Result)
 
 	err := imp.Import(ctx, rows, results)
@@ -453,29 +453,29 @@ func dryrun(ctx *appcontext.AppContext, imp importer.Importer, excludes *exclude
 		var pathname string
 		var isDir bool
 		switch {
-		case record.Record != nil:
-			pathname = record.Record.Pathname
-			isDir = record.Record.FileInfo.IsDir()
-		case record.Error != nil:
-			pathname = record.Error.Pathname
+		case record.Err != nil:
+			pathname = record.Pathname
 			isDir = false
+		default:
+			pathname = record.Pathname
+			isDir = record.FileInfo.IsDir()
 		}
 
 		if excludes.IsExcluded(pathname, isDir) {
-			if record.Record != nil {
-				record.Record.Close()
+			if record.Reader != nil {
+				record.Close()
 			}
 			continue
 		}
 
 		switch {
-		case record.Error != nil:
+		case record.Err != nil:
 			errors = true
 			fmt.Fprintf(ctx.Stderr, "%s: %s\n",
-				record.Error.Pathname, record.Error.Err)
-		case record.Record != nil:
-			fmt.Fprintln(ctx.Stdout, record.Record.Pathname)
-			record.Record.Close()
+				record.Pathname, record.Err)
+		default:
+			fmt.Fprintln(ctx.Stdout, record.Pathname)
+			record.Close()
 		}
 	}
 
@@ -493,7 +493,7 @@ type FilesystemSummary struct {
 	TotalSize    uint64
 }
 
-func statistics(ctx *appcontext.AppContext, scanner <-chan *connectors.Row, excludes *exclude.RuleSet) FilesystemSummary {
+func statistics(ctx *appcontext.AppContext, scanner <-chan *connectors.Record, excludes *exclude.RuleSet) FilesystemSummary {
 	errorCount := uint64(0)
 	directoryCount := uint64(0)
 	fileCount := uint64(0)
@@ -512,40 +512,41 @@ func statistics(ctx *appcontext.AppContext, scanner <-chan *connectors.Row, excl
 		var pathname string
 		var isDir bool
 		switch {
-		case record.Record != nil:
-			pathname = record.Record.Pathname
-			isDir = record.Record.FileInfo.IsDir()
-		case record.Error != nil:
-			pathname = record.Error.Pathname
+		case record.Err != nil:
+			pathname = record.Pathname
 			isDir = false
+
+		default:
+			pathname = record.Pathname
+			isDir = record.FileInfo.IsDir()
 		}
 
 		if excludes.IsExcluded(pathname, isDir) {
-			if record.Record != nil {
-				record.Record.Close()
+			if record.Reader != nil {
+				record.Close()
 			}
 			continue
 		}
 
 		switch {
-		case record.Error != nil:
+		case record.Err != nil:
 			errorCount++
-		case record.Record != nil:
-			if record.Record.IsXattr {
+		default:
+			if record.IsXattr {
 				xattrCount++
-				record.Record.Close()
+				record.Close()
 				continue
 			}
 
-			if record.Record.FileInfo.IsDir() {
+			if record.FileInfo.IsDir() {
 				directoryCount++
-			} else if record.Record.FileInfo.Mode()&os.ModeSymlink != 0 {
+			} else if record.FileInfo.Mode()&os.ModeSymlink != 0 {
 				symlinkCount++
-			} else if record.Record.FileInfo.Mode().IsRegular() {
+			} else if record.FileInfo.Mode().IsRegular() {
 				fileCount++
-				totalSize += uint64(record.Record.FileInfo.Size())
+				totalSize += uint64(record.FileInfo.Size())
 			}
-			record.Record.Close()
+			record.Close()
 		}
 	}
 	return FilesystemSummary{

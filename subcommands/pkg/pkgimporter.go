@@ -49,7 +49,7 @@ func absolutify(cwd, path string) string {
 	return filepath.Join(cwd, path)
 }
 
-func mkstruct(p string, ch chan<- *connectors.Row) {
+func mkstruct(p string, ch chan<- *connectors.Record) {
 	dir := path.Dir(p)
 	for dir != "/" {
 		fi := objects.FileInfo{
@@ -61,7 +61,7 @@ func mkstruct(p string, ch chan<- *connectors.Row) {
 	}
 }
 
-func (imp *pkgerImporter) dofile(p string, ch chan<- *connectors.Row, mustExe bool) {
+func (imp *pkgerImporter) dofile(p string, ch chan<- *connectors.Record, mustExe bool) {
 	absolute := absolutify(imp.cwd, p)
 
 	relative := absolute
@@ -102,24 +102,20 @@ func (imp *pkgerImporter) dofile(p string, ch chan<- *connectors.Row, mustExe bo
 	}
 
 	mkstruct(name, ch)
-	ch <- &connectors.Row{
-		Record: &connectors.Record{
-			Pathname: name,
-			FileInfo: objects.FileInfoFromStat(fi),
-			Reader:   fp,
-		},
+	ch <- &connectors.Record{
+		Pathname: name,
+		FileInfo: objects.FileInfoFromStat(fi),
+		Reader:   fp,
 	}
 }
 
-func (imp *pkgerImporter) scan(ch chan<- *connectors.Row) {
+func (imp *pkgerImporter) scan(ch chan<- *connectors.Record) {
 	defer close(ch)
 
 	info := objects.NewFileInfo("/", 0, 0700|os.ModeDir, time.Unix(0, 0), 0, 0, 0, 0, 1)
-	ch <- &connectors.Row{
-		Record: &connectors.Record{
-			Pathname: "/",
-			FileInfo: info,
-		},
+	ch <- &connectors.Record{
+		Pathname: "/",
+		FileInfo: info,
 	}
 
 	imp.dofile(imp.manifestPath, ch, false)
@@ -131,7 +127,7 @@ func (imp *pkgerImporter) scan(ch chan<- *connectors.Row) {
 	}
 }
 
-func (imp *pkgerImporter) Import(ctx context.Context, records chan<- *connectors.Row, results <-chan *connectors.Result) error {
+func (imp *pkgerImporter) Import(ctx context.Context, records chan<- *connectors.Record, results <-chan *connectors.Result) error {
 	go imp.scan(records)
 	return nil
 }
