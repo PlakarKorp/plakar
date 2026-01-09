@@ -119,19 +119,6 @@ func (cmd *Sync) Parse(ctx *appcontext.AppContext, args []string) error {
 				return fmt.Errorf("invalid passphrase")
 			}
 			peerSecret = key
-		} else if cmd, ok := storeConfig["passphrase_cmd"]; ok {
-			passphrase, err := utils.GetPassphraseFromCommand(cmd)
-			if err != nil {
-				return fmt.Errorf("failed to read passphrase from command: %w", err)
-			}
-			key, err := encryption.DeriveKey(peerStoreConfig.Encryption.KDFParams, []byte(passphrase))
-			if err != nil {
-				return err
-			}
-			if !encryption.VerifyCanary(peerStoreConfig.Encryption, key) {
-				return fmt.Errorf("invalid passphrase")
-			}
-			peerSecret = key
 		} else {
 			for {
 				passphrase, err := utils.GetPassphrase("destination store")
