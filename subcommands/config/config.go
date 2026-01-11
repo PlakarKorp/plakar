@@ -30,6 +30,7 @@ import (
 	"github.com/PlakarKorp/kloset/snapshot/importer"
 	"github.com/PlakarKorp/kloset/storage"
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/config"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
 	"go.yaml.in/yaml/v3"
@@ -110,7 +111,7 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 			}
 			cfgMap[name][key] = val
 		}
-		return utils.SaveConfig(ctx.ConfigDir, ctx.Config)
+		return config.Save(ctx.ConfigDir, ctx.Config)
 
 	case "check":
 		p := flag.NewFlagSet("check", flag.ExitOnError)
@@ -137,9 +138,9 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 			store.Close(ctx)
 
 		case "source":
-			cfg, ok := ctx.Config.GetSource(name)
-			if !ok {
-				return fmt.Errorf("failed to retrieve configuration for source %q", name)
+			cfg, err := ctx.Config.GetSource(name)
+			if err != nil {
+				return err
 			}
 			imp, _, err := importer.NewImporter(ctx.GetInner(), ctx.ImporterOpts(), cfg)
 			if err != nil {
@@ -148,9 +149,9 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 			imp.Close(ctx)
 
 		case "destination":
-			cfg, ok := ctx.Config.GetDestination(name)
-			if !ok {
-				return fmt.Errorf("failed to retrieve configuration for destination %q", name)
+			cfg, err := ctx.Config.GetDestination(name)
+			if err != nil {
+				return err
 			}
 			exp, err := exporter.NewExporter(ctx.GetInner(), cfg)
 			if err != nil {
@@ -240,7 +241,7 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 				}
 			}
 		}
-		return utils.SaveConfig(ctx.ConfigDir, ctx.Config)
+		return config.Save(ctx.ConfigDir, ctx.Config)
 
 	case "ping":
 		return fmt.Errorf("the ping subcomand is not yet implemented in this version of plakar")
@@ -262,7 +263,7 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 			return fmt.Errorf("%s %q does not exist", cmd, name)
 		}
 		delete(cfgMap, name)
-		return utils.SaveConfig(ctx.ConfigDir, ctx.Config)
+		return config.Save(ctx.ConfigDir, ctx.Config)
 
 	case "set":
 		p := flag.NewFlagSet("set", flag.ExitOnError)
@@ -286,7 +287,7 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 			}
 			cfgMap[name][key] = val
 		}
-		return utils.SaveConfig(ctx.ConfigDir, ctx.Config)
+		return config.Save(ctx.ConfigDir, ctx.Config)
 
 	case "show":
 		var opt_json bool
@@ -388,7 +389,7 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 			}
 			delete(cfgMap[name], key)
 		}
-		return utils.SaveConfig(ctx.ConfigDir, ctx.Config)
+		return config.Save(ctx.ConfigDir, ctx.Config)
 
 	default:
 		return fmt.Errorf("usage: plakar %s [add|check|import|ping|rm|set|show|unset]", cmd)

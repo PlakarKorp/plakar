@@ -145,9 +145,9 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 		"location": cmd.Target,
 	}
 	if strings.HasPrefix(cmd.Target, "@") {
-		remote, ok := ctx.Config.GetDestination(cmd.Target[1:])
-		if !ok {
-			return 1, fmt.Errorf("could not resolve exporter: %s", cmd.Target)
+		remote, err := ctx.Config.GetDestination(cmd.Target[1:])
+		if err != nil {
+			return 1, err
 		}
 		if _, ok := remote["location"]; !ok {
 			return 1, fmt.Errorf("could not resolve exporter location: %s", cmd.Target)
