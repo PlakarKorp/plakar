@@ -30,7 +30,7 @@ import (
 	"github.com/PlakarKorp/kloset/storage"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
-	"golang.org/x/sync/errgroup"
+	"github.com/google/uuid"
 )
 
 func init() {
@@ -64,9 +64,9 @@ type Clone struct {
 }
 
 func (cmd *Clone) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	sourceStore := repo.Store()
-
 	configuration := repo.Configuration()
+
+	configuration.RepositoryID = uuid.New()
 
 	serializedConfig, err := configuration.ToBytes()
 	if err != nil {
@@ -96,79 +96,9 @@ func (cmd *Clone) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 		return 1, err
 	}
 
-	cloneStore, err := storage.Create(ctx.GetInner(), storeConfig, wrappedSerializedConfig)
+	_, err = storage.Create(ctx.GetInner(), storeConfig, wrappedSerializedConfig)
 	if err != nil {
-		return 1, fmt.Errorf("could not create repository: %w", err)
-	}
-
-	packfileMACs, err := sourceStore.GetPackfiles(ctx)
-	if err != nil {
-		return 1, fmt.Errorf("could not get packfiles list from repository: %w", err)
-	}
-
-	wg := new(errgroup.Group)
-	wg.SetLimit(ctx.MaxConcurrency)
-	for _, packfileMAC := range packfileMACs {
-		if err := ctx.Err(); err != nil {
-			break
-		}
-
-		packfileMAC := packfileMAC
-		wg.Go(func() error {
-			rd, err := sourceStore.GetPackfile(ctx, packfileMAC)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "could not get packfile from repository: %s\n", err)
-				return err
-			}
-
-			defer rd.Close()
-
-			_, err = cloneStore.PutPackfile(ctx, packfileMAC, rd)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "could not put packfile to repository: %s\n", err)
-				return err
-			}
-
-			return nil
-		})
-	}
-	if err := wg.Wait(); err != nil {
-		return 1, fmt.Errorf("failed to process packfiles: %v", err)
-	}
-
-	indexesMACs, err := sourceStore.GetStates(ctx)
-	if err != nil {
-		return 1, fmt.Errorf("could not get packfiles list from repository: %w", err)
-	}
-
-	wg = new(errgroup.Group)
-	wg.SetLimit(ctx.MaxConcurrency)
-	for _, indexMAC := range indexesMACs {
-		if err := ctx.Err(); err != nil {
-			break
-		}
-
-		indexMAC := indexMAC
-		wg.Go(func() error {
-			data, err := sourceStore.GetState(ctx, indexMAC)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "could not get index from repository: %s\n", err)
-				return err
-			}
-
-			defer data.Close()
-
-			_, err = cloneStore.PutState(ctx, indexMAC, data)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "could not put packfile to repository: %s\n", err)
-				return err
-			}
-
-			return nil
-		})
-	}
-	if err := wg.Wait(); err != nil {
-		return 1, fmt.Errorf("failed to process states: %v", err)
+		return 1, fmt.Errorf("could not clone store: %w", err)
 	}
 
 	return 0, nil

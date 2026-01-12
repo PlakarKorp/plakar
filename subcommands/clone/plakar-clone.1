@@ -11,10 +11,11 @@
 .Sh DESCRIPTION
 The
 .Nm plakar clone
-command creates a full clone of an existing Plakar repository,
-including all snapshots, packfiles, and repository states, and saves
-it at the specified
-.Ar path .
+command creates a new empty Plakar store at the specified
+.Ar path
+with a configuration identical to the origin.
+This is only useful in situations where the stores must share
+encryption and chunking parametres.
 .Sh EXAMPLES
 Clone a repository to a new location:
 .Bd -literal -offset indent
