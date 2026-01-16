@@ -335,7 +335,7 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 				}
 				defer parent.Close()
 
-				parentVFS, err = parent.Filesystem()
+				parentVFS, err = parent.FilesystemWithCache()
 				if err != nil {
 					return 1, nil, objects.MAC{}, err
 				}
