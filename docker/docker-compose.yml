@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  plakar-ui:
+    build: ../
+    container_name: plakar-ui
+    ports:
+      - "8080:8080"
+    volumes:
+      # Mount a local repository
+      - ./my-plakar-repo:/data
+    environment:
+      # Override default repository location if needed
+      PLAKAR_REPOSITORY: /data
+      # Set passphrase to unlock repository (if encrypted)
+      PLAKAR_PASSPHRASE: "yourverysecurepassphrase"
+    restart: unless-stopped
+
