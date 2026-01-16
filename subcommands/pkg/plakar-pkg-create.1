@@ -5,12 +5,13 @@
 .Nm plakar-pkg-create
 .Nd Package a plugin
 .Sh SYNOPSIS
-.Nm plakar pkg build Ar manifest.yaml
+.Nm plakar pkg build Ar manifest.yaml Ar version
 .Sh DESCRIPTION
 The
 .Nm plakar pkg create
 assembles a plugin using the provided
-.Xr plakar-pkg-manifest.yaml 5 .
+.Xr plakar-pkg-manifest.yaml 5
+and version.
 .Pp
 All the files needed for the plugin need to be already available,
 i.e. executables must be already be built.

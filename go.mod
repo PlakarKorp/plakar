@@ -1,12 +1,12 @@
 module github.com/PlakarKorp/plakar
 
-go 1.24.0
+go 1.25.1
 
 require (
 	github.com/PlakarKorp/go-human2duration v0.1.6
 	github.com/PlakarKorp/integration-fs v1.0.15-0.20260115153221-79b61b951e1b
 	github.com/PlakarKorp/integration-grpc v1.0.19-0.20260115145806-1fd3ce31686d
-	github.com/PlakarKorp/integration-ptar v1.0.5
+	github.com/PlakarKorp/integration-ptar v1.0.6-0.20251129124308-5ede9e09abfc
 	github.com/PlakarKorp/integration-stdio v1.0.5-0.20260115153145-4c4e247d2c13
 	github.com/PlakarKorp/integration-tar v1.0.0-beta.7.0.20260115153106-47718979f565
 	github.com/PlakarKorp/kloset v1.0.13-0.20260116090628-eb4b5f2debb6
@@ -40,6 +40,8 @@ require (
 	gopkg.in/ini.v1 v1.67.1
 )
 
+require github.com/PlakarKorp/pkg v0.0.0-20260116143641-11aa17c074c6
+
 require (
 	github.com/DataDog/zstd v1.5.7 // indirect
 	github.com/PlakarKorp/go-cdc-chunkers v1.0.2 // indirect
@@ -62,6 +64,7 @@ require (
 	github.com/cockroachdb/redact v1.1.6 // indirect
 	github.com/cockroachdb/swiss v0.0.0-20251224182025-b0f6560f979b // indirect
 	github.com/cockroachdb/tokenbucket v0.0.0-20250429170803-42689b6311bb // indirect
+	github.com/coreos/go-semver v0.3.1
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dlclark/regexp2 v1.11.5 // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
@@ -69,7 +72,7 @@ require (
 	github.com/gabriel-vasile/mimetype v1.4.12 // indirect
 	github.com/getsentry/sentry-go v0.35.1 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
-	github.com/go-git/go-billy/v5 v5.6.2 // indirect
+	github.com/go-git/go-billy/v5 v5.7.0 // indirect
 	github.com/go-git/go-git/v5 v5.16.4 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
@@ -117,13 +120,13 @@ require (
 	github.com/yuin/goldmark-emoji v1.0.5 // indirect
 	github.com/zeebo/blake3 v0.2.4 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
-	golang.org/x/crypto v0.46.0 // indirect
+	golang.org/x/crypto v0.47.0 // indirect
 	golang.org/x/exp v0.0.0-20250819193227-8b4c13bb791b // indirect
-	golang.org/x/net v0.48.0 // indirect
-	golang.org/x/text v0.32.0 // indirect
+	golang.org/x/net v0.49.0 // indirect
+	golang.org/x/text v0.33.0 // indirect
 	google.golang.org/genproto v0.0.0-20250728155136-f173205681a0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251124214823-79d6a2a48846 // indirect
-	google.golang.org/protobuf v1.36.10 // indirect
+	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

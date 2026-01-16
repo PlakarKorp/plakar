@@ -204,7 +204,7 @@ func SetupRoutes(server *http.ServeMux, repo *repository.Repository, ctx *appcon
 	server.Handle("GET /api/repository/importer-types", authToken(JSONAPIView(ui.repositoryImporterTypes)))
 
 	server.Handle("GET /api/snapshot/{snapshot}", authToken(JSONAPIView(ui.snapshotHeader)))
-	server.Handle("GET /api/snapshot/reader/{snapshot_path...}", urlSigner.VerifyMiddleware(APIView(ui.snapshotReader)))
+	server.Handle("GET /api/snapshot/reader/{snapshot_path...}", urlSigner.VerifyMiddleware(APIView(ui.snapshotReader))) // <-
 	server.Handle("POST /api/snapshot/reader-sign-url/{snapshot_path...}", authToken(JSONAPIView(urlSigner.Sign)))
 
 	server.Handle("GET /api/snapshot/vfs/{snapshot_path...}", authToken(JSONAPIView(ui.snapshotVFSBrowse)))
@@ -213,14 +213,6 @@ func SetupRoutes(server *http.ServeMux, repo *repository.Repository, ctx *appcon
 	server.Handle("GET /api/snapshot/vfs/search/{snapshot_path...}", authToken(JSONAPIView(ui.snapshotVFSSearch)))
 	server.Handle("GET /api/snapshot/vfs/errors/{snapshot_path...}", authToken(JSONAPIView(ui.snapshotVFSErrors)))
 
-	server.Handle("POST /api/snapshot/vfs/downloader/{snapshot_path...}", authToken(JSONAPIView(ui.snapshotVFSDownloader)))
-	server.Handle("GET /api/snapshot/vfs/downloader-sign-url/{id}", JSONAPIView(ui.snapshotVFSDownloaderSigned))
-}
-
-func (ui *uiserver) reloadPlugins() {
-	// Installed packaged might have changed
-	err := ui.ctx.GetPlugins().ReloadPlugins(ui.ctx.GetInner())
-	if err != nil {
-		ui.ctx.GetLogger().Warn("failed to reload plugins: %w", err)
-	}
+	server.Handle("POST /api/snapshot/vfs/downloader/{snapshot_path...}", authToken(JSONAPIView(ui.snapshotVFSDownloader))) // <-
+	server.Handle("GET /api/snapshot/vfs/downloader-sign-url/{id}", JSONAPIView(ui.snapshotVFSDownloaderSigned))            // <-
 }

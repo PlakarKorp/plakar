@@ -9,7 +9,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/PlakarKorp/plakar/plugins"
+	"github.com/PlakarKorp/pkg"
+	//"github.com/PlakarKorp/plakar/plugins"
 	"github.com/PlakarKorp/plakar/services"
 )
 
@@ -150,76 +151,72 @@ func (ui *uiserver) servicesSetAlertingServiceConfiguration(w http.ResponseWrite
 }
 
 func (ui *uiserver) servicesGetIntegration(w http.ResponseWriter, r *http.Request) error {
-	offset, err := QueryParamToInt64(r, "offset", 0, 0)
-	if err != nil {
-		return err
-	}
+	// offset, err := QueryParamToInt64(r, "offset", 0, 0)
+	// if err != nil {
+	// 	return err
+	// }
 
-	limit, err := QueryParamToInt64(r, "limit", 1, 50)
-	if err != nil {
-		return err
-	}
+	// limit, err := QueryParamToInt64(r, "limit", 1, 50)
+	// if err != nil {
+	// 	return err
+	// }
 
-	filterType, _, err := QueryParamToString(r, "type")
-	if err != nil {
-		return err
-	}
+	// filterType, _, err := QueryParamToString(r, "type")
+	// if err != nil {
+	// 	return err
+	// }
 
-	filterTag, _, err := QueryParamToString(r, "tag")
-	if err != nil {
-		return err
-	}
+	// filterTag, _, err := QueryParamToString(r, "tag")
+	// if err != nil {
+	// 	return err
+	// }
 
-	filterStatus, _, err := QueryParamToString(r, "status")
-	if err != nil {
-		return err
-	}
+	// filterStatus, _, err := QueryParamToString(r, "status")
+	// if err != nil {
+	// 	return err
+	// }
 
-	var res Items[plugins.Integration]
-	res.Items = make([]plugins.Integration, 0)
+	var res Items[pkg.Integration]
+	res.Items = make([]pkg.Integration, 0)
 
-	var i int64
-	filter := plugins.IntegrationFilter{
-		Type:   filterType,
-		Tag:    filterTag,
-		Status: filterStatus,
-	}
+	// var i int64
+	// filter := pkg.IntegrationFilter{
+	// 	Type:   filterType,
+	// 	Tag:    filterTag,
+	// 	Status: filterStatus,
+	// }
 
-	ui.reloadPlugins()
-
-	ints, err := ui.ctx.GetPlugins().ListIntegrations(filter)
-	if err != nil {
-		return err
-	}
-	for _, int := range ints {
-		res.Total += 1
-		i += 1
-		if i > offset {
-			if i <= offset+limit {
-				res.Items = append(res.Items, int)
-			}
-		}
-	}
+	// ints, err := ui.ctx.GetPlugins().ListIntegrations(filter)
+	// if err != nil {
+	// 	return err
+	// }
+	// for _, int := range ints {
+	// 	res.Total += 1
+	// 	i += 1
+	// 	if i > offset {
+	// 		if i <= offset+limit {
+	// 			res.Items = append(res.Items, int)
+	// 		}
+	// 	}
+	// }
 
 	return json.NewEncoder(w).Encode(res)
 }
 
 func (ui *uiserver) servicesGetIntegrationId(w http.ResponseWriter, r *http.Request) error {
-	id := r.PathValue("id")
+	// id := r.PathValue("id")
 
-	ui.reloadPlugins()
+	// var filter plugins.IntegrationFilter
+	// ints, err := ui.ctx.GetPlugins().ListIntegrations(filter)
+	// if err != nil {
+	// 	return err
+	// }
 
-	var filter plugins.IntegrationFilter
-	ints, err := ui.ctx.GetPlugins().ListIntegrations(filter)
-	if err != nil {
-		return err
-	}
-
-	for _, int := range ints {
-		if int.Id == id {
-			return json.NewEncoder(w).Encode(int)
-		}
-	}
+	// for _, int := range ints {
+	// 	if int.Id == id {
+	// 		return json.NewEncoder(w).Encode(int)
+	// 	}
+	// }
 
 	return fmt.Errorf("Not found")
 }

@@ -34,9 +34,10 @@ import (
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/kloset/storage"
 	"github.com/PlakarKorp/kloset/versioning"
+	"github.com/PlakarKorp/pkg"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/plugins"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/coreos/go-semver/semver"
 )
 
 type PkgCreate struct {
@@ -44,25 +45,33 @@ type PkgCreate struct {
 
 	Base         string
 	Out          string
-	Manifest     plugins.Manifest
+	Manifest     pkg.Manifest
 	ManifestPath string
 }
 
 func (cmd *PkgCreate) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags := flag.NewFlagSet("pkg create", flag.ExitOnError)
 	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s [-out plugin] manifest.yaml\n",
+		fmt.Fprintf(flags.Output(), "Usage: %s [-out plugin] manifest.yaml version\n",
 			flags.Name())
 	}
 
 	flags.StringVar(&cmd.Out, "out", "", "Plugin file to create")
 	flags.Parse(args)
 
-	if flags.NArg() != 1 {
+	if flags.NArg() != 2 {
 		return fmt.Errorf("wrong usage")
 	}
 
-	manifest := flags.Arg(0)
+	var (
+		manifest = flags.Arg(0)
+		version  = flags.Arg(1)
+	)
+
+	if _, err := semver.NewVersion(version); err != nil {
+		return fmt.Errorf("bad version string: %s", version)
+	}
+
 	if !filepath.IsAbs(manifest) {
 		manifest = filepath.Join(ctx.CWD, manifest)
 	} else {
@@ -71,7 +80,13 @@ func (cmd *PkgCreate) Parse(ctx *appcontext.AppContext, args []string) error {
 	cmd.Base = filepath.Dir(manifest)
 	cmd.ManifestPath = manifest
 
-	if err := plugins.ParseManifestFile(manifest, &cmd.Manifest); err != nil {
+	fp, err := os.Open(manifest)
+	if err != nil {
+		return fmt.Errorf("can't open %s: %w", manifest, err)
+	}
+	defer fp.Close()
+
+	if err := cmd.Manifest.Parse(fp); err != nil {
 		return fmt.Errorf("failed to parse the manifest %s: %w", manifest, err)
 	}
 
@@ -85,7 +100,7 @@ func (cmd *PkgCreate) Parse(ctx *appcontext.AppContext, args []string) error {
 	}
 
 	if cmd.Out == "" {
-		p := fmt.Sprintf("%s_%s_%s_%s.ptar", cmd.Manifest.Name, cmd.Manifest.Version, GOOS, GOARCH)
+		p := fmt.Sprintf("%s_%s_%s_%s.ptar", cmd.Manifest.Name, version, GOOS, GOARCH)
 		cmd.Out = filepath.Join(ctx.CWD, p)
 	}
 
