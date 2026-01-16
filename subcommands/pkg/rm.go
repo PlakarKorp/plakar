@@ -45,13 +45,9 @@ func (cmd *PkgRm) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 func (cmd *PkgRm) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (int, error) {
+	pkgmgr := ctx.GetPkgManager()
 	for _, name := range cmd.Args {
-		pkg, err := ctx.GetPlugins().FindInstalledPackage(name)
-		if err != nil {
-			return 1, fmt.Errorf("failed to remove %q: %w", name, err)
-		}
-		err = ctx.GetPlugins().UninstallPackage(ctx.GetInner(), pkg)
-		if err != nil {
+		if err := pkgmgr.Del(name, nil); err != nil {
 			return 1, fmt.Errorf("failed to remove %q: %w", name, err)
 		}
 	}

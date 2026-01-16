@@ -3,9 +3,9 @@ package appcontext
 import (
 	"github.com/PlakarKorp/kloset/connectors"
 	"github.com/PlakarKorp/kloset/kcontext"
+	"github.com/PlakarKorp/pkg"
 	"github.com/PlakarKorp/plakar/config"
 	"github.com/PlakarKorp/plakar/cookies"
-	"github.com/PlakarKorp/plakar/plugins"
 	"github.com/PlakarKorp/plakar/utils"
 )
 
@@ -13,7 +13,7 @@ type AppContext struct {
 	*kcontext.KContext
 
 	cookies *cookies.Manager `msgpack:"-"`
-	plugins *plugins.Manager `msgpack:"-"`
+	pkgmgr  *pkg.Manager     `msgpack:"-"`
 	Config  *config.Config   `msgpack:"-"`
 
 	ConfigDir string
@@ -33,7 +33,7 @@ func NewAppContextFrom(ctx *AppContext) *AppContext {
 		KContext: kcontext.NewKContextFrom(ctx.GetInner()),
 
 		cookies:   ctx.cookies,
-		plugins:   ctx.plugins,
+		pkgmgr:    ctx.pkgmgr,
 		ConfigDir: ctx.ConfigDir,
 	}
 }
@@ -85,12 +85,12 @@ func (c *AppContext) GetCookies() *cookies.Manager {
 	return c.cookies
 }
 
-func (c *AppContext) SetPlugins(pluginsManager *plugins.Manager) {
-	c.plugins = pluginsManager
+func (c *AppContext) SetPkgManager(pluginsManager *pkg.Manager) {
+	c.pkgmgr = pluginsManager
 }
 
-func (c *AppContext) GetPlugins() *plugins.Manager {
-	return c.plugins
+func (c *AppContext) GetPkgManager() *pkg.Manager {
+	return c.pkgmgr
 }
 
 func (c *AppContext) ReloadConfig() error {
