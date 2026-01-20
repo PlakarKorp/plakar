@@ -5,25 +5,32 @@ import (
 	"fmt"
 	"path/filepath"
 
-	grpc_exporter "github.com/PlakarKorp/integration-grpc/exporter"
-	grpc_importer "github.com/PlakarKorp/integration-grpc/importer"
-	grpc_storage "github.com/PlakarKorp/integration-grpc/storage"
+	gexporter "github.com/PlakarKorp/integration-grpc/exporter"
+	gimporter "github.com/PlakarKorp/integration-grpc/importer"
+	gstorage "github.com/PlakarKorp/integration-grpc/storage"
+	gexporterv2 "github.com/PlakarKorp/integration-grpc/v2/exporter"
+	gimporterv2 "github.com/PlakarKorp/integration-grpc/v2/importer"
+	gstoragev2 "github.com/PlakarKorp/integration-grpc/v2/storage"
 	"github.com/PlakarKorp/kloset/connectors"
 	"github.com/PlakarKorp/kloset/connectors/exporter"
 	"github.com/PlakarKorp/kloset/connectors/importer"
 	"github.com/PlakarKorp/kloset/location"
 	"github.com/PlakarKorp/kloset/storage"
 	"github.com/PlakarKorp/pkg"
+	"golang.org/x/mod/semver"
 )
 
-func RegisterStorage(proto string, flags location.Flags, exe string, args []string) error {
+func RegisterStorage(v2 bool, proto string, flags location.Flags, exe string, args []string) error {
 	err := storage.Register(proto, flags, func(ctx context.Context, s string, config map[string]string) (storage.Store, error) {
 		client, err := connectPlugin(ctx, exe, args)
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to plugin: %w", err)
 		}
 
-		return grpc_storage.NewStorage(ctx, client, s, config)
+		if v2 {
+			return gstoragev2.NewStorage(ctx, client, s, config)
+		}
+		return gstorage.NewStorage(ctx, client, s, config)
 	})
 	if err != nil {
 		return err
@@ -32,13 +39,16 @@ func RegisterStorage(proto string, flags location.Flags, exe string, args []stri
 	return nil
 }
 
-func RegisterImporter(proto string, flags location.Flags, exe string, args []string) error {
+func RegisterImporter(v2 bool, proto string, flags location.Flags, exe string, args []string) error {
 	err := importer.Register(proto, flags, func(ctx context.Context, o *connectors.Options, s string, config map[string]string) (importer.Importer, error) {
 		client, err := connectPlugin(ctx, exe, args)
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to plugin: %w", err)
 		}
-		return grpc_importer.NewImporter(ctx, client, o, s, config)
+		if v2 {
+			return gimporterv2.NewImporter(ctx, client, o, s, config)
+		}
+		return gimporter.NewImporter(ctx, client, o, s, config)
 	})
 	if err != nil {
 		return err
@@ -46,14 +56,17 @@ func RegisterImporter(proto string, flags location.Flags, exe string, args []str
 	return nil
 }
 
-func RegisterExporter(proto string, flags location.Flags, exe string, args []string) error {
+func RegisterExporter(v2 bool, proto string, flags location.Flags, exe string, args []string) error {
 	err := exporter.Register(proto, flags, func(ctx context.Context, o *connectors.Options, s string, config map[string]string) (exporter.Exporter, error) {
 		client, err := connectPlugin(ctx, exe, args)
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to plugin: %w", err)
 		}
 
-		return grpc_exporter.NewExporter(ctx, client, o, s, config)
+		if v2 {
+			return gexporterv2.NewExporter(ctx, client, o, s, config)
+		}
+		return gexporter.NewExporter(ctx, client, o, s, config)
 	})
 	if err != nil {
 		return err
@@ -62,6 +75,15 @@ func RegisterExporter(proto string, flags location.Flags, exe string, args []str
 }
 
 func Load(m *pkg.Manifest, pkgdir string) error {
+	var v2 bool
+
+	if m.APIVersion != "" {
+		if semver.Major(m.APIVersion) != "v2" {
+			return fmt.Errorf("unknown api version %s", m.APIVersion)
+		}
+		v2 = true
+	}
+
 	for _, conn := range m.Connectors {
 		exe := filepath.Join(pkgdir, conn.Executable)
 
@@ -73,11 +95,11 @@ func Load(m *pkg.Manifest, pkgdir string) error {
 		for _, proto := range conn.Protocols {
 			switch conn.Type {
 			case "importer":
-				err = RegisterImporter(proto, flags, exe, conn.Args)
+				err = RegisterImporter(v2, proto, flags, exe, conn.Args)
 			case "exporter":
-				err = RegisterExporter(proto, flags, exe, conn.Args)
+				err = RegisterExporter(v2, proto, flags, exe, conn.Args)
 			case "storage":
-				err = RegisterStorage(proto, flags, exe, conn.Args)
+				err = RegisterStorage(v2, proto, flags, exe, conn.Args)
 			default:
 				err = fmt.Errorf("unknown connector type: %s",
 					conn.Type)
