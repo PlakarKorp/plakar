@@ -37,7 +37,7 @@ import (
 	"github.com/PlakarKorp/pkg"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
-	"github.com/coreos/go-semver/semver"
+	"golang.org/x/mod/semver"
 )
 
 type PkgCreate struct {
@@ -68,7 +68,7 @@ func (cmd *PkgCreate) Parse(ctx *appcontext.AppContext, args []string) error {
 		version  = flags.Arg(1)
 	)
 
-	if _, err := semver.NewVersion(version); err != nil {
+	if !semver.IsValid(version) {
 		return fmt.Errorf("bad version string: %s", version)
 	}
 
