@@ -78,10 +78,14 @@ func Load(m *pkg.Manifest, pkgdir string) error {
 	var v2 bool
 
 	if m.APIVersion != "" {
-		if semver.Major(m.APIVersion) != "v2" {
+		switch semver.Major(m.APIVersion) {
+		case "v1":
+			// nothing
+		case "v2":
+			v2 = true
+		default:
 			return fmt.Errorf("unknown api version %s", m.APIVersion)
 		}
-		v2 = true
 	}
 
 	for _, conn := range m.Connectors {
