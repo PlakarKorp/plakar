@@ -7,7 +7,7 @@ PLAKAR-DIAG(1) - General Commands Manual
 # SYNOPSIS
 
 **plakar&nbsp;diag**
-\[**contenttype**&nbsp;|&nbsp;**errors**&nbsp;|&nbsp;**locks**&nbsp;|&nbsp;**object**&nbsp;|&nbsp;**packfile**&nbsp;|&nbsp;**snapshot**&nbsp;|&nbsp;**state**&nbsp;|&nbsp;**vfs**&nbsp;|&nbsp;**xattr**]
+\[**contenttype**&nbsp;|&nbsp;**locks**&nbsp;|&nbsp;**object**&nbsp;|&nbsp;**packfile**&nbsp;|&nbsp;**snapshot**&nbsp;|&nbsp;**state**&nbsp;|&nbsp;**vfs**&nbsp;|&nbsp;**xattr**]
 
 # DESCRIPTION
 
@@ -20,10 +20,6 @@ Without any arguments, display information about the repository.
 The sub-commands are as follows:
 
 **contenttype** *snapshotID*:*path*
-
-**errors** *snapshotID*
-
-> Display the list of errors in the given snapshot.
 
 **locks**
 

@@ -24,7 +24,6 @@ func (cmd *DiagRepository) Parse(ctx *appcontext.AppContext, args []string) erro
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s\n", flags.Name())
 		fmt.Fprintf(flags.Output(), "       %s snapshot SNAPSHOT\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s errors SNAPSHOT\n", flags.Name())
 		fmt.Fprintf(flags.Output(), "       %s state [STATE]...\n", flags.Name())
 		fmt.Fprintf(flags.Output(), "       %s search snapshot[:path] mime\n", flags.Name())
 		fmt.Fprintf(flags.Output(), "       %s packfile [PACKFILE]...\n", flags.Name())

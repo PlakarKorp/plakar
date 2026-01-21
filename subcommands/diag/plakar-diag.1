@@ -6,7 +6,7 @@
 .Nd Display detailed information about Plakar internal structures
 .Sh SYNOPSIS
 .Nm plakar diag
-.Op Cm contenttype | errors | locks | object | packfile | snapshot | state | vfs | xattr
+.Op Cm contenttype | locks | object | packfile | snapshot | state | vfs | xattr
 .Sh DESCRIPTION
 The
 .Nm plakar diag
@@ -17,8 +17,6 @@ Without any arguments, display information about the repository.
 The sub-commands are as follows:
 .Bl -tag -width Ds
 .It Cm contenttype Ar snapshotID : Ns Ar path
-.It Cm errors Ar snapshotID
-Display the list of errors in the given snapshot.
 .It Cm locks
 Display the list of locks currently held on the repository.
 .It Cm object Ar objectID
