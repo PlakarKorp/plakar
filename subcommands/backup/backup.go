@@ -193,37 +193,27 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 	})
 
 	for _, source := range cmd.Sources {
-		scanDir := "fs:" + ctx.CWD
-		if source != "" {
-			scanDir = source
-		}
+		opts := make(map[string]string, len(cmd.Opts)+1)
+		maps.Copy(opts, cmd.Opts)
+		opts["location"] = source
 
-		// We are going to mutate this, so do a copy
-		cmdOptsCopy := make(map[string]string)
-		maps.Copy(cmdOptsCopy, cmd.Opts)
-
-		if strings.HasPrefix(scanDir, "@") {
-			remote, ok := ctx.Config.GetSource(scanDir[1:])
+		if strings.HasPrefix(source, "@") {
+			remote, ok := ctx.Config.GetSource(source[1:])
 			if !ok {
-				return 1, fmt.Errorf("could not resolve importer: %s", scanDir), objects.MAC{}, nil
+				return 1, fmt.Errorf("could not resolve importer: %s", source), objects.MAC{}, nil
 			}
 			if _, ok := remote["location"]; !ok {
-				return 1, fmt.Errorf("could not resolve importer location: %s", scanDir), objects.MAC{}, nil
+				return 1, fmt.Errorf("could not resolve importer location: %s", source), objects.MAC{}, nil
 			} else {
 				// inherit all the options -- but the ones
 				// specified in the command line takes the
 				// precedence.
 				for k, v := range remote {
-					if _, found := cmdOptsCopy[k]; !found {
-						cmdOptsCopy[k] = v
+					if _, found := opts[k]; !found {
+						opts[k] = v
 					}
 				}
 			}
-		}
-
-		// Now that we have resolved the possible @ syntax let's apply the scandir.
-		if _, found := cmdOptsCopy["location"]; !found {
-			cmdOptsCopy["location"] = scanDir
 		}
 
 		excludes := exclude.NewRuleSet()
@@ -234,9 +224,9 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		importerOpts := ctx.ImporterOpts()
 		importerOpts.Excludes = cmd.Excludes
 
-		imp, err := importer.NewImporter(ctx.GetInner(), importerOpts, cmdOptsCopy)
+		imp, err := importer.NewImporter(ctx.GetInner(), importerOpts, opts)
 		if err != nil {
-			return 1, fmt.Errorf("failed to create an importer for %s: %s", scanDir, err), objects.MAC{}, nil
+			return 1, fmt.Errorf("failed to create an importer for %s: %s", source, err), objects.MAC{}, nil
 		}
 		defer imp.Close(ctx)
 
