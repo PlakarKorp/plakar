@@ -74,6 +74,9 @@ import (
 	_ "github.com/PlakarKorp/integration-stdio/exporter"
 	_ "github.com/PlakarKorp/integration-stdio/importer"
 	_ "github.com/PlakarKorp/integration-tar/importer"
+
+	_ "github.com/PlakarKorp/integration-docker/importer"
+	_ "github.com/PlakarKorp/integration-oci/storage"
 )
 
 var ErrCantUnlock = errors.New("failed to unlock repository")
