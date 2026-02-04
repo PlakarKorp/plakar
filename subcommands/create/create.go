@@ -110,7 +110,14 @@ func (cmd *Create) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 		storageConfiguration.Compression = compression.NewDefaultConfiguration()
 	}
 
-	storageConfiguration.RepositoryID = uuid.MustParse(ctx.StoreConfig["store_id"])
+	storeId, found := ctx.StoreConfig["store_id"]
+	if found {
+		requestedId, err := uuid.Parse(storeId)
+		if err != nil {
+			return 1, fmt.Errorf("Failed to parse store ID: %w", err)
+		}
+		storageConfiguration.RepositoryID = requestedId
+	}
 
 	hashingConfiguration, err := hashing.LookupDefaultConfiguration(strings.ToUpper(cmd.Hashing))
 	if err != nil {
