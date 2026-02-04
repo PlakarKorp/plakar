@@ -25,15 +25,16 @@ import (
 	"strings"
 
 	"github.com/PlakarKorp/kloset/compression"
+	"github.com/PlakarKorp/kloset/connectors/storage"
 	"github.com/PlakarKorp/kloset/encryption"
 	"github.com/PlakarKorp/kloset/hashing"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/resources"
-	"github.com/PlakarKorp/kloset/connectors/storage"
 	"github.com/PlakarKorp/kloset/versioning"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
+	"github.com/google/uuid"
 )
 
 func init() {
@@ -108,6 +109,8 @@ func (cmd *Create) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 	} else {
 		storageConfiguration.Compression = compression.NewDefaultConfiguration()
 	}
+
+	storageConfiguration.RepositoryID = uuid.MustParse(ctx.StoreConfig["store_id"])
 
 	hashingConfiguration, err := hashing.LookupDefaultConfiguration(strings.ToUpper(cmd.Hashing))
 	if err != nil {
