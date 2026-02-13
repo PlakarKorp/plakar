@@ -54,7 +54,7 @@ Remove a specific snapshot by ID:
 
 Remove snapshots older than 30 days:
 
-	$ plakar prune -days 30d
+	$ plakar prune -days 30
 
 Remove snapshots with a specific tag:
 
