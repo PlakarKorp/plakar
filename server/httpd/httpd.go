@@ -1,17 +1,24 @@
 package httpd
 
 import (
-	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/PlakarKorp/kloset/connectors/storage"
+	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
-	"github.com/PlakarKorp/plakar/network"
 )
+
+var ErrInvalidResourceType = fmt.Errorf("Invalid resource type")
+var ErrInvalidMAC = fmt.Errorf("Invalid MAC")
+var ErrInvalidRange = fmt.Errorf("Invalid range")
 
 type server struct {
 	store    storage.Store
@@ -20,78 +27,53 @@ type server struct {
 }
 
 func (s *server) openRepository(w http.ResponseWriter, r *http.Request) {
-	var reqOpen network.ReqOpen
-	if err := json.NewDecoder(r.Body).Decode(&reqOpen); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
 	serializedConfig, err := s.store.Open(s.ctx)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	var resOpen network.ResOpen
-	resOpen.Configuration = serializedConfig
-	resOpen.Err = ""
-	if err := json.NewEncoder(w).Encode(resOpen); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Write(serializedConfig)
 }
 
-// states
-func (s *server) getStates(w http.ResponseWriter, r *http.Request) {
-	var reqGetIndexes network.ReqGetStates
-	if err := json.NewDecoder(r.Body).Decode(&reqGetIndexes); err != nil {
+func (s *server) listResource(w http.ResponseWriter, r *http.Request) {
+	typ, err := getResource(r)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	var resGetStates network.ResGetStates
-	indexes, err := s.store.List(r.Context(), storage.StorageResourceState)
-	if err != nil {
-		resGetStates.Err = err.Error()
+	if indexes, err := s.store.List(r.Context(), typ); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	} else {
-		resGetStates.MACs = indexes
-	}
-	if err := json.NewEncoder(w).Encode(resGetStates); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(indexes)
 	}
 }
 
-func (s *server) putState(w http.ResponseWriter, r *http.Request) {
-	var reqPutState network.ReqPutState
-	if err := json.NewDecoder(r.Body).Decode(&reqPutState); err != nil {
+func (s *server) getResource(w http.ResponseWriter, r *http.Request) {
+	typ, err := getResource(r)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	var resPutIndex network.ResPutState
-	data := reqPutState.Data
-	_, err := s.store.Put(r.Context(), storage.StorageResourceState, reqPutState.MAC, bytes.NewBuffer(data))
+	mac, err := getMac(r)
 	if err != nil {
-		resPutIndex.Err = err.Error()
-	}
-	if err := json.NewEncoder(w).Encode(resPutIndex); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
-func (s *server) getState(w http.ResponseWriter, r *http.Request) {
-	var reqGetState network.ReqGetState
-	if err := json.NewDecoder(r.Body).Decode(&reqGetState); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	var resGetState network.ResGetState
-	rd, err := s.store.Get(r.Context(), storage.StorageResourceState, reqGetState.MAC, nil)
+	rg, err := getRange(r)
 	if err != nil {
-		resGetState.Err = err.Error()
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if rd, err := s.store.Get(r.Context(), typ, mac, rg); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	} else {
 		defer rd.Close()
 
@@ -100,232 +82,50 @@ func (s *server) getState(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		resGetState.Data = data
-	}
-	if err := json.NewEncoder(w).Encode(resGetState); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+
+		w.Header().Set("Content-Type", "application/octet-stream")
+		w.Write(data)
 	}
 }
 
-func (s *server) deleteState(w http.ResponseWriter, r *http.Request) {
+func (s *server) putResource(w http.ResponseWriter, r *http.Request) {
+	typ, err := getResource(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	mac, err := getMac(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if _, err = s.store.Put(r.Context(), typ, mac, r.Body); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func (s *server) deleteResource(w http.ResponseWriter, r *http.Request) {
 	if s.noDelete {
 		http.Error(w, fmt.Errorf("not allowed to delete").Error(), http.StatusForbidden)
 		return
 	}
 
-	var reqDeleteState network.ReqDeleteState
-	if err := json.NewDecoder(r.Body).Decode(&reqDeleteState); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	var resDeleteState network.ResDeleteState
-	err := s.store.Delete(r.Context(), storage.StorageResourceState, reqDeleteState.MAC)
+	typ, err := getResource(r)
 	if err != nil {
-		resDeleteState.Err = err.Error()
-	}
-	if err := json.NewEncoder(w).Encode(resDeleteState); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
-// packfiles
-func (s *server) getPackfiles(w http.ResponseWriter, r *http.Request) {
-	var reqGetPackfiles network.ReqGetPackfiles
-	if err := json.NewDecoder(r.Body).Decode(&reqGetPackfiles); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	var resGetPackfiles network.ResGetPackfiles
-	packfiles, err := s.store.List(r.Context(), storage.StorageResourcePackfile)
+	mac, err := getMac(r)
 	if err != nil {
-		resGetPackfiles.Err = err.Error()
-	} else {
-		resGetPackfiles.MACs = packfiles
-	}
-	if err := json.NewEncoder(w).Encode(resGetPackfiles); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
-func (s *server) putPackfile(w http.ResponseWriter, r *http.Request) {
-	var reqPutPackfile network.ReqPutPackfile
-	if err := json.NewDecoder(r.Body).Decode(&reqPutPackfile); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	var resPutPackfile network.ResPutPackfile
-	_, err := s.store.Put(r.Context(), storage.StorageResourcePackfile, reqPutPackfile.MAC, bytes.NewBuffer(reqPutPackfile.Data))
-	if err != nil {
-		resPutPackfile.Err = err.Error()
-	}
-	if err := json.NewEncoder(w).Encode(resPutPackfile); err != nil {
+	if err := s.store.Delete(r.Context(), typ, mac); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
-func (s *server) getPackfile(w http.ResponseWriter, r *http.Request) {
-	var reqGetPackfile network.ReqGetPackfile
-	if err := json.NewDecoder(r.Body).Decode(&reqGetPackfile); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	var resGetPackfile network.ResGetPackfile
-	rd, err := s.store.Get(r.Context(), storage.StorageResourcePackfile, reqGetPackfile.MAC, nil)
-	if err != nil {
-		resGetPackfile.Err = err.Error()
-	} else {
-		defer rd.Close()
-		data, err := io.ReadAll(rd)
-		if err != nil {
-			resGetPackfile.Err = err.Error()
-		} else {
-			resGetPackfile.Data = data
-		}
-	}
-	if err := json.NewEncoder(w).Encode(resGetPackfile); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
-func (s *server) GetPackfileBlob(w http.ResponseWriter, r *http.Request) {
-	var reqGetPackfileBlob network.ReqGetPackfileBlob
-	if err := json.NewDecoder(r.Body).Decode(&reqGetPackfileBlob); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	var resGetPackfileBlob network.ResGetPackfileBlob
-	rd, err := s.store.Get(r.Context(), storage.StorageResourcePackfile, reqGetPackfileBlob.MAC, &storage.Range{Offset: reqGetPackfileBlob.Offset, Length: reqGetPackfileBlob.Length})
-	if err != nil {
-		resGetPackfileBlob.Err = err.Error()
-	} else {
-		data, err := io.ReadAll(rd)
-		rd.Close()
-
-		if err != nil {
-			resGetPackfileBlob.Err = err.Error()
-		} else {
-			resGetPackfileBlob.Data = data
-		}
-	}
-	if err := json.NewEncoder(w).Encode(resGetPackfileBlob); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
-func (s *server) deletePackfile(w http.ResponseWriter, r *http.Request) {
-	if s.noDelete {
-		http.Error(w, fmt.Errorf("not allowed to delete").Error(), http.StatusForbidden)
-		return
-	}
-
-	var reqDeletePackfile network.ReqDeletePackfile
-	if err := json.NewDecoder(r.Body).Decode(&reqDeletePackfile); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	var resDeletePackfile network.ResDeletePackfile
-	err := s.store.Delete(r.Context(), storage.StorageResourcePackfile, reqDeletePackfile.MAC)
-	if err != nil {
-		resDeletePackfile.Err = err.Error()
-	}
-	if err := json.NewEncoder(w).Encode(resDeletePackfile); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
-func (s *server) getLocks(w http.ResponseWriter, r *http.Request) {
-	var req network.ReqGetLocks
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	locks, err := s.store.List(r.Context(), storage.StorageResourceLock)
-	res := network.ResGetLocks{
-		Locks: locks,
-	}
-	if err != nil {
-		res.Err = err.Error()
-	}
-	if err := json.NewEncoder(w).Encode(&res); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
-func (s *server) putLock(w http.ResponseWriter, r *http.Request) {
-	var req network.ReqPutLock
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	var res network.ResPutLock
-	if _, err := s.store.Put(r.Context(), storage.StorageResourceLock, req.Mac, bytes.NewReader(req.Data)); err != nil {
-		res.Err = err.Error()
-	}
-
-	if err := json.NewEncoder(w).Encode(&res); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
-func (s *server) getLock(w http.ResponseWriter, r *http.Request) {
-	var req network.ReqGetLock
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	var res network.ResGetLock
-	rd, err := s.store.Get(r.Context(), storage.StorageResourceLock, req.Mac, nil)
-	if err != nil {
-		res.Err = err.Error()
-	} else {
-		defer rd.Close()
-		data, err := io.ReadAll(rd)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		res.Data = data
-	}
-
-	if err := json.NewEncoder(w).Encode(&res); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
-func (s *server) deleteLock(w http.ResponseWriter, r *http.Request) {
-	var req network.ReqDeleteLock
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	var res network.ResDeleteLock
-	if err := s.store.Delete(r.Context(), storage.StorageResourceLock, req.Mac); err != nil {
-		res.Err = err.Error()
-	}
-
-	if err := json.NewEncoder(w).Encode(&res); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
 	}
 }
 
@@ -340,21 +140,10 @@ func Server(ctx context.Context, repo *repository.Repository, addr string, noDel
 
 	mux.HandleFunc("GET /", s.openRepository)
 
-	mux.HandleFunc("GET /states", s.getStates)
-	mux.HandleFunc("PUT /state", s.putState)
-	mux.HandleFunc("GET /state", s.getState)
-	mux.HandleFunc("DELETE /state", s.deleteState)
-
-	mux.HandleFunc("GET /packfiles", s.getPackfiles)
-	mux.HandleFunc("PUT /packfile", s.putPackfile)
-	mux.HandleFunc("GET /packfile", s.getPackfile)
-	mux.HandleFunc("GET /packfile/blob", s.GetPackfileBlob)
-	mux.HandleFunc("DELETE /packfile", s.deletePackfile)
-
-	mux.HandleFunc("GET /locks", s.getLocks)
-	mux.HandleFunc("PUT /lock", s.putLock)
-	mux.HandleFunc("GET /lock", s.getLock)
-	mux.HandleFunc("DELETE /lock", s.deleteLock)
+	mux.HandleFunc("GET /resources/{resource}", s.listResource)
+	mux.HandleFunc("GET /resources/{resource}/{mac}", s.getResource)
+	mux.HandleFunc("PUT /resources/{resource}/{mac}", s.putResource)
+	mux.HandleFunc("DELETE /resources/{resource}/{mac}", s.deleteResource)
 
 	server := &http.Server{Addr: addr, Handler: mux}
 	go func() {
@@ -363,4 +152,78 @@ func Server(ctx context.Context, repo *repository.Repository, addr string, noDel
 	}()
 
 	return server.ListenAndServe()
+}
+
+func getResource(r *http.Request) (storage.StorageResource, error) {
+	switch r.PathValue("resource") {
+	case "packfiles":
+		return storage.StorageResourcePackfile, nil
+	case "states":
+		return storage.StorageResourceState, nil
+	case "locks":
+		return storage.StorageResourceLock, nil
+	case "eccpackfiles":
+		return storage.StorageResourceECCPackfile, nil
+	case "eccstates":
+		return storage.StorageResourceECCState, nil
+	default:
+		return 0, ErrInvalidResourceType
+	}
+}
+
+func getMac(r *http.Request) (objects.MAC, error) {
+	mac, err := hex.DecodeString(r.PathValue("mac"))
+	if err != nil {
+		return objects.NilMac, ErrInvalidMAC
+	}
+
+	if len(mac) != 32 {
+		return objects.NilMac, ErrInvalidMAC
+	}
+
+	return objects.MAC(mac), nil
+}
+
+// Only support fmt.Sprintf("bytes=<offset>-<offset+length>")
+func getRange(r *http.Request) (*storage.Range, error) {
+	var rng storage.Range
+	var err error
+
+	s := r.Header.Get("Range")
+	if s == "" {
+		return nil, nil
+	}
+
+	s, found := strings.CutPrefix(s, "bytes=")
+	if !found {
+		return nil, ErrInvalidRange
+	}
+
+	start, stop, found := strings.Cut(s, "-")
+	if !found {
+		return nil, ErrInvalidRange
+	}
+
+	rng.Offset, err = strconv.ParseUint(start, 10, 64)
+	if err != nil {
+		return nil, ErrInvalidRange
+	}
+
+	end, err := strconv.ParseUint(stop, 10, 64)
+	if err != nil {
+		return nil, ErrInvalidRange
+	}
+
+	if end <= rng.Offset {
+		return nil, ErrInvalidRange
+	}
+
+	len := end - rng.Offset
+	if len > math.MaxUint32 {
+		return nil, ErrInvalidRange
+	}
+
+	rng.Length = uint32(len)
+
+	return &rng, nil
 }
