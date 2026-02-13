@@ -76,13 +76,9 @@ func (cmd *SchedulerStart) Parse(ctx *appcontext.AppContext, args []string) erro
 
 		rd = resp.Body
 	} else {
-		absolutePath, err := filepath.Abs(opt_tasks)
+		fp, err := os.Open(opt_tasks)
 		if err != nil {
-			return fmt.Errorf("failed to get absolute path for configuration file: %w", err)
-		}
-		fp, err := os.Open(absolutePath)
-		if err != nil {
-			return fmt.Errorf("failed to open configuration file %q: %w", absolutePath, err)
+			return fmt.Errorf("failed to open %q: %w", opt_tasks, err)
 		}
 		defer fp.Close()
 		rd = fp
