@@ -7,18 +7,19 @@ PLAKAR-RESTORE(1) - General Commands Manual
 # SYNOPSIS
 
 **plakar&nbsp;restore**
-\[**-name**&nbsp;*name*]
+\[**-before**&nbsp;*date*]
 \[**-category**&nbsp;*category*]
 \[**-environment**&nbsp;*environment*]
-\[**-perimeter**&nbsp;*perimeter*]
 \[**-job**&nbsp;*job*]
-\[**-tag**&nbsp;*tag*]
 \[**-latest**]
-\[**-before**&nbsp;*date*]
-\[**-since**&nbsp;*date*]
+\[**-name**&nbsp;*name*]
+\[**-perimeter**&nbsp;*perimeter*]
 \[**-quiet**]
-\[**-to**&nbsp;*directory*]
+\[**-since**&nbsp;*date*]
 \[**-skip-permissions**]
+\[**-tag**&nbsp;*tag*]
+\[**-to**&nbsp;*directory*]
+\[**-o**&nbsp;*option*=*value*]
 \[*snapshotID*:*path&nbsp;...*]
 
 # DESCRIPTION
@@ -77,6 +78,13 @@ The options are as follows:
 > It Fl to Ar directory
 > Specify the base directory to which the files will be restored.
 > If omitted, files are restored to the current working directory.
+
+**-o** *option*=*value*
+
+> Can be used to pass extra arguments to the destination connector.
+> The given
+> *option*
+> takes precedence over the configuration file.
 
 **-quiet**
 
