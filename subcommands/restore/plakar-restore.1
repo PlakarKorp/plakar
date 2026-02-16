@@ -18,6 +18,7 @@
 .Op Fl skip-permissions
 .Op Fl tag Ar tag
 .Op Fl to Ar directory
+.Op Fl o Ar option Ns No = Ns Ar value
 .Op Ar snapshotID : Ns Ar path ...
 .Sh DESCRIPTION
 The
@@ -61,6 +62,11 @@ defaulting to 0750 for directories and 0640 for files.
 It Fl to Ar directory
 Specify the base directory to which the files will be restored.
 If omitted, files are restored to the current working directory.
+.It Fl o Ar option Ns No = Ns Ar value
+Can be used to pass extra arguments to the destination connector.
+The given
+.Ar option
+takes precedence over the configuration file.
 .It Fl quiet
 Suppress output to standard input, only logging errors and warnings.
 .El
