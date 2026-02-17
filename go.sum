@@ -19,8 +19,8 @@ github.com/PlakarKorp/integration-stdio v1.1.0-beta.1 h1:1XznjqRPLBePte3A8VVeam9
 github.com/PlakarKorp/integration-stdio v1.1.0-beta.1/go.mod h1:Vj8GFQb2ct6HN0KxLqqkYuV/JHy3vsn4Z7df1P7OZ4Y=
 github.com/PlakarKorp/integration-tar v1.1.0-beta.1 h1:gr1tIUm9mIVFm65In5Z4GujVobEsnLvO6Ddbu3vWMNc=
 github.com/PlakarKorp/integration-tar v1.1.0-beta.1/go.mod h1:r2mfsrGgZLKYpbCpwjqQFRW2zHFeeprmGEt1FuB2YiA=
-github.com/PlakarKorp/kloset v1.1.0-beta.2.0.20260216120034-2353cd775d15 h1:LIg7jO9ve3BOM8KgbOuLfKYNWMdajhV+uVwLhs9tfFA=
-github.com/PlakarKorp/kloset v1.1.0-beta.2.0.20260216120034-2353cd775d15/go.mod h1:SZilnlIjzb8ZxVzTwIwJWrDAtjQ6FHEzkmQO/6nQFqM=
+github.com/PlakarKorp/kloset v1.1.0-beta.2.0.20260216214207-481fd195dd5a h1:hbbHugIp+p4FQLrkBEqr1af/P5a+hZP4R/qTmBnE+WU=
+github.com/PlakarKorp/kloset v1.1.0-beta.2.0.20260216214207-481fd195dd5a/go.mod h1:SZilnlIjzb8ZxVzTwIwJWrDAtjQ6FHEzkmQO/6nQFqM=
 github.com/PlakarKorp/pkg v1.1.0-beta.3 h1:Nq+sH6V+k/AactQHR8vwpH9zEM6ACh71Xk7801bxg8s=
 github.com/PlakarKorp/pkg v1.1.0-beta.3/go.mod h1:s9dGwoh3bl+GoDKd+NL+ckwsbGpYU8+jErk5byOHjSM=
 github.com/RaduBerinde/axisds v0.1.0 h1:YItk/RmU5nvlsv/awo2Fjx97Mfpt4JfgtEVAGPrLdz8=
