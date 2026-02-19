@@ -19,6 +19,7 @@ package restore
 import (
 	"flag"
 	"fmt"
+	"maps"
 	"path"
 	"strings"
 	"time"
@@ -29,6 +30,7 @@ import (
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/PlakarKorp/plakar/utils"
 )
 
 type Restore struct {
@@ -41,6 +43,7 @@ type Restore struct {
 	OptJob             string
 	OptTag             string
 	OptSkipPermissions bool
+	Opts               map[string]string
 
 	Target    string
 	Strip     string
@@ -53,6 +56,8 @@ func init() {
 
 func (cmd *Restore) Parse(ctx *appcontext.AppContext, args []string) error {
 	var pullPath string
+
+	cmd.Opts = make(map[string]string)
 
 	flags := flag.NewFlagSet("restore", flag.ExitOnError)
 	flags.Usage = func() {
@@ -67,6 +72,7 @@ func (cmd *Restore) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags.StringVar(&cmd.OptPerimeter, "perimeter", "", "filter by perimeter")
 	flags.StringVar(&cmd.OptJob, "job", "", "filter by job")
 	flags.StringVar(&cmd.OptTag, "tag", "", "filter by tag")
+	flags.Var(utils.NewOptsFlag(cmd.Opts), "o", "specify extra exporter options")
 
 	flags.StringVar(&pullPath, "to", "", "base directory where pull will restore")
 	flags.BoolVar(&cmd.OptSkipPermissions, "skip-permissions", false, "do not restore file permissions")
@@ -155,6 +161,8 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 			exporterConfig = remote
 		}
 	}
+
+	maps.Copy(exporterConfig, cmd.Opts)
 
 	var exporterInstance exporter.Exporter
 	var err error
