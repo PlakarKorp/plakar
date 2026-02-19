@@ -328,12 +328,6 @@ func (cmd *Maintenance) Execute(ctx *appcontext.AppContext, repo *repository.Rep
 	// This random id generation for non snapshot state should probably be encapsulated somewhere.
 	cmd.maintenanceID = objects.RandomMAC()
 
-	done, err := cmd.Lock()
-	if err != nil {
-		return 1, err
-	}
-	defer cmd.Unlock(done)
-
 	cache, err := repo.AppContext().GetCache().Maintenance(repo.Configuration().RepositoryID)
 	if err != nil {
 		fmt.Fprintf(ctx.Stderr, "maintenance: Failed to open local cache %s\n", err)
