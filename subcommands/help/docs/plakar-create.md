@@ -47,4 +47,4 @@ The **plakar-create** utility exits&#160;0 on success, and&#160;&gt;0 if an erro
 plakar(1),
 plakar-backup(1)
 
-Plakar - July 3, 2025 - PLAKAR-CREATE(1)
+Plakar - July 3, 2025

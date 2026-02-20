@@ -67,4 +67,4 @@ When a host name is provided,
 uses only one of the IP addresses it resolves to,
 preferably IPv4 .
 
-Plakar - July 3, 2025 - PLAKAR-SERVER(1)
+Plakar - July 3, 2025

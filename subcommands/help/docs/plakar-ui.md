@@ -67,4 +67,4 @@ The **plakar-ui** utility exits&#160;0 on success, and&#160;&gt;0 if an error oc
 
 plakar(1)
 
-Plakar - August 6, 2025 - PLAKAR-UI(1)
+Plakar - August 6, 2025
