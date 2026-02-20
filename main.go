@@ -389,11 +389,13 @@ func entryPoint() int {
 		}
 	}
 
-	repoInexistant := cmd.GetFlags()&subcommands.BeforeRepositoryWithStorage != 0
-	if repo != nil && !repoInexistant && len(name) > 0 && name[0] != "repair" {
-		if err := isRepairNeeded(ctx, repo); err != nil {
-			fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
-			return 1
+	if opt_agentless {
+		repoInexistant := cmd.GetFlags()&subcommands.BeforeRepositoryWithStorage != 0
+		if repo != nil && !repoInexistant && len(name) > 0 && name[0] != "repair" {
+			if err := isRepairNeeded(ctx, repo); err != nil {
+				fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
+				return 1
+			}
 		}
 	}
 

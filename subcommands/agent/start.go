@@ -18,6 +18,7 @@ package agent
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
 	"flag"
 	"fmt"
@@ -358,6 +359,19 @@ func handleClient(ctx *appcontext.AppContext, conn net.Conn) {
 		defer repo.Close()
 	}
 
+	repoInexistant := subcommand.GetFlags()&subcommands.BeforeRepositoryWithStorage != 0
+	if repo != nil && !repoInexistant && len(name) > 0 && name[0] != "repair" {
+		if err := isRepairNeeded(ctx, repo); err != nil {
+			fmt.Fprintf(clientContext.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
+			write(agent.Packet{
+				Type:     "exit",
+				ExitCode: 1,
+				Err:      err.Error(),
+			})
+			return
+		}
+	}
+
 	if synccmd, ok := subcommand.(*psync.Sync); ok {
 		if err := setupPeerSecret(clientContext, synccmd); err != nil {
 			clientContext.GetLogger().Warn("Failed to setup peer secret: %v", err)
@@ -534,4 +548,29 @@ func (cr *CustomReader) Read(p []byte) (n int, err error) {
 			return 0, io.EOF
 		}
 	}
+}
+
+func isRepairNeeded(ctx *appcontext.AppContext, repo *repository.Repository) error {
+	var (
+		store   = repo.Store()
+		cookies = ctx.GetCookies()
+		id      = repo.Configuration().RepositoryID
+	)
+
+	location, err := store.Location(ctx)
+	if err != nil {
+		return err
+	}
+
+	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(location)))
+	if cookies.HasRepositoryCookie(id, hash) {
+		return nil
+	}
+
+	if err := utils.ShouldRepair(repo); err != nil {
+		return err
+	}
+
+	cookies.PutRepositoryCookie(id, hash)
+	return nil
 }
