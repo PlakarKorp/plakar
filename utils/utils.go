@@ -132,10 +132,10 @@ func CheckUpdate(cachedir string) (update ReleaseUpdateSummary, err error) {
 		}
 
 		body := latestEntry.Content.Body
-		if strings.HasPrefix(body, "SECURITY") {
+		if strings.Contains(body, "SECURITY") {
 			update.SecurityFix = true
 		}
-		if strings.HasPrefix(body, "RELIABILITY") {
+		if strings.Contains(body, "RELIABILITY") {
 			update.ReliabilityFix = true
 		}
 	}
