@@ -185,6 +185,17 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 		return 1, fmt.Errorf("could not open peer store %s: %s", cmd.PeerRepositoryLocation, err)
 	}
 
+	const (
+		ansiRed   = "\x1b[31m"
+		ansiReset = "\x1b[0m"
+	)
+
+	if repo.Configuration().RepositoryID == peerRepository.Configuration().RepositoryID {
+		ctx.GetLogger().Error(ansiRed + "Stores created with `plakar clone` are no longer supported: they are unsafe in synchronization scenarios." + ansiReset)
+		ctx.GetLogger().Error(ansiRed + "Run `plakar check` on both repositories, then recreate one end with `plakar create` (not `plakar clone`), or contact support@plakar.io for a supported transition." + ansiReset)
+		return 1, fmt.Errorf("ERROR: cannot synchronize clone stores")
+	}
+
 	if cmd.PackfileTempStorage != "memory" {
 		tmpDir, err := os.MkdirTemp(cmd.PackfileTempStorage, "plakar-sync-"+repo.Configuration().RepositoryID.String()+"-*")
 		if err != nil {
