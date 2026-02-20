@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
 	"flag"
 	"fmt"
@@ -389,6 +390,14 @@ func entryPoint() int {
 		}
 	}
 
+	repoInexistant := cmd.GetFlags()&subcommands.BeforeRepositoryWithStorage != 0
+	if repo != nil && !repoInexistant && len(name) > 0 && name[0] != "repair" {
+		if err := isRepairNeeded(ctx, repo); err != nil {
+			fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
+			return 1
+		}
+	}
+
 	t0 := time.Now()
 	if err := cmd.Parse(ctx, args); err != nil {
 		fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
@@ -620,6 +629,31 @@ func listCmds(out io.Writer, prefix string) {
 		}
 	}
 	flush()
+}
+
+func isRepairNeeded(ctx *appcontext.AppContext, repo *repository.Repository) error {
+	var (
+		store   = repo.Store()
+		cookies = ctx.GetCookies()
+		id      = repo.Configuration().RepositoryID
+	)
+
+	location, err := store.Location(ctx)
+	if err != nil {
+		return err
+	}
+
+	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(location)))
+	if cookies.HasRepositoryCookie(id, hash) {
+		return nil
+	}
+
+	if err := utils.ShouldRepair(repo); err != nil {
+		return err
+	}
+
+	cookies.PutRepositoryCookie(id, hash)
+	return nil
 }
 
 func main() {
