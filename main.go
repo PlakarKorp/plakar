@@ -39,7 +39,6 @@ import (
 	_ "github.com/PlakarKorp/plakar/subcommands/backup"
 	_ "github.com/PlakarKorp/plakar/subcommands/cat"
 	_ "github.com/PlakarKorp/plakar/subcommands/check"
-	_ "github.com/PlakarKorp/plakar/subcommands/clone"
 	_ "github.com/PlakarKorp/plakar/subcommands/config"
 	_ "github.com/PlakarKorp/plakar/subcommands/create"
 	_ "github.com/PlakarKorp/plakar/subcommands/diag"
