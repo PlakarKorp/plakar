@@ -92,7 +92,14 @@ func (ui *uiserver) repositoryInfo(w http.ResponseWriter, r *http.Request) error
 		}
 	}
 
-	location := ui.repository.Origin()
+	location := ui.repository.Type() + "://"
+	if host := ui.repository.Origin(); host != "" && host != "localhost" {
+		location += host
+	}
+	if root := ui.repository.Root(); root != "" && root != "/" {
+		location += root
+	}
+
 	mode, err := ui.repository.Store().Mode(r.Context())
 	if err != nil {
 		return err
