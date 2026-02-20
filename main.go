@@ -643,6 +643,8 @@ func isRepairNeeded(ctx *appcontext.AppContext, repo *repository.Repository) err
 	}
 
 	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(location)))
+	hash = "repair-" + hash[:16]
+
 	if cookies.HasRepositoryCookie(id, hash) {
 		return nil
 	}
