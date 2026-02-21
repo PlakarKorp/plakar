@@ -187,6 +187,27 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 		return 1, fmt.Errorf("could not open peer store %s: %s", cmd.PeerRepositoryLocation, err)
 	}
 
+	if repo.Configuration().RepositoryID == peerRepository.Configuration().RepositoryID {
+		if repo.Origin() == peerRepository.Origin() && repo.Root() == peerRepository.Root() {
+			return 1, fmt.Errorf("cannot synchronize snapshots to the same store")
+		}
+
+		ctx.GetLogger().Error("ATTENTION")
+		ctx.GetLogger().Error("")
+		ctx.GetLogger().Error("both stores have the same identifier but different origins or roots.")
+		ctx.GetLogger().Error("")
+		ctx.GetLogger().Error("this means one store was created using `plakar clone` instead of `plakar create`,")
+		ctx.GetLogger().Error("but `plakar clone` is now deprecated as it is unsafe to use.")
+		ctx.GetLogger().Error("")
+		ctx.GetLogger().Error("DON'T WORRY, here's a plan !")
+		ctx.GetLogger().Error("")
+		ctx.GetLogger().Error("STEP 1: run `plakar check` on both ends")
+		ctx.GetLogger().Error("STEP 2: if no error, recreate your target store using `plakar create` and sync again")
+		ctx.GetLogger().Error("STEP 3: if errors were found, contact support@plakar.io and we will take care of you")
+		ctx.GetLogger().Error("")
+		return 1, fmt.Errorf("cannot synchronize snapshots from cloned stores")
+	}
+
 	if cmd.PackfileTempStorage != "memory" {
 		tmpDir, err := os.MkdirTemp(cmd.PackfileTempStorage, "plakar-sync-"+repo.Configuration().RepositoryID.String()+"-*")
 		if err != nil {
