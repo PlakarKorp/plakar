@@ -93,7 +93,7 @@ func (cmd *DiagState) Execute(ctx *appcontext.AppContext, repo *repository.Repos
 				}
 			}
 			printDeleted := func(name string, Type resources.Type) {
-				for deletedEntry, err := range st.ListDeletedResources(Type) {
+				for deletedEntry, err := range st.ListColouredResources(Type) {
 					if err != nil {
 						fmt.Fprintf(ctx.Stdout, "Could not fetch deleted blob entry for %s\n", name)
 					} else {
