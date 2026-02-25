@@ -1,0 +1,119 @@
+name: Bug Report
+description: File a bug report.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+        Please fill in as much detail as possible to help us reproduce and fix the issue.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: A clear and concise description of what the bug is.
+      placeholder: What happened?
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: How do we reproduce the issue?
+      placeholder: |
+        1. Run `plakar ...`
+        2. Then run `plakar ...`
+        3. See error
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen?
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What actually happened? Paste error messages or panic traces here.
+      render: shell
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## Environment
+        Please run the commands below and paste the output in the relevant fields.
+
+  - type: input
+    id: plakar-version
+    attributes:
+      label: Plakar version
+      description: Run `plakar version`
+      placeholder: e.g. v1.1.0
+
+  - type: textarea
+    id: plugin-versions
+    attributes:
+      label: Plugin versions
+      description: Run `plakar pkg show` and paste the output here. Leave blank if you have no plugins installed.
+      render: shell
+
+  - type: input
+    id: os
+    attributes:
+      label: OS, version and architecture
+      description: Run `uname -srm` on Linux/macOS, or describe your system on Windows.
+      placeholder: e.g. Linux 6.18.7-arch1-1 x86_64 / macOS 15.3 arm64 / Windows 11 x86_64
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## Store & destination
+
+  - type: input
+    id: store-location
+    attributes:
+      label: Store location
+      description: Where is the store? (local path, S3 bucket URL, SFTP URL, etc.) Redact sensitive parts.
+      placeholder: e.g. /mnt/backup, s3://my-bucket/plakar, sftp://user@host/path
+
+  - type: input
+    id: backup-source
+    attributes:
+      label: Backup source location
+      description: What are you backing up? (local path, S3 bucket URL, SFTP URL, etc.) Redact sensitive parts.
+      placeholder: e.g. /home/user/documents, s3://my-bucket/data, sftp://user@host/path
+
+  - type: input
+    id: destination
+    attributes:
+      label: Restore destination (if applicable)
+      description: Where are you restoring to, if this is a restore issue?
+      placeholder: e.g. /tmp/restore, s3://other-bucket
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## Logs
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Debug output
+      description: |
+        Re-run your command with `-trace all` and paste the full output here.
+        You can narrow down the trace to specific subsystems using a comma-separated list:
+        `all`, `repository`, `snapshot`, `server` — e.g. `plakar -trace repository,snapshot at ...`
+      render: shell
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: |
+        Anything else that might be relevant: network setup, concurrent operations,
+        repository size, whether this is a regression (worked before on version X), etc.
