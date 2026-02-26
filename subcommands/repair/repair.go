@@ -95,7 +95,10 @@ func (cmd *Repair) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 			return 1, err
 		}
 
-		deltaState := state.NewLocalState(scanCache)
+		deltaState, err := state.NewLocalState(scanCache)
+		if err != nil {
+			return 1, err
+		}
 
 		for _, pf := range packfiles {
 			p, err := repo.GetPackfile(pf)

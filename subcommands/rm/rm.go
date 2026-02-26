@@ -144,6 +144,7 @@ func (cmd *Rm) Execute(ctx *appcontext.AppContext, repo *repository.Repository) 
 	// execution
 	errors := 0
 	wg := sync.WaitGroup{}
+	repo.NoStateToLocalDisk = true
 	for _, matchID := range matches {
 		wg.Add(1)
 		go func(snapshotID objects.MAC) {
