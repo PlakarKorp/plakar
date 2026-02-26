@@ -376,6 +376,7 @@ func (cmd *Maintenance) Lock() (chan bool, error) {
 		return lockDone, nil
 	}
 
+	cmd.repository.NoStateToLocalDisk = true
 	lock := repository.NewExclusiveLock(cmd.repository.AppContext().Hostname)
 
 	buffer := &bytes.Buffer{}
