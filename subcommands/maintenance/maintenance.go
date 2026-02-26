@@ -178,7 +178,8 @@ func (cmd *Maintenance) colourPass(ctx *appcontext.AppContext, cache *caching.Ma
 		}
 	}
 
-	sc, err := cmd.repository.AppContext().GetCache().Scan(cmd.maintenanceID)
+	stateID := objects.RandomMAC()
+	sc, err := cmd.repository.AppContext().GetCache().Scan(stateID)
 	if err != nil {
 		return err
 	}
@@ -187,7 +188,7 @@ func (cmd *Maintenance) colourPass(ctx *appcontext.AppContext, cache *caching.Ma
 	// For now we keep the same serial so that those delete gets merged in.
 	// Once we do the real deletion we will rebuild the aggregated view
 	// excluding those resources alltogether.
-	repoWriter := cmd.repository.NewRepositoryWriter(sc, cmd.maintenanceID, repository.DefaultType, "")
+	repoWriter := cmd.repository.NewRepositoryWriter(sc, stateID, repository.DefaultType, "")
 
 	coloredPackfiles := 0
 	for packfile := range packfiles {
@@ -230,7 +231,7 @@ func (cmd *Maintenance) colourPass(ctx *appcontext.AppContext, cache *caching.Ma
 
 		fmt.Fprintf(ctx.Stdout, "Coloured packfiles are scheduled to be removed in %s\n", humanDuration)
 
-		if err := repoWriter.CommitTransaction(cmd.maintenanceID); err != nil {
+		if err := repoWriter.CommitTransaction(stateID); err != nil {
 			return err
 		}
 	}
@@ -241,10 +242,17 @@ func (cmd *Maintenance) colourPass(ctx *appcontext.AppContext, cache *caching.Ma
 func (cmd *Maintenance) sweepPass(ctx *appcontext.AppContext, cache *caching.MaintenanceCache) error {
 	doDeletion, _ := strconv.ParseBool(os.Getenv("PLAKAR_DODELETION"))
 
+	stateID := objects.RandomMAC()
+	sc, err := cmd.repository.AppContext().GetCache().Scan(stateID)
+	if err != nil {
+		return err
+	}
+	repoWriter := cmd.repository.NewRepositoryWriter(sc, stateID, repository.DefaultType, "")
+
 	// First go over all the packfiles coloured by first pass.
 	blobRemoved := 0
 	toDelete := map[objects.MAC]struct{}{}
-	for packfileMAC, deletionTime := range cmd.repository.ListDeletedPackfiles() {
+	for packfileMAC, deletionTime := range cmd.repository.ListColouredPackfiles() {
 		if deletionTime.After(cmd.cutoff) {
 			continue
 		}
@@ -254,23 +262,28 @@ func (cmd *Maintenance) sweepPass(ctx *appcontext.AppContext, cache *caching.Mai
 		// phase.
 		if cache.HasPackfile(packfileMAC) {
 			fmt.Fprintf(ctx.Stderr, "maintenance: Concurrent backup used %x, uncolouring the packfile.\n", packfileMAC)
-			cmd.repository.RemoveDeletedPackfile(packfileMAC)
+			repoWriter.UncolourPackfile(packfileMAC)
 			continue
 		}
 
 		// First thing we remove the packfile entry from our state, this means
 		// that now effectively all of its blob are unreachable
-		if err := cmd.repository.RemovePackfile(packfileMAC); err != nil {
+		if err := repoWriter.RemovePackfile(packfileMAC); err != nil {
 			fmt.Fprintf(ctx.Stderr, "maintenance: Failed to remove packfile %s from state\n", packfileMAC)
 			continue
 		}
 
-		cmd.repository.RemoveDeletedPackfile(packfileMAC)
+		repoWriter.UncolourPackfile(packfileMAC)
 		toDelete[packfileMAC] = struct{}{}
 	}
 
-	// Second garbage collect dangling blobs in our state. This is the blobs we
-	// just orphaned plus potential orphan blobs from aborted backups etc.
+	// Second garbage collect dangling blobs in our state.
+	// Note: This is not the blobs from the packfile we just removed, since we
+	// do not operate on our local state, it's the responsability of the
+	// LocalState ingestion to unroll packfiles -> blobs deletion (which is a
+	// nice property as it makes for way smaller delta states).
+	// We still do this pass as a sanity check, but maybe we should get rid of
+	// it entirely since our whole maintenance is purely packfile based.
 	for blob, err := range cmd.repository.ListOrphanBlobs() {
 		if err != nil {
 			fmt.Fprintf(ctx.Stderr, "maintenance: Failed to fetch orphaned blob\n")
@@ -278,7 +291,7 @@ func (cmd *Maintenance) sweepPass(ctx *appcontext.AppContext, cache *caching.Mai
 		}
 
 		blobRemoved++
-		if err := cmd.repository.RemoveBlob(blob.Type, blob.Blob, blob.Location.Packfile); err != nil {
+		if err := repoWriter.RemoveBlob(blob.Type, blob.Blob, blob.Location.Packfile); err != nil {
 			// No hurt in this failing, we just have cruft left around, but they are unreachable anyway.
 			fmt.Fprintf(ctx.Stderr, "maintenance: garbage orphaned blobs pass failed to remove blob %x, type %s\n", blob.Blob, blob.Type)
 		}
@@ -287,7 +300,7 @@ func (cmd *Maintenance) sweepPass(ctx *appcontext.AppContext, cache *caching.Mai
 	fmt.Fprintf(ctx.Stdout, "maintenance: %d blobs and %d packfiles were removed\n", blobRemoved, len(toDelete))
 
 	if len(toDelete) > 0 {
-		if err := cmd.repository.PutCurrentState(); err != nil {
+		if err := repoWriter.CommitTransaction(stateID); err != nil {
 			return err
 		}
 	}
@@ -325,9 +338,7 @@ func (cmd *Maintenance) Execute(ctx *appcontext.AppContext, repo *repository.Rep
 
 	cmd.cutoff = time.Now().Add(-duration)
 
-	// This random id generation for non snapshot state should probably be encapsulated somewhere.
 	cmd.maintenanceID = objects.RandomMAC()
-
 	done, err := cmd.Lock()
 	if err != nil {
 		return 1, err
