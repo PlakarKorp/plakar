@@ -100,7 +100,9 @@ func (cmd *Cached) Parse(ctx *appcontext.AppContext, args []string) error {
 		ctx.GetLogger().SetOutput(f)
 	} else if !opt_foreground {
 		if err := setupSyslog(ctx); err != nil {
-			return err
+			ctx.GetLogger().Error("failed to setup syslog: %s", err)
+			ctx.GetLogger().Error("will discard all future logs")
+			ctx.GetLogger().SetOutput(io.Discard)
 		}
 	}
 
