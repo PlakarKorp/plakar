@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/PlakarKorp/kloset/connectors/storage"
+	"github.com/PlakarKorp/kloset/location"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/kloset/snapshot/header"
@@ -92,14 +93,25 @@ func (ui *uiserver) repositoryInfo(w http.ResponseWriter, r *http.Request) error
 		}
 	}
 
-	location := ui.repository.Origin()
+	var (
+		loc   = ui.repository.Type() + "://"
+		flags = ui.repository.Store().Flags()
+	)
+
+	if host := ui.repository.Origin(); host != "" && (flags&location.FLAG_LOCALFS) == 0 {
+		loc += host
+	}
+	if root := ui.repository.Root(); root != "" && root != "/" {
+		loc += root
+	}
+
 	mode, err := ui.repository.Store().Mode(r.Context())
 	if err != nil {
 		return err
 	}
 
 	return json.NewEncoder(w).Encode(Item[RepositoryInfoResponse]{Item: RepositoryInfoResponse{
-		Location: location,
+		Location: loc,
 		Snapshots: RepositoryInfoSnapshots{
 			Total:           nSnapshots,
 			StorageSize:     storageSize,
