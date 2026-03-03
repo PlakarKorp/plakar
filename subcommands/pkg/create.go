@@ -27,12 +27,12 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/PlakarKorp/kloset/connectors/storage"
 	"github.com/PlakarKorp/kloset/hashing"
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/resources"
 	"github.com/PlakarKorp/kloset/snapshot"
-	"github.com/PlakarKorp/kloset/connectors/storage"
 	"github.com/PlakarKorp/kloset/versioning"
 	"github.com/PlakarKorp/pkg"
 	"github.com/PlakarKorp/plakar/appcontext"
@@ -79,6 +79,10 @@ func (cmd *PkgCreate) Parse(ctx *appcontext.AppContext, args []string) error {
 	}
 	cmd.Base = filepath.Dir(manifest)
 	cmd.ManifestPath = manifest
+
+	if filepath.Base(manifest) != "manifest.yaml" {
+		return fmt.Errorf("manifest's file name must be manifest.yaml")
+	}
 
 	fp, err := os.Open(manifest)
 	if err != nil {
