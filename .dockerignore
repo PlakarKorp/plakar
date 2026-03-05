@@ -1,0 +1,13 @@
+.github
+.goreleaser.yml
+.gitignore
+README.md
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
+SECURITY.md
+docs/
+unittests/
+testing/
+dist/
+plakar
+**/.DS_Store
