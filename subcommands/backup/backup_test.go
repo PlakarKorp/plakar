@@ -185,6 +185,194 @@ func TestExecuteCmdCreateWithHooks(t *testing.T) {
 	require.Contains(t, output, "backup completed")
 }
 
+func TestBackupWithPlakarTagsEnv(t *testing.T) {
+	original := os.Getenv("PLAKAR_TAGS")
+	defer os.Setenv("PLAKAR_TAGS", original)
+	os.Setenv("PLAKAR_TAGS", "daily,important")
+
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+
+	repo, tmpBackupDir, ctx := generateFixtures(t, bufOut, bufErr)
+
+	renderer := stdio.New(ctx)
+	renderer.Run()
+	defer renderer.Wait()
+	defer ctx.Close()
+
+	ctx.MaxConcurrency = 1
+	ctx.Stdout = bufOut
+	ctx.Stderr = bufErr
+	args := []string{tmpBackupDir}
+
+	subcommand := &Backup{}
+	err := subcommand.Parse(ctx, args)
+	require.NoError(t, err)
+
+	require.Equal(t, []string{"daily", "important"}, subcommand.Tags)
+
+	status, err := subcommand.Execute(ctx, repo)
+	require.NoError(t, err)
+	require.Equal(t, 0, status)
+}
+
+func TestBackupTagFlagOverridesEnv(t *testing.T) {
+	original := os.Getenv("PLAKAR_TAGS")
+	defer os.Setenv("PLAKAR_TAGS", original)
+	os.Setenv("PLAKAR_TAGS", "env-tag1,env-tag2")
+
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+
+	repo, tmpBackupDir, ctx := generateFixtures(t, bufOut, bufErr)
+
+	renderer := stdio.New(ctx)
+	renderer.Run()
+	defer renderer.Wait()
+	defer ctx.Close()
+
+	ctx.MaxConcurrency = 1
+	ctx.Stdout = bufOut
+	ctx.Stderr = bufErr
+	args := []string{"-tag", "cli-tag", tmpBackupDir}
+
+	subcommand := &Backup{}
+	err := subcommand.Parse(ctx, args)
+	require.NoError(t, err)
+
+	// CLI flag should win over env var
+	require.Equal(t, []string{"cli-tag"}, subcommand.Tags)
+
+	status, err := subcommand.Execute(ctx, repo)
+	require.NoError(t, err)
+	require.Equal(t, 0, status)
+}
+
+func TestBackupEmptyPlakarTagsEnv(t *testing.T) {
+	original := os.Getenv("PLAKAR_TAGS")
+	defer os.Setenv("PLAKAR_TAGS", original)
+	os.Setenv("PLAKAR_TAGS", "")
+
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+
+	repo, tmpBackupDir, ctx := generateFixtures(t, bufOut, bufErr)
+
+	renderer := stdio.New(ctx)
+	renderer.Run()
+	defer renderer.Wait()
+	defer ctx.Close()
+
+	ctx.MaxConcurrency = 1
+	ctx.Stdout = bufOut
+	ctx.Stderr = bufErr
+	args := []string{tmpBackupDir}
+
+	subcommand := &Backup{}
+	err := subcommand.Parse(ctx, args)
+	require.NoError(t, err)
+
+	// No tags should be set
+	require.Equal(t, []string{}, subcommand.Tags)
+
+	status, err := subcommand.Execute(ctx, repo)
+	require.NoError(t, err)
+	require.Equal(t, 0, status)
+}
+
+func TestBackupPlakarTagsWhitespace(t *testing.T) {
+	original := os.Getenv("PLAKAR_TAGS")
+	defer os.Setenv("PLAKAR_TAGS", original)
+	os.Setenv("PLAKAR_TAGS", "ci, nightly , prod")
+
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+
+	repo, tmpBackupDir, ctx := generateFixtures(t, bufOut, bufErr)
+
+	renderer := stdio.New(ctx)
+	renderer.Run()
+	defer renderer.Wait()
+	defer ctx.Close()
+
+	ctx.MaxConcurrency = 1
+	ctx.Stdout = bufOut
+	ctx.Stderr = bufErr
+	args := []string{tmpBackupDir}
+
+	subcommand := &Backup{}
+	err := subcommand.Parse(ctx, args)
+	require.NoError(t, err)
+
+	require.Equal(t, []string{"ci", "nightly", "prod"}, subcommand.Tags)
+
+	status, err := subcommand.Execute(ctx, repo)
+	require.NoError(t, err)
+	require.Equal(t, 0, status)
+}
+
+func TestBackupPlakarTagsDoubleComma(t *testing.T) {
+	original := os.Getenv("PLAKAR_TAGS")
+	defer os.Setenv("PLAKAR_TAGS", original)
+	os.Setenv("PLAKAR_TAGS", "ci,,nightly")
+
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+
+	repo, tmpBackupDir, ctx := generateFixtures(t, bufOut, bufErr)
+
+	renderer := stdio.New(ctx)
+	renderer.Run()
+	defer renderer.Wait()
+	defer ctx.Close()
+
+	ctx.MaxConcurrency = 1
+	ctx.Stdout = bufOut
+	ctx.Stderr = bufErr
+	args := []string{tmpBackupDir}
+
+	subcommand := &Backup{}
+	err := subcommand.Parse(ctx, args)
+	require.NoError(t, err)
+
+	require.Equal(t, []string{"ci", "nightly"}, subcommand.Tags)
+
+	status, err := subcommand.Execute(ctx, repo)
+	require.NoError(t, err)
+	require.Equal(t, 0, status)
+}
+
+func TestBackupPlakarTagsTrailingComma(t *testing.T) {
+	original := os.Getenv("PLAKAR_TAGS")
+	defer os.Setenv("PLAKAR_TAGS", original)
+	os.Setenv("PLAKAR_TAGS", "ci,nightly,")
+
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+
+	repo, tmpBackupDir, ctx := generateFixtures(t, bufOut, bufErr)
+
+	renderer := stdio.New(ctx)
+	renderer.Run()
+	defer renderer.Wait()
+	defer ctx.Close()
+
+	ctx.MaxConcurrency = 1
+	ctx.Stdout = bufOut
+	ctx.Stderr = bufErr
+	args := []string{tmpBackupDir}
+
+	subcommand := &Backup{}
+	err := subcommand.Parse(ctx, args)
+	require.NoError(t, err)
+
+	require.Equal(t, []string{"ci", "nightly"}, subcommand.Tags)
+
+	status, err := subcommand.Execute(ctx, repo)
+	require.NoError(t, err)
+	require.Equal(t, 0, status)
+}
+
 func TestExecuteCmdCreateDefaultWithIgnores(t *testing.T) {
 	bufOut := bytes.NewBuffer(nil)
 	bufErr := bytes.NewBuffer(nil)
