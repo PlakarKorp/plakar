@@ -247,6 +247,14 @@ The following commands are available:
 
 > Reference to the Kloset store.
 
+`PLAKAR_TAGS`
+
+> Comma-separated list of tags to apply to snapshots created with
+> **plakar backup**.
+> Overridden by the
+> **-tag**
+> flag.
+
 `PLAKAR_TOKEN`
 
 > Token to authenticate for Plakar services.

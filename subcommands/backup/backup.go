@@ -156,6 +156,22 @@ func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
 	cmd.RepositorySecret = ctx.GetSecret()
 	cmd.Excludes = excludes
 	cmd.Tags = opt_tags.asList()
+
+	// If no tags were provided via CLI flag, check PLAKAR_TAGS env var
+	if len(cmd.Tags) == 0 {
+		if envTags, ok := os.LookupEnv("PLAKAR_TAGS"); ok && envTags != "" {
+			parts := strings.Split(envTags, ",")
+			var tags []string
+			for _, t := range parts {
+				t = strings.TrimSpace(t)
+				if t != "" {
+					tags = append(tags, t)
+				}
+			}
+			cmd.Tags = tags
+		}
+	}
+
 	cmd.Sources = flags.Args()
 
 	if len(cmd.Sources) == 0 {
