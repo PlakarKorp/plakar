@@ -30,6 +30,7 @@ import (
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/task"
 	"github.com/PlakarKorp/plakar/ui"
+	jsonui "github.com/PlakarKorp/plakar/ui/json"
 	"github.com/PlakarKorp/plakar/ui/stdio"
 	"github.com/PlakarKorp/plakar/ui/tui"
 	"github.com/PlakarKorp/plakar/utils"
@@ -122,6 +123,7 @@ func entryPoint() int {
 	var opt_memProfile string
 	var opt_time bool
 	var opt_trace string
+	var opt_json bool
 	var opt_stdio bool
 	var opt_quiet bool
 	var opt_silent bool
@@ -137,6 +139,7 @@ func entryPoint() int {
 	flag.StringVar(&opt_memProfile, "profile-mem", "", "profile MEM usage")
 	flag.BoolVar(&opt_time, "time", false, "display command execution time")
 	flag.StringVar(&opt_trace, "trace", "", "display trace logs, comma-separated (all, trace, repository, snapshot, server)")
+	flag.BoolVar(&opt_json, "json", false, "output events as JSON lines")
 	flag.BoolVar(&opt_stdio, "stdio", false, "use stdio user interface")
 	flag.BoolVar(&opt_quiet, "quiet", false, "no output except errors")
 	flag.BoolVar(&opt_silent, "silent", false, "no output at all")
@@ -162,7 +165,9 @@ func entryPoint() int {
 	defer ctx.Close()
 
 	var renderer ui.UI
-	if opt_stdio || opt_quiet || opt_silent || opt_trace != "" || !term.IsTerminal(1) {
+	if opt_json {
+		renderer = jsonui.New(ctx)
+	} else if opt_stdio || opt_quiet || opt_silent || opt_trace != "" || !term.IsTerminal(1) {
 		renderer = stdio.New(ctx)
 	} else {
 		renderer = tui.New(ctx)
