@@ -62,6 +62,7 @@ import (
 	_ "github.com/PlakarKorp/plakar/subcommands/repair"
 	_ "github.com/PlakarKorp/plakar/subcommands/restore"
 	_ "github.com/PlakarKorp/plakar/subcommands/rm"
+	_ "github.com/PlakarKorp/plakar/subcommands/rsync"
 	_ "github.com/PlakarKorp/plakar/subcommands/server"
 	_ "github.com/PlakarKorp/plakar/subcommands/service"
 	_ "github.com/PlakarKorp/plakar/subcommands/sync"
