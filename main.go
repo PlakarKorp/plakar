@@ -33,7 +33,6 @@ import (
 	"github.com/PlakarKorp/plakar/ui/stdio"
 	"github.com/PlakarKorp/plakar/ui/tui"
 	"github.com/PlakarKorp/plakar/utils"
-	"github.com/charmbracelet/x/term"
 	"github.com/denisbrodbeck/machineid"
 	"github.com/google/uuid"
 
@@ -163,7 +162,7 @@ func entryPoint() int {
 	defer ctx.Close()
 
 	var renderer ui.UI
-	if opt_stdio || opt_quiet || opt_silent || opt_trace != "" || !term.IsTerminal(1) {
+	if opt_stdio || opt_quiet || opt_silent || opt_trace != "" || !isTerminal() {
 		renderer = stdio.New(ctx)
 	} else {
 		renderer = tui.New(ctx)
