@@ -27,6 +27,7 @@ import (
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/cached"
 	"github.com/PlakarKorp/plakar/cookies"
+	"github.com/PlakarKorp/plakar/exitcodes"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/task"
 	"github.com/PlakarKorp/plakar/ui"
@@ -382,7 +383,7 @@ func entryPoint() int {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s: failed to open the repository at %s: %s\n", flag.CommandLine.Name(), storeConfig["location"], err)
 			fmt.Fprintln(os.Stderr, "To specify an alternative repository, please use \"plakar at <location> <command>\".")
-			return 1
+			return exitcodes.RepoNotFound
 		}
 
 		repoConfig, err := storage.NewConfigurationFromWrappedBytes(serializedConfig)
@@ -394,12 +395,12 @@ func entryPoint() int {
 		if repoConfig.Version != versioning.FromString(storage.VERSION) {
 			fmt.Fprintf(os.Stderr, "%s: incompatible repository version: %s != %s\n",
 				flag.CommandLine.Name(), repoConfig.Version, storage.VERSION)
-			return 1
+			return exitcodes.RepoIncompatible
 		}
 
 		if err := setupEncryption(ctx, repoConfig); err != nil {
 			fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
-			return 1
+			return exitcodes.AuthFailure
 		}
 
 		// Actual rebuild is done by cached, unless we are on windows.
