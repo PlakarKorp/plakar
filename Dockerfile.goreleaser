@@ -1,0 +1,6 @@
+# Minimal runtime image for GoReleaser (binary provided via build context).
+# For manual multi-stage builds, see ./Dockerfile instead.
+FROM cgr.dev/chainguard/static:latest
+COPY plakar /usr/local/bin/plakar
+USER nonroot
+ENTRYPOINT ["plakar"]
