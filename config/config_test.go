@@ -64,13 +64,13 @@ func TestGetSource(t *testing.T) {
 	}
 
 	// Test non-existent source
-	source, ok := cfg.GetSource("test-source")
-	require.False(t, ok)
+	source, err := cfg.GetSource("test-source")
+	require.NotNil(t, err)
 	require.Nil(t, source)
 
 	// Test existing source
 	cfg.Sources["test-source"] = SourceConfig{"url": "test://url"}
-	source, ok = cfg.GetSource("test-source")
-	require.True(t, ok)
+	source, err = cfg.GetSource("test-source")
+	require.Nil(t, err)
 	require.Equal(t, "test://url", source["url"])
 }
