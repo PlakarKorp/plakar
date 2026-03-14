@@ -2,18 +2,23 @@ name: release
 
 on:
   push:
-    # run only against tags
+    # run only against version tags
     tags:
-      - "*"
+      - "v*"
 
 permissions:
   contents: write
+  packages: write
+  id-token: write # keyless cosign signing
 
 jobs:
   goreleaser:
     runs-on: ubuntu-latest
     env:
-      # true if tag-name doesn't contain a hyphen (eg. v1.2.3-dev, 1.2.4-nightly), false otherwise
+      # Evaluates to the string "true" or "false". true if tag-name doesn't
+      # contain a hyphen (eg. v1.2.3-dev, 1.2.4-nightly), false otherwise.
+      # GoReleaser templates consume this as a string comparison:
+      #   skip_push: '{{ ne .Env.MAKE_LATEST_RELEASE "true" }}'
       MAKE_LATEST_RELEASE: ${{ contains(github.ref_name, '-') == false }}
     steps:
       - name: Checkout
@@ -25,6 +30,22 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: stable
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
@@ -40,3 +61,11 @@ jobs:
           MAKE_LATEST_RELEASE: ${{ env.MAKE_LATEST_RELEASE }}
           # If using goreleaser-pro, uncomment the following line
           # GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+
+      - name: Sign container images with cosign
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          cosign sign --yes "ghcr.io/plakarkorp/plakar:${TAG}-amd64"
+          cosign sign --yes "ghcr.io/plakarkorp/plakar:${TAG}-arm64"
+          cosign sign --yes "ghcr.io/plakarkorp/plakar:${TAG}"
