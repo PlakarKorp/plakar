@@ -188,6 +188,23 @@ Kloset stores configuration.
 .It Pa ~/.plakar
 Default Kloset store location.
 .El
+.Sh EXIT STATUS
+.Bl -tag -width Ds
+.It 0
+Command completed successfully.
+.It 1
+A general error occurred.
+.It 2
+Invalid command-line arguments or flags.
+.It 10
+The repository could not be opened or located.
+.It 11
+Incompatible repository version.
+.It 12
+Authentication or decryption failure (wrong passphrase, missing keyfile).
+.It 13
+Data integrity check failed (corrupted chunks, verification mismatch).
+.El
 .Sh EXAMPLES
 Create an encrypted Kloset store at the default location:
 .Bd -literal -offset indent
