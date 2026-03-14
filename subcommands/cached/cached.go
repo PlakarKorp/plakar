@@ -60,13 +60,18 @@ type Cached struct {
 	jobMtx   sync.Mutex
 	jobQueue map[uuid.UUID](chan jobReq)
 
-	inflight sync.WaitGroup
+	runningJobs chan int
 }
 
 type jobReq struct {
 	stateID objects.MAC
 	ch      chan error
 }
+
+const (
+	newJob  = 1
+	jobDone = -1
+)
 
 func (cmd *Cached) Parse(ctx *appcontext.AppContext, args []string) error {
 	var opt_foreground bool
@@ -110,6 +115,7 @@ func (cmd *Cached) Parse(ctx *appcontext.AppContext, args []string) error {
 
 	cmd.jobMtx = sync.Mutex{}
 	cmd.jobQueue = make(map[uuid.UUID]chan jobReq)
+	cmd.runningJobs = make(chan int)
 
 	return nil
 }
@@ -146,6 +152,29 @@ func (cmd *Cached) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 	return 0, nil
 }
 
+// Background task dealing with the teardown, basically anything running sends a
+// message over the channel, when taks is done we get another message. If the
+// teardown time passes and nothing is in flight we are free to stop, otherwise
+// someone is running and we need to stay alive. This is not a perfect "last
+// request + teardown seconds" implementation but it's close enough for our need
+// and is simpler. This is conceptually a waitgroup, except we can't use a
+// waitgroup as it has one special property (you can't reincrement the semaphore
+// while a Wait() is in progress) that our use case would transgress.
+func (cmd *Cached) Watcher(listener net.Listener) {
+	var inflight int
+
+	for {
+		select {
+		case n := <-cmd.runningJobs:
+			inflight += n
+		case <-time.After(cmd.teardown):
+			if inflight == 0 {
+				listener.Close()
+			}
+		}
+	}
+}
+
 func (cmd *Cached) ListenAndServe(ctx *appcontext.AppContext) error {
 	lock, err := cached.LockedFile(cmd.socketPath + ".cached-lock")
 	if err != nil {
@@ -166,16 +195,12 @@ func (cmd *Cached) ListenAndServe(ctx *appcontext.AppContext) error {
 		return fmt.Errorf("failed to bind the socket: %w", err)
 	}
 
+	go cmd.Watcher(listener)
+
 	cancelled := false
 	go func() {
 		<-ctx.Done()
 		cancelled = true
-		listener.Close()
-	}()
-
-	go func() {
-		time.Sleep(cmd.teardown)
-		cmd.inflight.Wait()
 		listener.Close()
 	}()
 
@@ -194,17 +219,15 @@ func (cmd *Cached) ListenAndServe(ctx *appcontext.AppContext) error {
 			return err
 		}
 
-		cmd.inflight.Add(1)
+		cmd.runningJobs <- newJob
 		go func() {
-			defer cmd.inflight.Done()
+			defer func() { cmd.runningJobs <- jobDone }()
 
 			if err := ctx.ReloadConfig(); err != nil {
 				ctx.GetLogger().Warn("could not load configuration: %v", err)
 			}
 
 			cmd.handleCachedClient(ctx, conn)
-
-			time.Sleep(cmd.teardown)
 		}()
 	}
 
@@ -318,7 +341,7 @@ func (cmd *Cached) rebuildJob(ctx *appcontext.AppContext, jobChan chan jobReq, r
 		for {
 			select {
 			case job := <-jobChan:
-				cmd.inflight.Add(1)
+				cmd.runningJobs <- newJob
 				var err error
 				if job.stateID == objects.NilMac {
 					err = repo.RebuildState()
@@ -332,7 +355,7 @@ func (cmd *Cached) rebuildJob(ctx *appcontext.AppContext, jobChan chan jobReq, r
 					close(job.ch)
 				}
 
-				cmd.inflight.Done()
+				cmd.runningJobs <- jobDone
 
 			// Debounce a bit to avoid halting and creating too many jobs.
 			case <-ctx.Done():

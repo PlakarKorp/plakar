@@ -141,7 +141,12 @@ func newClient(socketPath string, ignoreVersion bool) (*Client, error) {
 			}
 
 			plakar := exec.Command(me, "cached")
-			if err := plakar.Start(); err != nil {
+
+			// Cached is daemonized, so we can, and need to wait for the return
+			// of the direct child to avoid zombies.
+			// The grand children will get reparented to PID 0 as a daemon and
+			// will be reaped by PID 0 avoiding zonmbies.
+			if err := plakar.Run(); err != nil {
 				return nil, fmt.Errorf("failed to start cached: %w", err)
 			}
 			spawned = true

@@ -13,7 +13,3 @@ func setupSyslog(ctx *appcontext.AppContext) error {
 func daemonize(argv []string) error {
 	return errors.ErrUnsupported
 }
-
-func kill_self() error {
-	return errors.ErrUnsupported
-}
