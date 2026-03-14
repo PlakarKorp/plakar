@@ -64,6 +64,28 @@ builds:
     # Templates: allowed.
     mod_timestamp: "{{ .CommitTimestamp }}"
 
+dockers_v2:
+  - id: plakar
+    ids:
+      - plakar
+    images:
+      - "ghcr.io/plakarkorp/plakar"
+    tags:
+      - "{{ .Tag }}"
+      - '{{ if eq .Env.MAKE_LATEST_RELEASE "true" }}latest{{ end }}'
+    dockerfile: Dockerfile
+    flags:
+      - "--target=goreleaser"
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    labels:
+      "org.opencontainers.image.source": "https://github.com/PlakarKorp/plakar"
+      "org.opencontainers.image.version": "{{ .Version }}"
+      "org.opencontainers.image.created": "{{ .Date }}"
+      "org.opencontainers.image.title": "plakar"
+      "org.opencontainers.image.revision": "{{ .FullCommit }}"
+
 nfpms:
   - package_name: plakar
 
