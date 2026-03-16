@@ -10,7 +10,7 @@ require (
 	github.com/PlakarKorp/integration-ptar v1.1.0-beta.2
 	github.com/PlakarKorp/integration-stdio v1.1.0-beta.1
 	github.com/PlakarKorp/integration-tar v1.1.0-beta.1
-	github.com/PlakarKorp/kloset v1.1.0-beta.3.0.20260309084025-beb65d5ce058
+	github.com/PlakarKorp/kloset v1.1.0-beta.5
 	github.com/PlakarKorp/pkg v1.1.0-beta.4
 	github.com/alecthomas/chroma v0.10.0
 	github.com/anacrolix/fuse v0.3.1
@@ -100,7 +100,7 @@ require (
 	github.com/ncruces/go-strftime v1.0.0 // indirect
 	github.com/nickball/go-aes-key-wrap v0.0.0-20170929221519-1c3aa3e4dfc5 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
-	github.com/pierrec/lz4/v4 v4.1.25 // indirect
+	github.com/pierrec/lz4/v4 v4.1.26 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pkg/xattr v0.4.12 // indirect
 	github.com/prometheus/client_golang v1.23.2 // indirect
