@@ -139,7 +139,7 @@ func (cmd *Prune) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 			toDelete = append(toDelete, id)
 		}
 
-		snap, err := snapshot.Load(repo, id)
+		snap, err := utils.LoadSnapshot(repo, id)
 		if err != nil {
 			ctx.GetLogger().Warn("prune: skipping %x for timestamp lookup: %v", id[:4], err)
 			continue

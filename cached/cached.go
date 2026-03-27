@@ -18,7 +18,16 @@ import (
 	"github.com/vmihailenco/msgpack/v5"
 )
 
+type PacketType uint8
+
+const (
+	RebuildState PacketType = iota
+	SnapshotCache
+)
+
 type RequestPkt struct {
+	Type PacketType
+
 	Secret      []byte
 	RepoID      uuid.UUID
 	StoreConfig map[string]string
@@ -28,6 +37,9 @@ type RequestPkt struct {
 
 	// If empty do a full rebuild otherwise ingest that file from disk.
 	StateID objects.MAC
+
+	// Valid only for SnapshotCache type requests
+	SnapshotID objects.MAC
 }
 
 type ResponsePkt struct {
@@ -45,7 +57,7 @@ var (
 	ErrWrongVersion = errors.New("cached is running with a different version of plakar")
 )
 
-func rebuildStateRequest(ctx *appcontext.AppContext, req *RequestPkt) (int, error) {
+func cachedRequest(ctx *appcontext.AppContext, req *RequestPkt) (int, error) {
 	client, err := newClient(filepath.Join(ctx.CacheDir, "cached.sock"), false)
 	if err != nil {
 		return 1, err

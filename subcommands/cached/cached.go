@@ -64,8 +64,8 @@ type Cached struct {
 }
 
 type jobReq struct {
-	stateID objects.MAC
-	ch      chan error
+	req *cached.RequestPkt
+	ch  chan error
 }
 
 const (
@@ -280,7 +280,7 @@ func (cmd *Cached) handleCachedClient(ctx *appcontext.AppContext, conn net.Conn)
 
 	if err == nil {
 		j := jobReq{
-			stateID: pkt.StateID,
+			req: pkt,
 		}
 
 		if !pkt.FireAndForget {
@@ -342,19 +342,13 @@ func (cmd *Cached) rebuildJob(ctx *appcontext.AppContext, jobChan chan jobReq, r
 			select {
 			case job := <-jobChan:
 				cmd.runningJobs <- newJob
-				var err error
-				if job.stateID == objects.NilMac {
-					err = repo.RebuildState()
-				} else {
-					err = repo.IngestStateFile(job.stateID)
-				}
 
-				// Notify that we ended
+				err := cmd.processJobRequest(repo, &job)
+
 				if job.ch != nil {
 					job.ch <- err
 					close(job.ch)
 				}
-
 				cmd.runningJobs <- jobDone
 
 			// Debounce a bit to avoid halting and creating too many jobs.
@@ -371,6 +365,23 @@ func (cmd *Cached) rebuildJob(ctx *appcontext.AppContext, jobChan chan jobReq, r
 
 	return nil
 
+}
+
+func (cmd *Cached) processJobRequest(repo *repository.Repository, job *jobReq) error {
+	var err error
+
+	switch job.req.Type {
+	case cached.RebuildState:
+		if job.req.StateID == objects.NilMac {
+			err = repo.RebuildState()
+		} else {
+			err = repo.IngestStateFile(job.req.StateID)
+		}
+	case cached.SnapshotCache:
+		err = repo.CacheSnapshot(job.req.SnapshotID)
+	}
+
+	return err
 }
 
 func getSecret(ctx *appcontext.AppContext, secret []byte, storageConfig []byte) ([]byte, error) {

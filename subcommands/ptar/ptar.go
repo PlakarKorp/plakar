@@ -370,7 +370,7 @@ func (cmd *Ptar) backup(ctx *appcontext.AppContext, repo *repository.RepositoryW
 			return err
 		}
 
-		_, err = snap.PutSnapshot()
+		err = snap.PutSnapshot()
 		if err != nil {
 			return err
 		}

@@ -10,6 +10,18 @@ import (
 	"github.com/google/uuid"
 )
 
+func CacheSnapshotHeader(ctx *appcontext.AppContext, snapshotID objects.MAC, repoID uuid.UUID, storeConfig map[string]string) (int, error) {
+	req := &RequestPkt{
+		Secret:        ctx.GetSecret(),
+		RepoID:        repoID,
+		StoreConfig:   storeConfig,
+		SnapshotID:    snapshotID,
+		FireAndForget: true,
+	}
+
+	return cachedRequest(ctx, req)
+}
+
 func RebuildStateFromStateFile(ctx *appcontext.AppContext, stateID objects.MAC, repoID uuid.UUID, storeConfig map[string]string, fireAndForget bool) (int, error) {
 	t0 := time.Now()
 	defer func() {
@@ -24,7 +36,7 @@ func RebuildStateFromStateFile(ctx *appcontext.AppContext, stateID objects.MAC, 
 		FireAndForget: fireAndForget,
 	}
 
-	return rebuildStateRequest(ctx, req)
+	return cachedRequest(ctx, req)
 }
 
 func RebuildStateFromStore(ctx *appcontext.AppContext, repoID uuid.UUID, storeConfig map[string]string, fireAndForget bool) (int, error) {
@@ -39,5 +51,5 @@ func RebuildStateFromStore(ctx *appcontext.AppContext, repoID uuid.UUID, storeCo
 		FireAndForget: fireAndForget,
 	}
 
-	return rebuildStateRequest(ctx, req)
+	return cachedRequest(ctx, req)
 }

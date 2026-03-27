@@ -35,6 +35,9 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/PlakarKorp/kloset/objects"
+	"github.com/PlakarKorp/kloset/repository"
+	"github.com/PlakarKorp/kloset/snapshot"
 	passwordvalidator "github.com/wagslane/go-password-validator"
 	"golang.org/x/mod/semver"
 	"golang.org/x/term"
@@ -56,6 +59,11 @@ func ParseSnapshotID(id string) (string, string) {
 		}
 	}
 	return prefix, pattern
+}
+
+// Cached version of snapshost.Load
+func LoadSnapshot(repo *repository.Repository, id objects.MAC) (*snapshot.Snapshot, error) {
+	return snapshot.Load(repo, id)
 }
 
 type ReleaseUpdateSummary struct {

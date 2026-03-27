@@ -176,8 +176,7 @@ func (cmd *PkgCreate) Execute(ctx *appcontext.AppContext, _ *repository.Reposito
 		return 1, fmt.Errorf("failed to populate the snapshot: %w", err)
 	}
 
-	_, err = snap.PutSnapshot()
-	if err != nil {
+	if err := snap.PutSnapshot(); err != nil {
 		return 1, fmt.Errorf("failed to commit snapshot: %w", err)
 	}
 
