@@ -202,6 +202,9 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 	}
 
 	sourcesPerOrig := make(map[string][]importer.Importer)
+	// If we are doing a fake run for statistics instantiate separate importers,
+	// otherwise it makes plugin development harder than needed.
+	sourcesPerOrigForStats := make(map[string][]importer.Importer)
 
 	for _, source := range cmd.Sources {
 		scanDir := "fs:" + ctx.CWD
@@ -259,8 +262,26 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		importerKey := typ + ":" + orig
 		if _, exists := sourcesPerOrig[importerKey]; !exists {
 			sourcesPerOrig[importerKey] = []importer.Importer{imp}
+
+			if !cmd.NoProgress && (imp.Flags()&location.FLAG_STREAM) == 0 {
+				imp, err := importer.NewImporter(ctx.GetInner(), importerOpts, cmdOptsCopy)
+				if err != nil {
+					return 1, fmt.Errorf("failed to create an importer for %s: %s", scanDir, err), objects.MAC{}, nil
+				}
+				defer imp.Close(ctx)
+				sourcesPerOrigForStats[importerKey] = []importer.Importer{imp}
+			}
 		} else {
 			sourcesPerOrig[importerKey] = append(sourcesPerOrig[importerKey], imp)
+
+			if !cmd.NoProgress && (imp.Flags()&location.FLAG_STREAM) == 0 {
+				imp, err := importer.NewImporter(ctx.GetInner(), importerOpts, cmdOptsCopy)
+				if err != nil {
+					return 1, fmt.Errorf("failed to create an importer for %s: %s", scanDir, err), objects.MAC{}, nil
+				}
+				defer imp.Close(ctx)
+				sourcesPerOrigForStats[importerKey] = append(sourcesPerOrigForStats[importerKey], imp)
+			}
 		}
 	}
 
@@ -297,7 +318,7 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 	}
 
 	// Actual import of sources.
-	for _, sourceImporters := range sourcesPerOrig {
+	for key, sourceImporters := range sourcesPerOrig {
 		source, err := snapshot.NewSource(repo.AppContext(), sourceImporters...)
 		if err != nil {
 			return 1, err, objects.NilMac, nil
@@ -351,6 +372,15 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		snap.WithVFSCache(parentVFS)
 
 		if !cmd.NoProgress && (source.Flags()&location.FLAG_STREAM) == 0 {
+			source, err := snapshot.NewSource(repo.AppContext(), sourcesPerOrigForStats[key]...)
+			if err != nil {
+				return 1, err, objects.NilMac, nil
+			}
+
+			if err := source.SetExcludes(cmd.Excludes); err != nil {
+				return 1, err, objects.MAC{}, nil
+			}
+
 			go func() {
 				fsSummary := statistics(ctx, source)
 				emitter.FilesystemSummary(
