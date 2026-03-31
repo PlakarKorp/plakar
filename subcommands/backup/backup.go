@@ -201,13 +201,7 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		opts.ForcedTimestamp = cmd.ForcedTimestamp
 	}
 
-	// This is fugly, but in the following days Flags will be part of the
-	// Importer API so this will get folded. Keeping it ugly so that we get rid
-	// of it ASAP! Where is std::tuple when you need it.
-	sourcesPerOrig := make(map[string]*struct {
-		f    location.Flags
-		imps []importer.Importer
-	})
+	sourcesPerOrig := make(map[string][]importer.Importer)
 
 	for _, source := range cmd.Sources {
 		scanDir := "fs:" + ctx.CWD
@@ -264,13 +258,9 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 
 		importerKey := typ + ":" + orig
 		if _, exists := sourcesPerOrig[importerKey]; !exists {
-			sourcesPerOrig[importerKey] = &struct {
-				f    location.Flags
-				imps []importer.Importer
-			}{f: imp.Flags(), imps: []importer.Importer{imp}}
-
+			sourcesPerOrig[importerKey] = []importer.Importer{imp}
 		} else {
-			sourcesPerOrig[importerKey].imps = append(sourcesPerOrig[importerKey].imps, imp)
+			sourcesPerOrig[importerKey] = append(sourcesPerOrig[importerKey], imp)
 		}
 	}
 
@@ -308,7 +298,7 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 
 	// Actual import of sources.
 	for _, sourceImporters := range sourcesPerOrig {
-		source, err := snapshot.NewSource(repo.AppContext(), sourceImporters.f, sourceImporters.imps...)
+		source, err := snapshot.NewSource(repo.AppContext(), sourceImporters...)
 		if err != nil {
 			return 1, err, objects.NilMac, nil
 		}

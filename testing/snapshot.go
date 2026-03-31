@@ -149,7 +149,7 @@ func GenerateSnapshot(t *testing.T, repo *repository.Repository, files []MockFil
 		imp.(*MockImporter).SetFiles(files)
 	}
 
-	s, err := snapshot.NewSource(repo.AppContext(), 0, imp)
+	s, err := snapshot.NewSource(repo.AppContext(), imp)
 	require.NoError(t, err)
 
 	err = s.SetExcludes(o.excludes)
