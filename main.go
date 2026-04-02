@@ -176,6 +176,8 @@ func entryPoint() int {
 	if err := renderer.Run(); err != nil {
 		return 1
 	}
+
+	defer renderer.Stop()
 	go func() {
 		if err := renderer.Wait(); err != nil {
 			if errors.Is(err, ui.ErrUserAbort) {

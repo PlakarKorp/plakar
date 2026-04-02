@@ -40,6 +40,8 @@ func New(ctx *appcontext.AppContext) ui.UI {
 	}
 }
 
+func (jr *jsonRenderer) Stop() {}
+
 func (jr *jsonRenderer) Stdout() io.Writer {
 	return io.Discard
 }

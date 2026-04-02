@@ -18,14 +18,13 @@ var applications = map[string]func(*appcontext.AppContext, *Application, *reposi
 }
 
 type Application struct {
-	ctx    *appcontext.AppContext
-	job    uuid.UUID
-	name   string
-	state  *State
-	events chan Event    // events we feed into the Bubbletea model
-	done   chan struct{} // closed when Bubbletea program exits
-	prog   *tea.Program
-	err    error
+	ctx   *appcontext.AppContext
+	job   uuid.UUID
+	name  string
+	state *State
+	done  chan struct{} // closed when Bubbletea program exits
+	prog  *tea.Program
+	err   error
 
 	debounceStat time.Time
 	lastStat     string
@@ -94,7 +93,6 @@ func newApplicationState() *State {
 }
 
 func newApplication(ctx *appcontext.AppContext, name string, repo *repository.Repository) *Application {
-	events := make(chan Event, 256)
 	done := make(chan struct{})
 
 	modelFunc, ok := applications[name]
@@ -103,11 +101,10 @@ func newApplication(ctx *appcontext.AppContext, name string, repo *repository.Re
 	}
 
 	capp := &Application{
-		ctx:    ctx,
-		name:   name,
-		events: events,
-		done:   done,
-		state:  newApplicationState(),
+		ctx:   ctx,
+		name:  name,
+		done:  done,
+		state: newApplicationState(),
 	}
 	capp.prog = tea.NewProgram(modelFunc(ctx, capp, repo))
 
@@ -131,7 +128,6 @@ func (app *Application) Stop() {
 		app.prog.Quit()
 	}
 
-	close(app.events)
 	<-app.done
 }
 

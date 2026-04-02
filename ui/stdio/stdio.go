@@ -40,6 +40,7 @@ func (stdio *stdio) Stdout() io.Writer {
 func (stdio *stdio) Stderr() io.Writer {
 	return os.Stderr
 }
+func (stdio *stdio) Stop() {}
 
 func (stdio *stdio) Wait() error {
 	return <-stdio.done

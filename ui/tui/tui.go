@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"sync/atomic"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
@@ -19,6 +20,8 @@ type tui struct {
 	app *Application
 
 	done chan error
+
+	cancel atomic.Bool
 }
 
 func New(ctx *appcontext.AppContext) ui.UI {
@@ -43,6 +46,14 @@ func (t *tui) Stderr() io.Writer {
 	}
 }
 
+func (t *tui) Stop() {
+	t.cancel.Store(true)
+	if t.app != nil {
+		t.app.Stop()
+		t.app = nil
+	}
+}
+
 func (tui *tui) Wait() error {
 	return <-tui.done
 }
@@ -61,41 +72,43 @@ func (tui *tui) Run() error {
 		hasSeenStop := false
 		for e := range events {
 			// If app is running, forward event (non-blocking / cancel-safe)
-			if tui.app != nil {
-				tui.app.state.Update(*e)
-				select {
-				case <-tui.app.done:
-					if tui.app.err != nil {
-						if errors.Is(tui.app.err, tea.ErrInterrupted) {
-							if !hasSeenStop {
-								hasSeenStop = true
-								tui.done <- ui.ErrUserAbort
-							}
-						} else {
-							if !hasSeenStop {
-								hasSeenStop = true
-								tui.done <- tui.app.err
+			if !tui.cancel.Load() {
+				if tui.app != nil {
+					tui.app.state.Update(*e)
+					select {
+					case <-tui.app.done:
+						if tui.app.err != nil {
+							if errors.Is(tui.app.err, tea.ErrInterrupted) {
+								if !hasSeenStop {
+									hasSeenStop = true
+									tui.done <- ui.ErrUserAbort
+								}
+							} else {
+								if !hasSeenStop {
+									hasSeenStop = true
+									tui.done <- tui.app.err
+								}
 							}
 						}
+					default:
 					}
-				default:
-				}
 
-				// Close app on matching workflow.end
-				if e.Type == "workflow.end" && e.Job == tui.app.job {
-					tui.app.Stop()
-					tui.app = nil
-				}
-				continue
-			}
-
-			// No app: start when workflow.start matches a known model
-			if e.Type == "workflow.start" {
-				tui.app = newApplication(tui.ctx, e.Data["workflow"].(string), tui.repo)
-				if tui.app != nil {
-					tui.app.job = e.Job
-					tui.app.state.Update(*e)
+					// Close app on matching workflow.end
+					if e.Type == "workflow.end" && e.Job == tui.app.job {
+						tui.app.Stop()
+						tui.app = nil
+					}
 					continue
+				}
+
+				// No app: start when workflow.start matches a known model
+				if e.Type == "workflow.start" {
+					tui.app = newApplication(tui.ctx, e.Data["workflow"].(string), tui.repo)
+					if tui.app != nil {
+						tui.app.job = e.Job
+						tui.app.state.Update(*e)
+						continue
+					}
 				}
 			}
 
