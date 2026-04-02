@@ -13,6 +13,7 @@ type UI interface {
 	SetRepository(*repository.Repository)
 	Run() error
 	Wait() error
+	Stop()
 
 	Stdout() io.Writer
 	Stderr() io.Writer
