@@ -344,13 +344,13 @@ func entryPoint() int {
 
 	storeConfig, err := ctx.Config.GetRepository(repositoryPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
+		logger.Stderr("%s: %s\n", flag.CommandLine.Name(), err)
 		return 1
 	}
 
 	cmd, _, args := subcommands.Lookup(args)
 	if cmd == nil {
-		fmt.Fprintf(os.Stderr, "command not found: %s\n", args[0])
+		logger.Stderr("command not found: %s\n", args[0])
 		return 1
 	}
 
@@ -358,7 +358,7 @@ func entryPoint() int {
 	// available to subcommands like create.
 	passphrase, err := getPassphraseFromEnv(ctx, storeConfig)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
+		logger.Stderr("%s: %s\n", flag.CommandLine.Name(), err)
 		return 1
 	}
 	if passphrase != "" {
@@ -373,39 +373,39 @@ func entryPoint() int {
 	} else if cmd.GetFlags()&subcommands.BeforeRepositoryWithStorage != 0 {
 		repo, err = repository.Inexistent(ctx.GetInner(), storeConfig)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
+			logger.Stderr("%s: %s\n", flag.CommandLine.Name(), err)
 			return 1
 		}
 	} else {
 		var serializedConfig []byte
 		store, serializedConfig, err = storage.Open(ctx.GetInner(), storeConfig)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s: failed to open the repository at %s: %s\n", flag.CommandLine.Name(), storeConfig["location"], err)
-			fmt.Fprintln(os.Stderr, "To specify an alternative repository, please use \"plakar at <location> <command>\".")
+			logger.Stderr("%s: failed to open the repository at %s: %s\n", flag.CommandLine.Name(), storeConfig["location"], err)
+			logger.Stderr("To specify an alternative repository, please use \"plakar at <location> <command>\".")
 			return 1
 		}
 
 		repoConfig, err := storage.NewConfigurationFromWrappedBytes(serializedConfig)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
+			logger.Stderr("%s: %s\n", flag.CommandLine.Name(), err)
 			return 1
 		}
 
 		if repoConfig.Version != versioning.FromString(storage.VERSION) {
-			fmt.Fprintf(os.Stderr, "%s: incompatible repository version: %s != %s\n",
+			logger.Stderr("%s: incompatible repository version: %s != %s\n",
 				flag.CommandLine.Name(), repoConfig.Version, storage.VERSION)
 			return 1
 		}
 
 		if err := setupEncryption(ctx, repoConfig); err != nil {
-			fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
+			logger.Stderr("%s: %s\n", flag.CommandLine.Name(), err)
 			return 1
 		}
 
 		// Actual rebuild is done by cached, unless we are on windows.
 		repo, err = repository.NewNoRebuild(ctx.GetInner(), ctx.GetSecret(), store, serializedConfig, runtime.GOOS != "windows")
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
+			logger.Stderr("%s: %s\n", flag.CommandLine.Name(), err)
 			return 1
 		}
 	}
@@ -415,7 +415,7 @@ func entryPoint() int {
 
 	t0 := time.Now()
 	if err := cmd.Parse(ctx, args); err != nil {
-		fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), err)
+		logger.Stderr("%s: %s\n", flag.CommandLine.Name(), err)
 		return 1
 	}
 
@@ -430,7 +430,7 @@ func entryPoint() int {
 	go func() {
 		<-ctx.Done()
 		if interrupted {
-			fmt.Fprintf(os.Stderr, "%s: received interrupt signal, stopping gracefully...\n", flag.CommandLine.Name())
+			logger.Stderr("%s: received interrupt signal, stopping gracefully...\n", flag.CommandLine.Name())
 		}
 	}()
 
@@ -453,10 +453,10 @@ func entryPoint() int {
 			err = context.Cause(ctx)
 		}
 
-		fmt.Fprintf(os.Stderr, "%s: %s\n", flag.CommandLine.Name(), utils.SanitizeText(err.Error()))
+		logger.Printf("%s: %s\n", flag.CommandLine.Name(), utils.SanitizeText(err.Error()))
 		if errors.Is(err, cached.ErrWrongVersion) {
-			fmt.Fprintln(os.Stderr, "To stop the current cached, run:")
-			fmt.Fprintln(os.Stderr, "\t$ plakar cached stop")
+			logger.Stderr("To stop the current cached, run:")
+			logger.Stderr("\t$ plakar cached stop")
 		}
 	}
 
@@ -486,7 +486,7 @@ func entryPoint() int {
 		defer f.Close() // error handling omitted for example
 		runtime.GC()    // get up-to-date statistics
 		if err := pprof.WriteHeapProfile(f); err != nil {
-			fmt.Fprintf(os.Stderr, "%s: could not write MEM profile: %d\n", flag.CommandLine.Name(), err)
+			logger.Stderr("%s: could not write MEM profile: %d\n", flag.CommandLine.Name(), err)
 			return 1
 		}
 	}
