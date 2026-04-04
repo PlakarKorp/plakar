@@ -13,8 +13,8 @@ import (
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/config"
 	ptesting "github.com/PlakarKorp/plakar/testing"
-	"github.com/PlakarKorp/plakar/utils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -107,13 +107,13 @@ func TestExecuteCmdSyncWithEncryption(t *testing.T) {
 	// need to recreate configuration to store passphrase on peer repo
 	opt_configfile := strings.TrimPrefix(peerRepo.Root(), "fs://")
 
-	cfg, err := utils.LoadConfig(opt_configfile)
+	cfg, err := config.Load(opt_configfile)
 	require.NoError(t, err)
 	lctx.Config = cfg
 	lctx.Config.Repositories["peerRepo"] = make(map[string]string)
 	lctx.Config.Repositories["peerRepo"]["passphrase"] = string(passphrase)
 	lctx.Config.Repositories["peerRepo"]["location"] = peerRepo.Root()
-	err = utils.SaveConfig(opt_configfile, lctx.Config)
+	err = config.Save(opt_configfile, lctx.Config)
 	require.NoError(t, err)
 
 	indexId := snap.Header.GetIndexID()

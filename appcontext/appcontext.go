@@ -6,7 +6,6 @@ import (
 	"github.com/PlakarKorp/pkg"
 	"github.com/PlakarKorp/plakar/config"
 	"github.com/PlakarKorp/plakar/cookies"
-	"github.com/PlakarKorp/plakar/utils"
 )
 
 type AppContext struct {
@@ -97,7 +96,7 @@ func (c *AppContext) GetPkgManager() *pkg.Manager {
 }
 
 func (c *AppContext) ReloadConfig() error {
-	cfg, err := utils.LoadConfig(c.ConfigDir)
+	cfg, err := config.Load(c.ConfigDir)
 	if err != nil {
 		return err
 	}
