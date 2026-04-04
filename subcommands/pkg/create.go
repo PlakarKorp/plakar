@@ -156,7 +156,7 @@ func (cmd *PkgCreate) Execute(ctx *appcontext.AppContext, _ *repository.Reposito
 		cwd:          cmd.Base,
 	}
 
-	source, err := snapshot.NewSource(ctx, 0, imp)
+	source, err := snapshot.NewSource(ctx, imp)
 	if err != nil {
 		return 1, err
 	}
