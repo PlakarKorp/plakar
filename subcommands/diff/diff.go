@@ -17,6 +17,7 @@
 package diff
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"io"
@@ -303,7 +304,77 @@ func (cmd *Diff) diff_directories_recursive(out io.Writer, fs1 fs.FS, path1 stri
 	return nil
 }
 
+// best-effort, works only if the reader is actually a ReaderAt.  All
+// the files we deal with, entries from the vfs or os.File, implement
+// such interface.
+func isbinary(rd io.Reader) bool {
+	rdt, ok := rd.(io.ReaderAt)
+	if !ok {
+		return false
+	}
+
+	var buf [512]byte
+	n, _ := rdt.ReadAt(buf[:], 0)
+	for _, ch := range buf[:n] {
+		if ch < ' ' && ch != '\t' && ch != '\n' && ch != '\r' && ch != '\f' {
+			return true
+		}
+		if ch == 0x7f {
+			return true
+		}
+	}
+
+	return false
+}
+
+func binaryeq(rrd1 io.Reader, rrd2 io.Reader) (bool, error) {
+	var (
+		rd1 = bufio.NewReader(rrd1)
+		rd2 = bufio.NewReader(rrd2)
+
+		buf1 [1024]byte
+		buf2 [1024]byte
+	)
+
+	for {
+		n1, err1 := io.ReadFull(rd1, buf1[:])
+		n2, err2 := io.ReadFull(rd2, buf2[:])
+
+		if err1 != nil && err1 != io.EOF && err1 != io.ErrUnexpectedEOF {
+			return false, err1
+		}
+		if err2 != nil && err2 != io.EOF && err2 != io.ErrUnexpectedEOF {
+			return false, err2
+		}
+		if n1 != n2 {
+			return false, nil
+		}
+		for i := range n1 {
+			if buf1[i] != buf2[i] {
+				return false, nil
+			}
+		}
+
+		if n1 == 0 {
+			return true, nil
+		}
+	}
+}
+
 func (cmd *Diff) diff_readers(out io.Writer, id1 string, pathname1 string, rd1 io.Reader, id2 string, pathname2 string, rd2 io.Reader) error {
+	if isbinary(rd1) || isbinary(rd2) {
+		same, err := binaryeq(rd1, rd2)
+		if err != nil {
+			return err
+		}
+
+		if !same {
+			fmt.Fprintf(out, "Binary files %s and %s differ\n",
+				pathname1, pathname2)
+		}
+		return nil
+	}
+
 	buf1, err := io.ReadAll(rd1)
 	if err != nil {
 		return err
