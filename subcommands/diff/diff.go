@@ -123,7 +123,7 @@ func (cmd *Diff) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 		pathname2 = pathname1
 	}
 
-	diff, err = cmd.diff_pathnames(ctx, id1, vfs1, pathname1, id2, vfs2, pathname2)
+	diff, err = cmd.diff_pathnames(id1, vfs1, pathname1, id2, vfs2, pathname2)
 	if err != nil {
 		return 1, fmt.Errorf("diff: could not diff pathnames: %w", err)
 	}
@@ -139,7 +139,7 @@ func (cmd *Diff) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 	return 0, nil
 }
 
-func (cmd *Diff) diff_pathnames(ctx *appcontext.AppContext, id1 string, vfs1 fs.FS, pathname1 string, id2 string, vfs2 fs.FS, pathname2 string) (string, error) {
+func (cmd *Diff) diff_pathnames(id1 string, vfs1 fs.FS, pathname1 string, id2 string, vfs2 fs.FS, pathname2 string) (string, error) {
 	fsobj1, err := vfs1.Open(pathname1)
 	if err != nil {
 		return "", fmt.Errorf("could not open path %s in snapshot %s: %w", pathname1, id1, err)
@@ -168,9 +168,9 @@ func (cmd *Diff) diff_pathnames(ctx *appcontext.AppContext, id1 string, vfs1 fs.
 
 	if st1.IsDir() && st2.IsDir() {
 		if cmd.Recursive {
-			return cmd.diff_directories_recursive(ctx, vfs1, pathname1, vfs2, pathname1)
+			return cmd.diff_directories_recursive(vfs1, pathname1, vfs2, pathname1)
 		}
-		return cmd.diff_directories_flat(ctx, pathname1, fsobj1, pathname2, fsobj2)
+		return cmd.diff_directories_flat(pathname1, fsobj1, pathname2, fsobj2)
 	} else if st1.IsDir() || st2.IsDir() {
 		return "", fmt.Errorf("can't diff different file types")
 	} else {
@@ -178,7 +178,7 @@ func (cmd *Diff) diff_pathnames(ctx *appcontext.AppContext, id1 string, vfs1 fs.
 	}
 }
 
-func (cmd *Diff) diff_directories_flat(_ *appcontext.AppContext, pathname1 string, fsobj1 fs.File, pathname2 string, fsobj2 fs.File) (string, error) {
+func (cmd *Diff) diff_directories_flat(pathname1 string, fsobj1 fs.File, pathname2 string, fsobj2 fs.File) (string, error) {
 	// non VFS have their / stripped, reintroduce it
 	if !strings.HasPrefix(pathname2, "/") {
 		pathname2 = "/" + pathname2 // Ensure pathname starts with a slash
@@ -232,7 +232,7 @@ func (cmd *Diff) diff_directories_flat(_ *appcontext.AppContext, pathname1 strin
 	return output.String(), nil
 }
 
-func (cmd *Diff) diff_directories_recursive(ctx *appcontext.AppContext, fs1 fs.FS, path1 string, fs2 fs.FS, path2 string) (string, error) {
+func (cmd *Diff) diff_directories_recursive(fs1 fs.FS, path1 string, fs2 fs.FS, path2 string) (string, error) {
 	var output strings.Builder
 
 	entries1, err1 := fs.ReadDir(fs1, path1)
@@ -288,7 +288,7 @@ func (cmd *Diff) diff_directories_recursive(ctx *appcontext.AppContext, fs1 fs.F
 		case ok1 && ok2:
 			if e1.IsDir() && e2.IsDir() {
 				output.WriteString(fmt.Sprintf("Common subdirectories: %s and %s\n", full1, full2))
-				sub, err := cmd.diff_directories_recursive(ctx, fs1, full1, fs2, full2)
+				sub, err := cmd.diff_directories_recursive(fs1, full1, fs2, full2)
 				if err != nil {
 					return "", err
 				}
