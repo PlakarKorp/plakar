@@ -92,6 +92,9 @@ func (cmd *PkgAdd) Execute(ctx *appcontext.AppContext, _ *repository.Repository)
 			if cmd.upgrade && errors.Is(err, pkg.ErrAlreadyInstalled) {
 				continue
 			}
+			if errors.Is(err, pkg.ErrAuthorizationRequired) {
+				return 1, fmt.Errorf("failed to install %s: authentication required. Run `plakar login` and try again", filepath.Base(plugin))
+			}
 			return 1, fmt.Errorf("failed to install %s: %w",
 				filepath.Base(plugin), err)
 		}
