@@ -173,7 +173,7 @@ func (cmd *Diff) diff_pathnames(out io.Writer, id1 string, vfs1 fs.FS, pathname1
 
 	if st1.IsDir() && st2.IsDir() {
 		if cmd.Recursive {
-			return cmd.diff_directories_recursive(out, vfs1, pathname1, vfs2, pathname1)
+			return cmd.diff_directories_recursive(out, id1, vfs1, pathname1, id2, vfs2, pathname1)
 		}
 		return cmd.diff_directories_flat(out, pathname1, fsobj1, pathname2, fsobj2)
 	} else if st1.IsDir() || st2.IsDir() {
@@ -236,7 +236,7 @@ func (cmd *Diff) diff_directories_flat(out io.Writer, pathname1 string, fsobj1 f
 	return nil
 }
 
-func (cmd *Diff) diff_directories_recursive(out io.Writer, fs1 fs.FS, path1 string, fs2 fs.FS, path2 string) error {
+func (cmd *Diff) diff_directories_recursive(out io.Writer, id1 string, fs1 fs.FS, path1 string, id2 string, fs2 fs.FS, path2 string) error {
 	entries1, err1 := fs.ReadDir(fs1, path1)
 	entries2, err2 := fs.ReadDir(fs2, path2)
 
@@ -290,12 +290,30 @@ func (cmd *Diff) diff_directories_recursive(out io.Writer, fs1 fs.FS, path1 stri
 		case ok1 && ok2:
 			if e1.IsDir() && e2.IsDir() {
 				fmt.Fprintf(out, "Common subdirectories: %s and %s\n", full1, full2)
-				err := cmd.diff_directories_recursive(out, fs1, full1, fs2, full2)
+				err := cmd.diff_directories_recursive(out, id1, fs1, full1, id2, fs2, full2)
 				if err != nil {
 					return err
 				}
 
-			} else if e1.IsDir() != e2.IsDir() {
+			} else if e1.Type().IsRegular() && e2.Type().IsRegular() {
+				rd1, err := fs1.Open(full1)
+				if err != nil {
+					return err
+				}
+
+				rd2, err := fs2.Open(full2)
+				if err != nil {
+					rd1.Close()
+					return err
+				}
+
+				err = cmd.diff_readers(out, id1, full1, rd1, id2, full2, rd2)
+				rd1.Close()
+				rd2.Close()
+				if err != nil {
+					return err
+				}
+			} else {
 				fmt.Fprintf(out, "File type mismatch: %s vs %s\n", full1, full2)
 			}
 		}
