@@ -14,11 +14,7 @@ func TestParseSnapshotID(t *testing.T) {
 	id := "snapshot123:/path/to/file"
 	prefix, pattern := ParseSnapshotID(id)
 	require.Equal(t, "snapshot123", prefix)
-	if runtime.GOOS == "windows" {
-		require.Equal(t, "path/to/file", pattern) // No leading slash on Windows
-	} else {
-		require.Equal(t, "/path/to/file", pattern)
-	}
+	require.Equal(t, "/path/to/file", pattern)
 
 	// Test case: Snapshot ID without pattern
 	id = "snapshot123"
@@ -90,10 +86,14 @@ func TestGetConfigDir(t *testing.T) {
 	// Create a temporary directory for testing
 	tempDir := t.TempDir()
 
-	// Override the XDG_CONFIG_HOME environment variable
-	originalXDGConfigHome := os.Getenv("XDG_CONFIG_HOME")
-	defer os.Setenv("XDG_CONFIG_HOME", originalXDGConfigHome) // Restore the original value after the test
-	os.Setenv("XDG_CONFIG_HOME", tempDir)
+	// Override the XDG_CONFIG_HOME/LocalAppData environment variable
+	configEnv := "XDG_CONFIG_HOME"
+	if runtime.GOOS == "windows" {
+		configEnv = "LocalAppData"
+	}
+	originalXDGConfigHome := os.Getenv(configEnv)
+	defer os.Setenv(configEnv, originalXDGConfigHome) // Restore the original value after the test
+	os.Setenv(configEnv, tempDir)
 
 	// Call GetConfigDir with a test app name
 	appName := "testapp"
@@ -114,10 +114,14 @@ func TestGetCacheDir(t *testing.T) {
 	// Create a temporary directory for testing
 	tempDir := t.TempDir()
 
-	// Override the XDG_CACHE_HOME environment variable
-	originalXDGCacheHome := os.Getenv("XDG_CACHE_HOME")
-	defer os.Setenv("XDG_CACHE_HOME", originalXDGCacheHome) // Restore the original value after the test
-	os.Setenv("XDG_CACHE_HOME", tempDir)
+	// Override the XDG_CACHE_HOME/LocalAppData environment variable
+	cacheEnv := "XDG_CACHE_HOME"
+	if runtime.GOOS == "windows" {
+		cacheEnv = "LocalAppData"
+	}
+	originalXDGCacheHome := os.Getenv(cacheEnv)
+	defer os.Setenv(cacheEnv, originalXDGCacheHome) // Restore the original value after the test
+	os.Setenv(cacheEnv, tempDir)
 
 	// Call GetCacheDir with a test app name
 	appName := "testapp"
