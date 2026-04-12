@@ -1,0 +1,322 @@
+#! /usr/bin/env bash
+
+_plakar() {
+    local command_name="plakar" 
+    local help_and_main_commands="archive \
+backup \
+cat \
+check \
+create \
+destination \
+diff \
+digest \
+dup \
+info \
+locate \
+login \
+logout \
+ls \
+maintenance \
+mount \
+pkg \
+policy \
+prune \
+ptar \
+repair \
+restore \
+rm \
+scheduler \
+server \
+service \
+source \
+store \
+sync \
+token \
+ui \
+version"
+
+    local -A commands=()
+    commands[plakar]="help \
+$help_and_main_commands"
+
+    commands[plakar:help]="$help_and_main_commands"
+
+    commands[plakar:pkg]="add \
+build \
+create \
+list \
+rm \
+show"
+
+    commands[plakar:scheduler]="start \
+stop"
+
+    commands[plakar:service]="list \
+add \
+add \
+rm \
+status \
+show \
+enable \
+disable \
+set \
+unset"
+    commands[plakar:token]="create"
+    commands[plakar:destination]="add \
+check \
+import \
+ping \
+rm \
+show \
+unset"
+
+    commands[plakar:policy]="add \
+rm \
+set \
+show \
+unset"
+
+    commands[plakar:source]="add \
+check \
+import \
+ping \
+rm \
+set \
+show \
+unset"
+
+    commands[plakar:store]="add \
+check \
+import \
+ping \
+rm \
+set \
+show \
+unset"
+
+    local plakar_querry_options="-minutes \
+-hours \
+-days \
+-weeks \
+-months \
+-years \
+-mondays \
+-thuesdays \
+-wednesdays \
+-thursdays \
+-fridays \
+-saturdays \
+-sundays \
+-per-minute \
+-per-hour \
+-per-day \
+-per-week \
+-per-month \
+-per-year \
+-per-monday \
+-per-thuesday \
+-per-wednesday \
+-per-thursday \
+-per-friday \
+-per-saturday \
+-per-sunday \
+-before \
+-category \
+-environment \
+-job \
+-latest \
+-name \
+-perimeter \
+-root \
+-since \
+-tag"
+
+    local -A options=()
+    options[plakar]="-concurrency \
+-config \
+-cpu \
+-disable-security-check \
+-enable-security-check \
+-json \
+-keyfile \
+-profile-cpu \
+-profile-mem \
+-quiet \
+-silent \
+-stdio \
+-time \
+-trace \
+at"
+
+    options[plakar:archive]="-format \
+-output \
+-rebase"
+
+    options[plakar:backup]="-force-timestamp \
+-ignore \
+-ignore-file \
+-check \
+-dry-run \
+-no-xattr \
+-o \
+-quiet \
+-packfiles \
+-silent \
+-tag"
+
+    options[plakar:cat]="-decompress\
+-highlight"
+
+    
+    options[plakar:check]="-fast\
+-no-verify\
+-quiet \
+$plakar_querry_options"
+ 
+    options[plakar:create]="-plaintext"
+
+    options[plakar:destination:import]="-config \
+-overwrite \
+-rclone"
+    options[plakar:destination:show]="-secrets"
+
+    options[plakar:diff]="-highlight\
+-recursive"
+
+    options[plakar:digest]="-hashing"
+    options[plakar:info]="-errors"
+    options[plakar:locate]="-snapshot \
+$plakar_querry_options"
+
+    options[plakar:login]="-email \
+-env \
+-github \
+-no-spawn \
+-status"
+
+    options[plakar:ls]="-uuid\
+-recursive \
+$plakar_querry_options"
+
+    options[plakar:package:show]="-available\
+-long"
+
+    options[plakar:policy:show]="-ini \
+-json \
+-yaml"
+
+    options[plakar:prune]="-apply\
+-policy \
+$plakar_querry_options"
+
+    options[plakar:ptar]="-plaintext\
+-overwrite \
+-k -kloset \
+-o"
+
+    options[plakar:restore]="-name \
+-category \
+-environment \
+-perimeter \
+-job \
+-tag \
+-skip-permissions \
+-o \
+-quiet"
+
+    options[plakar:rm]="-name \
+-category \
+-environment \
+-perimeter \
+-job \
+-tag \
+-latest \
+-before \
+-since"
+
+    options[plakar:scheduler]="-foreground \
+-tasks"
+    options[plakar:scheduler:start]="-tasks"
+
+    options[plakar:server]="-allow-delete \
+-listen"
+
+    options[plakar:source:import]="-config\
+-overwrite \
+-rclone"
+    options[plakar:source:show]="-secrets"
+
+    options[plakar:store:import]="-config\
+-overwrite \
+-rclone"
+    options[plakar:store:show]="-secrets"
+    
+    options[plakar:sync]="-packfiles \
+to \
+from \
+with \
+$plakar_querry_options"
+
+    options[plakar:ui]="-addr \
+-cors \
+-no-auth \
+-no-spawn"
+
+    # All options or commands who needs a system completion for getting a folder or a file
+    local -A system_completion=()
+    system_completion[plakar]="-config \
+-keyfile \
+at"
+    system_completion[plakar:archive]="-output"
+    system_completion[plakar:backup]="-ignore-file \
+-packfiles"
+
+    system_completion[plakar:destination:import]="-config"
+
+    system_completion[plakar:mount]="mount"
+
+    system_completion[plakar:pkg:add]="add"
+    system_completion[plakar:pkg:build]="build"
+    system_completion[plakar:pkg:create]="create"
+    system_completion[plakar:pkg:add]="add"
+
+    system_completion[plakar:ptar]="-k \
+-kloset \
+-o"
+
+    system_completion[plakar:scheduler]="-tasks"
+    system_completion[plakar:scheduler:start]="-tasks"
+
+    system_completion[plakar:source:import]="-config"
+
+    system_completion[plakar:store:import]="-config"
+
+    system_completion[plakar:sync]="-packfiles"
+
+    # After this generic code
+    local cur prev words cword split
+    # builtin bash fonction use to set values to the previous variables
+    _init_completion -s || return
+
+   local path="$command_name"
+    # Start at 1 to skip the command name
+    # cword represent the number of words
+    for (( index=1; index < cword; index++ )); do
+    	local word="${words[$index]}"
+
+        # We do not wrap commands[*] into " because we want shell expension
+	# _command because commmand is a bash keyword
+        for _command in ${commands[*]}; do
+	   [[ "$_command" == "$word" ]] && path="$path:$word" && break
+	done
+    done
+
+   # We do not wrap system_completion[$path] into " because we want shell expension
+   for system_completion_word in ${system_completion[$path]}; do
+       # We relay to -o default to complete filenames or dirs completion
+   	[[ "$system_completion_word" == "$prev" ]] && return
+   done 
+   COMPREPLY=( $(compgen -W "${options[$path]:- } ${commands[$path]:- }" --  ${cur}))
+}
+
+[ "${BASH_VERSINFO[0]}" -ge '4' ] && complete -F _plakar -o default -o filenames plakar
