@@ -18,7 +18,8 @@ var _ fusefs.Node = (*File)(nil)
 var _ fusefs.NodeOpener = (*File)(nil)
 
 type fileHandle struct {
-	f io.ReadCloser
+	f      io.ReadCloser
+	offset int64
 }
 
 var _ fusefs.Handle = (*fileHandle)(nil)
@@ -92,15 +93,26 @@ func (f *File) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 }
 
 func (h *fileHandle) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.ReadResponse) error {
-	ra, ok := h.f.(io.ReaderAt)
-	if !ok {
-		return syscall.EIO
+	if req.Offset != h.offset {
+		s, ok := h.f.(io.Seeker)
+		if !ok {
+			return syscall.EIO
+		}
+		if _, err := s.Seek(req.Offset, io.SeekStart); err != nil {
+			return err
+		}
+		h.offset = req.Offset
 	}
+
 	buf := make([]byte, req.Size)
-	n, err := ra.ReadAt(buf, req.Offset)
+	n, err := io.ReadFull(h.f, buf)
+	if err == io.ErrUnexpectedEOF {
+		err = nil
+	}
 	if err != nil && err != io.EOF {
 		return err
 	}
+	h.offset += int64(n)
 	resp.Data = buf[:n]
 	return nil
 }
