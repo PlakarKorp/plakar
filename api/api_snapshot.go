@@ -125,96 +125,103 @@ func (ui *uiserver) snapshotReader(w http.ResponseWriter, r *http.Request) error
 
 	switch render {
 	case "text":
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		http.ServeContent(w, r, filepath.Base(path), entry.Stat().ModTime(), file.(io.ReadSeeker))
-		return nil
+		return renderText(w, r, path, entry, file)
 	case "text_styled":
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		return renderTextStyled(w, file)
+	case "auto":
+		return renderAuto(w, r, path, entry, file)
+	default: // "code"
+		return renderCode(w, path, entry, file)
+	}
+}
 
-		if _, err := w.Write([]byte(`<!DOCTYPE html>
-		<html>
-			<head>
-			<meta charset="utf-8">
-			<style>
-				body {
-					background-color: #282a36;
-					color: #fff;
-					font-family: monospace;
-				}
-			</style>
-		</head>
-		<body>
-			<pre>`)); err != nil {
-			return err
-		}
+func renderText(w http.ResponseWriter, r *http.Request, entryPath string, entry *vfs.Entry, file io.ReadCloser) error {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	http.ServeContent(w, r, filepath.Base(entryPath), entry.Stat().ModTime(), file.(io.ReadSeeker))
+	return nil
+}
 
-		reader := bufio.NewReader(file)
-		buf := make([]byte, 4096)
-		for {
-			n, err := reader.Read(buf)
-			if n > 0 {
-				escaped := html.EscapeString(string(buf[:n])) // Prevent HTML injection
-				if _, err := w.Write([]byte(escaped)); err != nil {
-					return err
-				}
+func renderTextStyled(w http.ResponseWriter, file io.Reader) error {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+	if _, err := w.Write([]byte(`<!DOCTYPE html>
+	<html>
+		<head>
+		<meta charset="utf-8">
+		<style>
+			body {
+				background-color: #282a36;
+				color: #fff;
+				font-family: monospace;
 			}
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
+		</style>
+	</head>
+	<body>
+		<pre>`)); err != nil {
+		return err
+	}
+
+	reader := bufio.NewReader(file)
+	buf := make([]byte, 4096)
+	for {
+		n, err := reader.Read(buf)
+		if n > 0 {
+			escaped := html.EscapeString(string(buf[:n])) // Prevent HTML injection
+			if _, err := w.Write([]byte(escaped)); err != nil {
 				return err
 			}
 		}
-
-		if _, err := w.Write([]byte("</pre></body></html>")); err != nil {
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
 			return err
 		}
-		return nil
-	case "auto":
-		http.ServeContent(w, r, filepath.Base(path), entry.Stat().ModTime(), file.(io.ReadSeeker))
-		return nil
-	default: // "code"
-		lexer := lexers.Match(path)
-		if lexer == nil {
-			lexer = lexers.Get(entry.ResolvedObject.ContentType)
-		}
-		if lexer == nil {
-			lexer = lexers.Fallback // Fallback if no lexer is found
-		}
-		formatter := formatters.Get("html")
-		style := styles.Get("dracula")
-
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		if _, err := w.Write([]byte("<!DOCTYPE html>")); err != nil {
-			return err
-		}
-
-		reader := bufio.NewReader(file)
-		buffer := make([]byte, 4096) // Fixed-size buffer for chunked reading
-		for {
-			n, err := reader.Read(buffer) // Read up to the size of the buffer
-			if n >= 0 {
-				chunk := string(buffer[:n])
-
-				// Tokenize the chunk and apply syntax highlighting
-				iterator, errTokenize := lexer.Tokenise(nil, chunk)
-				if errTokenize != nil {
-					break
-				}
-
-				errFormat := formatter.Format(w, style, iterator)
-				if errFormat != nil {
-					break
-				}
-			}
-
-			if err != nil {
-				break
-			}
-		}
-
-		return nil
 	}
+
+	if _, err := w.Write([]byte("</pre></body></html>")); err != nil {
+		return err
+	}
+	return nil
+}
+
+func renderAuto(w http.ResponseWriter, r *http.Request, entryPath string, entry *vfs.Entry, file io.ReadCloser) error {
+	http.ServeContent(w, r, filepath.Base(entryPath), entry.Stat().ModTime(), file.(io.ReadSeeker))
+	return nil
+}
+
+func renderCode(w http.ResponseWriter, entryPath string, entry *vfs.Entry, file io.ReadCloser) error {
+	// For files >4MB skip syntax highlighting to avoid reading the entire file into memory.
+	if entry.Size() > 4<<20 {
+		return renderTextStyled(w, file)
+	}
+
+	lexer := lexers.Match(entryPath)
+	if lexer == nil {
+		lexer = lexers.Get(entry.ResolvedObject.ContentType)
+	}
+	if lexer == nil {
+		lexer = lexers.Fallback // Fallback if no lexer is found
+	}
+	formatter := formatters.Get("html")
+	style := styles.Get("dracula")
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if _, err := w.Write([]byte("<!DOCTYPE html>")); err != nil {
+		return err
+	}
+
+	content, err := io.ReadAll(file)
+	if err != nil {
+		return err
+	}
+
+	iterator, err := lexer.Tokenise(nil, string(content))
+	if err != nil {
+		return err
+	}
+
+	return formatter.Format(w, style, iterator)
 }
 
 type SnapshotReaderURLSigner struct {
