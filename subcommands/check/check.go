@@ -25,6 +25,7 @@ import (
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/exitcodes"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/google/uuid"
 )
@@ -150,7 +151,7 @@ func (cmd *Check) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 		if failures == 1 {
 			snapshots = "snapshot"
 		}
-		return 1, fmt.Errorf("check failed for %d %s",
+		return exitcodes.IntegrityFailure, fmt.Errorf("check failed for %d %s",
 			failures, snapshots)
 	}
 
