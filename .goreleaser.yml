@@ -64,6 +64,49 @@ builds:
     # Templates: allowed.
     mod_timestamp: "{{ .CommitTimestamp }}"
 
+dockers:
+  - id: plakar-amd64
+    image_templates:
+      - "ghcr.io/plakarkorp/plakar:{{ .Tag }}-amd64"
+    use: buildx
+    dockerfile: Dockerfile.goreleaser
+    goos: linux
+    goarch: amd64
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.source=https://github.com/PlakarKorp/plakar"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.title=plakar"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+
+  - id: plakar-arm64
+    image_templates:
+      - "ghcr.io/plakarkorp/plakar:{{ .Tag }}-arm64"
+    use: buildx
+    dockerfile: Dockerfile.goreleaser
+    goos: linux
+    goarch: arm64
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--label=org.opencontainers.image.source=https://github.com/PlakarKorp/plakar"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.title=plakar"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+
+docker_manifests:
+  - name_template: "ghcr.io/plakarkorp/plakar:{{ .Tag }}"
+    image_templates:
+      - "ghcr.io/plakarkorp/plakar:{{ .Tag }}-amd64"
+      - "ghcr.io/plakarkorp/plakar:{{ .Tag }}-arm64"
+
+  - name_template: "ghcr.io/plakarkorp/plakar:latest"
+    skip_push: '{{ ne .Env.MAKE_LATEST_RELEASE "true" }}'
+    image_templates:
+      - "ghcr.io/plakarkorp/plakar:{{ .Tag }}-amd64"
+      - "ghcr.io/plakarkorp/plakar:{{ .Tag }}-arm64"
+
 nfpms:
   - package_name: plakar
 
