@@ -265,26 +265,20 @@ func GetCacheDir(appName string) (string, error) {
 
 	switch runtime.GOOS {
 	case "windows":
-		// Use %LocalAppData%
 		cacheDir = os.Getenv("LocalAppData")
-		if cacheDir == "" {
-			return "", fmt.Errorf("LocalAppData environment variable not set")
-		}
-		cacheDir = filepath.Join(cacheDir, appName)
 	default:
-		// Use XDG_CACHE_HOME or default to ~/.cache
 		cacheDir = os.Getenv("XDG_CACHE_HOME")
-		if cacheDir == "" {
-			homeDir, err := os.UserHomeDir()
-			if err != nil {
-				return "", err
-			}
-			cacheDir = filepath.Join(homeDir, ".cache", appName)
-		} else {
-			cacheDir = filepath.Join(cacheDir, appName)
-		}
 	}
-
+	// Use environment or default to ~/.cache
+	if cacheDir == "" {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return "", err
+		}
+		cacheDir = filepath.Join(homeDir, ".cache", appName)
+	} else {
+		cacheDir = filepath.Join(cacheDir, appName)
+	}
 	// Create the cache directory if it doesn't exist
 	err := os.MkdirAll(cacheDir, 0700)
 	if err != nil {
@@ -299,24 +293,19 @@ func GetConfigDir(appName string) (string, error) {
 
 	switch runtime.GOOS {
 	case "windows":
-		// Use %LocalAppData%
 		configDir = os.Getenv("LocalAppData")
-		if configDir == "" {
-			return "", fmt.Errorf("LocalAppData environment variable not set")
-		}
-		configDir = filepath.Join(configDir, appName)
 	default:
-		// Use XDG_CONFIG_HOME or default to ~/.config
 		configDir = os.Getenv("XDG_CONFIG_HOME")
-		if configDir == "" {
-			homeDir, err := os.UserHomeDir()
-			if err != nil {
-				return "", err
-			}
-			configDir = filepath.Join(homeDir, ".config", appName)
-		} else {
-			configDir = filepath.Join(configDir, appName)
+	}
+	// Use the environment or default to ~/.config
+	if configDir == "" {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return "", err
 		}
+		configDir = filepath.Join(homeDir, ".config", appName)
+	} else {
+		configDir = filepath.Join(configDir, appName)
 	}
 
 	// Create the cache directory if it doesn't exist
@@ -333,24 +322,19 @@ func GetDataDir(appName string) (string, error) {
 
 	switch runtime.GOOS {
 	case "windows":
-		// Use %LocalAppData%
 		dataDir = os.Getenv("LocalAppData")
-		if dataDir == "" {
-			return "", fmt.Errorf("LocalAppData environment variable not set")
-		}
-		dataDir = filepath.Join(dataDir, appName)
 	default:
-		// Use XDG_DATA_HOME or default to ~/.local/share
 		dataDir = os.Getenv("XDG_DATA_HOME")
-		if dataDir == "" {
-			homeDir, err := os.UserHomeDir()
-			if err != nil {
-				return "", err
-			}
-			dataDir = filepath.Join(homeDir, ".local", "share", appName)
-		} else {
-			dataDir = filepath.Join(dataDir, appName)
+	}
+	// Use the environment or default to ~/.local/share
+	if dataDir == "" {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return "", err
 		}
+		dataDir = filepath.Join(homeDir, ".local", "share", appName)
+	} else {
+		dataDir = filepath.Join(dataDir, appName)
 	}
 
 	// Create the cache directory if it doesn't exist
