@@ -112,13 +112,25 @@ func entryPoint() int {
 
 	opt_configDefault, err := utils.GetConfigDir("plakar")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: could not get config directory: %s\n", flag.CommandLine.Name(), err)
+		fmt.Fprintf(os.Stderr, "%s: could not get default config directory: %s\n", flag.CommandLine.Name(), err)
+		return 1
+	}
+	opt_cacheDefault, err := utils.GetCacheDir("plakar")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s: could not get default cache directory: %s\n", flag.CommandLine.Name(), err)
+		return 1
+	}
+	opt_dataDefault, err := utils.GetDataDir("plakar")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s: could not get default data directory: %s\n", flag.CommandLine.Name(), err)
 		return 1
 	}
 
 	// command line overrides
 	var opt_cpuCount int
 	var opt_configdir string
+	var opt_cachedir string
+	var opt_datadir string
 	var opt_cpuProfile string
 	var opt_memProfile string
 	var opt_time bool
@@ -133,6 +145,8 @@ func entryPoint() int {
 	var opt_maxConcurrency int
 
 	flag.StringVar(&opt_configdir, "config", opt_configDefault, "configuration directory")
+	flag.StringVar(&opt_cachedir, "cache", opt_cacheDefault, "cache directory")
+	flag.StringVar(&opt_datadir, "data", opt_dataDefault, "data directory")
 	flag.IntVar(&opt_cpuCount, "cpu", opt_cpuDefault, "limit the number of usable cores")
 	flag.IntVar(&opt_maxConcurrency, "concurrency", -1, "limit the number of concurrent operations")
 	flag.StringVar(&opt_cpuProfile, "profile-cpu", "", "profile CPU usage")
@@ -199,10 +213,8 @@ func entryPoint() int {
 	ctx.Client = "plakar/" + utils.GetVersion()
 	ctx.CWD = cwd
 
-	// default cachedir
-	cacheSubDir := "plakar"
-
-	cookiesDir, err := utils.GetCacheDir(cacheSubDir)
+	cookiesDir := opt_cachedir
+	err = os.MkdirAll(cookiesDir, 0700)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s: could not get cookies directory: %s\n", flag.CommandLine.Name(), err)
 		return 1
@@ -211,16 +223,16 @@ func entryPoint() int {
 	ctx.SetCookies(cookies.NewManager(cookiesDir))
 	defer ctx.GetCookies().Close()
 
-	cacheDir, err := utils.GetCacheDir(cacheSubDir)
+	err = os.MkdirAll(opt_cachedir, 0700)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s: could not get cache directory: %s\n", flag.CommandLine.Name(), err)
 		return 1
 	}
-	ctx.CacheDir = cacheDir
-	ctx.SetCache(caching.NewManager(pebble.Constructor(cacheDir)))
+	ctx.CacheDir = opt_cachedir
+	ctx.SetCache(caching.NewManager(pebble.Constructor(opt_cachedir)))
 	defer ctx.GetCache().Close()
 
-	dataDir, err := utils.GetDataDir("plakar")
+	err = os.MkdirAll(opt_datadir, 0700)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s: could not get data directory: %s\n", flag.CommandLine.Name(), err)
 		return 1
@@ -313,7 +325,7 @@ func entryPoint() int {
 
 	ctx.SetLogger(logger)
 
-	if err := setupPkgManager(ctx, dataDir, cacheDir); err != nil {
+	if err := setupPkgManager(ctx, opt_datadir, opt_cachedir); err != nil {
 		log.Fatalln(err.Error())
 	}
 

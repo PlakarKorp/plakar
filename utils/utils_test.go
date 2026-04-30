@@ -99,6 +99,8 @@ func TestGetConfigDir(t *testing.T) {
 	appName := "testapp"
 	configDir, err := GetConfigDir(appName)
 	require.NoError(t, err)
+	err = os.MkdirAll(configDir, 0700)
+	require.NoError(t, err)
 
 	// Verify that the config directory is inside the temporary directory
 	expectedDir := filepath.Join(tempDir, appName)
@@ -126,6 +128,8 @@ func TestGetCacheDir(t *testing.T) {
 	// Call GetCacheDir with a test app name
 	appName := "testapp"
 	cacheDir, err := GetCacheDir(appName)
+	require.NoError(t, err)
+	err = os.MkdirAll(cacheDir, 0700)
 	require.NoError(t, err)
 
 	// Verify that the cache directory is inside the temporary directory
