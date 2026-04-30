@@ -38,6 +38,18 @@ The following options are available:
 > Defaults to
 > *~/.config/plakar*.
 
+**-cache** *dir*
+
+> Specify an alternate cache directory.
+> Defaults to
+> *~/.cache*.
+
+**-data** *dir*
+
+> Specify an alternate data directory.
+> Defaults to
+> *~/.local/share*.
+
 **-concurrency** *number*
 
 > Set the maximum number of parallel tasks for faster

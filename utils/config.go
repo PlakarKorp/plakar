@@ -102,7 +102,13 @@ func (cl *configHandler) LoadFallback() (*config.Config, error) {
 }
 
 func (cl *configHandler) Save(cfg *config.Config) error {
-	err := cl.save("sources.yml", sourcesConfig{
+	// Create the config directory if it doesn't exist
+	err := os.MkdirAll(cl.Path, 0700)
+	if err != nil {
+		return err
+	}
+
+	err = cl.save("sources.yml", sourcesConfig{
 		Version: CONFIG_VERSION,
 		Sources: cfg.Sources,
 	})
