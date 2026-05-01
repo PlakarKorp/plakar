@@ -13,7 +13,7 @@ require (
 	github.com/PlakarKorp/kloset v1.1.0-beta.6.0.20260407081142-583ca7aa0373
 	github.com/PlakarKorp/pkg v1.1.0-beta.6
 	github.com/alecthomas/chroma v0.10.0
-	github.com/anacrolix/fuse v0.3.1
+	github.com/anacrolix/fuse v0.3.2
 	github.com/charmbracelet/bubbles v1.0.0
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/glamour v1.0.0
@@ -48,6 +48,13 @@ require (
 	github.com/RaduBerinde/axisds v0.1.0 // indirect
 	github.com/RaduBerinde/btreemap v0.0.0-20250419232817-bf0d809ae648 // indirect
 	github.com/alecthomas/chroma/v2 v2.20.0 // indirect
+	github.com/anacrolix/envpprof v1.4.1-0.20251201125402-e8b52d50f714 // indirect
+	github.com/anacrolix/generics v0.1.0 // indirect
+	github.com/anacrolix/log v0.14.1 // indirect
+	github.com/anacrolix/missinggo v1.2.1 // indirect
+	github.com/anacrolix/missinggo/perf v1.0.0 // indirect
+	github.com/anacrolix/missinggo/v2 v2.10.0 // indirect
+	github.com/anacrolix/sync v0.6.0 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -70,6 +77,7 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dlclark/regexp2 v1.11.5 // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
+	github.com/felixge/fgprof v0.9.5 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.13 // indirect
 	github.com/getsentry/sentry-go v0.35.1 // indirect
@@ -80,7 +88,9 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
+	github.com/google/pprof v0.0.0-20250317173921-a4b03ec1a45e // indirect
 	github.com/gorilla/css v1.0.1 // indirect
+	github.com/huandu/xstrings v1.3.2 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
