@@ -49,6 +49,15 @@ func (c *policiesConfig) setTime(value string, p *time.Time) error {
 	return nil
 }
 
+func (c *policiesConfig) setDuration(value string, p *time.Duration) error {
+	t, err := locate.ParseDurationFlag(value)
+	if err != nil {
+		return fmt.Errorf("invalid value: %w", err)
+	}
+	*p = t
+	return nil
+}
+
 func (c *policiesConfig) setStringList(value string, p *[]string) error {
 	*p = strings.Split(value, ",")
 	return nil
@@ -154,6 +163,8 @@ func (c *policiesConfig) Set(name string, key string, value string) error {
 		return c.setInt(value, p)
 	case *time.Time:
 		return c.setTime(value, p)
+	case *time.Duration:
+		return c.setDuration(value, p)
 	case *string:
 		*p = value
 		return nil
