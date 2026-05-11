@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/PlakarKorp/kloset/connectors/storage"
 	"github.com/PlakarKorp/kloset/encryption"
 	"github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/kloset/repository"
-	"github.com/PlakarKorp/kloset/connectors/storage"
 	"github.com/PlakarKorp/kloset/versioning"
 	"github.com/PlakarKorp/plakar/cached"
 	"github.com/PlakarKorp/plakar/subcommands/backup"
@@ -92,7 +92,7 @@ func (s *Scheduler) backupTask(taskset Task, task BackupConfig) {
 					continue
 				}
 
-				rmSubcommand.LocateOptions.Filters.Before = time.Now().Add(-task.Retention)
+				rmSubcommand.LocateOptions.Filters.Before = task.Retention
 				retval, err := ptask.RunCommand(s.ctx, rmSubcommand, repo, "@scheduler")
 				if err != nil || retval != 0 {
 					s.ctx.GetLogger().Error("Error removing obsolete backups: %s", err)
@@ -285,7 +285,7 @@ func (s *Scheduler) maintenanceTask(task MaintenanceConfig) {
 					continue
 				}
 
-				rmSubcommand.LocateOptions.Filters.Before = time.Now().Add(-task.Retention)
+				rmSubcommand.LocateOptions.Filters.Before = task.Retention
 				retval, err := ptask.RunCommand(s.ctx, rmSubcommand, repo, "@scheduler")
 				if err != nil || retval != 0 {
 					s.ctx.GetLogger().Error("Error removing obsolete backups: %s", err)
