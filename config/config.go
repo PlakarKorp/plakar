@@ -3,8 +3,6 @@ package config
 import (
 	"fmt"
 	"strings"
-
-	"maps"
 )
 
 type Config struct {
@@ -42,11 +40,9 @@ func (c *Config) GetRepository(name string) (map[string]string, error) {
 	}
 	if _, ok := kv["location"]; !ok {
 		return nil, fmt.Errorf("repository %s has no location", name)
-	} else {
-		res := make(map[string]string)
-		maps.Copy(res, kv)
-		return res, nil
 	}
+
+	return resolve(kv)
 }
 
 func (c *Config) HasSource(name string) bool {
@@ -54,13 +50,11 @@ func (c *Config) HasSource(name string) bool {
 	return ok
 }
 
-func (c *Config) GetSource(name string) (map[string]string, bool) {
+func (c *Config) GetSource(name string) (map[string]string, error) {
 	if kv, ok := c.Sources[name]; !ok {
-		return nil, false
+		return nil, fmt.Errorf("failed to retrieve configuration for source %q", name)
 	} else {
-		res := make(map[string]string)
-		maps.Copy(res, kv)
-		return res, ok
+		return resolve(kv)
 	}
 }
 
@@ -69,12 +63,10 @@ func (c *Config) HasDestination(name string) bool {
 	return ok
 }
 
-func (c *Config) GetDestination(name string) (map[string]string, bool) {
+func (c *Config) GetDestination(name string) (map[string]string, error) {
 	if kv, ok := c.Destinations[name]; !ok {
-		return nil, false
+		return nil, fmt.Errorf("failed to retrieve configuration for destination %q", name)
 	} else {
-		res := make(map[string]string)
-		maps.Copy(res, kv)
-		return res, ok
+		return resolve(kv)
 	}
 }

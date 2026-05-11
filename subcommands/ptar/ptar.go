@@ -335,9 +335,9 @@ func (cmd *Ptar) backup(ctx *appcontext.AppContext, repo *repository.RepositoryW
 			"location": loc,
 		}
 		if strings.HasPrefix(loc, "@") {
-			remote, ok := ctx.Config.GetSource(loc[1:])
-			if !ok {
-				return fmt.Errorf("could not resolve importer: %s", loc)
+			remote, err := ctx.Config.GetSource(loc[1:])
+			if err != nil {
+				return err
 			}
 			if _, ok := remote["location"]; !ok {
 				return fmt.Errorf("could not resolve importer location: %s", loc)
