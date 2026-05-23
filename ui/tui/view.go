@@ -298,25 +298,27 @@ func (m appModel) View() string {
 	}
 	fmt.Fprintln(&s, barLine)
 
-	// ── line 4: dirs / files / errors ────────────────────────────────────────
+	// ── line 4: nodes / objects / errors ─────────────────────────────────────
+	// nodes   = directory entries (structural)
+	// objects = files + symlinks + xattrs (actual data objects)
 
 	var statParts []string
 
-	// dirs
+	// nodes (dirs)
 	statParts = append(statParts,
-		dimStyle.Render("dirs: ")+okStyle.Render(fmt.Sprintf("%d", state.countDirOk)))
+		dimStyle.Render("nodes: ")+okStyle.Render(fmt.Sprintf("%d", state.countDirOk)))
 
-	// files: done/total or just done
-	filesDone := state.countFileOk + state.countSymlinkOk + state.countXattrOk
+	// objects: done/total or just done
+	objectsDone := state.countFileOk + state.countSymlinkOk + state.countXattrOk
 	if hasSummary {
-		filesTotal := state.summaryFile + state.summarySymlink + state.summaryXattr
+		objectsTotal := state.summaryFile + state.summarySymlink + state.summaryXattr
 		statParts = append(statParts,
-			dimStyle.Render("files: ")+
-				okStyle.Render(fmt.Sprintf("%d", filesDone))+
-				dimStyle.Render(fmt.Sprintf("/%d", filesTotal)))
+			dimStyle.Render("objects: ")+
+				okStyle.Render(fmt.Sprintf("%d", objectsDone))+
+				dimStyle.Render(fmt.Sprintf("/%d", objectsTotal)))
 	} else {
 		statParts = append(statParts,
-			dimStyle.Render("files: ")+okStyle.Render(fmt.Sprintf("%d", filesDone)))
+			dimStyle.Render("objects: ")+okStyle.Render(fmt.Sprintf("%d", objectsDone)))
 	}
 
 	// cached
