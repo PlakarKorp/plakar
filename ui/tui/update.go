@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -54,10 +55,11 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch event.String() {
 		case "ctrl+c":
-			// Mark abort on the application so the event loop can detect it,
-			// then quit cleanly so bubbletea fully restores terminal state.
 			m.application.aborted = true
 			m.forceQuit = true
+			// Cancel the context immediately so the running command stops
+			// without waiting for the event channel to drain and close.
+			m.application.ctx.Cancel(fmt.Errorf("aborted"))
 			return m, tea.Quit
 		}
 
