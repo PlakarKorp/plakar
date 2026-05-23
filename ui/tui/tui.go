@@ -15,8 +15,9 @@ type tui struct {
 	ctx  *appcontext.AppContext
 	repo *repository.Repository
 
-	mu  sync.Mutex
-	app *Application
+	mu      sync.Mutex
+	app     *Application
+	silent  bool // true after user abort; suppresses all further output
 
 	done chan error
 }
@@ -53,6 +54,18 @@ func (t *tui) setApp(app *Application) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.app = app
+}
+
+func (t *tui) isSilent() bool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.silent
+}
+
+func (t *tui) setSilent() {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.silent = true
 }
 
 func (t *tui) Stop() {
@@ -92,6 +105,7 @@ func (t *tui) Run() error {
 				case <-app.done:
 					if app.aborted {
 						result = ui.ErrUserAbort
+						t.setSilent()
 					} else if app.err != nil {
 						result = app.err
 					}
@@ -122,8 +136,10 @@ func (t *tui) Run() error {
 				}
 			}
 
-			// Default fallback for unhandled events
-			stdio.HandleEvent(t.ctx, e)
+			// Default fallback for unhandled events (suppressed after user abort)
+			if !t.isSilent() {
+				stdio.HandleEvent(t.ctx, e)
+			}
 		}
 
 		// Drain: if an app is still running when events close, stop it

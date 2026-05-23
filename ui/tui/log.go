@@ -52,5 +52,10 @@ func (w *switchWriter) writeLine(line string) {
 		app.state.logs = append(app.state.logs, fmt.Sprintf("[%s] %s", w.stream, line))
 		return
 	}
+	// After a user abort the TUI has exited; swallow output so the restored
+	// terminal is not polluted by the still-winding-down command.
+	if w.tui.isSilent() {
+		return
+	}
 	_, _ = io.WriteString(w.fallback, line+"\n")
 }
