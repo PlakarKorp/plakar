@@ -16,9 +16,9 @@ import (
 
 var (
 	crossMark = lipgloss.NewStyle().Foreground(lipgloss.Color("1")).SetString("✘")
-	okStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("2"))  // green
-	errStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("1"))  // red
-	dimStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))  // bright-black / gray
+	okStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("2")) // green
+	errStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("1")) // red
+	dimStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("8")) // gray
 	boldStyle = lipgloss.NewStyle().Bold(true)
 )
 
@@ -44,7 +44,7 @@ func progressBar() progress.Model {
 	)
 	p.Full = '█'
 	p.Empty = '░'
-	p.ShowPercentage = false // we render percentage ourselves
+	p.ShowPercentage = false
 	return p
 }
 
@@ -68,7 +68,6 @@ func formatBytes(b int64) string {
 	return humanize.IBytes(uint64(b))
 }
 
-// truncateLeft keeps the rightmost part of s, prefixing with "…".
 func truncateLeft(s string, maxW int) string {
 	if maxW <= 0 {
 		return ""
@@ -96,7 +95,6 @@ func truncateLeft(s string, maxW int) string {
 	return "..." + string(tail)
 }
 
-// shortenPathTailMax keeps as many whole trailing path components as fit.
 func shortenPathTailMax(path string, maxW int) string {
 	if maxW <= 0 || path == "" {
 		return ""
@@ -104,7 +102,6 @@ func shortenPathTailMax(path string, maxW int) string {
 	if lipgloss.Width(path) <= maxW {
 		return path
 	}
-
 	sep := string(filepath.Separator)
 	p := strings.ReplaceAll(strings.ReplaceAll(path, "\\", sep), "/", sep)
 	vol := filepath.VolumeName(p)
@@ -114,7 +111,6 @@ func shortenPathTailMax(path string, maxW int) string {
 	if len(p) > 1 {
 		p = strings.TrimRight(p, sep)
 	}
-
 	parts := strings.FieldsFunc(p, func(r rune) bool { return string(r) == sep })
 	if len(parts) == 0 {
 		out := vol
@@ -123,26 +119,21 @@ func shortenPathTailMax(path string, maxW int) string {
 		}
 		return truncateLeft(out, maxW)
 	}
-
 	join := func(dots bool, tail []string) string {
 		body := strings.Join(tail, sep)
-		prefix := ""
 		if dots {
-			prefix = "..."
 			if vol != "" {
-				prefix = vol + sep + prefix
+				return vol + sep + "..." + sep + body
 			}
-			return prefix + sep + body
+			return "..." + sep + body
 		}
 		if vol != "" {
 			return vol + sep + body
 		}
 		return body
 	}
-
 	tail := []string{parts[len(parts)-1]}
 	best := join(true, tail)
-
 	if lipgloss.Width(best) > maxW {
 		file := parts[len(parts)-1]
 		prefix := "..." + sep
@@ -152,7 +143,6 @@ func shortenPathTailMax(path string, maxW int) string {
 		}
 		return prefix + truncateLeft(file, avail)
 	}
-
 	for i := len(parts) - 2; i >= 0; i-- {
 		cand := join(true, append([]string{parts[i]}, tail...))
 		if lipgloss.Width(cand) <= maxW {
@@ -162,20 +152,20 @@ func shortenPathTailMax(path string, maxW int) string {
 			break
 		}
 	}
-
 	if full := join(false, parts); lipgloss.Width(full) <= maxW {
 		return full
 	}
 	return best
 }
 
-// padRight pads or truncates s to exactly w visible characters.
-func padRight(s string, w int) string {
-	sw := lipgloss.Width(s)
-	if sw >= w {
-		return s
+// rightAlign returns a string of exactly width w with left padded so that
+// content sits at the right edge.
+func rightAlign(content string, w int) string {
+	cw := lipgloss.Width(content)
+	if cw >= w {
+		return content
 	}
-	return s + strings.Repeat(" ", w-sw)
+	return strings.Repeat(" ", w-cw) + content
 }
 
 // ── View ──────────────────────────────────────────────────────────────────────
@@ -185,15 +175,16 @@ func (m appModel) View() string {
 	elapsed := time.Since(state.startTime)
 
 	if m.forceQuit {
-		return dimStyle.Render(fmt.Sprintf("  %s  %s: aborted\n",
-			humanDuration(elapsed), m.application.name))
+		return fmt.Sprintf("[%s] %s: aborted\n",
+			humanDuration(elapsed), m.application.name)
+	}
+
+	termW := m.width
+	if termW <= 0 {
+		termW = 80
 	}
 
 	var s strings.Builder
-	w := m.width
-	if w <= 0 {
-		w = 80 // safe default before first WindowSizeMsg
-	}
 
 	// ── computed values ──────────────────────────────────────────────────────
 
@@ -223,143 +214,168 @@ func (m appModel) View() string {
 		}
 	}
 
-	// ── line 1: timer · bar · progress fraction · size · ETA ────────────────
-	//
-	//   02:14  ████████████░░░░  74%  8,432/9,721  1.2 GiB  ETA 32s
-	//
-	// Fixed-width tokens go on the outside; the bar stretches to fill the gap.
+	// indent used on lines 2+ (aligns with the content after "[HH:MM] ")
+	timerLabel := "[" + humanDuration(elapsed) + "]"
+	timerW := lipgloss.Width(timerLabel)
+	indent := strings.Repeat(" ", timerW+1)
 
-	timer := boldStyle.Render(humanDuration(elapsed))
+	// ── line 1: [HH:MM] snapID  phase ───────────────────────────────────────
 
-	// Right side: "done/total  size  ETA" or just "size" when no summary
-	var rightTokens []string
-	if hasSummary {
-		fraction := fmt.Sprintf("%d/%d", done, total)
-		if state.countPathError > 0 {
-			fraction += "  " + errStyle.Render(fmt.Sprintf("%d err", state.countPathError))
-		}
-		rightTokens = append(rightTokens, dimStyle.Render(fraction))
+	header := boldStyle.Render(timerLabel) + " " + dimStyle.Render(state.snapshotID)
+	if state.phase != "" {
+		header += "  " + state.phase
 	}
-	if state.countFileSize > 0 {
-		rightTokens = append(rightTokens, humanize.IBytes(uint64(state.countFileSize)))
-	}
-	if etaText != "" {
-		rightTokens = append(rightTokens, dimStyle.Render(etaText))
-	}
-	right := strings.Join(rightTokens, dimStyle.Render("  ·  "))
+	fmt.Fprintln(&s, header)
 
-	// Bar with percentage label embedded at the right end
+	// ── line 2: path (left) + size (right) ───────────────────────────────────
+
+	sizeText := humanize.IBytes(uint64(state.countFileSize))
+	sizeW := lipgloss.Width(sizeText)
+
+	item := state.lastItem
+	availPath := termW - timerW - 1 - sizeW - 1 // indent + path + space + size
+	if availPath < 0 {
+		availPath = 0
+	}
+	item = shortenPathTailMax(item, availPath)
+	itemW := lipgloss.Width(item)
+
+	pad := availPath - itemW
+	if pad < 0 {
+		pad = 0
+	}
+	fmt.Fprintf(&s, "%s%s%s%s\n", indent, item, strings.Repeat(" ", pad), sizeText)
+
+	// ── line 3: progress bar + pct (left) + ETA (right) ─────────────────────
+
 	pctLabel := ""
 	if hasSummary {
 		pctLabel = fmt.Sprintf(" %3d%%", pct)
 	}
+	etaLabel := ""
+	if etaText != "" {
+		etaLabel = dimStyle.Render(etaText)
+	}
 
-	// Calculate bar width: total - timer - spaces - pctLabel - right
-	timerW := lipgloss.Width(timer)
-	rightW := lipgloss.Width(right)
 	pctW := lipgloss.Width(pctLabel)
-
-	// layout: "  {timer}  {bar}{pct}  {right}\n"
-	// fixed overhead: 2+2+2 = 6 spaces
-	overhead := 2 + timerW + 2 + pctW + 2 + rightW
-	barW := w - overhead
+	etaW := lipgloss.Width(etaLabel)
+	barW := termW - timerW - 1 - pctW - etaW
+	if etaW > 0 {
+		barW-- // space before ETA
+	}
 	if barW < 4 {
 		barW = 4
 	}
 
-	bar := ""
+	p := m.progress
+	p.Width = barW
+	var bar string
 	if hasSummary {
-		p := m.progress
-		p.Width = barW
-		bar = p.ViewAs(ratio) + dimStyle.Render(pctLabel)
+		bar = p.ViewAs(ratio)
 	} else {
-		// Spinner-style placeholder when we don't know the total yet
 		bar = dimStyle.Render(strings.Repeat("░", barW))
 	}
 
-	line1 := fmt.Sprintf("  %s  %s", timer, bar)
-	if right != "" {
-		// pad so right sits at the terminal edge
-		line1W := lipgloss.Width(line1)
-		gap := w - line1W - rightW - 2
+	barLine := indent + bar + pctLabel
+	if etaLabel != "" {
+		barLineW := lipgloss.Width(barLine)
+		gap := termW - barLineW - etaW
 		if gap < 1 {
 			gap = 1
 		}
-		line1 += strings.Repeat(" ", gap) + right
+		barLine += strings.Repeat(" ", gap) + etaLabel
 	}
-	fmt.Fprintln(&s, line1)
+	fmt.Fprintln(&s, barLine)
 
-	// ── line 2: current path (dim, indented) ─────────────────────────────────
+	// ── line 4: dirs / files / errors ────────────────────────────────────────
 
-	if state.lastItem != "" {
-		indent := "  " + strings.Repeat(" ", timerW+2) // align under the bar
-		avail := w - lipgloss.Width(indent)
-		if avail < 1 {
-			avail = 1
-		}
-		path := dimStyle.Render(shortenPathTailMax(state.lastItem, avail))
-		fmt.Fprintln(&s, indent+path)
-	} else if state.phase != "" {
-		indent := "  " + strings.Repeat(" ", timerW+2)
-		fmt.Fprintln(&s, indent+dimStyle.Render(state.phase+"…"))
-	}
+	var statParts []string
 
-	// ── line 3: stats row (dirs · cached · store I/O) ────────────────────────
+	// dirs
+	statParts = append(statParts,
+		dimStyle.Render("dirs: ")+okStyle.Render(fmt.Sprintf("%d", state.countDirOk)))
 
-	var statTokens []string
-
-	if state.countDirOk > 0 {
-		statTokens = append(statTokens,
-			dimStyle.Render("dirs ")+okStyle.Render(fmt.Sprintf("%d", state.countDirOk)))
-	}
-	if state.countFileCached+state.countDirCached+state.countSymlinkCached+state.countXattrCached > 0 {
-		cached := state.countFileCached + state.countDirCached + state.countSymlinkCached + state.countXattrCached
-		statTokens = append(statTokens,
-			dimStyle.Render("cached ")+dimStyle.Render(fmt.Sprintf("%d", cached)))
+	// files: done/total or just done
+	filesDone := state.countFileOk + state.countSymlinkOk + state.countXattrOk
+	if hasSummary {
+		filesTotal := state.summaryFile + state.summarySymlink + state.summaryXattr
+		statParts = append(statParts,
+			dimStyle.Render("files: ")+
+				okStyle.Render(fmt.Sprintf("%d", filesDone))+
+				dimStyle.Render(fmt.Sprintf("/%d", filesTotal)))
+	} else {
+		statParts = append(statParts,
+			dimStyle.Render("files: ")+okStyle.Render(fmt.Sprintf("%d", filesDone)))
 	}
 
-	if m.repo != nil {
+	// cached
+	cached := state.countFileCached + state.countDirCached + state.countSymlinkCached + state.countXattrCached
+	if cached > 0 {
+		statParts = append(statParts,
+			dimStyle.Render("cached: ")+dimStyle.Render(fmt.Sprintf("%d", cached)))
+	}
+
+	// errors
+	if state.countPathError > 0 {
+		statParts = append(statParts,
+			dimStyle.Render("errors: ")+errStyle.Render(fmt.Sprintf("%d", state.countPathError)))
+	} else {
+		statParts = append(statParts, dimStyle.Render("errors: 0"))
+	}
+
+	fmt.Fprintln(&s, indent+strings.Join(statParts, dimStyle.Render("   ")))
+
+	// ── line 5: throughput / store I/O ───────────────────────────────────────
+
+	var ioTokens []string
+
+	// prefer event-driven rates; fall back to repo polling if not yet available
+	if state.transferRate > 0 {
+		ioTokens = append(ioTokens,
+			dimStyle.Render("in ")+fmt.Sprintf("%s/s", humanize.IBytes(uint64(state.transferRate))))
+	}
+	if state.storeWriteRate > 0 {
+		ioTokens = append(ioTokens,
+			dimStyle.Render("store ↑ ")+fmt.Sprintf("%s/s", humanize.IBytes(uint64(state.storeWriteRate))))
+	} else if m.repo != nil {
+		// fallback: poll repo stats (no granular events yet)
 		if time.Since(m.application.debounceStat) >= time.Second {
 			io := m.repo.IOStats()
 			r := io.Read.Stats()
-			ww := io.Write.Stats()
-			m.application.lastStat = fmt.Sprintf("store ↑%s ↓%s",
-				humanize.IBytes(uint64(ww.TotalBytes)),
+			w := io.Write.Stats()
+			m.application.lastStat = fmt.Sprintf("store ↑ %s  ↓ %s",
+				humanize.IBytes(uint64(w.TotalBytes)),
 				humanize.IBytes(uint64(r.TotalBytes)))
 			m.application.debounceStat = time.Now()
 		}
 		if m.application.lastStat != "" {
-			statTokens = append(statTokens, dimStyle.Render(m.application.lastStat))
+			ioTokens = append(ioTokens, dimStyle.Render(m.application.lastStat))
 		}
 	}
 
-	if len(statTokens) > 0 {
-		indent := "  " + strings.Repeat(" ", timerW+2)
-		fmt.Fprintln(&s, indent+strings.Join(statTokens, dimStyle.Render("  ·  ")))
+	if len(ioTokens) > 0 {
+		fmt.Fprintln(&s, indent+strings.Join(ioTokens, dimStyle.Render("   ")))
 	}
 
-	// ── errors (tail, bounded by remaining terminal height) ──────────────────
+	// ── errors (below, bounded by terminal height) ────────────────────────────
 
 	if len(state.errors) > 0 {
 		fmt.Fprintln(&s)
-
-		// how many lines we've used so far
-		used := strings.Count(s.String(), "\n")
-		avail := m.height - used - 1 // leave one line for the notice
+		used := strings.Count(s.String(), "\n") + 2
+		avail := m.height - used
 		if avail < 1 {
 			avail = 1
 		}
 		if avail > len(state.errors) {
 			avail = len(state.errors)
 		}
-
 		start := len(state.errors) - avail
 		for _, e := range state.errors[start:] {
 			fmt.Fprintln(&s, e)
 		}
 		if start > 0 {
 			fmt.Fprintln(&s, dimStyle.Render(fmt.Sprintf(
-				"  … %d more errors — run `plakar info -errors %s` for full list",
+				"  … %d more — run `plakar info -errors %s`",
 				start, state.snapshotID)))
 		}
 	}

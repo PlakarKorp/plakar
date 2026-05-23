@@ -21,20 +21,20 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 
 	case tickMsg:
-		var cmd tea.Cmd
-
 		state := m.application.state
-
 		now := time.Now()
+		const alpha = 0.2
+
 		if m.lastETAAt.IsZero() {
 			m.lastETAAt = now
 		} else {
 			dt := now.Sub(m.lastETAAt).Seconds()
-			if dt > 0.2 { // ~5Hz max
-				resDone := state.countFileOk + state.countFileError + state.countSymlinkOk + state.countSymlinkError + state.countXattrOk + state.countXattrError
+			if dt > 0.2 { // ~5 Hz max
+				// item-level rate for ETA
+				resDone := state.countFileOk + state.countFileError +
+					state.countSymlinkOk + state.countSymlinkError +
+					state.countXattrOk + state.countXattrError
 				resRate := float64(resDone-m.lastDone) / dt
-
-				const alpha = 0.2
 				if resRate > 0 {
 					if m.rateEMA == 0 {
 						m.rateEMA = resRate
@@ -42,15 +42,38 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.rateEMA = alpha*resRate + (1-alpha)*m.rateEMA
 					}
 				}
-
 				m.lastETAAt = now
 				m.lastDone = resDone
+
+				// byte-level throughput rates from granular events
+				if !state.lastRateAt.IsZero() {
+					dTransfer := state.transferBytes - state.lastTransfer
+					transferRate := float64(dTransfer) / dt
+					if transferRate >= 0 {
+						if state.transferRate == 0 {
+							state.transferRate = transferRate
+						} else {
+							state.transferRate = alpha*transferRate + (1-alpha)*state.transferRate
+						}
+					}
+
+					dStore := state.storeWriteBytes - state.lastStoreWrite
+					storeRate := float64(dStore) / dt
+					if storeRate >= 0 {
+						if state.storeWriteRate == 0 {
+							state.storeWriteRate = storeRate
+						} else {
+							state.storeWriteRate = alpha*storeRate + (1-alpha)*state.storeWriteRate
+						}
+					}
+				}
+				state.lastRateAt = now
+				state.lastTransfer = state.transferBytes
+				state.lastStoreWrite = state.storeWriteBytes
 			}
 		}
 
-		// IMPORTANT: do NOT re-arm waitForBatch here; keep exactly one waiter in flight
-		// (armed after processing each appBatchMsg)
-		return m, tea.Batch(cmd, tick())
+		return m, tea.Batch(tick())
 
 	case tea.KeyMsg:
 		switch event.String() {

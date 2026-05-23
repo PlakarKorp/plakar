@@ -79,6 +79,18 @@ type State struct {
 	countXattrSize     int64
 	countCachedSize    uint64
 
+	// byte-level progress from the new granular events
+	transferBytes     int64     // import.progress or export.progress bytes seen
+	storeWriteBytes   int64     // store.write.progress bytes seen
+	storeReadBytes    int64     // store.read.progress bytes seen
+
+	// throughput — updated by the tick handler in update.go
+	transferRate    float64   // bytes/sec (EMA) for import/export data
+	storeWriteRate  float64   // bytes/sec (EMA) for store writes
+	lastRateAt      time.Time
+	lastTransfer    int64
+	lastStoreWrite  int64
+
 	lastItem string
 	errors   []string
 	logs     []string
@@ -251,6 +263,26 @@ func (s *State) Update(e Event) {
 	case "snapshot.commit.start":
 		s.lastItem = ""
 		s.phase = "committing"
+
+	case "import.progress":
+		if b, ok := e.Data["bytes"].(int64); ok {
+			s.transferBytes += b
+		}
+
+	case "export.progress":
+		if b, ok := e.Data["bytes"].(int64); ok {
+			s.transferBytes += b
+		}
+
+	case "store.write.progress":
+		if b, ok := e.Data["bytes"].(int64); ok {
+			s.storeWriteBytes += b
+		}
+
+	case "store.read.progress":
+		if b, ok := e.Data["bytes"].(int64); ok {
+			s.storeReadBytes += b
+		}
 
 	case "result":
 		s.lastItem = ""
