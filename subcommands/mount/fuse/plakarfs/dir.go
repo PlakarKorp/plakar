@@ -45,11 +45,12 @@ func NewDirectory(pfs *plakarFS, vfs fs.FS, parent *Dir, pathname string) (*Dir,
 	switch {
 	case parent == nil:
 		key = stableKey("root", pathname)
-	case parent.IsRoot():
-		// Snapshot-level directory. Resolve the snapshot MAC up front so
-		// the cache key uniquely identifies the snapshot rather than just
-		// its short name (which could collide between snapshots that share
-		// a 4-byte prefix).
+	case parent.IsSnapshotLister():
+		// Snapshot-level directory: parent is the multi-snapshot root and
+		// we're descending into a specific snapshot by name. Resolve the
+		// snapshot MAC up front so the cache key uniquely identifies the
+		// snapshot rather than just its short name (which could collide
+		// between snapshots that share a 4-byte prefix).
 		parent.readDirMutex.Lock()
 		mac, ok := parent.readDirSnapshotMapping[pathname]
 		parent.readDirMutex.Unlock()
@@ -58,6 +59,9 @@ func NewDirectory(pfs *plakarFS, vfs fs.FS, parent *Dir, pathname string) (*Dir,
 		}
 		key = stableKey("snapshot", fmt.Sprintf("%x", mac[:]), pathname)
 	default:
+		// Ordinary directory inside a snapshot (or inside a chrooted
+		// single-snapshot mount). snapKey is empty for the chroot case;
+		// the path component disambiguates within the same mount.
 		key = stableKey("directory", parent.snapKey, pathname)
 	}
 

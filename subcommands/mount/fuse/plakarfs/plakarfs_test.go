@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io/fs"
 	"os"
 	"strings"
 	"testing"
@@ -133,6 +134,50 @@ func TestStatFallsBackToVFS(t *testing.T) {
 	st, err := cur.Stat("subdir")
 	require.NoError(t, err)
 	require.True(t, st.IsDir())
+}
+
+// TestChrootMountLookup is a regression test for mounting a specific snapshot
+// (plakar mount <snap>): the FUSE root has vfs != nil (a chrootfs from
+// fs.Sub) rather than being a snapshot lister. Lookup on the root must
+// resolve names through the chrootfs, not try to interpret them as snapshot
+// short-names.
+func TestChrootMountLookup(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	repo, ctx := ptesting.GenerateRepository(t, bufOut, bufErr, nil)
+	snap := ptesting.GenerateSnapshot(t, repo, []ptesting.MockFile{
+		ptesting.NewMockDir("etc"),
+		ptesting.NewMockFile("etc/hosts", 0o644, "127.0.0.1 localhost"),
+	})
+	t.Cleanup(func() { snap.Close() })
+
+	// Construct a chrootfs by Sub-ing into the snapshot at its backup dir.
+	// We mimic what mount.go does: fs.Sub(snap.Filesystem(), path[1:]).
+	pvfs, err := snap.Filesystem()
+	require.NoError(t, err)
+	backupDir := strings.TrimPrefix(snap.Header.GetSource(0).Importer.Directory, "/")
+	// fs.Sub requires a valid fs.FS-style path; if the importer dir is
+	// empty (root-relative backup), pass "." to mean the snapshot root.
+	if backupDir == "" {
+		backupDir = "."
+	}
+	chroot, err := fs.Sub(pvfs, backupDir)
+	require.NoError(t, err)
+
+	pfs := NewFS(ctx, repo, nil, chroot)
+	rootNode, err := pfs.Root()
+	require.NoError(t, err)
+	root := rootNode.(*Dir)
+
+	// The root must not be treated as a snapshot lister.
+	require.False(t, root.IsSnapshotLister())
+
+	ctxBg := context.Background()
+	etcNode, err := root.Lookup(ctxBg, "etc")
+	require.NoError(t, err, "lookup of etc on chroot mount root must succeed")
+	hostsNode, err := etcNode.(*Dir).Lookup(ctxBg, "hosts")
+	require.NoError(t, err)
+	_ = hostsNode.(*File)
 }
 
 // TestUnreadableDirIsTraversable is a regression test for the case where a

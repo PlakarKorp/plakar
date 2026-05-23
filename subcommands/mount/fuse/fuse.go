@@ -143,9 +143,8 @@ func fuseDebugFunc(ctx *appcontext.AppContext) func(msg interface{}) {
 	if os.Getenv("PLAKAR_FUSE_DEBUG") != "1" {
 		return nil
 	}
-	logger := ctx.GetLogger()
 	return func(msg interface{}) {
-		logger.Trace("fuse", "%v", msg)
+		fmt.Fprintf(os.Stderr, "fuse: %v\n", msg)
 	}
 }
 
