@@ -18,14 +18,13 @@ var applications = map[string]func(*appcontext.AppContext, *Application, *reposi
 }
 
 type Application struct {
-	ctx     *appcontext.AppContext
-	job     uuid.UUID
-	name    string
-	state   *State
-	done    chan struct{} // closed when Bubbletea program exits
-	prog    *tea.Program
-	err     error
-	aborted bool // true when the user pressed ctrl+c
+	ctx   *appcontext.AppContext
+	job   uuid.UUID
+	name  string
+	state *State
+	done  chan struct{} // closed when Bubbletea program exits
+	prog  *tea.Program
+	err   error
 
 	debounceStat time.Time
 	lastStat     string
@@ -107,15 +106,14 @@ func newApplication(ctx *appcontext.AppContext, name string, repo *repository.Re
 		done:  done,
 		state: newApplicationState(),
 	}
-	// WithAltScreen + WithMouseCellMotion are intentionally omitted so we
-	// stay in the normal screen buffer; this avoids a blank-screen flash on
-	// ctrl+c and makes terminal restoration trivial.
 	capp.prog = tea.NewProgram(modelFunc(ctx, capp, repo))
 
 	go func() {
 		defer close(done)
 		_, err := capp.prog.Run()
-		capp.err = err // nil on clean quit
+		if err != nil {
+			capp.err = err
+		}
 	}()
 
 	return capp
@@ -130,7 +128,6 @@ func (app *Application) Stop() {
 		app.prog.Quit()
 	}
 
-	// Wait for bubbletea to fully restore terminal state.
 	<-app.done
 }
 

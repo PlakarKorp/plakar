@@ -1,25 +1,27 @@
 package tui
 
 import (
+	"errors"
 	"io"
 	"os"
-	"sync"
+	"sync/atomic"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/ui"
 	"github.com/PlakarKorp/plakar/ui/stdio"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 type tui struct {
 	ctx  *appcontext.AppContext
 	repo *repository.Repository
 
-	mu      sync.Mutex
-	app     *Application
-	silent  bool // true after user abort; suppresses all further output
+	app *Application
 
 	done chan error
+
+	cancel atomic.Bool
 }
 
 func New(ctx *appcontext.AppContext) ui.UI {
@@ -44,119 +46,80 @@ func (t *tui) Stderr() io.Writer {
 	}
 }
 
-func (t *tui) getApp() *Application {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	return t.app
-}
-
-func (t *tui) setApp(app *Application) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	t.app = app
-}
-
-func (t *tui) isSilent() bool {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	return t.silent
-}
-
-func (t *tui) setSilent() {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	t.silent = true
-}
-
 func (t *tui) Stop() {
-	t.mu.Lock()
-	app := t.app
-	t.app = nil
-	t.mu.Unlock()
-
-	if app != nil {
-		app.Stop()
+	t.cancel.Store(true)
+	if t.app != nil {
+		t.app.Stop()
+		t.app = nil
 	}
 }
 
-func (t *tui) Wait() error {
-	return <-t.done
+func (tui *tui) Wait() error {
+	return <-tui.done
 }
 
-func (t *tui) SetRepository(repo *repository.Repository) {
-	t.repo = repo
+func (tui *tui) SetRepository(repo *repository.Repository) {
+	tui.repo = repo
 }
 
-func (t *tui) Run() error {
-	events := t.ctx.Events().Listen()
-	t.done = make(chan error, 1)
+func (tui *tui) Run() error {
+	events := tui.ctx.Events().Listen()
+	tui.done = make(chan error, 1)
 
 	go func() {
-		var result error
+		defer close(tui.done)
 
+		hasSeenStop := false
 		for e := range events {
-			app := t.getApp()
-
-			if app != nil {
-				app.state.Update(*e)
-
-				// Check if app exited (non-blocking)
-				select {
-				case <-app.done:
-					if app.aborted {
-						result = ui.ErrUserAbort
-						t.setSilent()
-					} else if app.err != nil {
-						result = app.err
+			// If app is running, forward event (non-blocking / cancel-safe)
+			if !tui.cancel.Load() {
+				if tui.app != nil {
+					tui.app.state.Update(*e)
+					select {
+					case <-tui.app.done:
+						if tui.app.err != nil {
+							if errors.Is(tui.app.err, tea.ErrInterrupted) {
+								if !hasSeenStop {
+									hasSeenStop = true
+									tui.done <- ui.ErrUserAbort
+								}
+							} else {
+								if !hasSeenStop {
+									hasSeenStop = true
+									tui.done <- tui.app.err
+								}
+							}
+						}
+					default:
 					}
-					// App is done; clear it so fallback kicks in
-					t.setApp(nil)
-					app = nil
-				default:
-				}
 
-				if app != nil {
 					// Close app on matching workflow.end
-					if e.Type == "workflow.end" && e.Job == app.job {
-						app.Stop()
-						t.setApp(nil)
+					if e.Type == "workflow.end" && e.Job == tui.app.job {
+						tui.app.Stop()
+						tui.app = nil
 					}
 					continue
 				}
-			}
 
-			// No active app: start one when workflow.start matches a known model
-			if e.Type == "workflow.start" {
-				newApp := newApplication(t.ctx, e.Data["workflow"].(string), t.repo)
-				if newApp != nil {
-					newApp.job = e.Job
-					newApp.state.Update(*e)
-					t.setApp(newApp)
-					continue
+				// No app: start when workflow.start matches a known model
+				if e.Type == "workflow.start" {
+					tui.app = newApplication(tui.ctx, e.Data["workflow"].(string), tui.repo)
+					if tui.app != nil {
+						tui.app.job = e.Job
+						tui.app.state.Update(*e)
+						continue
+					}
 				}
 			}
 
-			// Default fallback for unhandled events (suppressed after user abort)
-			if !t.isSilent() {
-				stdio.HandleEvent(t.ctx, e)
-			}
+			// default fallback
+			stdio.HandleEvent(tui.ctx, e)
 		}
-
-		// Drain: if an app is still running when events close, stop it
-		app := t.getApp()
-		if app != nil {
-			app.Stop()
-			t.setApp(nil)
-			if result == nil {
-				if app.aborted {
-					result = ui.ErrUserAbort
-				} else if app.err != nil {
-					result = app.err
-				}
-			}
+		if tui.app != nil {
+			tui.app.Stop()
+			tui.done <- nil
+			return
 		}
-
-		t.done <- result
 	}()
 
 	return nil
