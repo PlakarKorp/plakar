@@ -19,7 +19,13 @@ type plakarFS struct {
 	locateOptions *locate.LocateOptions
 	chrootfs      fs.FS
 
-	rootRefresh    time.Duration
+	// rootRefresh is how often we re-list snapshots at the FUSE root.
+	rootRefresh time.Duration
+	// rootCacheTTL is the kernel-side attr/entry cache TTL at the FUSE
+	// root. Kept short so newly created snapshots show up promptly.
+	rootCacheTTL time.Duration
+	// kernelCacheTTL is the kernel-side attr/entry cache TTL inside
+	// snapshots, which are immutable — so we can be generous.
 	kernelCacheTTL time.Duration
 	inodeCache     *inodeCache
 }
@@ -31,7 +37,8 @@ func NewFS(ctx *appcontext.AppContext, repo *repository.Repository, locateOption
 		locateOptions:  locateOptions,
 		chrootfs:       chrootfs,
 		rootRefresh:    10 * time.Second,
-		kernelCacheTTL: time.Minute,
+		rootCacheTTL:   5 * time.Second,
+		kernelCacheTTL: time.Hour,
 		inodeCache:     newInodeCache(),
 	}
 }

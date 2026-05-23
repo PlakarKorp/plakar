@@ -64,6 +64,10 @@ func NewDirectory(pfs *plakarFS, vfs fs.FS, parent *Dir, pathname string) (*Dir,
 	if child, ok := pfs.inodeCache.getDir(key); ok {
 		return child, nil
 	} else {
+		validTTL := pfs.kernelCacheTTL
+		if parent == nil {
+			validTTL = pfs.rootCacheTTL
+		}
 		dir := &Dir{
 			pfs:      pfs,
 			vfs:      vfs,
@@ -71,7 +75,7 @@ func NewDirectory(pfs *plakarFS, vfs fs.FS, parent *Dir, pathname string) (*Dir,
 			path:     pathname,
 			cacheKey: key,
 			attr: &fuse.Attr{
-				Valid: pfs.kernelCacheTTL,
+				Valid: validTTL,
 				Uid:   uint32(os.Geteuid()),
 				Gid:   uint32(os.Getgid()),
 				Nlink: 2,

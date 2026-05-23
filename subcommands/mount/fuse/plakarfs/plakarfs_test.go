@@ -134,6 +134,45 @@ func TestStatFallsBackToVFS(t *testing.T) {
 	require.True(t, st.IsDir())
 }
 
+// TestFileHandleSequentialRead exercises the sequential read fast path:
+// consecutive reads at increasing offsets should return contiguous data and
+// keep seqActive=true between them.
+func TestFileHandleSequentialRead(t *testing.T) {
+	root, snapName, backupDir := newTestFS(t)
+	ctx := context.Background()
+
+	cur, err := root.Lookup(ctx, snapName)
+	require.NoError(t, err)
+	for _, part := range splitPath(backupDir) {
+		next, err := cur.(*Dir).Lookup(ctx, part)
+		require.NoError(t, err)
+		cur = next
+	}
+	subdirNode, err := cur.(*Dir).Lookup(ctx, "subdir")
+	require.NoError(t, err)
+	fileNode, err := subdirNode.(*Dir).Lookup(ctx, "hello.txt")
+	require.NoError(t, err)
+	f := fileNode.(*File)
+
+	hNode, err := f.Open(ctx, &fuse.OpenRequest{}, &fuse.OpenResponse{})
+	require.NoError(t, err)
+	h := hNode.(*fileHandle)
+	t.Cleanup(func() { _ = h.Release(ctx, &fuse.ReleaseRequest{}) })
+
+	var got []byte
+	for off := int64(0); off < int64(len("hello world")); off += 4 {
+		resp := &fuse.ReadResponse{}
+		require.NoError(t, h.Read(ctx, &fuse.ReadRequest{Offset: off, Size: 4}, resp))
+		got = append(got, resp.Data...)
+	}
+	require.Equal(t, "hello world", string(got))
+
+	// Random-access read after sequential should still work.
+	resp := &fuse.ReadResponse{}
+	require.NoError(t, h.Read(ctx, &fuse.ReadRequest{Offset: 6, Size: 5}, resp))
+	require.Equal(t, "world", string(resp.Data))
+}
+
 // TestFileMetadataFromKlosetEntry confirms that uid/gid/mode/nlink are taken
 // from the underlying kloset FileInfo and not hardcoded to the process's
 // effective uid/gid.
