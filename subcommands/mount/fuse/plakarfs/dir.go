@@ -42,11 +42,21 @@ type Dir struct {
 
 func NewDirectory(pfs *plakarFS, vfs fs.FS, parent *Dir, pathname string) (*Dir, error) {
 	var key string
-	switch parent {
-	case nil:
-		key = stableKey(pathname)
-	case parent.parent:
-		key = stableKey("snapshot", pathname)
+	switch {
+	case parent == nil:
+		key = stableKey("root", pathname)
+	case parent.IsRoot():
+		// Snapshot-level directory. Resolve the snapshot MAC up front so
+		// the cache key uniquely identifies the snapshot rather than just
+		// its short name (which could collide between snapshots that share
+		// a 4-byte prefix).
+		parent.readDirMutex.Lock()
+		mac, ok := parent.readDirSnapshotMapping[pathname]
+		parent.readDirMutex.Unlock()
+		if !ok {
+			return nil, syscall.ENOENT
+		}
+		key = stableKey("snapshot", fmt.Sprintf("%x", mac[:]), pathname)
 	default:
 		key = stableKey("directory", parent.snapKey, pathname)
 	}
@@ -145,12 +155,6 @@ func (d *Dir) Lookup(ctx context.Context, name string) (fusefs.Node, error) {
 	if d.vfs == nil {
 		if err := d.ensureSnapshotMapping(ctx); err != nil {
 			return nil, err
-		}
-		d.readDirMutex.Lock()
-		_, ok := d.readDirSnapshotMapping[name]
-		d.readDirMutex.Unlock()
-		if !ok {
-			return nil, syscall.ENOENT
 		}
 		return NewDirectory(d.pfs, nil, d, name)
 	}

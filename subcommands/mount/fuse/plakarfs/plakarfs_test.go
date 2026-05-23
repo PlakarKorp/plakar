@@ -5,6 +5,7 @@ package plakarfs
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -131,6 +132,44 @@ func TestStatFallsBackToVFS(t *testing.T) {
 	st, err := cur.Stat("subdir")
 	require.NoError(t, err)
 	require.True(t, st.IsDir())
+}
+
+// TestSnapshotCacheKeyDistinguishesSnapshots ensures the inode cache key for
+// snapshot-level directories includes the full snapshot MAC, so two snapshots
+// that share a 4-byte short-name prefix do not collide.
+func TestSnapshotCacheKeyDistinguishesSnapshots(t *testing.T) {
+	root, _, _ := newTestFS(t)
+
+	var a, b objects.MAC
+	for i := range a {
+		a[i] = byte(i)
+		b[i] = byte(i)
+	}
+	// Same 4-byte prefix, different tail.
+	a[5] = 0x42
+	b[5] = 0x99
+
+	root.readDirMutex.Lock()
+	root.readDirSnapshotMapping = map[string]objects.MAC{
+		"prefix-a": a,
+		"prefix-b": b,
+	}
+	root.readDirLast = time.Now()
+	root.readDirMutex.Unlock()
+
+	// Force the same logical name to demonstrate that even identical names
+	// keyed by different MACs produce different cache entries.
+	root.readDirMutex.Lock()
+	root.readDirSnapshotMapping["dup"] = a
+	root.readDirMutex.Unlock()
+
+	keyA := stableKey("snapshot", fmt.Sprintf("%x", a[:]), "dup")
+	root.readDirMutex.Lock()
+	root.readDirSnapshotMapping["dup"] = b
+	root.readDirMutex.Unlock()
+	keyB := stableKey("snapshot", fmt.Sprintf("%x", b[:]), "dup")
+
+	require.NotEqual(t, keyA, keyB, "snapshot cache key must include full MAC")
 }
 
 var _ fusefs.Node = (*Dir)(nil)

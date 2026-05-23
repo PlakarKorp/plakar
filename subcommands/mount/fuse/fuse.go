@@ -58,27 +58,39 @@ func ExecuteFUSE(ctx *appcontext.AppContext, repo *repository.Repository, mountp
 		fuse.FSName("plakar"),
 		fuse.Subtype("plakarfs"),
 		fuse.LocalVolume(),
+		fuse.ReadOnly(),
 	)
 	if err != nil {
 		return 1, fmt.Errorf("mount: %v", err)
 	}
 	defer c.Close()
 
+	// fuse.Mount returns as soon as the kernel hands back a connection;
+	// the actual mount succeeds asynchronously and is signaled via c.Ready.
+	// Check for early mount errors before entering Serve, which blocks
+	// until unmount.
+	select {
+	case <-c.Ready:
+		if err := c.MountError; err != nil {
+			return 1, fmt.Errorf("mount: %v", err)
+		}
+	default:
+	}
+
 	ctx.GetLogger().Info("mounted repository %s at %s", repo.Origin(), mountpoint)
 
 	go func() {
 		<-ctx.Done()
 
-		err := fuse.Unmount(mountpoint)
-		if err != nil {
+		if err := fuse.Unmount(mountpoint); err != nil {
 			fmt.Fprintf(os.Stderr, "%s is still in use; run `umount -f %s` to force\n", mountpoint, mountpoint)
 		}
 	}()
 
-	err = fusefs.Serve(c, plakarfs.NewFS(ctx, repo, locateOptions, chrootfs))
-	if err != nil {
+	if err := fusefs.Serve(c, plakarfs.NewFS(ctx, repo, locateOptions, chrootfs)); err != nil {
 		return 1, err
 	}
+
 	<-c.Ready
 	if err := c.MountError; err != nil {
 		return 1, err

@@ -81,7 +81,8 @@ func (f *File) Attr(ctx context.Context, a *fuse.Attr) error {
 }
 
 func (f *File) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenResponse) (fusefs.Handle, error) {
-	resp.Flags |= fuse.OpenDirectIO
+	// Snapshots are immutable, so let the kernel cache page contents
+	// across opens. OpenDirectIO would conflict with this; do not set it.
 	resp.Flags |= fuse.OpenKeepCache
 
 	rd, err := f.vfs.Open(f.path)
