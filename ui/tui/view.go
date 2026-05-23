@@ -186,14 +186,38 @@ func (m appModel) View() string {
 
 	var s strings.Builder
 
-	// ── computed values ──────────────────────────────────────────────────────
+	// ── progress computation ─────────────────────────────────────────────────
+	//
+	// Prefer byte-driven progress when fs.summary carried a total size
+	// (currently populated for export/check). Falls back to object count
+	// otherwise. Byte-driven progress better reflects time-to-completion
+	// when item sizes vary widely (one 5 GiB file vs 10k config files).
 
-	// countPathOk already includes cached paths (PathCached is emitted before
-	// PathOk for the same record, not instead of it), so don't add
-	// countPathCached here or it would double-count and push ratio > 1.
-	done := state.countPathOk + state.countPathError
-	total := state.summaryPath
-	hasSummary := state.gotSummary && total > 0
+	// object-driven done/total (PathOk already includes cached items —
+	// don't add countPathCached or it double-counts).
+	objDone := state.countPathOk + state.countPathError
+	objTotal := state.summaryPath
+
+	// byte-driven done/total. sourceReadBytes accumulates from
+	// import.progress; sourceWriteBytes from export.progress — use
+	// whichever is non-zero (only one is active per workflow).
+	byteDone := state.sourceReadBytes
+	if state.sourceWriteBytes > byteDone {
+		byteDone = state.sourceWriteBytes
+	}
+	byteTotal := int64(state.summarySize)
+
+	useBytes := state.gotSummary && byteTotal > 0
+	hasSummary := useBytes || (state.gotSummary && objTotal > 0)
+
+	var done, total uint64
+	if useBytes {
+		done = uint64(byteDone)
+		total = uint64(byteTotal)
+	} else {
+		done = objDone
+		total = objTotal
+	}
 
 	ratio := 0.0
 	pct := 0
@@ -202,10 +226,10 @@ func (m appModel) View() string {
 		if ratio < 0 {
 			ratio = 0
 		} else if ratio >= 1 {
-			// Don't show 100% until the workflow.end event confirms we're
-			// truly done — the fs.summary totals can be approximate and
-			// PathOk counts can exceed them before all post-processing
-			// (VFS build, index, commit) is complete.
+			// Don't show 100% until workflow.end confirms completion —
+			// fs.summary totals can be approximate and counts can exceed
+			// them before all post-processing (VFS build, index, commit)
+			// is complete.
 			if state.finished {
 				ratio = 1
 			} else {
@@ -215,13 +239,26 @@ func (m appModel) View() string {
 		pct = int(ratio * 100)
 	}
 
+	// ETA: derive from the same units we're using for the bar.
 	etaText := ""
-	if hasSummary && m.rateEMA > 0 && done > 10 &&
-		elapsed > 2*time.Second && total >= done {
-		remaining := float64(total - done)
-		etaDur := time.Duration(remaining / m.rateEMA * float64(time.Second))
-		if v := fmtETA(etaDur); v != "" {
-			etaText = "ETA " + v
+	if hasSummary && elapsed > 2*time.Second && total > done {
+		var rate float64
+		if useBytes {
+			// Pick the matching byte rate.
+			if state.sourceReadBytes > 0 {
+				rate = state.sourceReadRate
+			} else {
+				rate = state.sourceWriteRate
+			}
+		} else {
+			rate = m.rateEMA
+		}
+		if rate > 0 {
+			remaining := float64(total - done)
+			etaDur := time.Duration(remaining / rate * float64(time.Second))
+			if v := fmtETA(etaDur); v != "" {
+				etaText = "ETA " + v
+			}
 		}
 	}
 
