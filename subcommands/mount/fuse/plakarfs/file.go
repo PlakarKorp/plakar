@@ -6,7 +6,6 @@ import (
 	"context"
 	"io"
 	"io/fs"
-	"os"
 	"path"
 	"syscall"
 
@@ -16,6 +15,9 @@ import (
 
 var _ fusefs.Node = (*File)(nil)
 var _ fusefs.NodeOpener = (*File)(nil)
+var _ fusefs.NodeReadlinker = (*File)(nil)
+var _ fusefs.NodeGetxattrer = (*File)(nil)
+var _ fusefs.NodeListxattrer = (*File)(nil)
 
 type fileHandle struct {
 	f io.ReadCloser
@@ -38,34 +40,23 @@ func NewFile(pfs *plakarFS, vfs fs.FS, parent *Dir, pathname string) (*File, err
 	key := stableKey("file", parent.snapKey, pathname)
 	if f, ok := pfs.inodeCache.getFile(key); ok {
 		return f, nil
-	} else {
-		st, err := parent.Stat(path.Base(pathname))
-		if err != nil {
-			return nil, syscall.ENOENT
-		}
-
-		f := &File{
-			pfs:      pfs,
-			vfs:      vfs,
-			path:     pathname,
-			cacheKey: key,
-			attr: &fuse.Attr{
-				Valid: pfs.kernelCacheTTL,
-				Mode:  st.Mode(),
-				//Uid:   uint32(entry.Stat().Uid()),
-				//Gid:   uint32(entry.Stat().Gid()),
-				Uid:   uint32(os.Geteuid()),
-				Gid:   uint32(os.Getgid()),
-				Ctime: st.ModTime(),
-				Mtime: st.ModTime(),
-				Atime: st.ModTime(),
-				Size:  uint64(st.Size()),
-				//Nlink: uint32(st.Nlink()),
-			},
-		}
-		pfs.inodeCache.setFile(f.cacheKey, f)
-		return f, nil
 	}
+
+	st, err := parent.Stat(path.Base(pathname))
+	if err != nil {
+		return nil, syscall.ENOENT
+	}
+
+	f := &File{
+		pfs:      pfs,
+		vfs:      vfs,
+		path:     pathname,
+		cacheKey: key,
+		attr:     &fuse.Attr{Valid: pfs.kernelCacheTTL},
+	}
+	fillAttrFromFileInfo(f.attr, st, 0, 0)
+	pfs.inodeCache.setFile(f.cacheKey, f)
+	return f, nil
 }
 
 func (f *File) Forget() {
@@ -112,4 +103,20 @@ func (h *fileHandle) Release(ctx context.Context, req *fuse.ReleaseRequest) erro
 
 func (h *fileHandle) Access(ctx context.Context, req *fuse.AccessRequest) error {
 	return nil
+}
+
+func (f *File) Readlink(ctx context.Context, req *fuse.ReadlinkRequest) (string, error) {
+	target, err := readlink(f.vfs, f.path, f.attr.Mode)
+	if err != nil {
+		return "", syscall.EINVAL
+	}
+	return target, nil
+}
+
+func (f *File) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fuse.GetxattrResponse) error {
+	return getxattr(f.vfs, f.path, req, resp)
+}
+
+func (f *File) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *fuse.ListxattrResponse) error {
+	return listxattr(f.vfs, f.path, resp)
 }

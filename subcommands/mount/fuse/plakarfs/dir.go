@@ -115,14 +115,7 @@ func NewDirectory(pfs *plakarFS, vfs fs.FS, parent *Dir, pathname string) (*Dir,
 				if err != nil {
 					return nil, err
 				}
-
-				dir.attr.Mode = st.Mode()
-				//				dir.attr.Uid = uint32(entry.Stat().Uid())
-				//				dir.attr.Gid = uint32(entry.Stat().Gid())
-				dir.attr.Ctime = st.ModTime()
-				dir.attr.Mtime = st.ModTime()
-				dir.attr.Atime = st.ModTime()
-				dir.attr.Size = uint64(st.Size())
+				fillAttrFromFileInfo(dir.attr, st, 0, 0)
 			}
 		}
 
@@ -234,6 +227,20 @@ func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 		d.readDirChildren = out
 	}
 	return d.readDirChildren, nil
+}
+
+func (d *Dir) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fuse.GetxattrResponse) error {
+	if d.vfs == nil {
+		return fuse.ErrNoXattr
+	}
+	return getxattr(d.vfs, d.path, req, resp)
+}
+
+func (d *Dir) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *fuse.ListxattrResponse) error {
+	if d.vfs == nil {
+		return nil
+	}
+	return listxattr(d.vfs, d.path, resp)
 }
 
 func (d *Dir) Stat(name string) (fs.FileInfo, error) {

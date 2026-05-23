@@ -134,6 +134,31 @@ func TestStatFallsBackToVFS(t *testing.T) {
 	require.True(t, st.IsDir())
 }
 
+// TestFileMetadataFromKlosetEntry confirms that uid/gid/mode/nlink are taken
+// from the underlying kloset FileInfo and not hardcoded to the process's
+// effective uid/gid.
+func TestFileMetadataFromKlosetEntry(t *testing.T) {
+	root, snapName, backupDir := newTestFS(t)
+	ctx := context.Background()
+
+	cur, err := root.Lookup(ctx, snapName)
+	require.NoError(t, err)
+	for _, part := range splitPath(backupDir) {
+		next, err := cur.(*Dir).Lookup(ctx, part)
+		require.NoError(t, err)
+		cur = next
+	}
+	subdirNode, err := cur.(*Dir).Lookup(ctx, "subdir")
+	require.NoError(t, err)
+	fileNode, err := subdirNode.(*Dir).Lookup(ctx, "hello.txt")
+	require.NoError(t, err)
+	f := fileNode.(*File)
+
+	require.EqualValues(t, 0644, f.attr.Mode&0o777, "file mode should match the importer setting")
+	require.GreaterOrEqual(t, f.attr.Nlink, uint32(1))
+	require.EqualValues(t, len("hello world"), f.attr.Size)
+}
+
 // TestSnapshotCacheKeyDistinguishesSnapshots ensures the inode cache key for
 // snapshot-level directories includes the full snapshot MAC, so two snapshots
 // that share a 4-byte short-name prefix do not collide.
