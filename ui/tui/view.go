@@ -201,8 +201,16 @@ func (m appModel) View() string {
 		ratio = float64(done) / float64(total)
 		if ratio < 0 {
 			ratio = 0
-		} else if ratio > 1 {
-			ratio = 1
+		} else if ratio >= 1 {
+			// Don't show 100% until the workflow.end event confirms we're
+			// truly done — the fs.summary totals can be approximate and
+			// PathOk counts can exceed them before all post-processing
+			// (VFS build, index, commit) is complete.
+			if state.finished {
+				ratio = 1
+			} else {
+				ratio = 0.99
+			}
 		}
 		pct = int(ratio * 100)
 	}

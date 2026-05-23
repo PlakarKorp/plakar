@@ -37,8 +37,9 @@ type State struct {
 	timerBegin time.Time
 	timerDone  bool
 
-	phase  string
-	detail string
+	phase    string
+	detail   string
+	finished bool // set on workflow.end; allows bar to show 100%
 
 	gotSummary       bool
 	summaryPath      uint64
@@ -150,6 +151,8 @@ func (s *State) Update(e Event) {
 		s.snapshotID = fmt.Sprintf("%x", e.Snapshot[0:4])
 
 	case "workflow.end":
+		s.finished = true
+
 
 	case "path":
 		if p, ok := e.Data["path"].(string); ok {
