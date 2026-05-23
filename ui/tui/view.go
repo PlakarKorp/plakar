@@ -338,14 +338,22 @@ func (m appModel) View() string {
 
 	fmt.Fprintln(&s, indent+strings.Join(statParts, dimStyle.Render("   ")))
 
-	// ── line 5: source and store throughput ──────────────────────────────────
+	// ── line 5: connector and store throughput ──────────────────────────────
 	//
-	//   source  in 142 MiB/s  out 0 B/s     store  in 12 MiB/s  out 89 MiB/s
+	// For backup  (import workflow):
+	//   importer  in 142 MiB/s  out 0 B/s     store  in 12 MiB/s  out 89 MiB/s
+	// For restore (export workflow):
+	//   exporter  in 0 B/s      out 95 MiB/s  store  in 110 MiB/s out 0 B/s
 	//
-	// source-in  = import.progress  (bytes read from filesystem during backup)
-	// source-out = export.progress  (bytes written to filesystem during restore)
-	// store-in   = store.read.progress  (bytes read from the store)
-	// store-out  = store.write.progress (bytes written to the store)
+	// importer-in  = import.progress  (bytes read from source filesystem)
+	// exporter-out = export.progress  (bytes written to destination filesystem)
+	// store-in     = store.read.progress  (bytes read from the store)
+	// store-out    = store.write.progress (bytes written to the store)
+
+	connectorLabel := "importer"
+	if m.application.name == "export" {
+		connectorLabel = "exporter"
+	}
 
 	fmtRate := func(r float64) string {
 		return fmt.Sprintf("%s/s", humanize.IBytes(uint64(r)))
@@ -355,14 +363,14 @@ func (m appModel) View() string {
 		state.storeReadBytes > 0 || state.storeWriteBytes > 0
 
 	if hasGranular {
-		srcIn := fmtRate(state.sourceReadRate)
-		srcOut := fmtRate(state.sourceWriteRate)
+		connIn := fmtRate(state.sourceReadRate)
+		connOut := fmtRate(state.sourceWriteRate)
 		storeIn := fmtRate(state.storeReadRate)
 		storeOut := fmtRate(state.storeWriteRate)
 
-		ioLine := dimStyle.Render("source") +
-			"  " + dimStyle.Render("in ") + srcIn +
-			"  " + dimStyle.Render("out ") + srcOut +
+		ioLine := dimStyle.Render(connectorLabel) +
+			"  " + dimStyle.Render("in ") + connIn +
+			"  " + dimStyle.Render("out ") + connOut +
 			"     " +
 			dimStyle.Render("store") +
 			"  " + dimStyle.Render("in ") + storeIn +
@@ -375,10 +383,6 @@ func (m appModel) View() string {
 			io := m.repo.IOStats()
 			r := io.Read.Stats()
 			w := io.Write.Stats()
-			m.application.lastStat = fmt.Sprintf("%s  %s  %s  %s",
-				dimStyle.Render("store  in ")+humanize.IBytes(uint64(r.TotalBytes)),
-				dimStyle.Render("out ")+humanize.IBytes(uint64(w.TotalBytes)),
-				"", "")
 			m.application.lastStat = dimStyle.Render("store") +
 				"  " + dimStyle.Render("in ") + humanize.IBytes(uint64(r.TotalBytes)) +
 				"  " + dimStyle.Render("out ") + humanize.IBytes(uint64(w.TotalBytes))
