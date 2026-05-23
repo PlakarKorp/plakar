@@ -201,7 +201,11 @@ func (m appModel) View() string {
 	// byte-driven done/total. sourceReadBytes accumulates from
 	// import.progress; sourceWriteBytes from export.progress — use
 	// whichever is non-zero (only one is active per workflow).
-	byteDone := state.sourceReadBytes
+	//
+	// Cached files short-circuit before chunkify, so import.progress
+	// never fires for them. Add countCachedSize so the bar still
+	// progresses on a re-run where everything is cached.
+	byteDone := state.sourceReadBytes + int64(state.countCachedSize)
 	if state.sourceWriteBytes > byteDone {
 		byteDone = state.sourceWriteBytes
 	}
