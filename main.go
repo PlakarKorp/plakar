@@ -175,8 +175,6 @@ func entryPoint() int {
 	}
 	flag.Parse()
 
-	var interrupted bool
-
 	ctx := appcontext.NewAppContext()
 	defer ctx.Close()
 
@@ -196,7 +194,6 @@ func entryPoint() int {
 	go func() {
 		if err := renderer.Wait(); err != nil {
 			if errors.Is(err, ui.ErrUserAbort) {
-				interrupted = true
 				ctx.Cancel(err)
 			}
 		}
@@ -447,17 +444,17 @@ func entryPoint() int {
 		return 1
 	}
 
-	c := make(chan os.Signal, 1)
-	go func() {
-		<-c
-		ctx.Cancel(fmt.Errorf("interrupted"))
-		interrupted = true
-	}()
+	c := make(chan os.Signal, 2)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-
 	go func() {
-		<-ctx.Done()
-		if interrupted {
+		for sig := range c {
+			_ = sig
+			if ctx.Err() != nil {
+				// Context already cancelled (e.g. by the TUI on ctrl+c):
+				// the user is pressing again to force-quit.
+				os.Exit(1)
+			}
+			ctx.Cancel(fmt.Errorf("interrupted"))
 			logger.Stderr("%s: received interrupt signal, stopping gracefully...\n", flag.CommandLine.Name())
 		}
 	}()
