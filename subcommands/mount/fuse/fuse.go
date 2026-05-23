@@ -23,7 +23,10 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
+	"runtime"
 	"syscall"
+	"time"
 
 	"path/filepath"
 
@@ -81,13 +84,13 @@ func ExecuteFUSE(ctx *appcontext.AppContext, repo *repository.Repository, mountp
 
 	go func() {
 		<-ctx.Done()
-
-		if err := fuse.Unmount(mountpoint); err != nil {
-			fmt.Fprintf(os.Stderr, "%s is still in use; run `umount -f %s` to force\n", mountpoint, mountpoint)
-		}
+		unmountWithRetry(ctx, mountpoint)
 	}()
 
-	if err := fusefs.Serve(c, plakarfs.NewFS(ctx, repo, locateOptions, chrootfs)); err != nil {
+	server := fusefs.New(c, &fusefs.Config{
+		Debug: fuseDebugFunc(ctx),
+	})
+	if err := server.Serve(plakarfs.NewFS(ctx, repo, locateOptions, chrootfs)); err != nil {
 		return 1, err
 	}
 
@@ -95,8 +98,57 @@ func ExecuteFUSE(ctx *appcontext.AppContext, repo *repository.Repository, mountp
 	if err := c.MountError; err != nil {
 		return 1, err
 	}
+	ctx.GetLogger().Info("unmounted %s", mountpoint)
 	return 0, nil
 }
+
+// unmountWithRetry attempts a graceful unmount, then escalates to the
+// platform unmount tool, then finally tells the user how to recover.
+func unmountWithRetry(ctx *appcontext.AppContext, mountpoint string) {
+	if err := fuse.Unmount(mountpoint); err == nil {
+		return
+	}
+
+	// Give in-flight operations a moment to drain, then try again.
+	time.Sleep(100 * time.Millisecond)
+	if err := fuse.Unmount(mountpoint); err == nil {
+		return
+	}
+
+	// Fall back to the platform tool. On Linux that is fusermount -u; on
+	// macOS, diskutil unmount. We do *not* force-unmount: that can leave
+	// processes with open handles in an unrecoverable state.
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "linux":
+		cmd = exec.Command("fusermount", "-u", mountpoint)
+	case "darwin":
+		cmd = exec.Command("diskutil", "unmount", mountpoint)
+	}
+	if cmd != nil {
+		if err := cmd.Run(); err == nil {
+			return
+		}
+	}
+
+	fmt.Fprintf(os.Stderr,
+		"%s is still in use; run `umount -f %s` (or fusermount -uz %s on Linux) to force\n",
+		mountpoint, mountpoint, mountpoint)
+}
+
+// fuseDebugFunc returns a debug callback if PLAKAR_FUSE_DEBUG=1 is set,
+// otherwise nil (silent). Enabling debug here streams every kernel-FUSE
+// request to the logger; it's primarily useful when reproducing hangs.
+func fuseDebugFunc(ctx *appcontext.AppContext) func(msg interface{}) {
+	if os.Getenv("PLAKAR_FUSE_DEBUG") != "1" {
+		return nil
+	}
+	logger := ctx.GetLogger()
+	return func(msg interface{}) {
+		logger.Trace("fuse", "%v", msg)
+	}
+}
+
 
 func looksLikeMountpoint(p string) (bool, error) {
 	p = filepath.Clean(p)
