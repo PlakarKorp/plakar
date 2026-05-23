@@ -188,7 +188,10 @@ func (m appModel) View() string {
 
 	// ── computed values ──────────────────────────────────────────────────────
 
-	done := state.countPathOk + state.countPathError + state.countPathCached
+	// countPathOk already includes cached paths (PathCached is emitted before
+	// PathOk for the same record, not instead of it), so don't add
+	// countPathCached here or it would double-count and push ratio > 1.
+	done := state.countPathOk + state.countPathError
 	total := state.summaryPath
 	hasSummary := state.gotSummary && total > 0
 
