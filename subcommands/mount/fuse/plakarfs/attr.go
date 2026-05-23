@@ -14,32 +14,46 @@ import (
 )
 
 // fillAttrFromFileInfo populates a fuse.Attr from a generic fs.FileInfo.
-// If the FileInfo's Sys() exposes an objects.FileInfo (as kloset's VFS does),
-// uid/gid/nlink/inode are taken from there; otherwise they fall back to the
-// process's effective uid/gid and Nlink=1.
-func fillAttrFromFileInfo(a *fuse.Attr, fi fs.FileInfo, ttl, dirTTL uint32) {
-	a.Mode = fi.Mode()
+//
+// uid/gid are forced to the mounting process's effective values so the
+// kernel's permission check always matches: without AllowOther, only the
+// mounting user reaches our filesystem in the first place, and presenting
+// files as owned by the snapshot's original (often root) uid would block
+// them at the "other" mode bits, which may legitimately be zero.
+//
+// mode is taken from the recorded entry but coerced to be at least
+// owner-readable (0400 for files, 0500 for dirs). Snapshots routinely
+// contain directories captured by an importer that lacked +rx; those would
+// otherwise be untraversable through the mount.
+//
+// nlink and inode are taken from the recorded entry when available, so
+// stable identities and hardlink counts survive across mounts.
+func fillAttrFromFileInfo(a *fuse.Attr, fi fs.FileInfo) {
+	mode := fi.Mode()
+	if mode.IsDir() {
+		mode |= 0o500
+	} else if mode.IsRegular() {
+		mode |= 0o400
+	}
+	a.Mode = mode
 	a.Size = uint64(fi.Size())
 	a.Ctime = fi.ModTime()
 	a.Mtime = fi.ModTime()
 	a.Atime = fi.ModTime()
+	a.Uid = uint32(os.Geteuid())
+	a.Gid = uint32(os.Getgid())
 	a.Nlink = 1
 
 	if kfi, ok := fi.Sys().(objects.FileInfo); ok {
-		a.Uid = uint32(kfi.Uid())
-		a.Gid = uint32(kfi.Gid())
 		if n := kfi.Nlink(); n > 0 {
 			a.Nlink = uint32(n)
 		}
 		if ino := kfi.Ino(); ino != 0 {
 			a.Inode = ino
 		}
-	} else {
-		a.Uid = uint32(os.Geteuid())
-		a.Gid = uint32(os.Getgid())
 	}
 
-	if fi.IsDir() && a.Nlink < 2 {
+	if mode.IsDir() && a.Nlink < 2 {
 		a.Nlink = 2
 	}
 }

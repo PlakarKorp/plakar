@@ -99,7 +99,7 @@ func NewFile(pfs *plakarFS, vfs fs.FS, parent *Dir, pathname string) (*File, err
 		cacheKey: key,
 		attr:     &fuse.Attr{Valid: pfs.kernelCacheTTL},
 	}
-	fillAttrFromFileInfo(f.attr, st, 0, 0)
+	fillAttrFromFileInfo(f.attr, st)
 	pfs.inodeCache.setFile(f.cacheKey, f)
 	return f, nil
 }

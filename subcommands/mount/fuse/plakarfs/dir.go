@@ -119,7 +119,7 @@ func NewDirectory(pfs *plakarFS, vfs fs.FS, parent *Dir, pathname string) (*Dir,
 				if err != nil {
 					return nil, err
 				}
-				fillAttrFromFileInfo(dir.attr, st, 0, 0)
+				fillAttrFromFileInfo(dir.attr, st)
 			}
 		}
 

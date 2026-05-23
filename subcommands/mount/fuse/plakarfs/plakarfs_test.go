@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -134,6 +135,68 @@ func TestStatFallsBackToVFS(t *testing.T) {
 	require.True(t, st.IsDir())
 }
 
+// TestUnreadableDirIsTraversable is a regression test for the case where a
+// directory was captured by an importer that lacked +rx on it: the recorded
+// mode is 0, and previously the mount surfaced it as "d---------" — owned by
+// the snapshot's original uid (root), unreadable to the mounting user. The
+// mount must remap uid/gid to the mounting user and coerce dir mode to at
+// least 0500 so the kernel allows traversal.
+func TestUnreadableDirIsTraversable(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	repo, ctx := ptesting.GenerateRepository(t, bufOut, bufErr, nil)
+
+	// A directory whose stored mode is fs.ModeDir only (no perm bits) —
+	// exactly the case that triggered the "d---------" rendering.
+	files := []ptesting.MockFile{
+		ptesting.NewMockDir("etc"),
+		ptesting.NewMockDir("etc/uucp"),
+		ptesting.NewMockFile("etc/uucp/config", 0o644, "x"),
+	}
+	// Force etc/uucp to have no perm bits at all.
+	files[1].Mode = 0
+	snap := ptesting.GenerateSnapshot(t, repo, files)
+	t.Cleanup(func() { snap.Close() })
+
+	pfs := NewFS(ctx, repo, nil, nil)
+	rootNode, err := pfs.Root()
+	require.NoError(t, err)
+	root := rootNode.(*Dir)
+	indexID := snap.Header.GetIndexID()
+	var mac objects.MAC
+	copy(mac[:], indexID[:])
+	snapName := shortName(mac)
+	root.readDirMutex.Lock()
+	root.readDirSnapshotMapping = map[string]objects.MAC{snapName: mac}
+	root.readDirLast = time.Now()
+	root.readDirMutex.Unlock()
+
+	ctxBg := context.Background()
+	cur, err := root.Lookup(ctxBg, snapName)
+	require.NoError(t, err)
+	for _, part := range splitPath(snap.Header.GetSource(0).Importer.Directory) {
+		next, err := cur.(*Dir).Lookup(ctxBg, part)
+		require.NoError(t, err)
+		cur = next
+	}
+	etcNode, err := cur.(*Dir).Lookup(ctxBg, "etc")
+	require.NoError(t, err)
+	uucpNode, err := etcNode.(*Dir).Lookup(ctxBg, "uucp")
+	require.NoError(t, err, "looking up zero-mode dir must succeed")
+	uucp := uucpNode.(*Dir)
+
+	// Owner perm bits must include read+execute.
+	require.NotZero(t, uucp.attr.Mode&0o500, "dir mode must include owner r-x; got %o", uucp.attr.Mode)
+	// Uid/gid must match the mounting process so the kernel permission
+	// check matches.
+	require.Equal(t, uint32(os.Geteuid()), uucp.attr.Uid)
+	require.Equal(t, uint32(os.Getgid()), uucp.attr.Gid)
+
+	// And we must be able to enter it.
+	_, err = uucp.Lookup(ctxBg, "config")
+	require.NoError(t, err)
+}
+
 // TestFileHandleSequentialRead exercises the sequential read fast path:
 // consecutive reads at increasing offsets should return contiguous data and
 // keep seqActive=true between them.
@@ -173,10 +236,10 @@ func TestFileHandleSequentialRead(t *testing.T) {
 	require.Equal(t, "world", string(resp.Data))
 }
 
-// TestFileMetadataFromKlosetEntry confirms that uid/gid/mode/nlink are taken
-// from the underlying kloset FileInfo and not hardcoded to the process's
-// effective uid/gid.
-func TestFileMetadataFromKlosetEntry(t *testing.T) {
+// TestFileMetadata confirms that mode/nlink/size are taken from the
+// underlying kloset FileInfo, and that uid/gid are remapped to the mounting
+// process (see fillAttrFromFileInfo doc comment for why).
+func TestFileMetadata(t *testing.T) {
 	root, snapName, backupDir := newTestFS(t)
 	ctx := context.Background()
 
@@ -196,6 +259,8 @@ func TestFileMetadataFromKlosetEntry(t *testing.T) {
 	require.EqualValues(t, 0644, f.attr.Mode&0o777, "file mode should match the importer setting")
 	require.GreaterOrEqual(t, f.attr.Nlink, uint32(1))
 	require.EqualValues(t, len("hello world"), f.attr.Size)
+	require.Equal(t, uint32(os.Geteuid()), f.attr.Uid)
+	require.Equal(t, uint32(os.Getgid()), f.attr.Gid)
 }
 
 // TestSnapshotCacheKeyDistinguishesSnapshots ensures the inode cache key for
