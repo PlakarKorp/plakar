@@ -239,16 +239,27 @@ func (m appModel) View() string {
 	fmt.Fprintln(&s, header)
 
 	// ── line 2: path (left) + size (right) ───────────────────────────────────
+	//
+	// When the importer has moved past the per-file phase (lastItem is
+	// cleared on snapshot.vfs.start / index.start / commit.start) we
+	// show a "<phase>…" placeholder so the line isn't blank for several
+	// seconds during VFS/index/commit.
 
 	sizeText := humanize.IBytes(uint64(state.countFileSize))
 	sizeW := lipgloss.Width(sizeText)
 
 	item := state.lastItem
-	availPath := termW - timerW - 1 - sizeW - 1 // indent + path + space + size
+	if item == "" && state.phase != "" {
+		item = dimStyle.Render(state.phase + "…")
+	}
+	availPath := termW - timerW - 1 - sizeW - 1
 	if availPath < 0 {
 		availPath = 0
 	}
-	item = shortenPathTailMax(item, availPath)
+	// Only path-shorten real paths, not the dim phase placeholder.
+	if state.lastItem != "" {
+		item = shortenPathTailMax(item, availPath)
+	}
 	itemW := lipgloss.Width(item)
 
 	pad := availPath - itemW
@@ -258,45 +269,44 @@ func (m appModel) View() string {
 	fmt.Fprintf(&s, "%s%s%s%s\n", indent, item, strings.Repeat(" ", pad), sizeText)
 
 	// ── line 3: progress bar + pct (left) + ETA (right) ─────────────────────
+	//
+	// When we don't yet have a total to compute progress against
+	// (fs.summary not received), render nothing — an empty static bar
+	// for tens of seconds is worse than no bar at all. The timer in the
+	// header already shows that work is in flight.
 
-	pctLabel := ""
 	if hasSummary {
-		pctLabel = fmt.Sprintf(" %3d%%", pct)
-	}
-	etaLabel := ""
-	if etaText != "" {
-		etaLabel = dimStyle.Render(etaText)
-	}
-
-	pctW := lipgloss.Width(pctLabel)
-	etaW := lipgloss.Width(etaLabel)
-	barW := termW - timerW - 1 - pctW - etaW
-	if etaW > 0 {
-		barW-- // space before ETA
-	}
-	if barW < 4 {
-		barW = 4
-	}
-
-	p := m.progress
-	p.Width = barW
-	var bar string
-	if hasSummary {
-		bar = p.ViewAs(ratio)
-	} else {
-		bar = dimStyle.Render(strings.Repeat("░", barW))
-	}
-
-	barLine := indent + bar + pctLabel
-	if etaLabel != "" {
-		barLineW := lipgloss.Width(barLine)
-		gap := termW - barLineW - etaW
-		if gap < 1 {
-			gap = 1
+		pctLabel := fmt.Sprintf(" %3d%%", pct)
+		etaLabel := ""
+		if etaText != "" {
+			etaLabel = dimStyle.Render(etaText)
 		}
-		barLine += strings.Repeat(" ", gap) + etaLabel
+
+		pctW := lipgloss.Width(pctLabel)
+		etaW := lipgloss.Width(etaLabel)
+		barW := termW - timerW - 1 - pctW - etaW
+		if etaW > 0 {
+			barW-- // space before ETA
+		}
+		if barW < 4 {
+			barW = 4
+		}
+
+		p := m.progress
+		p.Width = barW
+		bar := p.ViewAs(ratio)
+
+		barLine := indent + bar + pctLabel
+		if etaLabel != "" {
+			barLineW := lipgloss.Width(barLine)
+			gap := termW - barLineW - etaW
+			if gap < 1 {
+				gap = 1
+			}
+			barLine += strings.Repeat(" ", gap) + etaLabel
+		}
+		fmt.Fprintln(&s, barLine)
 	}
-	fmt.Fprintln(&s, barLine)
 
 	// ── line 4: nodes / objects / errors ─────────────────────────────────────
 	// nodes   = directory entries (structural)
