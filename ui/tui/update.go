@@ -17,12 +17,11 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 
 	case cancelledMsg:
+		// Context was cancelled externally (e.g. signal handler); quit cleanly.
 		m.forceQuit = true
 		return m, tea.Quit
 
 	case tickMsg:
-		var cmd tea.Cmd
-
 		state := m.application.state
 
 		now := time.Now()
@@ -30,8 +29,10 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.lastETAAt = now
 		} else {
 			dt := now.Sub(m.lastETAAt).Seconds()
-			if dt > 0.2 { // ~5Hz max
-				resDone := state.countFileOk + state.countFileError + state.countSymlinkOk + state.countSymlinkError + state.countXattrOk + state.countXattrError
+			if dt > 0.2 { // ~5 Hz max
+				resDone := state.countFileOk + state.countFileError +
+					state.countSymlinkOk + state.countSymlinkError +
+					state.countXattrOk + state.countXattrError
 				resRate := float64(resDone-m.lastDone) / dt
 
 				const alpha = 0.2
@@ -48,15 +49,16 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
-		// IMPORTANT: do NOT re-arm waitForBatch here; keep exactly one waiter in flight
-		// (armed after processing each appBatchMsg)
-		return m, tea.Batch(cmd, tick())
+		return m, tick()
 
 	case tea.KeyMsg:
 		switch event.String() {
 		case "ctrl+c":
+			// Mark abort on the application so the event loop can detect it,
+			// then quit cleanly so bubbletea fully restores terminal state.
+			m.application.aborted = true
 			m.forceQuit = true
-			return m, tea.Interrupt
+			return m, tea.Quit
 		}
 
 	case tea.QuitMsg:

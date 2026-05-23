@@ -212,9 +212,10 @@ func shortenPathTailMax(path string, maxW int) string {
 func (m appModel) View() string {
 	state := m.application.state
 
-	// fast exit
+	// On user abort, emit a clean single line and nothing else so the
+	// terminal is left in a sane state after bubbletea restores it.
 	if m.forceQuit {
-		return fmt.Sprintf("[%s] %s: aborted !\n", humanDuration(time.Since(state.startTime)), m.application.name)
+		return fmt.Sprintf("[%s] %s: aborted\n", humanDuration(time.Since(state.startTime)), m.application.name)
 	}
 
 	var s strings.Builder
@@ -299,20 +300,26 @@ func (m appModel) View() string {
 	}
 
 	writeLastErrors := func(maxLines int) {
-		if maxLines <= 0 || len(state.errors) == 0 {
+		if len(state.errors) == 0 {
 			return
 		}
-		maxLines -= 3
-
-		if maxLines > len(state.errors) {
-			maxLines = len(state.errors)
+		// Reserve headroom for the truncation notice (2 lines) and some padding.
+		const headroom = 3
+		if maxLines <= headroom {
+			return
 		}
-		start := len(state.errors) - maxLines
-		for i := start; i < len(state.errors); i++ {
+		maxLines -= headroom
+
+		n := len(state.errors)
+		if maxLines > n {
+			maxLines = n
+		}
+		start := n - maxLines
+		for i := start; i < n; i++ {
 			fmt.Fprintf(&s, "%s\n", state.errors[i])
 		}
 
-		if maxLines < len(state.errors) {
+		if start > 0 {
 			fmt.Fprintf(&s, "\nerrors list truncated, run `plakar info -errors %s` for full list\n", state.snapshotID)
 		}
 	}
