@@ -78,6 +78,13 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c":
 			m.forceQuit = true
 			return m, tea.Interrupt
+		case "d", "D":
+			// toggle debug overlay
+			if m.application != nil && m.application.tui != nil {
+				t := m.application.tui
+				t.debug.Store(!t.debug.Load())
+			}
+			return m, nil
 		}
 
 	case tea.QuitMsg:

@@ -22,12 +22,22 @@ type tui struct {
 	done chan error
 
 	cancel atomic.Bool
+
+	debug atomic.Bool // when true, the model renders the debug overlay
 }
 
 func New(ctx *appcontext.AppContext) ui.UI {
 	return &tui{
 		ctx: ctx,
 	}
+}
+
+// NewWithDebug returns a TUI that starts with the debug overlay enabled.
+// The overlay can still be toggled at runtime with the `d` key.
+func NewWithDebug(ctx *appcontext.AppContext) ui.UI {
+	t := &tui{ctx: ctx}
+	t.debug.Store(true)
+	return t
 }
 
 func (t *tui) Stdout() io.Writer {
@@ -103,7 +113,7 @@ func (tui *tui) Run() error {
 
 				// No app: start when workflow.start matches a known model
 				if e.Type == "workflow.start" {
-					tui.app = newApplication(tui.ctx, e.Data["workflow"].(string), tui.repo)
+					tui.app = newApplication(tui, e.Data["workflow"].(string), tui.repo)
 					if tui.app != nil {
 						tui.app.job = e.Job
 						tui.app.state.Update(*e)

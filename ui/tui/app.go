@@ -19,6 +19,7 @@ var applications = map[string]func(*appcontext.AppContext, *Application, *reposi
 
 type Application struct {
 	ctx   *appcontext.AppContext
+	tui   *tui // back-reference for shared flags (debug, silent, …)
 	job   uuid.UUID
 	name  string
 	state *State
@@ -110,7 +111,7 @@ func newApplicationState() *State {
 	}
 }
 
-func newApplication(ctx *appcontext.AppContext, name string, repo *repository.Repository) *Application {
+func newApplication(t *tui, name string, repo *repository.Repository) *Application {
 	done := make(chan struct{})
 
 	modelFunc, ok := applications[name]
@@ -119,12 +120,13 @@ func newApplication(ctx *appcontext.AppContext, name string, repo *repository.Re
 	}
 
 	capp := &Application{
-		ctx:   ctx,
+		ctx:   t.ctx,
+		tui:   t,
 		name:  name,
 		done:  done,
 		state: newApplicationState(),
 	}
-	capp.prog = tea.NewProgram(modelFunc(ctx, capp, repo))
+	capp.prog = tea.NewProgram(modelFunc(t.ctx, capp, repo))
 
 	go func() {
 		defer close(done)

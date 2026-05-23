@@ -140,6 +140,7 @@ func entryPoint() int {
 	var opt_stdio bool
 	var opt_quiet bool
 	var opt_silent bool
+	var opt_tuiDebug bool
 	var opt_keyfile string
 	var opt_enableSecurityCheck bool
 	var opt_disableSecurityCheck bool
@@ -159,6 +160,7 @@ func entryPoint() int {
 	flag.BoolVar(&opt_stdio, "stdio", false, "use stdio user interface")
 	flag.BoolVar(&opt_quiet, "quiet", false, "no output except errors")
 	flag.BoolVar(&opt_silent, "silent", false, "no output at all")
+	flag.BoolVar(&opt_tuiDebug, "tui-debug", false, "start the TUI with the debug overlay enabled (toggle at runtime with d)")
 	flag.StringVar(&opt_keyfile, "keyfile", "", "use passphrase from key file when prompted")
 	flag.BoolVar(&opt_enableSecurityCheck, "enable-security-check", false, "enable update check")
 	flag.BoolVar(&opt_disableSecurityCheck, "disable-security-check", false, "disable update check")
@@ -185,6 +187,8 @@ func entryPoint() int {
 		renderer = stdio.New(ctx)
 	} else if opt_json {
 		renderer = jsonui.New(ctx)
+	} else if opt_tuiDebug {
+		renderer = tui.NewWithDebug(ctx)
 	} else {
 		renderer = tui.New(ctx)
 	}

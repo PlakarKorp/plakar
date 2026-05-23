@@ -444,6 +444,12 @@ func (m appModel) View() string {
 		}
 	}
 
+	// ── debug overlay (toggle with `d`) ──────────────────────────────────────
+
+	if m.application.tui != nil && m.application.tui.debug.Load() {
+		m.writeDebugOverlay(&s, indent)
+	}
+
 	// ── errors (below, bounded by terminal height) ────────────────────────────
 
 	if len(state.errors) > 0 {
@@ -468,4 +474,78 @@ func (m appModel) View() string {
 	}
 
 	return s.String()
+}
+
+// writeDebugOverlay appends a detailed stats block under the normal display.
+// Toggled at runtime with the `d` key or started with -tui-debug. Lines are
+// dim-styled with a leading "[debug]" tag so they're clearly out-of-band.
+func (m appModel) writeDebugOverlay(s *strings.Builder, indent string) {
+	state := m.application.state
+	tag := dimStyle.Render("[debug]")
+
+	fmt.Fprintln(s)
+	fmt.Fprintln(s, tag+dimStyle.Render(" ── debug ─────────────────────────────────────────"))
+
+	// Event counters: ok / cached / error per type.
+	fmt.Fprintf(s, "%s%s path:    ok=%d  cached=%d  err=%d\n",
+		indent, tag, state.countPathOk, state.countPathCached, state.countPathError)
+	fmt.Fprintf(s, "%s%s dir:     ok=%d  cached=%d  err=%d\n",
+		indent, tag, state.countDirOk, state.countDirCached, state.countDirError)
+	fmt.Fprintf(s, "%s%s file:    ok=%d  cached=%d  err=%d\n",
+		indent, tag, state.countFileOk, state.countFileCached, state.countFileError)
+	fmt.Fprintf(s, "%s%s symlink: ok=%d  cached=%d  err=%d\n",
+		indent, tag, state.countSymlinkOk, state.countSymlinkCached, state.countSymlinkError)
+	fmt.Fprintf(s, "%s%s xattr:   ok=%d  cached=%d  err=%d\n",
+		indent, tag, state.countXattrOk, state.countXattrCached, state.countXattrError)
+
+	// Cumulative bytes from granular events.
+	fmt.Fprintf(s, "%s%s bytes:   src.r=%s  src.w=%s  store.r=%s  store.w=%s  cached.size=%s\n",
+		indent, tag,
+		humanize.IBytes(uint64(state.sourceReadBytes)),
+		humanize.IBytes(uint64(state.sourceWriteBytes)),
+		humanize.IBytes(uint64(state.storeReadBytes)),
+		humanize.IBytes(uint64(state.storeWriteBytes)),
+		humanize.IBytes(state.countCachedSize))
+
+	// EMA rates.
+	fmtRate := func(r float64) string {
+		return fmt.Sprintf("%s/s", humanize.IBytes(uint64(r)))
+	}
+	fmt.Fprintf(s, "%s%s rates:   src.r=%s  src.w=%s  store.r=%s  store.w=%s  items=%.1f/s\n",
+		indent, tag,
+		fmtRate(state.sourceReadRate),
+		fmtRate(state.sourceWriteRate),
+		fmtRate(state.storeReadRate),
+		fmtRate(state.storeWriteRate),
+		m.rateEMA)
+
+	// fs.summary totals.
+	fmt.Fprintf(s, "%s%s summary: paths=%d  files=%d  dirs=%d  symlinks=%d  xattrs=%d  size=%s\n",
+		indent, tag,
+		state.summaryPath, state.summaryFile, state.summaryDirectory,
+		state.summarySymlink, state.summaryXattr,
+		humanize.IBytes(state.summarySize))
+
+	// IOStats: full read/write distribution from kloset's iostat package.
+	if m.repo != nil {
+		io := m.repo.IOStats()
+		r := io.Read.Stats()
+		w := io.Write.Stats()
+		fmt.Fprintf(s, "%s%s iostat.r dt=%s bytes=%s overall=%s min=%s avg=%s med=%s p90=%s p99=%s max=%s\n",
+			indent, tag,
+			r.Duration.Round(time.Millisecond),
+			humanize.IBytes(uint64(r.TotalBytes)),
+			fmtRate(r.Overall), fmtRate(r.Min), fmtRate(r.Avg),
+			fmtRate(r.Median), fmtRate(r.P90), fmtRate(r.P99), fmtRate(r.Max))
+		fmt.Fprintf(s, "%s%s iostat.w dt=%s bytes=%s overall=%s min=%s avg=%s med=%s p90=%s p99=%s max=%s\n",
+			indent, tag,
+			w.Duration.Round(time.Millisecond),
+			humanize.IBytes(uint64(w.TotalBytes)),
+			fmtRate(w.Overall), fmtRate(w.Min), fmtRate(w.Avg),
+			fmtRate(w.Median), fmtRate(w.P90), fmtRate(w.P99), fmtRate(w.Max))
+	}
+
+	// State machine bits.
+	fmt.Fprintf(s, "%s%s state:   phase=%q  lastItem=%q  finished=%v  gotSummary=%v\n",
+		indent, tag, state.phase, state.lastItem, state.finished, state.gotSummary)
 }
