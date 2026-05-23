@@ -47,40 +47,27 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 				// byte-level throughput rates from granular events
 				if !state.lastRateAt.IsZero() {
-					dTransfer := state.transferBytes - state.lastTransfer
-					transferRate := float64(dTransfer) / dt
-					if transferRate >= 0 {
-						if state.transferRate == 0 {
-							state.transferRate = transferRate
-						} else {
-							state.transferRate = alpha*transferRate + (1-alpha)*state.transferRate
+					ema := func(current float64, delta int64) float64 {
+						rate := float64(delta) / dt
+						if rate < 0 {
+							return current
 						}
+						if current == 0 {
+							return rate
+						}
+						return alpha*rate + (1-alpha)*current
 					}
 
-					dStoreWrite := state.storeWriteBytes - state.lastStoreWrite
-					storeWriteRate := float64(dStoreWrite) / dt
-					if storeWriteRate >= 0 {
-						if state.storeWriteRate == 0 {
-							state.storeWriteRate = storeWriteRate
-						} else {
-							state.storeWriteRate = alpha*storeWriteRate + (1-alpha)*state.storeWriteRate
-						}
-					}
-
-					dStoreRead := state.storeReadBytes - state.lastStoreRead
-					storeReadRate := float64(dStoreRead) / dt
-					if storeReadRate >= 0 {
-						if state.storeReadRate == 0 {
-							state.storeReadRate = storeReadRate
-						} else {
-							state.storeReadRate = alpha*storeReadRate + (1-alpha)*state.storeReadRate
-						}
-					}
+					state.sourceReadRate = ema(state.sourceReadRate, state.sourceReadBytes-state.lastSourceRead)
+					state.sourceWriteRate = ema(state.sourceWriteRate, state.sourceWriteBytes-state.lastSourceWrite)
+					state.storeReadRate = ema(state.storeReadRate, state.storeReadBytes-state.lastStoreRead)
+					state.storeWriteRate = ema(state.storeWriteRate, state.storeWriteBytes-state.lastStoreWrite)
 				}
 				state.lastRateAt = now
-				state.lastTransfer = state.transferBytes
-				state.lastStoreWrite = state.storeWriteBytes
+				state.lastSourceRead = state.sourceReadBytes
+				state.lastSourceWrite = state.sourceWriteBytes
 				state.lastStoreRead = state.storeReadBytes
+				state.lastStoreWrite = state.storeWriteBytes
 			}
 		}
 

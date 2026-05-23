@@ -80,19 +80,22 @@ type State struct {
 	countXattrSize     int64
 	countCachedSize    uint64
 
-	// byte-level progress from the new granular events
-	transferBytes     int64     // import.progress or export.progress bytes seen
-	storeWriteBytes   int64     // store.write.progress bytes seen
-	storeReadBytes    int64     // store.read.progress bytes seen
+	// byte-level progress from granular events
+	sourceReadBytes  int64 // import.progress  — bytes read from source (backup)
+	sourceWriteBytes int64 // export.progress  — bytes written to destination (restore)
+	storeReadBytes   int64 // store.read.progress  — bytes read from store
+	storeWriteBytes  int64 // store.write.progress — bytes written to store
 
-	// throughput — updated by the tick handler in update.go
-	transferRate   float64 // bytes/sec (EMA) for import/export data
-	storeWriteRate float64 // bytes/sec (EMA) for store writes
-	storeReadRate  float64 // bytes/sec (EMA) for store reads
-	lastRateAt     time.Time
-	lastTransfer   int64
-	lastStoreWrite int64
-	lastStoreRead  int64
+	// throughput rates (EMA bytes/sec), updated each tick
+	sourceReadRate  float64
+	sourceWriteRate float64
+	storeReadRate   float64
+	storeWriteRate  float64
+	lastRateAt      time.Time
+	lastSourceRead  int64
+	lastSourceWrite int64
+	lastStoreRead   int64
+	lastStoreWrite  int64
 
 	lastItem string
 	errors   []string
@@ -271,22 +274,22 @@ func (s *State) Update(e Event) {
 
 	case "import.progress":
 		if b, ok := e.Data["bytes"].(int64); ok {
-			s.transferBytes += b
+			s.sourceReadBytes += b
 		}
 
 	case "export.progress":
 		if b, ok := e.Data["bytes"].(int64); ok {
-			s.transferBytes += b
-		}
-
-	case "store.write.progress":
-		if b, ok := e.Data["bytes"].(int64); ok {
-			s.storeWriteBytes += b
+			s.sourceWriteBytes += b
 		}
 
 	case "store.read.progress":
 		if b, ok := e.Data["bytes"].(int64); ok {
 			s.storeReadBytes += b
+		}
+
+	case "store.write.progress":
+		if b, ok := e.Data["bytes"].(int64); ok {
+			s.storeWriteBytes += b
 		}
 
 	case "result":

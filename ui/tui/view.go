@@ -336,50 +336,55 @@ func (m appModel) View() string {
 
 	fmt.Fprintln(&s, indent+strings.Join(statParts, dimStyle.Render("   ")))
 
-	// ── line 5: throughput ───────────────────────────────────────────────────
+	// ── line 5: source and store throughput ──────────────────────────────────
 	//
-	// For import: "in" = source reads (import.progress),
-	//             "out" = store writes (store.write.progress)
-	// For export: "in" = store reads (store.read.progress),
-	//             "out" = destination writes (export.progress)
-	// We always label from the user's perspective: in = data scanned/read,
-	// out = data written to its destination.
+	//   source  in 142 MiB/s  out 0 B/s     store  in 12 MiB/s  out 89 MiB/s
+	//
+	// source-in  = import.progress  (bytes read from filesystem during backup)
+	// source-out = export.progress  (bytes written to filesystem during restore)
+	// store-in   = store.read.progress  (bytes read from the store)
+	// store-out  = store.write.progress (bytes written to the store)
 
-	var ioTokens []string
+	fmtRate := func(r float64) string {
+		return fmt.Sprintf("%s/s", humanize.IBytes(uint64(r)))
+	}
 
-	hasGranular := state.transferRate > 0 || state.storeWriteRate > 0 || state.storeReadRate > 0
+	hasGranular := state.sourceReadBytes > 0 || state.sourceWriteBytes > 0 ||
+		state.storeReadBytes > 0 || state.storeWriteBytes > 0
 
 	if hasGranular {
-		if state.transferRate > 0 {
-			ioTokens = append(ioTokens,
-				dimStyle.Render("in ")+fmt.Sprintf("%s/s", humanize.IBytes(uint64(state.transferRate))))
-		}
-		if state.storeWriteRate > 0 {
-			ioTokens = append(ioTokens,
-				dimStyle.Render("out ")+fmt.Sprintf("%s/s", humanize.IBytes(uint64(state.storeWriteRate))))
-		}
-		if state.storeReadRate > 0 {
-			ioTokens = append(ioTokens,
-				dimStyle.Render("out ")+fmt.Sprintf("%s/s", humanize.IBytes(uint64(state.storeReadRate))))
-		}
+		srcIn := fmtRate(state.sourceReadRate)
+		srcOut := fmtRate(state.sourceWriteRate)
+		storeIn := fmtRate(state.storeReadRate)
+		storeOut := fmtRate(state.storeWriteRate)
+
+		ioLine := dimStyle.Render("source") +
+			"  " + dimStyle.Render("in ") + srcIn +
+			"  " + dimStyle.Render("out ") + srcOut +
+			"     " +
+			dimStyle.Render("store") +
+			"  " + dimStyle.Render("in ") + storeIn +
+			"  " + dimStyle.Render("out ") + storeOut
+
+		fmt.Fprintln(&s, indent+ioLine)
 	} else if m.repo != nil {
 		// fallback: poll repo stats totals when granular events not yet flowing
 		if time.Since(m.application.debounceStat) >= time.Second {
 			io := m.repo.IOStats()
 			r := io.Read.Stats()
 			w := io.Write.Stats()
-			m.application.lastStat = fmt.Sprintf("in %s  out %s",
-				humanize.IBytes(uint64(r.TotalBytes)),
-				humanize.IBytes(uint64(w.TotalBytes)))
+			m.application.lastStat = fmt.Sprintf("%s  %s  %s  %s",
+				dimStyle.Render("store  in ")+humanize.IBytes(uint64(r.TotalBytes)),
+				dimStyle.Render("out ")+humanize.IBytes(uint64(w.TotalBytes)),
+				"", "")
+			m.application.lastStat = dimStyle.Render("store") +
+				"  " + dimStyle.Render("in ") + humanize.IBytes(uint64(r.TotalBytes)) +
+				"  " + dimStyle.Render("out ") + humanize.IBytes(uint64(w.TotalBytes))
 			m.application.debounceStat = time.Now()
 		}
 		if m.application.lastStat != "" {
-			ioTokens = append(ioTokens, dimStyle.Render(m.application.lastStat))
+			fmt.Fprintln(&s, indent+m.application.lastStat)
 		}
-	}
-
-	if len(ioTokens) > 0 {
-		fmt.Fprintln(&s, indent+strings.Join(ioTokens, dimStyle.Render("   ")))
 	}
 
 	// ── errors (below, bounded by terminal height) ────────────────────────────
