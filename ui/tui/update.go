@@ -57,19 +57,30 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						}
 					}
 
-					dStore := state.storeWriteBytes - state.lastStoreWrite
-					storeRate := float64(dStore) / dt
-					if storeRate >= 0 {
+					dStoreWrite := state.storeWriteBytes - state.lastStoreWrite
+					storeWriteRate := float64(dStoreWrite) / dt
+					if storeWriteRate >= 0 {
 						if state.storeWriteRate == 0 {
-							state.storeWriteRate = storeRate
+							state.storeWriteRate = storeWriteRate
 						} else {
-							state.storeWriteRate = alpha*storeRate + (1-alpha)*state.storeWriteRate
+							state.storeWriteRate = alpha*storeWriteRate + (1-alpha)*state.storeWriteRate
+						}
+					}
+
+					dStoreRead := state.storeReadBytes - state.lastStoreRead
+					storeReadRate := float64(dStoreRead) / dt
+					if storeReadRate >= 0 {
+						if state.storeReadRate == 0 {
+							state.storeReadRate = storeReadRate
+						} else {
+							state.storeReadRate = alpha*storeReadRate + (1-alpha)*state.storeReadRate
 						}
 					}
 				}
 				state.lastRateAt = now
 				state.lastTransfer = state.transferBytes
 				state.lastStoreWrite = state.storeWriteBytes
+				state.lastStoreRead = state.storeReadBytes
 			}
 		}
 

@@ -336,27 +336,41 @@ func (m appModel) View() string {
 
 	fmt.Fprintln(&s, indent+strings.Join(statParts, dimStyle.Render("   ")))
 
-	// ── line 5: throughput / store I/O ───────────────────────────────────────
+	// ── line 5: throughput ───────────────────────────────────────────────────
+	//
+	// For import: "in" = source reads (import.progress),
+	//             "out" = store writes (store.write.progress)
+	// For export: "in" = store reads (store.read.progress),
+	//             "out" = destination writes (export.progress)
+	// We always label from the user's perspective: in = data scanned/read,
+	// out = data written to its destination.
 
 	var ioTokens []string
 
-	// prefer event-driven rates; fall back to repo polling if not yet available
-	if state.transferRate > 0 {
-		ioTokens = append(ioTokens,
-			dimStyle.Render("in ")+fmt.Sprintf("%s/s", humanize.IBytes(uint64(state.transferRate))))
-	}
-	if state.storeWriteRate > 0 {
-		ioTokens = append(ioTokens,
-			dimStyle.Render("store ↑ ")+fmt.Sprintf("%s/s", humanize.IBytes(uint64(state.storeWriteRate))))
+	hasGranular := state.transferRate > 0 || state.storeWriteRate > 0 || state.storeReadRate > 0
+
+	if hasGranular {
+		if state.transferRate > 0 {
+			ioTokens = append(ioTokens,
+				dimStyle.Render("in ")+fmt.Sprintf("%s/s", humanize.IBytes(uint64(state.transferRate))))
+		}
+		if state.storeWriteRate > 0 {
+			ioTokens = append(ioTokens,
+				dimStyle.Render("out ")+fmt.Sprintf("%s/s", humanize.IBytes(uint64(state.storeWriteRate))))
+		}
+		if state.storeReadRate > 0 {
+			ioTokens = append(ioTokens,
+				dimStyle.Render("out ")+fmt.Sprintf("%s/s", humanize.IBytes(uint64(state.storeReadRate))))
+		}
 	} else if m.repo != nil {
-		// fallback: poll repo stats (no granular events yet)
+		// fallback: poll repo stats totals when granular events not yet flowing
 		if time.Since(m.application.debounceStat) >= time.Second {
 			io := m.repo.IOStats()
 			r := io.Read.Stats()
 			w := io.Write.Stats()
-			m.application.lastStat = fmt.Sprintf("store ↑ %s  ↓ %s",
-				humanize.IBytes(uint64(w.TotalBytes)),
-				humanize.IBytes(uint64(r.TotalBytes)))
+			m.application.lastStat = fmt.Sprintf("in %s  out %s",
+				humanize.IBytes(uint64(r.TotalBytes)),
+				humanize.IBytes(uint64(w.TotalBytes)))
 			m.application.debounceStat = time.Now()
 		}
 		if m.application.lastStat != "" {

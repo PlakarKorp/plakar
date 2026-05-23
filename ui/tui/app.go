@@ -86,11 +86,13 @@ type State struct {
 	storeReadBytes    int64     // store.read.progress bytes seen
 
 	// throughput — updated by the tick handler in update.go
-	transferRate    float64   // bytes/sec (EMA) for import/export data
-	storeWriteRate  float64   // bytes/sec (EMA) for store writes
-	lastRateAt      time.Time
-	lastTransfer    int64
-	lastStoreWrite  int64
+	transferRate   float64 // bytes/sec (EMA) for import/export data
+	storeWriteRate float64 // bytes/sec (EMA) for store writes
+	storeReadRate  float64 // bytes/sec (EMA) for store reads
+	lastRateAt     time.Time
+	lastTransfer   int64
+	lastStoreWrite int64
+	lastStoreRead  int64
 
 	lastItem string
 	errors   []string
