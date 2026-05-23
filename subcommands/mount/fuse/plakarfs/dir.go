@@ -143,6 +143,15 @@ func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
 
 func (d *Dir) Lookup(ctx context.Context, name string) (fusefs.Node, error) {
 	if d.vfs == nil {
+		if err := d.ensureSnapshotMapping(ctx); err != nil {
+			return nil, err
+		}
+		d.readDirMutex.Lock()
+		_, ok := d.readDirSnapshotMapping[name]
+		d.readDirMutex.Unlock()
+		if !ok {
+			return nil, syscall.ENOENT
+		}
 		return NewDirectory(d.pfs, nil, d, name)
 	}
 
@@ -159,6 +168,17 @@ func (d *Dir) Lookup(ctx context.Context, name string) (fusefs.Node, error) {
 	}
 }
 
+func (d *Dir) ensureSnapshotMapping(ctx context.Context) error {
+	d.readDirMutex.Lock()
+	if !d.readDirLast.IsZero() && time.Since(d.readDirLast) < d.pfs.rootRefresh {
+		d.readDirMutex.Unlock()
+		return nil
+	}
+	d.readDirMutex.Unlock()
+	_, err := d.ReadDirAll(ctx)
+	return err
+}
+
 func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 	d.readDirMutex.Lock()
 	defer d.readDirMutex.Unlock()
@@ -169,9 +189,8 @@ func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 			return d.readDirChildren, nil
 		}
 
-		_, err := cached.RebuildStateFromStore(d.pfs.ctx, d.pfs.repo.Configuration().RepositoryID, d.pfs.ctx.StoreConfig, false)
-		if err != nil {
-			return nil, err
+		if _, err := cached.RebuildStateFromStore(d.pfs.ctx, d.pfs.repo.Configuration().RepositoryID, d.pfs.ctx.StoreConfig, false); err != nil {
+			d.pfs.ctx.GetLogger().Warn("plakarfs: refreshing cached state failed: %v", err)
 		}
 
 		snapshotIDs, err := locate.LocateSnapshotIDs(d.pfs.repo, d.pfs.locateOptions)
@@ -214,16 +233,16 @@ func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 }
 
 func (d *Dir) Stat(name string) (fs.FileInfo, error) {
-	if d.readDirEntries != nil {
-		for _, de := range d.readDirEntries {
-			if de.Name() == name {
-				st, err := de.Info()
-				if err != nil {
-					return nil, err
-				}
-				return st, nil
-			}
+	d.readDirMutex.Lock()
+	entries := d.readDirEntries
+	d.readDirMutex.Unlock()
+	for _, de := range entries {
+		if de.Name() == name {
+			return de.Info()
 		}
 	}
-	return nil, fs.ErrNotExist
+	if d.vfs == nil {
+		return nil, fs.ErrNotExist
+	}
+	return fs.Stat(d.vfs, path.Join(".", d.path, name))
 }
