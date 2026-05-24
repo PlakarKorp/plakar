@@ -2,7 +2,6 @@ package fileinfo
 
 import (
 	"io/fs"
-	"syscall"
 	"time"
 )
 
@@ -21,7 +20,7 @@ func New() MockFileInfo {
 		size:    100,
 		mode:    0644,
 		modTime: time.Now(),
-		sys:     &syscall.Stat_t{},
+		sys:     newSys(),
 	}
 }
 
