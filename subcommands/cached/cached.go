@@ -24,7 +24,6 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"runtime"
 	"runtime/debug"
 	"sync"
 	"time"
@@ -43,10 +42,8 @@ import (
 )
 
 func init() {
-	if runtime.GOOS != "windows" {
-		subcommands.Register(func() subcommands.Subcommand { return &Cached{} },
-			subcommands.BeforeRepositoryOpen, "cached")
-	}
+	subcommands.Register(func() subcommands.Subcommand { return &Cached{} },
+		subcommands.BeforeRepositoryOpen, "cached")
 }
 
 type Cached struct {
