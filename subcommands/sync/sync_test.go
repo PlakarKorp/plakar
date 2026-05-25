@@ -23,6 +23,9 @@ func init() {
 }
 
 func generateSnapshot(t *testing.T, bufOut *bytes.Buffer, bufErr *bytes.Buffer) (*repository.Repository, *snapshot.Snapshot, *appcontext.AppContext) {
+	// Disable the stateRefresher hook so RebuildStateFromStateFile during the
+	// sync flow becomes a no-op. The peer-side RebuildStateFromStore call is
+	// handled separately by the in-process fake cached server.
 	stateRefresher = func(*appcontext.AppContext, *repository.Repository) func(objects.MAC, bool) error {
 		return nil
 	}
@@ -39,20 +42,25 @@ func generateSnapshot(t *testing.T, bufOut *bytes.Buffer, bufErr *bytes.Buffer) 
 	return repo, snap, ctx
 }
 
-func _TestExecuteCmdSyncTo(t *testing.T) {
+func TestExecuteCmdSyncTo(t *testing.T) {
 	bufOut := bytes.NewBuffer(nil)
 	bufErr := bytes.NewBuffer(nil)
 
 	localRepo, snap, lctx := generateSnapshot(t, bufOut, bufErr)
 	defer snap.Close()
 
+	// Stand up an in-process fake cached server so the peer-side
+	// cached.RebuildStateFromStore call in Sync.Execute (sync.go:194) doesn't
+	// try to fork-exec the test binary as a cached daemon.
+	cachedSrv := ptesting.StartFakeCachedServer(t, lctx)
+	defer cachedSrv.Close()
+
 	peerRepo, _ := ptesting.GenerateRepository(t, bufOut, bufErr, nil)
 
 	indexId := snap.Header.GetIndexID()
-	args := []string{fmt.Sprintf("%s", hex.EncodeToString(indexId[:])), "to", peerRepo.Root()}
+	args := []string{hex.EncodeToString(indexId[:]), "to", peerRepo.Root()}
 
 	subcommand := &Sync{}
-	fmt.Println(args)
 	err := subcommand.Parse(lctx, args)
 	require.NoError(t, err)
 	require.NotNil(t, subcommand)
@@ -61,23 +69,24 @@ func _TestExecuteCmdSyncTo(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 0, status)
 
-	// output should look like this
-	// 2025-03-26T21:17:28Z info: sync: synchronization from /tmp/tmp_repo1957539148/repo to /tmp/tmp_repo2470692775/repo completed: 1 snapshots synchronized
 	output := bufOut.String()
 	require.Contains(t, strings.Trim(output, "\n"), fmt.Sprintf("info: sync: synchronization from %s to %s completed: 1 snapshots synchronized", localRepo.Origin(), peerRepo.Origin()))
 }
 
-func _TestExecuteCmdSyncWith(t *testing.T) {
+func TestExecuteCmdSyncWith(t *testing.T) {
 	bufOut := bytes.NewBuffer(nil)
 	bufErr := bytes.NewBuffer(nil)
 
 	localRepo, snap, lctx := generateSnapshot(t, bufOut, bufErr)
 	defer snap.Close()
 
+	cachedSrv := ptesting.StartFakeCachedServer(t, lctx)
+	defer cachedSrv.Close()
+
 	peerRepo, _ := ptesting.GenerateRepository(t, bufOut, bufErr, nil)
 
 	indexId := snap.Header.GetIndexID()
-	args := []string{fmt.Sprintf("%s", hex.EncodeToString(indexId[:])), "with", peerRepo.Root()}
+	args := []string{hex.EncodeToString(indexId[:]), "with", peerRepo.Root()}
 
 	subcommand := &Sync{}
 	err := subcommand.Parse(lctx, args)
@@ -88,23 +97,24 @@ func _TestExecuteCmdSyncWith(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 0, status)
 
-	// output should look like this
-	// 2025-03-26T21:28:23Z info: sync: synchronization between /tmp/tmp_repo3863826583/repo and /tmp/tmp_repo327669581/repo completed: 1 snapshots synchronized
 	output := bufOut.String()
 	require.Contains(t, strings.Trim(output, "\n"), fmt.Sprintf("info: sync: synchronization between %s and %s completed: 1 snapshots synchronized", localRepo.Origin(), peerRepo.Origin()))
 }
 
-func _TestExecuteCmdSyncWithEncryption(t *testing.T) {
+func TestExecuteCmdSyncWithEncryption(t *testing.T) {
 	bufOut := bytes.NewBuffer(nil)
 	bufErr := bytes.NewBuffer(nil)
 
 	localRepo, snap, lctx := generateSnapshot(t, bufOut, bufErr)
 	defer snap.Close()
 
+	cachedSrv := ptesting.StartFakeCachedServer(t, lctx)
+	defer cachedSrv.Close()
+
 	passphrase := []byte("aZeRtY123456$#@!@")
 	peerRepo, _ := ptesting.GenerateRepository(t, bufOut, bufErr, &passphrase)
 
-	// need to recreate configuration to store passphrase on peer repo
+	// Recreate the config so the passphrase is stored alongside the peer repo.
 	opt_configfile := strings.TrimPrefix(peerRepo.Root(), "fs://")
 
 	cfg, err := utils.LoadConfig(opt_configfile)
@@ -117,7 +127,7 @@ func _TestExecuteCmdSyncWithEncryption(t *testing.T) {
 	require.NoError(t, err)
 
 	indexId := snap.Header.GetIndexID()
-	args := []string{fmt.Sprintf("%s", hex.EncodeToString(indexId[:])), "with", "@peerRepo"}
+	args := []string{hex.EncodeToString(indexId[:]), "with", "@peerRepo"}
 
 	subcommand := &Sync{}
 	err = subcommand.Parse(lctx, args)
@@ -128,8 +138,70 @@ func _TestExecuteCmdSyncWithEncryption(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 0, status)
 
-	// output should look like this
-	// 2025-03-26T21:28:23Z info: sync: synchronization between /tmp/tmp_repo3863826583/repo and /tmp/tmp_repo327669581/repo completed: 1 snapshots synchronized
 	output := bufOut.String()
 	require.Contains(t, strings.Trim(output, "\n"), fmt.Sprintf("info: sync: synchronization between %s and %s completed: 1 snapshots synchronized", localRepo.Origin(), peerRepo.Origin()))
+}
+
+func TestParseRejectsNoArgs(t *testing.T) {
+	_, _, ctx := generateSnapshot(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil))
+	subcommand := &Sync{}
+	err := subcommand.Parse(ctx, []string{})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "usage")
+}
+
+func TestParseRejectsInvalidDirection(t *testing.T) {
+	_, _, ctx := generateSnapshot(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil))
+	subcommand := &Sync{}
+	err := subcommand.Parse(ctx, []string{"sideways", "fs:///tmp"})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "invalid direction")
+}
+
+func TestParseRejectsTooManyArgs(t *testing.T) {
+	_, _, ctx := generateSnapshot(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil))
+	subcommand := &Sync{}
+	err := subcommand.Parse(ctx, []string{"a", "b", "c", "d"})
+	require.Error(t, err)
+}
+
+func TestParseRejectsUnknownPeer(t *testing.T) {
+	_, _, ctx := generateSnapshot(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil))
+	// Parse looks up @-aliases through ctx.Config; generateSnapshot leaves it
+	// nil. Initialize with an empty config so the lookup returns "not found"
+	// instead of NPE.
+	ctx.ConfigDir = t.TempDir()
+	require.NoError(t, ctx.ReloadConfig())
+	subcommand := &Sync{}
+	err := subcommand.Parse(ctx, []string{"to", "@nope-this-is-not-configured"})
+	require.Error(t, err)
+}
+
+func TestExecuteCmdSyncFrom(t *testing.T) {
+	// Reverse direction: pull a snapshot from the peer into the local repo.
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+
+	localRepo, _, lctx := generateSnapshot(t, bufOut, bufErr)
+
+	cachedSrv := ptesting.StartFakeCachedServer(t, lctx)
+	defer cachedSrv.Close()
+
+	peerRepo, peerCtx := ptesting.GenerateRepository(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil), nil)
+	peerSnap := ptesting.GenerateSnapshot(t, peerRepo, []ptesting.MockFile{
+		ptesting.NewMockFile("hello.txt", 0644, "from peer"),
+	})
+	defer peerSnap.Close()
+	_ = peerCtx
+
+	indexId := peerSnap.Header.GetIndexID()
+	args := []string{hex.EncodeToString(indexId[:]), "from", peerRepo.Root()}
+
+	subcommand := &Sync{}
+	err := subcommand.Parse(lctx, args)
+	require.NoError(t, err)
+
+	status, err := subcommand.Execute(lctx, localRepo)
+	require.NoError(t, err)
+	require.Equal(t, 0, status)
 }
