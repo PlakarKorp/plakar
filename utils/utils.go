@@ -334,7 +334,7 @@ func GetDataDir(appName string) (string, error) {
 }
 
 var VERSION = func() string {
-	version := "v1.1.0-rc.3"
+	version := "v1.1.0-rc.4"
 	if strings.HasSuffix(version, "-devel") {
 		if info, ok := debug.ReadBuildInfo(); ok {
 			for _, setting := range info.Settings {
