@@ -372,13 +372,14 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 			if len(parentID) != 0 {
 				parent, err := snapshot.Load(repo, parentID[0])
 				if err != nil {
-					return 1, nil, objects.MAC{}, err
-				}
-				defer parent.Close()
+					fmt.Printf("Failed to load parent snapshot %x: %s\n", parentID[0], err)
+				} else {
+					defer parent.Close()
 
-				parentVFS, err = parent.FilesystemWithCache()
-				if err != nil {
-					return 1, nil, objects.MAC{}, err
+					parentVFS, err = parent.FilesystemWithCache()
+					if err != nil {
+						fmt.Printf("Failed to get parent VFS for snapshot %x: %s\n", parentID[0], err)
+					}
 				}
 			}
 		}
