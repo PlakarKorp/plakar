@@ -11,7 +11,7 @@ require (
 	github.com/PlakarKorp/integrations/stdio v1.1.0-beta.2
 	github.com/PlakarKorp/integrations/tar v1.1.0-beta.2
 	github.com/PlakarKorp/kloset v1.1.0-rc.4
-	github.com/PlakarKorp/pkg v1.1.0-beta.11
+	github.com/PlakarKorp/pkg v1.1.0-beta.12
 	github.com/alecthomas/chroma v0.10.0
 	github.com/anacrolix/fuse v0.3.2
 	github.com/charmbracelet/bubbles v1.0.0
