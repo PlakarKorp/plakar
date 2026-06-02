@@ -49,14 +49,14 @@ func (f *fakeStore) Open(ctx context.Context) ([]byte, error) {
 	return f.openConfig, f.openErr
 }
 
-func (f *fakeStore) List(ctx context.Context, typ storage.StorageResource) ([]objects.MAC, error) {
+func (f *fakeStore) List(ctx context.Context, typ storage.StorageResource, flags uint32) ([]objects.MAC, error) {
 	if f.listErr != nil {
 		return nil, f.listErr
 	}
 	return f.listResources[typ], nil
 }
 
-func (f *fakeStore) Get(ctx context.Context, typ storage.StorageResource, mac objects.MAC, rg *storage.Range) (io.ReadCloser, error) {
+func (f *fakeStore) Get(ctx context.Context, typ storage.StorageResource, mac objects.MAC, rg *storage.Range, flags uint32) (io.ReadCloser, error) {
 	f.lastGetType, f.lastGetMAC, f.lastGetRng = typ, mac, rg
 	if f.getErr != nil {
 		return nil, f.getErr
@@ -65,25 +65,25 @@ func (f *fakeStore) Get(ctx context.Context, typ storage.StorageResource, mac ob
 	return io.NopCloser(bytes.NewReader(data)), nil
 }
 
-func (f *fakeStore) Put(ctx context.Context, typ storage.StorageResource, mac objects.MAC, rd io.Reader) (int64, error) {
+func (f *fakeStore) Put(ctx context.Context, typ storage.StorageResource, mac objects.MAC, rd io.Reader, flags uint32) (int64, error) {
 	f.lastPutType, f.lastPutMAC = typ, mac
 	data, _ := io.ReadAll(rd)
 	f.lastPutData = data
 	return int64(len(data)), f.putErr
 }
 
-func (f *fakeStore) Delete(ctx context.Context, typ storage.StorageResource, mac objects.MAC) error {
+func (f *fakeStore) Delete(ctx context.Context, typ storage.StorageResource, mac objects.MAC, flags uint32) error {
 	f.lastDelType, f.lastDelMAC = typ, mac
 	return f.deleteErr
 }
 
 // Unused methods — panic so an accidentally widened surface is loud.
-func (f *fakeStore) Create(context.Context, []byte) error      { panic("unused") }
-func (f *fakeStore) Ping(context.Context) error                { panic("unused") }
-func (f *fakeStore) Origin() string                            { panic("unused") }
-func (f *fakeStore) Type() string                              { panic("unused") }
-func (f *fakeStore) Root() string                              { panic("unused") }
-func (f *fakeStore) Flags() location.Flags                     { panic("unused") }
+func (f *fakeStore) Create(context.Context, []byte) error { panic("unused") }
+func (f *fakeStore) Ping(context.Context) error           { panic("unused") }
+func (f *fakeStore) Origin() string                       { panic("unused") }
+func (f *fakeStore) Type() string                         { panic("unused") }
+func (f *fakeStore) Root() string                         { panic("unused") }
+func (f *fakeStore) Flags() location.Flags                { panic("unused") }
 func (f *fakeStore) Mode(context.Context) (storage.Mode, error) {
 	panic("unused")
 }

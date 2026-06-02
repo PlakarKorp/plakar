@@ -43,7 +43,7 @@ func (s *server) listResource(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if indexes, err := s.store.List(r.Context(), typ); err != nil {
+	if indexes, err := s.store.List(r.Context(), typ, 0); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	} else {
 		w.Header().Set("Content-Type", "application/json")
@@ -70,7 +70,7 @@ func (s *server) getResource(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if rd, err := s.store.Get(r.Context(), typ, mac, rg); err != nil {
+	if rd, err := s.store.Get(r.Context(), typ, mac, rg, 0); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	} else {
@@ -100,7 +100,7 @@ func (s *server) putResource(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err = s.store.Put(r.Context(), typ, mac, r.Body); err != nil {
+	if _, err = s.store.Put(r.Context(), typ, mac, r.Body, 0); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -123,7 +123,7 @@ func (s *server) deleteResource(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.store.Delete(r.Context(), typ, mac); err != nil {
+	if err := s.store.Delete(r.Context(), typ, mac, 0); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }

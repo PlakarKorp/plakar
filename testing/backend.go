@@ -136,7 +136,7 @@ func (mb *MockBackend) Size(ctx context.Context) (int64, error) {
 	return 0, nil
 }
 
-func (mb *MockBackend) List(ctx context.Context, res storage.StorageResource) ([]objects.MAC, error) {
+func (mb *MockBackend) List(ctx context.Context, res storage.StorageResource, flags uint32) ([]objects.MAC, error) {
 	switch res {
 	case storage.StorageResourcePackfile:
 		if mb.behavior == "brokenGetPackfiles" {
@@ -158,11 +158,11 @@ func (mb *MockBackend) List(ctx context.Context, res storage.StorageResource) ([
 	return nil, errors.ErrUnsupported
 }
 
-func (mb *MockBackend) Put(ctx context.Context, res storage.StorageResource, mac objects.MAC, rd io.Reader) (int64, error) {
+func (mb *MockBackend) Put(ctx context.Context, res storage.StorageResource, mac objects.MAC, rd io.Reader, flags uint32) (int64, error) {
 	return 0, nil
 }
 
-func (mb *MockBackend) Get(ctx context.Context, res storage.StorageResource, mac objects.MAC, rg *storage.Range) (io.ReadCloser, error) {
+func (mb *MockBackend) Get(ctx context.Context, res storage.StorageResource, mac objects.MAC, rg *storage.Range, flags uint32) (io.ReadCloser, error) {
 	switch res {
 	case storage.StorageResourcePackfile:
 		if rg == nil {
@@ -205,7 +205,7 @@ func (mb *MockBackend) Get(ctx context.Context, res storage.StorageResource, mac
 	return nil, errors.ErrUnsupported
 }
 
-func (mb *MockBackend) Delete(ctx context.Context, res storage.StorageResource, mac objects.MAC) error {
+func (mb *MockBackend) Delete(ctx context.Context, res storage.StorageResource, mac objects.MAC, flags uint32) error {
 	return nil
 }
 
