@@ -4,14 +4,14 @@ go 1.25.0
 
 require (
 	github.com/PlakarKorp/go-human2duration v0.1.6
-	github.com/PlakarKorp/integration-grpc v1.1.0-rc.5
-	github.com/PlakarKorp/integrations/fs v1.1.0-beta.8
-	github.com/PlakarKorp/integrations/http v1.1.0-beta.2
-	github.com/PlakarKorp/integrations/ptar v1.1.0-beta.4
-	github.com/PlakarKorp/integrations/stdio v1.1.0-beta.2
-	github.com/PlakarKorp/integrations/tar v1.1.0-beta.2
-	github.com/PlakarKorp/kloset v1.1.0-rc.4
-	github.com/PlakarKorp/pkg v1.1.0-beta.12
+	github.com/PlakarKorp/integration-grpc v1.1.0
+	github.com/PlakarKorp/integrations/fs v1.1.0
+	github.com/PlakarKorp/integrations/http v1.1.0
+	github.com/PlakarKorp/integrations/ptar v1.1.0
+	github.com/PlakarKorp/integrations/stdio v1.1.0
+	github.com/PlakarKorp/integrations/tar v1.1.0
+	github.com/PlakarKorp/kloset v1.1.0
+	github.com/PlakarKorp/pkg v1.1.0
 	github.com/alecthomas/chroma v0.10.0
 	github.com/anacrolix/fuse v0.3.2
 	github.com/charmbracelet/bubbles v1.0.0
@@ -67,7 +67,7 @@ require (
 	github.com/cockroachdb/crlib v0.0.0-20250718215705-7ff5051265b9 // indirect
 	github.com/cockroachdb/errors v1.12.0 // indirect
 	github.com/cockroachdb/logtags v0.0.0-20241215232642-bb51bb14a506 // indirect
-	github.com/cockroachdb/pebble/v2 v2.1.5 // indirect
+	github.com/cockroachdb/pebble/v2 v2.1.6 // indirect
 	github.com/cockroachdb/redact v1.1.6 // indirect
 	github.com/cockroachdb/swiss v0.0.0-20251224182025-b0f6560f979b // indirect
 	github.com/cockroachdb/tokenbucket v0.0.0-20250429170803-42689b6311bb // indirect
@@ -102,7 +102,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/ncruces/go-strftime v1.0.0 // indirect
 	github.com/nickball/go-aes-key-wrap v0.0.0-20170929221519-1c3aa3e4dfc5 // indirect
-	github.com/pierrec/lz4/v4 v4.1.26 // indirect
+	github.com/pierrec/lz4/v4 v4.1.27 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pkg/xattr v0.4.12 // indirect
 	github.com/prometheus/client_golang v1.23.2 // indirect
@@ -130,5 +130,5 @@ require (
 	modernc.org/libc v1.72.3 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
-	modernc.org/sqlite v1.50.1 // indirect
+	modernc.org/sqlite v1.51.0 // indirect
 )
