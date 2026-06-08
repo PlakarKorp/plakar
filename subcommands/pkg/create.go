@@ -26,6 +26,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/PlakarKorp/kloset/connectors/storage"
 	"github.com/PlakarKorp/kloset/hashing"
@@ -67,6 +68,10 @@ func (cmd *PkgCreate) Parse(ctx *appcontext.AppContext, args []string) error {
 		manifest = flags.Arg(0)
 		version  = flags.Arg(1)
 	)
+
+	if _, v, ok := strings.Cut(version, "/"); ok {
+		version = v
+	}
 
 	if !semver.IsValid(version) {
 		return fmt.Errorf("bad version string: %s", version)
