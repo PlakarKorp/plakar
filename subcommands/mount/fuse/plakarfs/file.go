@@ -10,15 +10,21 @@ import (
 	"path"
 	"syscall"
 
+	"github.com/PlakarKorp/kloset/caching/lru"
 	"github.com/anacrolix/fuse"
 	fusefs "github.com/anacrolix/fuse/fs"
+)
+
+const (
+	CacheSliceSize = 4 * 1024 * 1024
 )
 
 var _ fusefs.Node = (*File)(nil)
 var _ fusefs.NodeOpener = (*File)(nil)
 
 type fileHandle struct {
-	f io.ReadCloser
+	f      io.ReadCloser
+	parent *File
 }
 
 var _ fusefs.Handle = (*fileHandle)(nil)
@@ -32,6 +38,8 @@ type File struct {
 
 	cacheKey string
 	attr     *fuse.Attr
+
+	cache *lru.Cache[int64, []byte]
 }
 
 func NewFile(pfs *plakarFS, vfs fs.FS, parent *Dir, pathname string) (*File, error) {
@@ -49,6 +57,7 @@ func NewFile(pfs *plakarFS, vfs fs.FS, parent *Dir, pathname string) (*File, err
 			vfs:      vfs,
 			path:     pathname,
 			cacheKey: key,
+			cache:    lru.New[int64, []byte](50, nil),
 			attr: &fuse.Attr{
 				Valid: pfs.kernelCacheTTL,
 				Mode:  st.Mode(),
@@ -63,6 +72,7 @@ func NewFile(pfs *plakarFS, vfs fs.FS, parent *Dir, pathname string) (*File, err
 				//Nlink: uint32(st.Nlink()),
 			},
 		}
+
 		pfs.inodeCache.setFile(f.cacheKey, f)
 		return f, nil
 	}
@@ -81,14 +91,13 @@ func (f *File) Attr(ctx context.Context, a *fuse.Attr) error {
 }
 
 func (f *File) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenResponse) (fusefs.Handle, error) {
-	resp.Flags |= fuse.OpenDirectIO
 	resp.Flags |= fuse.OpenKeepCache
 
 	rd, err := f.vfs.Open(f.path)
 	if err != nil {
 		return nil, err
 	}
-	return &fileHandle{f: rd}, nil
+	return &fileHandle{f: rd, parent: f}, nil
 }
 
 func (h *fileHandle) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.ReadResponse) error {
@@ -96,12 +105,31 @@ func (h *fileHandle) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse
 	if !ok {
 		return syscall.EIO
 	}
-	buf := make([]byte, req.Size)
-	n, err := ra.ReadAt(buf, req.Offset)
+
+	pageOffset := req.Offset % CacheSliceSize
+	alignedOffset := req.Offset - pageOffset
+
+	// End of file might be smaller so do not use CacheSliceSize in the
+	// comparison here.
+	if v, ok := h.parent.cache.Get(alignedOffset); ok && (pageOffset+int64(req.Size)) < int64(len(v)) {
+		resp.Data = v[pageOffset : pageOffset+int64(req.Size)]
+		return nil
+	}
+
+	sz := max(CacheSliceSize, req.Size)
+
+	buf := make([]byte, sz)
+	_, err := ra.ReadAt(buf, alignedOffset)
+
 	if err != nil && err != io.EOF {
 		return err
 	}
-	resp.Data = buf[:n]
+	resp.Data = buf[pageOffset : pageOffset+int64(req.Size)]
+
+	if sz == CacheSliceSize {
+		h.parent.cache.Put(alignedOffset, buf)
+	}
+
 	return nil
 }
 
