@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/PlakarKorp/plakar/utils"
 	"go.yaml.in/yaml/v3"
 )
 
@@ -160,7 +161,7 @@ func save(file string, src any) error {
 		return err
 	}
 
-	err = yaml.NewEncoder(tmpFile).Encode(src)
+	err = utils.YAMLEncode(tmpFile, src)
 	tmpFile.Close()
 
 	if err == nil {
