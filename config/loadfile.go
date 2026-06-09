@@ -12,17 +12,6 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-func toString(v any) string {
-	switch t := v.(type) {
-	case string:
-		return t
-	case int, int64, float64, bool:
-		return fmt.Sprintf("%v", t)
-	default:
-		return ""
-	}
-}
-
 func loadINI(rd io.Reader) (map[string]map[string]string, error) {
 	cfg, err := ini.Load(rd)
 	if err != nil {
@@ -60,7 +49,7 @@ func loadYAML(rd io.Reader) (map[string]map[string]string, error) {
 		}
 		result[section] = make(map[string]string)
 		for k, v := range sectionMap {
-			result[section][k] = toString(v)
+			result[section][k] = fmt.Sprint(v)
 		}
 	}
 

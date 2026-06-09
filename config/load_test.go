@@ -197,10 +197,10 @@ remote:
 		t.Fatalf("location = %q", got["remote"]["location"])
 	}
 	if got["remote"]["port"] != "22" {
-		t.Fatalf("port = %q (toString should convert int)", got["remote"]["port"])
+		t.Fatalf("port = %q (should be converted from int)", got["remote"]["port"])
 	}
 	if got["remote"]["ssl"] != "true" {
-		t.Fatalf("ssl = %q (toString should convert bool)", got["remote"]["ssl"])
+		t.Fatalf("ssl = %q (should be converted from bool)", got["remote"]["ssl"])
 	}
 }
 
@@ -239,27 +239,6 @@ func TestLoadJSON(t *testing.T) {
 func TestLoadJSONBad(t *testing.T) {
 	if _, err := loadJSON(strings.NewReader("nope")); err == nil {
 		t.Fatal("expected parse error, got nil")
-	}
-}
-
-func TestToString(t *testing.T) {
-	cases := []struct {
-		in   any
-		want string
-	}{
-		{"hello", "hello"},
-		{42, "42"},
-		{int64(7), "7"},
-		{3.14, "3.14"},
-		{true, "true"},
-		{false, "false"},
-		{nil, ""},
-		{[]int{1, 2}, ""},
-	}
-	for _, c := range cases {
-		if got := toString(c.in); got != c.want {
-			t.Errorf("toString(%v) = %q, want %q", c.in, got, c.want)
-		}
 	}
 }
 
