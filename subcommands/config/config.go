@@ -32,7 +32,7 @@ import (
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/config"
 	"github.com/PlakarKorp/plakar/subcommands"
-	"go.yaml.in/yaml/v3"
+	"github.com/PlakarKorp/plakar/utils"
 	"gopkg.in/ini.v1"
 )
 
@@ -415,7 +415,7 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 			} else if opt_ini {
 				err = MarshalINISections(name, cfgMap[name], ctx.Stdout)
 			} else {
-				err = yaml.NewEncoder(ctx.Stdout).Encode(map[string]map[string]string{name: cfgMap[name]})
+				err = utils.YAMLEncode(ctx.Stdout, map[string]map[string]string{name: cfgMap[name]})
 			}
 			if err != nil {
 				return fmt.Errorf("failed to encode store %q: %w", name, err)
