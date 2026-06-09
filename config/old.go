@@ -1,4 +1,4 @@
-package utils
+package config
 
 import (
 	"fmt"
@@ -6,18 +6,16 @@ import (
 	"os"
 
 	"go.yaml.in/yaml/v3"
-
-	"github.com/PlakarKorp/plakar/config"
 )
 
 type OldConfig struct {
-	DefaultRepository string                             `yaml:"default-repo"`
-	Repositories      map[string]config.RepositoryConfig `yaml:"repositories"`
-	Remotes           map[string]config.SourceConfig     `yaml:"remotes"`
+	DefaultRepository string                      `yaml:"default-repo"`
+	Repositories      map[string]RepositoryConfig `yaml:"repositories"`
+	Remotes           map[string]SourceConfig     `yaml:"remotes"`
 }
 
-func LoadOldConfigIfExists(configFile string) (*config.Config, error) {
-	cfg := config.NewConfig()
+func LoadOldConfigIfExists(configFile string) (*Config, error) {
+	cfg := NewConfig()
 
 	f, err := os.Open(configFile)
 	if err != nil {
@@ -36,7 +34,7 @@ func LoadOldConfigIfExists(configFile string) (*config.Config, error) {
 	cfg.DefaultRepository = old.DefaultRepository
 	cfg.Repositories = old.Repositories
 	cfg.Sources = old.Remotes
-	cfg.Destinations = make(map[string]config.DestinationConfig)
+	cfg.Destinations = make(map[string]DestinationConfig)
 	for key, val := range cfg.Sources {
 		res := make(map[string]string)
 		maps.Copy(res, val)
