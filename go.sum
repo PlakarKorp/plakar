@@ -11,6 +11,10 @@ github.com/PlakarKorp/integration-grpc v1.1.0 h1:ZUa/4m/pZWOmB7XzBfeAA/pOAxev3zb
 github.com/PlakarKorp/integration-grpc v1.1.0/go.mod h1:QZ55M9kXa3DntUvS9njOLoFY1S09bYbHKR/3kflDi5o=
 github.com/PlakarKorp/integrations/fs v1.1.2 h1:d6bFqTruBB1LCR86CrzMhRr8iV3ycyPDn6GhUGQpMAs=
 github.com/PlakarKorp/integrations/fs v1.1.2/go.mod h1:ileYIi1I+0VTvDI31xD+WY1vYbFijj+l0zUnHwHWlvI=
+github.com/PlakarKorp/integrations/fs v1.1.4 h1:Py362xMRt823p2/Ohgvk0tdZNsm7obUqJSG9a1lO2OI=
+github.com/PlakarKorp/integrations/fs v1.1.4/go.mod h1:ileYIi1I+0VTvDI31xD+WY1vYbFijj+l0zUnHwHWlvI=
+github.com/PlakarKorp/integrations/fs v1.1.5 h1:1jU7PoYdl0iQR51eu7fxxg37AgC5vRtj9FbcG5WStTM=
+github.com/PlakarKorp/integrations/fs v1.1.5/go.mod h1:ileYIi1I+0VTvDI31xD+WY1vYbFijj+l0zUnHwHWlvI=
 github.com/PlakarKorp/integrations/http v1.1.0 h1:Fet/N1t4UjfMNjZAC0vzPg/2sjwo1JGmSM8pb7fUexQ=
 github.com/PlakarKorp/integrations/http v1.1.0/go.mod h1:+ZsrIfIy15M8mHJoCCTcWOEO5TZpewKHwWU9SPyfziY=
 github.com/PlakarKorp/integrations/ptar v1.1.0 h1:UgRd7R0NemyQWkvpYY7gqKkgh6gRPOzZ897BrW1nO5I=
