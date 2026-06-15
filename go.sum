@@ -9,8 +9,8 @@ github.com/PlakarKorp/go-human2duration v0.1.6 h1:pRPAU3yX4ROV7RihXihPkwyjoQNI1l
 github.com/PlakarKorp/go-human2duration v0.1.6/go.mod h1:1kg75kTlYCYURVyciaeO2GFdLgGDMhIfBTBpfydv1sk=
 github.com/PlakarKorp/integration-grpc v1.1.0 h1:ZUa/4m/pZWOmB7XzBfeAA/pOAxev3zbkVHrdi0tqtB4=
 github.com/PlakarKorp/integration-grpc v1.1.0/go.mod h1:QZ55M9kXa3DntUvS9njOLoFY1S09bYbHKR/3kflDi5o=
-github.com/PlakarKorp/integrations/fs v1.1.0 h1:bpIcZRQphTNr8SKdlXEFxukrJjI7UERVnQQ05ftIzp4=
-github.com/PlakarKorp/integrations/fs v1.1.0/go.mod h1:WkOLOiDNpBFVyvsDSfly1V26s12eMp5WTVgEDiHni8k=
+github.com/PlakarKorp/integrations/fs v1.1.1 h1:qdD22e/MjaOaICQ9esdlYcwRSZU4GPlw8pfx5EdSNlE=
+github.com/PlakarKorp/integrations/fs v1.1.1/go.mod h1:ileYIi1I+0VTvDI31xD+WY1vYbFijj+l0zUnHwHWlvI=
 github.com/PlakarKorp/integrations/http v1.1.0 h1:Fet/N1t4UjfMNjZAC0vzPg/2sjwo1JGmSM8pb7fUexQ=
 github.com/PlakarKorp/integrations/http v1.1.0/go.mod h1:+ZsrIfIy15M8mHJoCCTcWOEO5TZpewKHwWU9SPyfziY=
 github.com/PlakarKorp/integrations/ptar v1.1.0 h1:UgRd7R0NemyQWkvpYY7gqKkgh6gRPOzZ897BrW1nO5I=
@@ -19,8 +19,8 @@ github.com/PlakarKorp/integrations/stdio v1.1.0 h1:kvZma7XfqW4p21DH/mHUC4WTa3tiP
 github.com/PlakarKorp/integrations/stdio v1.1.0/go.mod h1:Hoef62hqivDoEFC4ewyUE1ZAFSd6Kncd2Wr+R7tBcug=
 github.com/PlakarKorp/integrations/tar v1.1.0 h1:hw2vhiwlAzJMWVS2py9sRVqhF9K9kUD+S1L7JsRzwrc=
 github.com/PlakarKorp/integrations/tar v1.1.0/go.mod h1:lq8UXspuZFCKqOZUsUL9f4pM3xWXqZNeLTAc7GIBMsg=
-github.com/PlakarKorp/kloset v1.1.0 h1:Yc76wQUbwkrLLx8ZR9XGaVf+s3dslIXKXH/V66rBAoM=
-github.com/PlakarKorp/kloset v1.1.0/go.mod h1:t/KqLqbp4zHviF0pA4e63Gex/h5P2fdMTdwFBFQKHpg=
+github.com/PlakarKorp/kloset v1.1.1 h1:7PZjChXtZ0ebcEmUmxjnKGBp6HIPQaBmD2xFd6I8AlM=
+github.com/PlakarKorp/kloset v1.1.1/go.mod h1:t/KqLqbp4zHviF0pA4e63Gex/h5P2fdMTdwFBFQKHpg=
 github.com/PlakarKorp/pkg v1.1.0 h1:5BHBieIXohStPGP6076XuqKsqhNXpAhPpINyFNe2exI=
 github.com/PlakarKorp/pkg v1.1.0/go.mod h1:2mnpmH0ZbJXIjYjhvjLQhmw4Tj5TIVDXZWuINtPNdaU=
 github.com/RaduBerinde/axisds v0.1.0 h1:YItk/RmU5nvlsv/awo2Fjx97Mfpt4JfgtEVAGPrLdz8=
