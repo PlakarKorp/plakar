@@ -181,6 +181,10 @@ func (cmd *PkgCreate) Execute(ctx *appcontext.AppContext, _ *repository.Reposito
 		return 1, fmt.Errorf("failed to commit snapshot: %w", err)
 	}
 
+	if err := snap.Close(); err != nil {
+		return 1, fmt.Errorf("failed to close snapshot: %w", err)
+	}
+
 	// We are done with everything we can now stop the backup routines.
 	repoWriter.PackerManager.Wait()
 	err = repoWriter.CommitTransaction(identifier)
