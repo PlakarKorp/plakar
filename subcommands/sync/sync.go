@@ -190,8 +190,7 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 		return 1, fmt.Errorf("could not open peer repository %s: %w", cmd.PeerRepositoryLocation, err)
 	}
 
-	_, err = cached.RebuildStateFromStore(ctx, peerRepository.Configuration().RepositoryID, storeConfig, false)
-	if err != nil {
+	if _, err = cached.RebuildStateFromStore(peerCtx, peerRepository.Configuration().RepositoryID, storeConfig, false); err != nil {
 		return 1, fmt.Errorf("failed to rebuild peer repository's state %s: %w", cmd.PeerRepositoryLocation, err)
 	}
 
