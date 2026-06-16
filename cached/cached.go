@@ -46,7 +46,7 @@ var (
 )
 
 func rebuildStateRequest(ctx *appcontext.AppContext, req *RequestPkt) (int, error) {
-	client, err := newClient(filepath.Join(ctx.CacheDir, "cached.sock"), false)
+	client, err := newClient(ctx, filepath.Join(ctx.CacheDir, "cached.sock"), false)
 	if err != nil {
 		return 1, err
 	}
@@ -79,7 +79,7 @@ func rebuildStateRequest(ctx *appcontext.AppContext, req *RequestPkt) (int, erro
 	return 0, nil
 }
 
-func newClient(socketPath string, ignoreVersion bool) (*Client, error) {
+func newClient(ctx *appcontext.AppContext, socketPath string, ignoreVersion bool) (*Client, error) {
 	var lockfile *os.File
 	var spawned bool
 
@@ -135,7 +135,7 @@ func newClient(socketPath string, ignoreVersion bool) (*Client, error) {
 				return nil, fmt.Errorf("failed to get executable: %w", err)
 			}
 
-			plakar := exec.Command(me, "cached")
+			plakar := exec.Command(me, "-cachedir", ctx.CacheDir, "cached")
 
 			// Cached is daemonized, so we can, and need to wait for the return
 			// of the direct child to avoid zombies.
