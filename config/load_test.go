@@ -1,35 +1,33 @@
-package utils
+package config
 
 import (
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/PlakarKorp/plakar/config"
 )
 
-func TestLoadConfigEmptyDirFallsBackAndReturnsBlank(t *testing.T) {
+func TestLoadEmptyDirFallsBackAndReturnsBlank(t *testing.T) {
 	dir := t.TempDir()
-	cfg, err := LoadConfig(dir)
+	cfg, err := Load(dir)
 	if err != nil {
-		t.Fatalf("LoadConfig: %v", err)
+		t.Fatalf("Load: %v", err)
 	}
 	if cfg == nil {
 		t.Fatal("expected non-nil config")
 	}
 }
 
-func TestSaveAndLoadConfigRoundTrip(t *testing.T) {
+func TestSaveAndLoadRoundTrip(t *testing.T) {
 	dir := t.TempDir()
-	cfg := config.NewConfig()
+	cfg := NewConfig()
 	cfg.DefaultRepository = "home"
 	cfg.Repositories["home"] = map[string]string{"location": "/var/data/repo"}
 	cfg.Sources["src"] = map[string]string{"location": "fs:///var/source"}
 	cfg.Destinations["dst"] = map[string]string{"location": "fs:///var/dest"}
 
-	if err := SaveConfig(dir, cfg); err != nil {
-		t.Fatalf("SaveConfig: %v", err)
+	if err := Save(dir, cfg); err != nil {
+		t.Fatalf("Save: %v", err)
 	}
 
 	// All three files should exist.
@@ -39,9 +37,9 @@ func TestSaveAndLoadConfigRoundTrip(t *testing.T) {
 		}
 	}
 
-	loaded, err := LoadConfig(dir)
+	loaded, err := Load(dir)
 	if err != nil {
-		t.Fatalf("LoadConfig after save: %v", err)
+		t.Fatalf("Load after save: %v", err)
 	}
 	if loaded.DefaultRepository != "home" {
 		t.Fatalf("DefaultRepository = %q, want home", loaded.DefaultRepository)
@@ -57,7 +55,7 @@ func TestSaveAndLoadConfigRoundTrip(t *testing.T) {
 	}
 }
 
-func TestLoadConfigFallbackFromOldFormat(t *testing.T) {
+func TestLoadFallbackFromOldFormat(t *testing.T) {
 	dir := t.TempDir()
 	old := `
 default-repo: legacy
@@ -72,9 +70,9 @@ remotes:
 		t.Fatalf("write old config: %v", err)
 	}
 
-	cfg, err := LoadConfig(dir)
+	cfg, err := Load(dir)
 	if err != nil {
-		t.Fatalf("LoadConfig: %v", err)
+		t.Fatalf("Load: %v", err)
 	}
 	if cfg.DefaultRepository != "legacy" {
 		t.Fatalf("DefaultRepository = %q, want legacy", cfg.DefaultRepository)
@@ -90,7 +88,7 @@ remotes:
 	}
 }
 
-func TestLoadConfigKlosetsYmlFallback(t *testing.T) {
+func TestLoadKlosetsYmlFallback(t *testing.T) {
 	dir := t.TempDir()
 	// Provide sources.yml + destinations.yml + the older klosets.yml; loader
 	// should fall through to klosets.yml when stores.yml is absent.
@@ -104,16 +102,16 @@ func TestLoadConfigKlosetsYmlFallback(t *testing.T) {
 	mustWrite("destinations.yml", "version: v1.0.0\ndestinations:\n  d:\n    location: fs:///d\n")
 	mustWrite("klosets.yml", "version: v1.0.0\ndefault: r\nstores:\n  r:\n    location: fs:///r\n")
 
-	cfg, err := LoadConfig(dir)
+	cfg, err := Load(dir)
 	if err != nil {
-		t.Fatalf("LoadConfig: %v", err)
+		t.Fatalf("Load: %v", err)
 	}
 	if cfg.DefaultRepository != "r" {
 		t.Fatalf("DefaultRepository = %q, want r (read from klosets.yml)", cfg.DefaultRepository)
 	}
 }
 
-func TestLoadConfigBackwardCompatPreviousStoreFormat(t *testing.T) {
+func TestLoadBackwardCompatPreviousStoreFormat(t *testing.T) {
 	// Old store file format: top-level map keyed by name; an entry can carry
 	// `.isDefault: true` to mark itself as default.
 	dir := t.TempDir()
@@ -126,9 +124,9 @@ func TestLoadConfigBackwardCompatPreviousStoreFormat(t *testing.T) {
 	mustWrite("destinations.yml", "version: v1.0.0\ndestinations: {}\n")
 	mustWrite("stores.yml", "home:\n  location: /var/h\n  .isDefault: \"true\"\nother:\n  location: /var/o\n")
 
-	cfg, err := LoadConfig(dir)
+	cfg, err := Load(dir)
 	if err != nil {
-		t.Fatalf("LoadConfig: %v", err)
+		t.Fatalf("Load: %v", err)
 	}
 	if cfg.DefaultRepository != "home" {
 		t.Fatalf("DefaultRepository = %q, want home (from .isDefault)", cfg.DefaultRepository)
@@ -141,7 +139,7 @@ func TestLoadConfigBackwardCompatPreviousStoreFormat(t *testing.T) {
 	}
 }
 
-func TestLoadConfigMultipleDefaultsIsError(t *testing.T) {
+func TestLoadMultipleDefaultsIsError(t *testing.T) {
 	dir := t.TempDir()
 	mustWrite := func(name, body string) {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o600); err != nil {
@@ -152,7 +150,7 @@ func TestLoadConfigMultipleDefaultsIsError(t *testing.T) {
 	mustWrite("destinations.yml", "version: v1.0.0\ndestinations: {}\n")
 	mustWrite("stores.yml", "a:\n  .isDefault: \"true\"\nb:\n  .isDefault: \"true\"\n")
 
-	if _, err := LoadConfig(dir); err == nil {
+	if _, err := Load(dir); err == nil {
 		t.Fatal("expected error for multiple default stores, got nil")
 	}
 }
@@ -166,7 +164,7 @@ key2 = value2
 [section2]
 foo = bar
 `)
-	got, err := LoadINI(rd)
+	got, err := loadINI(rd)
 	if err != nil {
 		t.Fatalf("LoadINI: %v", err)
 	}
@@ -179,7 +177,7 @@ foo = bar
 }
 
 func TestLoadINIBad(t *testing.T) {
-	if _, err := LoadINI(strings.NewReader("[unclosed")); err == nil {
+	if _, err := loadINI(strings.NewReader("[unclosed")); err == nil {
 		t.Fatal("expected parse error, got nil")
 	}
 }
@@ -191,7 +189,7 @@ remote:
   port: 22
   ssl: true
 `)
-	got, err := LoadYAML(rd)
+	got, err := loadYAML(rd)
 	if err != nil {
 		t.Fatalf("LoadYAML: %v", err)
 	}
@@ -209,7 +207,7 @@ remote:
 func TestLoadYAMLSkipsScalarTopLevel(t *testing.T) {
 	// Top-level scalar keys are skipped rather than producing an error.
 	rd := strings.NewReader("version: v1.0.0\nremote:\n  location: x\n")
-	got, err := LoadYAML(rd)
+	got, err := loadYAML(rd)
 	if err != nil {
 		t.Fatalf("LoadYAML: %v", err)
 	}
@@ -222,14 +220,14 @@ func TestLoadYAMLSkipsScalarTopLevel(t *testing.T) {
 }
 
 func TestLoadYAMLBad(t *testing.T) {
-	if _, err := LoadYAML(strings.NewReader("not: [valid: yaml")); err == nil {
+	if _, err := loadYAML(strings.NewReader("not: [valid: yaml")); err == nil {
 		t.Fatal("expected parse error, got nil")
 	}
 }
 
 func TestLoadJSON(t *testing.T) {
 	rd := strings.NewReader(`{"a":{"k":"v"},"b":{"x":"y"}}`)
-	got, err := LoadJSON(rd)
+	got, err := loadJSON(rd)
 	if err != nil {
 		t.Fatalf("LoadJSON: %v", err)
 	}
@@ -239,7 +237,7 @@ func TestLoadJSON(t *testing.T) {
 }
 
 func TestLoadJSONBad(t *testing.T) {
-	if _, err := LoadJSON(strings.NewReader("nope")); err == nil {
+	if _, err := loadJSON(strings.NewReader("nope")); err == nil {
 		t.Fatal("expected parse error, got nil")
 	}
 }
@@ -265,15 +263,15 @@ func TestToString(t *testing.T) {
 	}
 }
 
-func TestGetConfYAMLWithLocation(t *testing.T) {
+func TestLoadFileYAMLWithLocation(t *testing.T) {
 	rd := strings.NewReader(`
 remote:
   location: ssh://host
   port: 22
 `)
-	got, err := GetConf(rd, "")
+	got, err := LoadFile(rd, "")
 	if err != nil {
-		t.Fatalf("GetConf: %v", err)
+		t.Fatalf("LoadFile: %v", err)
 	}
 	if got["remote"]["location"] != "ssh://host" {
 		t.Fatalf("location = %q", got["remote"]["location"])
@@ -283,25 +281,25 @@ remote:
 	}
 }
 
-func TestGetConfYAMLMissingLocationIsError(t *testing.T) {
+func TestLoadFileYAMLMissingLocationIsError(t *testing.T) {
 	rd := strings.NewReader(`
 remote:
   port: 22
 `)
-	if _, err := GetConf(rd, ""); err == nil {
+	if _, err := LoadFile(rd, ""); err == nil {
 		t.Fatal("expected error for missing 'location', got nil")
 	}
 }
 
-func TestGetConfThirdPartyRewritesKeys(t *testing.T) {
+func TestLoadFileThirdPartyRewritesKeys(t *testing.T) {
 	rd := strings.NewReader(`
 remote:
   host: example.com
   port: 22
 `)
-	got, err := GetConf(rd, "rclone")
+	got, err := LoadFile(rd, "rclone")
 	if err != nil {
-		t.Fatalf("GetConf: %v", err)
+		t.Fatalf("LoadFile: %v", err)
 	}
 	if got["remote"]["location"] != "rclone://" {
 		t.Fatalf("location = %q, want rclone://", got["remote"]["location"])
@@ -318,29 +316,29 @@ remote:
 	}
 }
 
-func TestGetConfINISource(t *testing.T) {
+func TestLoadFileINISource(t *testing.T) {
 	rd := strings.NewReader(`
 [remote]
 location = fs:///x
 `)
-	got, err := GetConf(rd, "")
+	got, err := LoadFile(rd, "")
 	if err != nil {
-		t.Fatalf("GetConf: %v", err)
+		t.Fatalf("LoadFile: %v", err)
 	}
 	if got["remote"]["location"] != "fs:///x" {
 		t.Fatalf("location = %q", got["remote"]["location"])
 	}
 }
 
-func TestGetConfStripsEmptyValues(t *testing.T) {
+func TestLoadFileStripsEmptyValues(t *testing.T) {
 	rd := strings.NewReader(`
 remote:
   location: fs:///x
   empty: ""
 `)
-	got, err := GetConf(rd, "")
+	got, err := LoadFile(rd, "")
 	if err != nil {
-		t.Fatalf("GetConf: %v", err)
+		t.Fatalf("LoadFile: %v", err)
 	}
 	if _, has := got["remote"]["empty"]; has {
 		t.Fatal("empty value should have been stripped")
