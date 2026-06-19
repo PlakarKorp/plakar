@@ -92,6 +92,10 @@ func (cmd *Prune) Parse(ctx *appcontext.AppContext, args []string) error {
 func mergePolicyOptions(to *locate.LocateOptions, from *locate.LocateOptions) {
 	mergeFilters(&to.Filters, &from.Filters)
 
+	if from.GroupBy != locate.GroupByNone {
+		to.GroupBy = from.GroupBy
+	}
+
 	merge := func(a, b *locate.LocatePeriod) {
 		if b.Keep != 0 {
 			a.Keep = b.Keep
