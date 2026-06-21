@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/utils"
 	"github.com/stretchr/testify/require"
@@ -45,22 +44,10 @@ func TestConfigEmpty(t *testing.T) {
 	ctx.Config = cfg
 	ctx.Stdout = bufOut
 	ctx.Stderr = bufErr
-	repo := &repository.Repository{}
-	args := []string{}
 
-	subcommand := &ConfigStoreCmd{}
-	err = subcommand.Parse(ctx, args)
-	require.Error(t, err, "no action specified")
+	require.Error(t, ConfigStore(ctx, nil, []string{}), "no action specified")
 
-	subcommand = &ConfigStoreCmd{}
-	args = []string{"show"}
-	err = subcommand.Parse(ctx, args)
-	require.NoError(t, err)
-	require.NotNil(t, subcommand)
-
-	status, err := subcommand.Execute(ctx, repo)
-	require.NoError(t, err)
-	require.Equal(t, 0, status)
+	require.NoError(t, ConfigStore(ctx, nil, []string{"show"}))
 
 	output := bufOut.String()
 	expectedOutput := ""
@@ -69,25 +56,9 @@ func TestConfigEmpty(t *testing.T) {
 	bufOut.Reset()
 	bufErr.Reset()
 
-	args = []string{"add", "my-remote", "s3://foobar"}
-	subcommandr := &ConfigSourceCmd{}
-	err = subcommandr.Parse(ctx, args)
-	require.NoError(t, err)
-	require.NotNil(t, subcommandr)
+	require.NoError(t, ConfigSource(ctx, nil, []string{"add", "my-remote", "s3://foobar"}))
 
-	status, err = subcommandr.Execute(ctx, repo)
-	require.NoError(t, err)
-	require.Equal(t, 0, status)
-
-	args = []string{"add", "my-repo", "fs:/tmp/foobar"}
-	subcommandk := &ConfigStoreCmd{}
-	err = subcommandk.Parse(ctx, args)
-	require.NoError(t, err)
-	require.NotNil(t, subcommandk)
-
-	status, err = subcommandk.Execute(ctx, repo)
-	require.NoError(t, err)
-	require.Equal(t, 0, status)
+	require.NoError(t, ConfigStore(ctx, nil, []string{"add", "my-repo", "fs:/tmp/foobar"}))
 
 	output = bufOut.String()
 	expectedOutput = ``

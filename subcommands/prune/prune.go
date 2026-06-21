@@ -36,54 +36,8 @@ import (
 	"github.com/dustin/go-humanize"
 )
 
-type Prune struct {
-	subcommands.SubcommandBase
-
-	LocateOptions *locate.LocateOptions
-
-	Apply bool
-}
-
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Prune{} }, 0, "prune")
-}
-
-func (cmd *Prune) Parse(ctx *appcontext.AppContext, args []string) error {
-	policyName := ""
-	cmd.LocateOptions = locate.NewDefaultLocateOptions()
-	policyOverride := locate.NewDefaultLocateOptions()
-
-	flags := flag.NewFlagSet("prune", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS] SNAPSHOT...\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
-		flags.PrintDefaults()
-	}
-	flags.BoolVar(&cmd.Apply, "apply", false, "do the actual removal")
-	flags.StringVar(&policyName, "policy", "", "policy to use")
-	policyOverride.InstallLocateFlags(flags)
-	flags.Parse(args)
-
-	if policyName != "" {
-		configFile := filepath.Join(ctx.ConfigDir, "policies.yml")
-		cfg, err := utils.LoadPolicyConfigFile(configFile)
-		if err != nil {
-			return fmt.Errorf("failed to load policies config: %w", err)
-		}
-		if !cfg.Has(policyName) {
-			return fmt.Errorf("policy %q not found", policyName)
-		}
-		cfg.ApplyConfig(policyName, cmd.LocateOptions)
-	}
-	mergePolicyOptions(cmd.LocateOptions, policyOverride)
-
-	if flags.NArg() == 0 && cmd.LocateOptions.Empty() {
-		return fmt.Errorf("no filter specified, not going to prune everything")
-	}
-
-	cmd.RepositorySecret = ctx.GetSecret()
-
-	return nil
+	subcommands.Register(Prune, 0, "prune")
 }
 
 // mergePolicyOptions layers CLI overrides (from) onto policy-loaded options
@@ -179,10 +133,45 @@ type planEntry struct {
 	action string // "keep" or "delete"
 }
 
-func (cmd *Prune) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	_, reasons, err := locate.Match(repo, cmd.LocateOptions)
+func Prune(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	var (
+		locopts        = locate.NewDefaultLocateOptions()
+		policyOverride = locate.NewDefaultLocateOptions()
+		apply          bool
+		policyName     string
+	)
+
+	flags := flag.NewFlagSet("prune", flag.ExitOnError)
+	flags.Usage = func() {
+		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS] SNAPSHOT...\n", flags.Name())
+		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
+		flags.PrintDefaults()
+	}
+	flags.BoolVar(&apply, "apply", false, "do the actual removal")
+	flags.StringVar(&policyName, "policy", "", "policy to use")
+	policyOverride.InstallLocateFlags(flags)
+	flags.Parse(args)
+
+	if policyName != "" {
+		configFile := filepath.Join(ctx.ConfigDir, "policies.yml")
+		cfg, err := utils.LoadPolicyConfigFile(configFile)
+		if err != nil {
+			return fmt.Errorf("failed to load policies config: %w", err)
+		}
+		if !cfg.Has(policyName) {
+			return fmt.Errorf("policy %q not found", policyName)
+		}
+		cfg.ApplyConfig(policyName, locopts)
+	}
+	mergePolicyOptions(locopts, policyOverride)
+
+	if flags.NArg() == 0 && locopts.Empty() {
+		return fmt.Errorf("no filter specified, not going to prune everything")
+	}
+
+	_, reasons, err := locate.Match(repo, locopts)
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	toDelete := make([]objects.MAC, 0, len(reasons))
@@ -224,7 +213,7 @@ func (cmd *Prune) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 		entries = append(entries, entry)
 	}
 
-	if !cmd.Apply {
+	if !apply {
 		// Sort newest-first; unknown timestamps (IsZero) go last
 		sort.SliceStable(entries, func(i, j int) bool {
 			ti, tj := entries[i].ts, entries[j].ts
@@ -256,11 +245,11 @@ func (cmd *Prune) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 					e.action, e.prefix, r.Rule, r.Bucket, r.Rank, r.Cap)
 			}
 		}
-		return 0, nil
+		return nil
 	}
 
 	if len(toDelete) == 0 {
-		return 0, nil
+		return nil
 	}
 
 	errors := 0
@@ -280,8 +269,8 @@ func (cmd *Prune) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 	wg.Wait()
 
 	if errors != 0 {
-		return 1, fmt.Errorf("failed to remove %d snapshots", errors)
+		return fmt.Errorf("failed to remove %d snapshots", errors)
 	}
 
-	return 0, nil
+	return nil
 }

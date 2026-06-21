@@ -22,16 +22,9 @@ import (
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/subcommands"
 )
 
-type ServiceStatus struct {
-	subcommands.SubcommandBase
-
-	Service string
-}
-
-func (cmd *ServiceStatus) Parse(ctx *appcontext.AppContext, args []string) error {
+func Status(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
 	flags := flag.NewFlagSet("service status", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s <name>\n", flags.Name())
@@ -42,26 +35,21 @@ func (cmd *ServiceStatus) Parse(ctx *appcontext.AppContext, args []string) error
 		return fmt.Errorf("invalid number of arguments, expected 1 but got %d", flags.NArg())
 	}
 
-	cmd.Service = flags.Arg(0)
-	cmd.RepositorySecret = ctx.GetSecret()
+	service := flags.Arg(0)
 
-	return nil
-}
-
-func (cmd *ServiceStatus) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	sc, err := getClient(ctx)
 	if err != nil {
-		return 1, err
+		return err
 	}
 
-	status, err := sc.GetServiceStatus(cmd.Service)
+	status, err := sc.GetServiceStatus(service)
 	if err != nil {
-		return 1, err
+		return err
 	}
 	if status {
 		fmt.Fprintf(ctx.Stdout, "status: enabled\n")
 	} else {
 		fmt.Fprintf(ctx.Stdout, "status: disabled\n")
 	}
-	return 0, nil
+	return nil
 }

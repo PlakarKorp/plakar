@@ -22,16 +22,9 @@ import (
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/subcommands"
 )
 
-type ServiceDisable struct {
-	subcommands.SubcommandBase
-
-	Service string
-}
-
-func (cmd *ServiceDisable) Parse(ctx *appcontext.AppContext, args []string) error {
+func Disable(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
 	flags := flag.NewFlagSet("service disable", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s <name>\n", flags.Name())
@@ -42,22 +35,17 @@ func (cmd *ServiceDisable) Parse(ctx *appcontext.AppContext, args []string) erro
 		return fmt.Errorf("invalid number of arguments, expected 1 but got %d", flags.NArg())
 	}
 
-	cmd.Service = flags.Arg(0)
-	cmd.RepositorySecret = ctx.GetSecret()
+	service := flags.Arg(0)
 
-	return nil
-}
-
-func (cmd *ServiceDisable) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	sc, err := getClient(ctx)
 	if err != nil {
-		return 1, err
+		return err
 	}
 
-	if err := sc.SetServiceStatus(cmd.Service, false); err != nil {
-		return 1, err
+	if err := sc.SetServiceStatus(service, false); err != nil {
+		return err
 	}
 	fmt.Fprintf(ctx.Stdout, "disabled\n")
 
-	return 0, nil
+	return nil
 }

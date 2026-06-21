@@ -37,14 +37,10 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &ConfigStoreCmd{} },
-		subcommands.BeforeRepositoryOpen, "store")
-	subcommands.Register(func() subcommands.Subcommand { return &ConfigSourceCmd{} },
-		subcommands.BeforeRepositoryOpen, "source")
-	subcommands.Register(func() subcommands.Subcommand { return &ConfigDestinationCmd{} },
-		subcommands.BeforeRepositoryOpen, "destination")
-	subcommands.Register(func() subcommands.Subcommand { return &ConfigPolicyCmd{} },
-		subcommands.BeforeRepositoryOpen, "policy")
+	subcommands.Register(ConfigStore, subcommands.BeforeRepositoryOpen, "store")
+	subcommands.Register(ConfigSource, subcommands.BeforeRepositoryOpen, "source")
+	subcommands.Register(ConfigDestination, subcommands.BeforeRepositoryOpen, "destination")
+	subcommands.Register(ConfigPolicy, subcommands.BeforeRepositoryOpen, "policy")
 }
 
 func normalizeName(name string) string {

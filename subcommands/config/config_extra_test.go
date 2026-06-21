@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
@@ -16,19 +15,10 @@ import (
 func TestConfigRegisteredFactories(t *testing.T) {
 	// Look each command up through the registry to invoke the factory closures
 	// registered in init().
-	cases := []struct {
-		name string
-		typ  interface{}
-	}{
-		{"store", &ConfigStoreCmd{}},
-		{"source", &ConfigSourceCmd{}},
-		{"destination", &ConfigDestinationCmd{}},
-		{"policy", &ConfigPolicyCmd{}},
-	}
-	for _, c := range cases {
-		cmd, _, _ := subcommands.Lookup([]string{c.name})
-		require.NotNil(t, cmd, "command %q not registered", c.name)
-		require.IsType(t, c.typ, cmd)
+	for _, name := range []string{"store", "source", "destination", "policy"} {
+		cmd, flags, _, _ := subcommands.Lookup([]string{name})
+		require.NotNil(t, cmd, "command %q not registered", name)
+		require.Equal(t, subcommands.BeforeRepositoryOpen, flags)
 	}
 }
 
@@ -80,40 +70,26 @@ func TestDispatchUnknownCmd(t *testing.T) {
 func TestEntityParseNoAction(t *testing.T) {
 	ctx, _, _ := newConfigCtx(t)
 
-	require.Error(t, (&ConfigStoreCmd{}).Parse(ctx, []string{}))
-	require.Error(t, (&ConfigSourceCmd{}).Parse(ctx, []string{}))
-	require.Error(t, (&ConfigDestinationCmd{}).Parse(ctx, []string{}))
-	require.Error(t, (&ConfigPolicyCmd{}).Parse(ctx, []string{}))
+	require.Error(t, ConfigStore(ctx, nil, []string{}))
+	require.Error(t, ConfigSource(ctx, nil, []string{}))
+	require.Error(t, ConfigDestination(ctx, nil, []string{}))
+	require.Error(t, ConfigPolicy(ctx, nil, []string{}))
 }
 
 func TestDestinationParseExecute(t *testing.T) {
 	ctx, _, _ := newConfigCtx(t)
-	repo := &repository.Repository{}
 
-	cmd := &ConfigDestinationCmd{}
-	require.NoError(t, cmd.Parse(ctx, []string{"add", "mydest", "fs:/tmp/dst"}))
-	status, err := cmd.Execute(ctx, repo)
-	require.NoError(t, err)
-	require.Equal(t, 0, status)
+	require.NoError(t, ConfigDestination(ctx, nil, []string{"add", "mydest", "fs:/tmp/dst"}))
 	require.True(t, ctx.Config.HasDestination("mydest"))
 
 	// A failing dispatch (rm of unknown) propagates status 1.
-	cmd = &ConfigDestinationCmd{}
-	require.NoError(t, cmd.Parse(ctx, []string{"rm", "ghost"}))
-	status, err = cmd.Execute(ctx, repo)
-	require.Error(t, err)
-	require.Equal(t, 1, status)
+	require.Error(t, ConfigDestination(ctx, nil, []string{"rm", "ghost"}))
 }
 
 func TestSourceParseExecute(t *testing.T) {
 	ctx, _, _ := newConfigCtx(t)
-	repo := &repository.Repository{}
 
-	cmd := &ConfigSourceCmd{}
-	require.NoError(t, cmd.Parse(ctx, []string{"add", "mysrc", "fs:/tmp/src"}))
-	status, err := cmd.Execute(ctx, repo)
-	require.NoError(t, err)
-	require.Equal(t, 0, status)
+	require.NoError(t, ConfigSource(ctx, nil, []string{"add", "mysrc", "fs:/tmp/src"}))
 	require.True(t, ctx.Config.HasSource("mysrc"))
 }
 
@@ -283,16 +259,11 @@ func TestDispatchPingUnknown(t *testing.T) {
 
 func TestPolicyParseExecute(t *testing.T) {
 	ctx, _, _ := newConfigCtx(t)
-	repo := &repository.Repository{}
 
-	cmd := &ConfigPolicyCmd{}
-	require.NoError(t, cmd.Parse(ctx, []string{"add", "nightly"}))
-	status, err := cmd.Execute(ctx, repo)
-	require.NoError(t, err)
-	require.Equal(t, 0, status)
+	require.NoError(t, ConfigPolicy(ctx, nil, []string{"add", "nightly"}))
 
 	// policies.yml was written.
-	_, err = os.Stat(filepath.Join(ctx.ConfigDir, "policies.yml"))
+	_, err := os.Stat(filepath.Join(ctx.ConfigDir, "policies.yml"))
 	require.NoError(t, err)
 }
 
@@ -313,8 +284,8 @@ func TestDispatchPolicyLifecycle(t *testing.T) {
 
 	// set
 	require.Error(t, dispatchPolicy(ctx, "policy", "set", []string{"ghost", "k=v"}))
-	require.Error(t, dispatchPolicy(ctx, "policy", "set", []string{"daily"}))           // too few
-	require.Error(t, dispatchPolicy(ctx, "policy", "set", []string{"daily", "bad"}))    // malformed
+	require.Error(t, dispatchPolicy(ctx, "policy", "set", []string{"daily"}))        // too few
+	require.Error(t, dispatchPolicy(ctx, "policy", "set", []string{"daily", "bad"})) // malformed
 
 	// show (yaml + json), all + specific
 	bufOut.Reset()
@@ -323,7 +294,7 @@ func TestDispatchPolicyLifecycle(t *testing.T) {
 	require.NoError(t, dispatchPolicy(ctx, "policy", "show", []string{"-json", "daily"}))
 
 	// unset
-	require.Error(t, dispatchPolicy(ctx, "policy", "unset", []string{"daily"}))   // too few
+	require.Error(t, dispatchPolicy(ctx, "policy", "unset", []string{"daily"})) // too few
 	require.Error(t, dispatchPolicy(ctx, "policy", "unset", []string{"ghost", "tags"}))
 
 	// rm

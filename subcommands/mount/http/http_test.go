@@ -123,16 +123,9 @@ func TestExecuteHTTPChrootStartServeShutdown(t *testing.T) {
 	}
 
 	addr := freePort(t)
-	errCh := make(chan struct {
-		status int
-		err    error
-	}, 1)
+	errCh := make(chan error, 1)
 	go func() {
-		status, err := ExecuteHTTP(ctx, repo, "http://"+addr, nil, chroot)
-		errCh <- struct {
-			status int
-			err    error
-		}{status, err}
+		errCh <- ExecuteHTTP(ctx, repo, "http://"+addr, nil, chroot)
 	}()
 
 	base := "http://" + addr
@@ -152,9 +145,8 @@ func TestExecuteHTTPChrootStartServeShutdown(t *testing.T) {
 	ctx.GetInner().Cancel(nil)
 
 	select {
-	case res := <-errCh:
-		require.NoError(t, res.err)
-		require.Equal(t, 0, res.status)
+	case err := <-errCh:
+		require.NoError(t, err)
 	case <-time.After(8 * time.Second):
 		t.Fatal("ExecuteHTTP did not return after context cancellation")
 	}
@@ -166,7 +158,6 @@ func TestExecuteHTTPListenError(t *testing.T) {
 	repo, ctx := ptesting.GenerateRepository(t, nil, nil, nil)
 
 	chroot := fstest.MapFS{}
-	status, err := ExecuteHTTP(ctx, repo, "http://256.256.256.256:99999", nil, chroot)
+	err := ExecuteHTTP(ctx, repo, "http://256.256.256.256:99999", nil, chroot)
 	require.Error(t, err)
-	require.Equal(t, 1, status)
 }

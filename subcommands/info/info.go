@@ -26,19 +26,17 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Info{} }, 0, "info")
+	subcommands.Register(Info, 0, "info")
 }
 
-type Info struct {
-	subcommands.SubcommandBase
-	SnapshotID string
-	Errors     bool
-}
+func Info(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	var (
+		listErrors bool
+	)
 
-func (cmd *Info) Parse(ctx *appcontext.AppContext, args []string) error {
 	// Since this is the default action, we plug the general USAGE here.
 	flags := flag.NewFlagSet("info", flag.ExitOnError)
-	flags.BoolVar(&cmd.Errors, "errors", false, "display errors in the repository or snapshot")
+	flags.BoolVar(&listErrors, "errors", false, "display errors in the repository or snapshot")
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s [-errors] [SNAPSHOT]\n", flags.Name())
 	}
@@ -48,20 +46,13 @@ func (cmd *Info) Parse(ctx *appcontext.AppContext, args []string) error {
 		return fmt.Errorf("too many arguments")
 	}
 
-	cmd.RepositorySecret = ctx.GetSecret()
 	if flags.NArg() == 1 {
-		cmd.SnapshotID = flags.Arg(0)
+		if listErrors {
+			return infoErrors(ctx, repo, flags.Arg(0))
+		}
+
+		return infoSnapshot(ctx, repo, flags.Arg(0))
 	}
 
-	return nil
-}
-
-func (cmd *Info) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	if cmd.SnapshotID == "" {
-		return cmd.executeRepository(ctx, repo)
-	}
-	if cmd.Errors {
-		return cmd.executeErrors(ctx, repo)
-	}
-	return cmd.executeSnapshot(ctx, repo)
+	return infoRepo(ctx, repo)
 }

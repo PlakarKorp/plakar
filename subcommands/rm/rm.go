@@ -35,20 +35,15 @@ import (
 	"github.com/dustin/go-humanize"
 )
 
-type Rm struct {
-	subcommands.SubcommandBase
-
-	LocateOptions *locate.LocateOptions
-
-	Apply bool
-}
-
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Rm{} }, 0, "rm")
+	subcommands.Register(Rm, 0, "rm")
 }
 
-func (cmd *Rm) Parse(ctx *appcontext.AppContext, args []string) error {
-	cmd.LocateOptions = locate.NewDefaultLocateOptions()
+func Rm(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	var (
+		locOpts = locate.NewDefaultLocateOptions()
+		apply   bool
+	)
 
 	flags := flag.NewFlagSet("rm", flag.ExitOnError)
 	flags.Usage = func() {
@@ -56,34 +51,28 @@ func (cmd *Rm) Parse(ctx *appcontext.AppContext, args []string) error {
 		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
 		flags.PrintDefaults()
 	}
-	flags.BoolVar(&cmd.Apply, "apply", false, "do the actual removal")
-	cmd.LocateOptions.InstallDeletionFlags(flags)
+	flags.BoolVar(&apply, "apply", false, "do the actual removal")
+	locOpts.InstallDeletionFlags(flags)
 	flags.Parse(args)
 
-	if flags.NArg() == 0 && cmd.LocateOptions.Empty() {
+	if flags.NArg() == 0 && locOpts.Empty() {
 		return fmt.Errorf("no filter specified, not going to remove everything")
 	}
 
-	cmd.LocateOptions.Filters.IDs = flags.Args()
+	locOpts.Filters.IDs = flags.Args()
 
-	cmd.RepositorySecret = ctx.GetSecret()
-
-	return nil
-}
-
-func (cmd *Rm) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	matches, err := locate.LocateSnapshotIDs(repo, cmd.LocateOptions)
+	matches, err := locate.LocateSnapshotIDs(repo, locOpts)
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	if len(matches) == 0 {
 		ctx.GetLogger().Info("rm: no snapshots matched the selection")
-		return 0, nil
+		return nil
 	}
 
 	// plan
-	if !cmd.Apply {
+	if !apply {
 		type planEntry struct {
 			prefix string
 			id     objects.MAC
@@ -138,7 +127,7 @@ func (cmd *Rm) Execute(ctx *appcontext.AppContext, repo *repository.Repository) 
 		for _, e := range entries {
 			fmt.Fprintf(ctx.Stdout, "%s\n", e.prefix)
 		}
-		return 0, nil
+		return nil
 	}
 
 	// execution
@@ -160,8 +149,8 @@ func (cmd *Rm) Execute(ctx *appcontext.AppContext, repo *repository.Repository) 
 	wg.Wait()
 
 	if errors != 0 {
-		return 1, fmt.Errorf("failed to remove %d snapshots", errors)
+		return fmt.Errorf("failed to remove %d snapshots", errors)
 	}
 
-	return 0, nil
+	return nil
 }

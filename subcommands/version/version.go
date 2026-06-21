@@ -27,10 +27,10 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Version{} }, subcommands.BeforeRepositoryOpen, "version")
+	subcommands.Register(Version, subcommands.BeforeRepositoryOpen, "version")
 }
 
-func (_ *Version) Parse(ctx *appcontext.AppContext, args []string) error {
+func Version(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
 	flags := flag.NewFlagSet("version", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s\n", flags.Name())
@@ -43,14 +43,6 @@ func (_ *Version) Parse(ctx *appcontext.AppContext, args []string) error {
 		return fmt.Errorf("Too many arguments")
 	}
 
-	return nil
-}
-
-type Version struct {
-	subcommands.SubcommandBase
-}
-
-func (cmd *Version) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	fmt.Printf("plakar/%s\n", utils.GetVersion())
-	return 0, nil
+	return nil
 }

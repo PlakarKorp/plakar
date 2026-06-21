@@ -8,16 +8,9 @@ import (
 	"github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/subcommands"
 )
 
-type DiagContentType struct {
-	subcommands.SubcommandBase
-
-	SnapshotPath string
-}
-
-func (cmd *DiagContentType) Parse(ctx *appcontext.AppContext, args []string) error {
+func ContentType(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
 	flags := flag.NewFlagSet("diag contenttype", flag.ExitOnError)
 	flags.Parse(args)
 
@@ -25,16 +18,9 @@ func (cmd *DiagContentType) Parse(ctx *appcontext.AppContext, args []string) err
 		return fmt.Errorf("usage: %s contenttype SNAPSHOT[:PATH]", flags.Name())
 	}
 
-	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.SnapshotPath = flags.Args()[0]
-
-	return nil
-}
-
-func (cmd *DiagContentType) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	snap, pathname, err := locate.OpenSnapshotByPath(repo, cmd.SnapshotPath)
+	snap, pathname, err := locate.OpenSnapshotByPath(repo, flags.Args()[0])
 	if err != nil {
-		return 1, err
+		return err
 	}
 	defer snap.Close()
 
@@ -47,15 +33,15 @@ func (cmd *DiagContentType) Execute(ctx *appcontext.AppContext, repo *repository
 
 	tree, err := snap.ContentTypeIdx()
 	if err != nil {
-		return 1, err
+		return err
 	}
 	if tree == nil {
-		return 1, fmt.Errorf("no content-type index available in the snapshot")
+		return fmt.Errorf("no content-type index available in the snapshot")
 	}
 
 	it, err := tree.ScanFrom(pathname)
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	for it.Next() {
@@ -67,8 +53,8 @@ func (cmd *DiagContentType) Execute(ctx *appcontext.AppContext, repo *repository
 		fmt.Fprintln(ctx.Stdout, path)
 	}
 	if err := it.Err(); err != nil {
-		return 1, err
+		return err
 	}
 
-	return 0, nil
+	return nil
 }

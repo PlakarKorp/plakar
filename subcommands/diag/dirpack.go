@@ -13,17 +13,10 @@ import (
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/kloset/snapshot/vfs"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/vmihailenco/msgpack/v5"
 )
 
-type DiagDirPack struct {
-	subcommands.SubcommandBase
-
-	SnapshotPath string
-}
-
-func (cmd *DiagDirPack) Parse(ctx *appcontext.AppContext, args []string) error {
+func DirPack(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
 	flags := flag.NewFlagSet("diag dirpack", flag.ExitOnError)
 	flags.Parse(args)
 
@@ -31,27 +24,9 @@ func (cmd *DiagDirPack) Parse(ctx *appcontext.AppContext, args []string) error {
 		return fmt.Errorf("usage: %s dirpack SNAPSHOT[:PATH]", flags.Name())
 	}
 
-	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.SnapshotPath = flags.Args()[0]
-
-	return nil
-}
-
-func readDirPackHdr(rd io.Reader) (typ snapshot.DirPackEntry, siz uint32, err error) {
-	endian := binary.LittleEndian
-	if err = binary.Read(rd, endian, &typ); err != nil {
-		return
-	}
-	if err = binary.Read(rd, endian, &siz); err != nil {
-		return
-	}
-	return
-}
-
-func (cmd *DiagDirPack) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	snap, pathname, err := locate.OpenSnapshotByPath(repo, cmd.SnapshotPath)
+	snap, pathname, err := locate.OpenSnapshotByPath(repo, flags.Args()[0])
 	if err != nil {
-		return 1, err
+		return err
 	}
 	defer snap.Close()
 
@@ -64,15 +39,15 @@ func (cmd *DiagDirPack) Execute(ctx *appcontext.AppContext, repo *repository.Rep
 
 	tree, err := snap.DirPack()
 	if err != nil {
-		return 1, err
+		return err
 	}
 	if tree == nil {
-		return 1, fmt.Errorf("no dirpack index available in the snapshot")
+		return fmt.Errorf("no dirpack index available in the snapshot")
 	}
 
 	it, err := tree.ScanFrom(pathname)
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	for it.Next() {
@@ -86,7 +61,7 @@ func (cmd *DiagDirPack) Execute(ctx *appcontext.AppContext, repo *repository.Rep
 
 		obj, err := snap.LookupObject(dirpackmac)
 		if err != nil {
-			return 1, fmt.Errorf("failed to get object %x: %w", dirpackmac, err)
+			return fmt.Errorf("failed to get object %x: %w", dirpackmac, err)
 		}
 
 		var size int64
@@ -102,18 +77,18 @@ func (cmd *DiagDirPack) Execute(ctx *appcontext.AppContext, repo *repository.Rep
 				if errors.Is(err, io.EOF) {
 					break
 				}
-				return 1, fmt.Errorf("failed to read: %w", err)
+				return fmt.Errorf("failed to read: %w", err)
 			}
 
 			var entry vfs.Entry
 			lrd := io.LimitReader(rd, int64(siz-uint32(len(entry.MAC[:]))))
 			err = msgpack.NewDecoder(lrd).Decode(&entry)
 			if err != nil {
-				return 1, fmt.Errorf("failed to read entry: %w", err)
+				return fmt.Errorf("failed to read entry: %w", err)
 			}
 
 			if _, err := io.ReadFull(rd, entry.MAC[:]); err != nil {
-				return 1, fmt.Errorf("failed to read entry mac: %w", err)
+				return fmt.Errorf("failed to read entry mac: %w", err)
 			}
 
 			fmt.Fprintf(ctx.Stdout, "vfs-entry %x %s %v %v %s\n", entry.MAC, path,
@@ -121,8 +96,19 @@ func (cmd *DiagDirPack) Execute(ctx *appcontext.AppContext, repo *repository.Rep
 		}
 	}
 	if err := it.Err(); err != nil {
-		return 1, err
+		return err
 	}
 
-	return 0, nil
+	return nil
+}
+
+func readDirPackHdr(rd io.Reader) (typ snapshot.DirPackEntry, siz uint32, err error) {
+	endian := binary.LittleEndian
+	if err = binary.Read(rd, endian, &typ); err != nil {
+		return
+	}
+	if err = binary.Read(rd, endian, &siz); err != nil {
+		return
+	}
+	return
 }

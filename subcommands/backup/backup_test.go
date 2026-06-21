@@ -14,10 +14,12 @@ import (
 	"github.com/PlakarKorp/kloset/caching/pebble"
 	"github.com/PlakarKorp/kloset/connectors/storage"
 	"github.com/PlakarKorp/kloset/hashing"
+	"github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/kloset/logging"
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/resources"
+	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/kloset/versioning"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/ui/stdio"
@@ -120,14 +122,8 @@ func TestExecuteCmdCreateDefault(t *testing.T) {
 	ctx.Stderr = bufErr
 	args := []string{tmpBackupDir}
 
-	subcommand := &Backup{}
-	err := subcommand.Parse(ctx, args)
+	err := Backup(ctx, repo, args)
 	require.NoError(t, err)
-	require.NotNil(t, subcommand)
-
-	status, err := subcommand.Execute(ctx, repo)
-	require.NoError(t, err)
-	require.Equal(t, 0, status)
 
 	// output should be something like:
 	// info: 9a383818: OK ✓ /tmp/tmp_to_backup2103009254/subdir/foo.txt
@@ -162,20 +158,15 @@ func TestExecuteCmdCreateWithHooks(t *testing.T) {
 	ctx.MaxConcurrency = 1
 	ctx.Stdout = bufOut
 	ctx.Stderr = bufErr
-	args := []string{tmpBackupDir}
 
-	subcommand := &Backup{}
-	err := subcommand.Parse(ctx, args)
+	args := []string{
+		"-pre-hook", "echo 'pre-hook executed'",
+		"-post-hook", "echo 'post-hook executed'",
+		tmpBackupDir,
+	}
+
+	err := Backup(ctx, repo, args)
 	require.NoError(t, err)
-	require.NotNil(t, subcommand)
-
-	// Set hooks
-	subcommand.PreHook = "echo 'pre-hook executed'"
-	subcommand.PostHook = "echo 'post-hook executed'"
-
-	status, err := subcommand.Execute(ctx, repo)
-	require.NoError(t, err)
-	require.Equal(t, 0, status)
 
 	output := bufOut.String()
 	require.Contains(t, output, "executing hook: echo 'pre-hook executed'")
@@ -203,17 +194,20 @@ func TestBackupWithPlakarTagsEnv(t *testing.T) {
 	ctx.MaxConcurrency = 1
 	ctx.Stdout = bufOut
 	ctx.Stderr = bufErr
-	args := []string{tmpBackupDir}
 
-	subcommand := &Backup{}
-	err := subcommand.Parse(ctx, args)
+	err := Backup(ctx, repo, []string{tmpBackupDir})
 	require.NoError(t, err)
 
-	require.Equal(t, []string{"daily", "important"}, subcommand.Tags)
+	locateopts := locate.NewDefaultLocateOptions(locate.WithLatest(true))
 
-	status, err := subcommand.Execute(ctx, repo)
+	require.NoError(t, repo.RebuildState())
+	snapshotIDs, err := locate.LocateSnapshotIDs(repo, locateopts)
+	require.NoError(t, err, "LocateSnapshotIDs failed")
+	require.Len(t, snapshotIDs, 1)
+
+	snap, err := snapshot.Load(repo, snapshotIDs[0])
 	require.NoError(t, err)
-	require.Equal(t, 0, status)
+	require.Equal(t, snap.Header.Tags, []string{"daily", "important"})
 }
 
 func TestBackupTagFlagOverridesEnv(t *testing.T) {
@@ -234,18 +228,20 @@ func TestBackupTagFlagOverridesEnv(t *testing.T) {
 	ctx.MaxConcurrency = 1
 	ctx.Stdout = bufOut
 	ctx.Stderr = bufErr
-	args := []string{"-tag", "cli-tag", tmpBackupDir}
 
-	subcommand := &Backup{}
-	err := subcommand.Parse(ctx, args)
+	err := Backup(ctx, repo, []string{"-tag", "cli-tag", tmpBackupDir})
 	require.NoError(t, err)
 
-	// CLI flag should win over env var
-	require.Equal(t, []string{"cli-tag"}, subcommand.Tags)
+	locateopts := locate.NewDefaultLocateOptions(locate.WithLatest(true))
 
-	status, err := subcommand.Execute(ctx, repo)
+	require.NoError(t, repo.RebuildState())
+	snapshotIDs, err := locate.LocateSnapshotIDs(repo, locateopts)
+	require.NoError(t, err, "LocateSnapshotIDs failed")
+	require.Len(t, snapshotIDs, 1)
+
+	snap, err := snapshot.Load(repo, snapshotIDs[0])
 	require.NoError(t, err)
-	require.Equal(t, 0, status)
+	require.Equal(t, snap.Header.Tags, []string{"cli-tag"})
 }
 
 func TestBackupEmptyPlakarTagsEnv(t *testing.T) {
@@ -266,18 +262,20 @@ func TestBackupEmptyPlakarTagsEnv(t *testing.T) {
 	ctx.MaxConcurrency = 1
 	ctx.Stdout = bufOut
 	ctx.Stderr = bufErr
-	args := []string{tmpBackupDir}
 
-	subcommand := &Backup{}
-	err := subcommand.Parse(ctx, args)
+	err := Backup(ctx, repo, []string{tmpBackupDir})
 	require.NoError(t, err)
 
-	// No tags should be set
-	require.Equal(t, []string{}, subcommand.Tags)
+	locateopts := locate.NewDefaultLocateOptions(locate.WithLatest(true))
 
-	status, err := subcommand.Execute(ctx, repo)
+	require.NoError(t, repo.RebuildState())
+	snapshotIDs, err := locate.LocateSnapshotIDs(repo, locateopts)
+	require.NoError(t, err, "LocateSnapshotIDs failed")
+	require.Len(t, snapshotIDs, 1)
+
+	snap, err := snapshot.Load(repo, snapshotIDs[0])
 	require.NoError(t, err)
-	require.Equal(t, 0, status)
+	require.Empty(t, snap.Header.Tags)
 }
 
 func TestBackupPlakarTagsWhitespace(t *testing.T) {
@@ -298,17 +296,20 @@ func TestBackupPlakarTagsWhitespace(t *testing.T) {
 	ctx.MaxConcurrency = 1
 	ctx.Stdout = bufOut
 	ctx.Stderr = bufErr
-	args := []string{tmpBackupDir}
 
-	subcommand := &Backup{}
-	err := subcommand.Parse(ctx, args)
+	err := Backup(ctx, repo, []string{tmpBackupDir})
 	require.NoError(t, err)
 
-	require.Equal(t, []string{"ci", "nightly", "prod"}, subcommand.Tags)
+	locateopts := locate.NewDefaultLocateOptions(locate.WithLatest(true))
 
-	status, err := subcommand.Execute(ctx, repo)
+	require.NoError(t, repo.RebuildState())
+	snapshotIDs, err := locate.LocateSnapshotIDs(repo, locateopts)
+	require.NoError(t, err, "LocateSnapshotIDs failed")
+	require.Len(t, snapshotIDs, 1)
+
+	snap, err := snapshot.Load(repo, snapshotIDs[0])
 	require.NoError(t, err)
-	require.Equal(t, 0, status)
+	require.Equal(t, snap.Header.Tags, []string{"ci", "nightly", "prod"})
 }
 
 func TestBackupPlakarTagsDoubleComma(t *testing.T) {
@@ -329,17 +330,20 @@ func TestBackupPlakarTagsDoubleComma(t *testing.T) {
 	ctx.MaxConcurrency = 1
 	ctx.Stdout = bufOut
 	ctx.Stderr = bufErr
-	args := []string{tmpBackupDir}
 
-	subcommand := &Backup{}
-	err := subcommand.Parse(ctx, args)
+	err := Backup(ctx, repo, []string{tmpBackupDir})
 	require.NoError(t, err)
 
-	require.Equal(t, []string{"ci", "nightly"}, subcommand.Tags)
+	locateopts := locate.NewDefaultLocateOptions(locate.WithLatest(true))
 
-	status, err := subcommand.Execute(ctx, repo)
+	require.NoError(t, repo.RebuildState())
+	snapshotIDs, err := locate.LocateSnapshotIDs(repo, locateopts)
+	require.NoError(t, err, "LocateSnapshotIDs failed")
+	require.Len(t, snapshotIDs, 1)
+
+	snap, err := snapshot.Load(repo, snapshotIDs[0])
 	require.NoError(t, err)
-	require.Equal(t, 0, status)
+	require.Equal(t, snap.Header.Tags, []string{"ci", "nightly"})
 }
 
 func TestBackupPlakarTagsTrailingComma(t *testing.T) {
@@ -360,17 +364,20 @@ func TestBackupPlakarTagsTrailingComma(t *testing.T) {
 	ctx.MaxConcurrency = 1
 	ctx.Stdout = bufOut
 	ctx.Stderr = bufErr
-	args := []string{tmpBackupDir}
 
-	subcommand := &Backup{}
-	err := subcommand.Parse(ctx, args)
+	err := Backup(ctx, repo, []string{tmpBackupDir})
 	require.NoError(t, err)
 
-	require.Equal(t, []string{"ci", "nightly"}, subcommand.Tags)
+	locateopts := locate.NewDefaultLocateOptions(locate.WithLatest(true))
 
-	status, err := subcommand.Execute(ctx, repo)
+	require.NoError(t, repo.RebuildState())
+	snapshotIDs, err := locate.LocateSnapshotIDs(repo, locateopts)
+	require.NoError(t, err, "LocateSnapshotIDs failed")
+	require.Len(t, snapshotIDs, 1)
+
+	snap, err := snapshot.Load(repo, snapshotIDs[0])
 	require.NoError(t, err)
-	require.Equal(t, 0, status)
+	require.Equal(t, snap.Header.Tags, []string{"ci", "nightly"})
 }
 
 func TestExecuteCmdCreateDefaultWithIgnores(t *testing.T) {
@@ -380,16 +387,9 @@ func TestExecuteCmdCreateDefaultWithIgnores(t *testing.T) {
 	repo, tmpBackupDir, ctx := generateFixtures(t, bufOut, bufErr)
 
 	ctx.MaxConcurrency = 1
-	args := []string{"-ignore", "**/subdir", tmpBackupDir}
 
-	subcommand := &Backup{}
-	err := subcommand.Parse(ctx, args)
+	err := Backup(ctx, repo, []string{"-ignore", "**/subdir", tmpBackupDir})
 	require.NoError(t, err)
-	require.NotNil(t, subcommand)
-
-	status, err := subcommand.Execute(ctx, repo)
-	require.NoError(t, err)
-	require.Equal(t, 0, status)
 
 	output := bufOut.String()
 	require.NotContains(t, output, "/subdir")

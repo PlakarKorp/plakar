@@ -29,10 +29,16 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Archive{} }, 0, "archive")
+	subcommands.Register(Archive, 0, "archive")
 }
 
-func (cmd *Archive) Parse(ctx *appcontext.AppContext, args []string) error {
+func Archive(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	var (
+		rebase bool
+		output string
+		format string
+	)
+
 	flags := flag.NewFlagSet("archive", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS] [SNAPSHOT[:PATH]]\n", flags.Name())
@@ -40,60 +46,48 @@ func (cmd *Archive) Parse(ctx *appcontext.AppContext, args []string) error {
 		flags.PrintDefaults()
 	}
 
-	flags.StringVar(&cmd.Output, "output", "", "archive pathname")
-	flags.BoolVar(&cmd.Rebase, "rebase", false, "strip pathname when pulling")
-	flags.StringVar(&cmd.Format, "format", "tarball", "archive format: tar, tarball, zip")
+	flags.StringVar(&output, "output", "", "archive pathname")
+	flags.BoolVar(&rebase, "rebase", false, "strip pathname when pulling")
+	flags.StringVar(&format, "format", "tarball", "archive format: tar, tarball, zip")
 	flags.Parse(args)
 
 	if flags.NArg() == 0 {
 		return fmt.Errorf("need at least one snapshot ID to pull")
 	}
-	cmd.SnapshotPrefix = flags.Arg(0)
+
+	prefix := flags.Arg(0)
 
 	supportedFormats := map[string]string{
 		"tar":     "tar",
 		"tarball": "tar.gz",
 		"zip":     "zip",
 	}
-	if _, ok := supportedFormats[cmd.Format]; !ok {
-		return fmt.Errorf("unsupported format %s", cmd.Format)
+	if _, ok := supportedFormats[format]; !ok {
+		return fmt.Errorf("unsupported format %s", format)
 	}
 
-	if cmd.Output == "" {
-		cmd.Output = fmt.Sprintf("plakar-%s.%s", time.Now().UTC().Format(time.RFC3339), supportedFormats[cmd.Format])
+	if output == "" {
+		output = fmt.Sprintf("plakar-%s.%s", time.Now().UTC().Format(time.RFC3339), supportedFormats[format])
 	}
 
-	return nil
-}
-
-type Archive struct {
-	subcommands.SubcommandBase
-
-	Rebase         bool
-	Output         string
-	Format         string
-	SnapshotPrefix string
-}
-
-func (cmd *Archive) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	snap, pathname, err := locate.OpenSnapshotByPath(repo, cmd.SnapshotPrefix)
+	snap, pathname, err := locate.OpenSnapshotByPath(repo, prefix)
 	if err != nil {
-		return 1, fmt.Errorf("archive: could not open snapshot: %s", cmd.SnapshotPrefix)
+		return fmt.Errorf("archive: could not open snapshot: %s", prefix)
 	}
 	defer snap.Close()
 
 	out := os.Stdout
-	if cmd.Output != "-" {
-		out, err = os.Create(cmd.Output)
+	if output != "-" {
+		out, err = os.Create(output)
 		if err != nil {
-			return 1, fmt.Errorf("failed to create %s: %w", cmd.Output, err)
+			return fmt.Errorf("failed to create %s: %w", output, err)
 		}
 		defer out.Close()
 	}
 
-	if err = snap.Archive(out, cmd.Format, []string{pathname}, cmd.Rebase); err != nil {
-		return 1, err
+	if err = snap.Archive(out, format, []string{pathname}, rebase); err != nil {
+		return err
 	}
 
-	return 0, nil
+	return nil
 }

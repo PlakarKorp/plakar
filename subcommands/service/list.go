@@ -22,14 +22,9 @@ import (
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/subcommands"
 )
 
-type ServiceList struct {
-	subcommands.SubcommandBase
-}
-
-func (cmd *ServiceList) Parse(ctx *appcontext.AppContext, args []string) error {
+func List(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
 	flags := flag.NewFlagSet("service list", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s\n", flags.Name())
@@ -40,22 +35,19 @@ func (cmd *ServiceList) Parse(ctx *appcontext.AppContext, args []string) error {
 		return fmt.Errorf("invalid argument: %s", flags.Arg(0))
 	}
 
-	return nil
-}
-
-func (cmd *ServiceList) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	sc, err := getClient(ctx)
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	list, err := sc.GetServiceList()
 	if err != nil {
-		return 1, err
+		return err
 	}
+
 	for _, svc := range list {
 		fmt.Fprintf(ctx.Stdout, "%s\n", svc.Name)
 	}
 
-	return 0, nil
+	return nil
 }

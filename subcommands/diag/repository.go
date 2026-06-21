@@ -8,17 +8,10 @@ import (
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/dustin/go-humanize"
 )
 
-type DiagRepository struct {
-	subcommands.SubcommandBase
-
-	RepositoryLocation string
-}
-
-func (cmd *DiagRepository) Parse(ctx *appcontext.AppContext, args []string) error {
+func Repository(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
 	// Since this is the default action, we plug the general USAGE here.
 	flags := flag.NewFlagSet("diag", flag.ExitOnError)
 	flags.Usage = func() {
@@ -34,13 +27,6 @@ func (cmd *DiagRepository) Parse(ctx *appcontext.AppContext, args []string) erro
 		fmt.Fprintf(flags.Output(), "       %s locks\n", flags.Name())
 	}
 	flags.Parse(args)
-
-	cmd.RepositorySecret = ctx.GetSecret()
-
-	return nil
-}
-
-func (cmd *DiagRepository) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 
 	fmt.Fprintln(ctx.Stdout, "Version:", repo.Configuration().Version)
 	fmt.Fprintln(ctx.Stdout, "Timestamp:", repo.Configuration().Timestamp)
@@ -102,7 +88,7 @@ func (cmd *DiagRepository) Execute(ctx *appcontext.AppContext, repo *repository.
 
 	snapshotIDs, err := locate.LocateSnapshotIDs(repo, nil)
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	fmt.Fprintln(ctx.Stdout, "Snapshots:", len(snapshotIDs))
@@ -110,12 +96,12 @@ func (cmd *DiagRepository) Execute(ctx *appcontext.AppContext, repo *repository.
 	for _, snapshotID := range snapshotIDs {
 		snap, err := snapshot.Load(repo, snapshotID)
 		if err != nil {
-			return 1, err
+			return err
 		}
 		totalSize += snap.Header.GetSource(0).Summary.Directory.Size + snap.Header.GetSource(0).Summary.Below.Size
 		snap.Close()
 	}
 	fmt.Fprintf(ctx.Stdout, "Size: %s (%d bytes)\n", humanize.IBytes(totalSize), totalSize)
 
-	return 0, nil
+	return nil
 }

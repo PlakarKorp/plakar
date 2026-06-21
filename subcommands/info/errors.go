@@ -8,24 +8,24 @@ import (
 	"github.com/PlakarKorp/plakar/appcontext"
 )
 
-func (cmd *Info) executeErrors(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	snap, pathname, err := locate.OpenSnapshotByPath(repo, cmd.SnapshotID)
+func infoErrors(ctx *appcontext.AppContext, repo *repository.Repository, snapshotID string) error {
+	snap, pathname, err := locate.OpenSnapshotByPath(repo, snapshotID)
 	if err != nil {
-		return 1, err
+		return err
 	}
 	defer snap.Close()
 
 	fs, err := snap.Filesystem()
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	for item, err := range fs.Errors(pathname) {
 		if err != nil {
-			return 1, fmt.Errorf("failed to scan errors: %w", err)
+			return fmt.Errorf("failed to scan errors: %w", err)
 		}
 
 		fmt.Fprintf(ctx.Stdout, "%s: %s\n", item.Name, item.Error)
 	}
-	return 0, nil
+	return nil
 }

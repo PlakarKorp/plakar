@@ -29,10 +29,18 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Login{} }, subcommands.BeforeRepositoryOpen, "login")
+	subcommands.Register(Login, subcommands.BeforeRepositoryOpen, "login")
 }
 
-func (cmd *Login) Parse(ctx *appcontext.AppContext, args []string) error {
+func Login(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	var (
+		status  bool
+		github  bool
+		email   string
+		env     bool
+		nospawn bool
+	)
+
 	flags := flag.NewFlagSet("login", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS]\n", flags.Name())
@@ -40,96 +48,82 @@ func (cmd *Login) Parse(ctx *appcontext.AppContext, args []string) error {
 		flags.PrintDefaults()
 	}
 
-	flags.BoolVar(&cmd.Status, "status", false, "do not login, just display the status")
-	flags.BoolVar(&cmd.NoSpawn, "no-spawn", false, "don't spawn browser")
-	flags.BoolVar(&cmd.Github, "github", false, "login with GitHub")
-	flags.StringVar(&cmd.Email, "email", "", "login with email")
-	flags.BoolVar(&cmd.Env, "env", false, "use token from environment variable PLAKAR_TOKEN")
+	flags.BoolVar(&status, "status", false, "do not login, just display the status")
+	flags.BoolVar(&nospawn, "no-spawn", false, "don't spawn browser")
+	flags.BoolVar(&github, "github", false, "login with GitHub")
+	flags.StringVar(&email, "email", "", "login with email")
+	flags.BoolVar(&env, "env", false, "use token from environment variable PLAKAR_TOKEN")
 	flags.Parse(args)
 
 	if flags.NArg() > 0 {
 		return fmt.Errorf("too many arguments")
 	}
 
-	if cmd.Status {
-		if cmd.Github || cmd.Email != "" || cmd.NoSpawn || cmd.Env {
+	if status {
+		if github || email != "" || nospawn || env {
 			return fmt.Errorf("the -status option must be used alone")
 		}
 	} else {
-		if cmd.Github {
-			if cmd.Email != "" || cmd.Env {
+		if github {
+			if email != "" || env {
 				return fmt.Errorf("the -github option cannot be used with -email or -env")
 			}
-		} else if cmd.Email != "" {
-			if cmd.Env {
+		} else if email != "" {
+			if env {
 				return fmt.Errorf("the -email option cannot be used with -env")
 			}
-			addr, err := utils.ValidateEmail(cmd.Email)
+			addr, err := utils.ValidateEmail(email)
 			if err != nil {
 				return fmt.Errorf("invalid email address: %w", err)
 			}
-			cmd.Email = addr
-		} else if !cmd.Env {
+			email = addr
+		} else if !env {
 			fmt.Println("no provided login method, defaulting to GitHub")
-			cmd.Github = true
+			github = true
 		}
-		if cmd.NoSpawn && !cmd.Github {
+		if nospawn && !github {
 			return fmt.Errorf("the -no-spawn option is only valid with -github")
 		}
 	}
 
-	return nil
-}
-
-type Login struct {
-	subcommands.SubcommandBase
-
-	Status  bool
-	Github  bool
-	Email   string
-	Env     bool
-	NoSpawn bool
-}
-
-func (cmd *Login) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	if cmd.Status {
+	if status {
 		token, _ := ctx.GetCookies().GetAuthToken()
 		status := "not logged in"
 		if token != "" {
 			status = "logged in"
 		}
 		fmt.Fprintf(ctx.Stdout, "%s\n", status)
-		return 0, nil
+		return nil
 	}
 
 	var token string
 
-	if cmd.Env {
+	if env {
 		if token = ctx.GetCookies().GetAuthEnvToken(); token == "" {
-			return 1, fmt.Errorf("no auth token found in environment variable PLAKAR_TOKEN")
+			return fmt.Errorf("no auth token found in environment variable PLAKAR_TOKEN")
 		}
 	} else {
-		flow, err := plogin.NewLoginFlow(ctx, cmd.NoSpawn)
+		flow, err := plogin.NewLoginFlow(ctx, nospawn)
 		if err != nil {
-			return 1, err
+			return err
 		}
 		defer flow.Close()
 
-		if cmd.Github {
+		if github {
 			token, err = flow.Run("github", map[string]string{})
-		} else if cmd.Email != "" {
-			token, err = flow.Run("email", map[string]string{"email": cmd.Email})
+		} else if email != "" {
+			token, err = flow.Run("email", map[string]string{"email": email})
 		} else {
-			return 1, fmt.Errorf("invalid login method")
+			return fmt.Errorf("invalid login method")
 		}
 		if err != nil {
-			return 1, err
+			return err
 		}
 	}
 
 	if err := ctx.GetCookies().PutAuthToken(token); err != nil {
-		return 1, fmt.Errorf("failed to store token in cache: %w", err)
+		return fmt.Errorf("failed to store token in cache: %w", err)
 	}
 
-	return 0, nil
+	return nil
 }

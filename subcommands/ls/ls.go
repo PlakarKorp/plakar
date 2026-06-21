@@ -37,11 +37,16 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Ls{} }, 0, "ls")
+	subcommands.Register(Ls, 0, "ls")
 }
 
-func (cmd *Ls) Parse(ctx *appcontext.AppContext, args []string) error {
-	cmd.LocateOptions = locate.NewDefaultLocateOptions()
+func Ls(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	var (
+		locateopts  = locate.NewDefaultLocateOptions()
+		recursive   bool
+		displayUUID bool
+		showTags    bool
+	)
 
 	flags := flag.NewFlagSet("ls", flag.ExitOnError)
 	flags.Usage = func() {
@@ -50,53 +55,32 @@ func (cmd *Ls) Parse(ctx *appcontext.AppContext, args []string) error {
 		flags.PrintDefaults()
 	}
 
-	flags.BoolVar(&cmd.DisplayUUID, "uuid", false, "display uuid instead of short ID")
-	flags.BoolVar(&cmd.Recursive, "recursive", false, "recursive listing")
-	flags.BoolVar(&cmd.ShowTags, "tags", false, "show tags")
+	flags.BoolVar(&displayUUID, "uuid", false, "display uuid instead of short ID")
+	flags.BoolVar(&recursive, "recursive", false, "recursive listing")
+	flags.BoolVar(&showTags, "tags", false, "show tags")
 
-	cmd.LocateOptions.InstallLocateFlags(flags)
+	locateopts.InstallLocateFlags(flags)
 
 	flags.Parse(args)
 
 	switch flags.NArg() {
-	case 0: // nothing
+	case 0:
+		return list_snapshots(ctx, repo, locateopts, showTags, displayUUID)
 	case 1:
-		cmd.Path = []string{flags.Arg(0)}
+		return list_snapshot(ctx, repo, flags.Arg(0), recursive)
 	default:
 		return fmt.Errorf("too many arguments")
 	}
-
-	cmd.RepositorySecret = ctx.GetSecret()
-	return nil
 }
 
-type Ls struct {
-	subcommands.SubcommandBase
-
-	LocateOptions *locate.LocateOptions
-	Recursive     bool
-	DisplayUUID   bool
-	Path          []string
-
-	ShowTags bool
-}
-
-func (cmd *Ls) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	if len(cmd.Path) == 0 {
-		if err := cmd.list_snapshots(ctx, repo); err != nil {
-			return 1, err
-		}
-		return 0, nil
-	}
-
-	if err := cmd.list_snapshot(ctx, repo, cmd.Path[0], cmd.Recursive); err != nil {
-		return 1, err
-	}
-	return 0, nil
-}
-
-func (cmd *Ls) list_snapshots(ctx *appcontext.AppContext, repo *repository.Repository) error {
-	snapshotIDs, err := locate.LocateSnapshotIDs(repo, cmd.LocateOptions)
+func list_snapshots(
+	ctx *appcontext.AppContext,
+	repo *repository.Repository,
+	locateopts *locate.LocateOptions,
+	showTags bool,
+	displayUUID bool,
+) error {
+	snapshotIDs, err := locate.LocateSnapshotIDs(repo, locateopts)
 	if err != nil {
 		return fmt.Errorf("ls: could not fetch snapshots list: %w", err)
 	}
@@ -108,14 +92,14 @@ func (cmd *Ls) list_snapshots(ctx *appcontext.AppContext, repo *repository.Repos
 		}
 
 		tags := ""
-		if cmd.ShowTags && len(snap.Header.Tags) > 0 {
+		if showTags && len(snap.Header.Tags) > 0 {
 			tagList := strings.Join(snap.Header.Tags, ",")
 			if tagList != "" {
 				tags = " tags=" + strings.Join(snap.Header.Tags, ",")
 			}
 		}
 
-		if !cmd.DisplayUUID {
+		if !displayUUID {
 			fmt.Fprintf(ctx.Stdout, "%s %10s%10s%10s %s%s\n",
 				snap.Header.Timestamp.UTC().Format(time.RFC3339),
 				hex.EncodeToString(snap.Header.GetIndexShortID()),
@@ -139,7 +123,7 @@ func (cmd *Ls) list_snapshots(ctx *appcontext.AppContext, repo *repository.Repos
 	return nil
 }
 
-func (cmd *Ls) list_snapshot(ctx *appcontext.AppContext, repo *repository.Repository, snapshotPath string, recursive bool) error {
+func list_snapshot(ctx *appcontext.AppContext, repo *repository.Repository, snapshotPath string, recursive bool) error {
 	snap, pathname, err := locate.OpenSnapshotByPath(repo, snapshotPath)
 	if err != nil {
 		return err

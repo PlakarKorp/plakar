@@ -27,10 +27,10 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Logout{} }, subcommands.BeforeRepositoryOpen, "logout")
+	subcommands.Register(Logout, subcommands.BeforeRepositoryOpen, "logout")
 }
 
-func (cmd *Logout) Parse(ctx *appcontext.AppContext, args []string) error {
+func Logout(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
 	flags := flag.NewFlagSet("logout", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s\n", flags.Name())
@@ -41,16 +41,9 @@ func (cmd *Logout) Parse(ctx *appcontext.AppContext, args []string) error {
 		return fmt.Errorf("too many arguments")
 	}
 
-	return nil
-}
-
-type Logout struct {
-	subcommands.SubcommandBase
-}
-
-func (cmd *Logout) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	if err := ctx.GetCookies().DeleteAuthToken(); err != nil {
-		return 1, err
+		return err
 	}
-	return 0, nil
+
+	return nil
 }

@@ -30,56 +30,44 @@ import (
 	"github.com/PlakarKorp/plakar/subcommands"
 )
 
-type Repair struct {
-	subcommands.SubcommandBase
-
-	Apply bool
-
-	repository *repository.Repository
-	repairID   objects.MAC
-}
-
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Repair{} }, 0, "repair")
+	subcommands.Register(Repair, 0, "repair")
 }
 
-func (cmd *Repair) Parse(ctx *appcontext.AppContext, args []string) error {
+func Repair(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	var (
+		Apply bool
+	)
+
 	flags := flag.NewFlagSet("repair", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s\n", flags.Name())
 		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
 		flags.PrintDefaults()
 	}
-	flags.BoolVar(&cmd.Apply, "apply", false, "do the actual repair")
+	flags.BoolVar(&Apply, "apply", false, "do the actual repair")
 	flags.Parse(args)
 
-	cmd.RepositorySecret = ctx.GetSecret()
+	repairID := objects.RandomMAC()
 
-	return nil
-}
-
-func (cmd *Repair) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	cmd.repository = repo
-	cmd.repairID = objects.RandomMAC()
-
-	if cmd.Apply {
-		done, err := cmd.Lock()
+	if Apply {
+		done, err := lock(ctx, repo, repairID)
 		if err != nil {
-			return 1, err
+			return err
 		}
 
-		defer cmd.Unlock(done)
+		defer close(done)
 	}
 
 	oldCache, err := repo.AppContext().GetCache().Repository(repo.Configuration().RepositoryID)
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	repo.RebuildStateWithCache(oldCache)
 	remoteStates, err := repo.GetStates()
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	remoteStatesMap := make(map[objects.MAC]struct{}, 0)
@@ -90,7 +78,7 @@ func (cmd *Repair) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 	packfilesPerState := make(map[objects.MAC][]objects.MAC, 0)
 	for pe, err := range repo.ListPackfileEntries() {
 		if err != nil {
-			return 1, err
+			return err
 		}
 		if _, ok := remoteStatesMap[pe.StateID]; ok {
 			continue
@@ -99,7 +87,7 @@ func (cmd *Repair) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 	}
 
 	for stateID, packfiles := range packfilesPerState {
-		if !cmd.Apply {
+		if !Apply {
 			ctx.GetLogger().Info("found missing state %x\n", stateID)
 			continue
 		} else {
@@ -108,18 +96,18 @@ func (cmd *Repair) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 
 		scanCache, err := repo.AppContext().GetCache().Scan(stateID)
 		if err != nil {
-			return 1, err
+			return err
 		}
 
 		deltaState, err := state.NewLocalState(scanCache)
 		if err != nil {
-			return 1, err
+			return err
 		}
 
 		for _, pf := range packfiles {
 			p, err := repo.GetPackfile(pf)
 			if err != nil {
-				return 1, err
+				return err
 			}
 
 			if deltaState.Metadata.Timestamp.UnixNano() > p.Footer.Timestamp {
@@ -138,12 +126,12 @@ func (cmd *Repair) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 					},
 				}
 				if err := deltaState.PutDelta(delta); err != nil {
-					return 1, err
+					return err
 				}
 			}
 
 			if err := deltaState.PutPackfile(stateID, pf); err != nil {
-				return 1, err
+				return err
 			}
 		}
 
@@ -157,13 +145,13 @@ func (cmd *Repair) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 		}()
 		err = repo.PutState(stateID, pr)
 		if err != nil {
-			return 1, err
+			return err
 		}
 
 		scanCache.Close()
 	}
 
-	if !cmd.Apply {
+	if !Apply {
 		if len(packfilesPerState) == 0 {
 			ctx.GetLogger().Info("no repairs needed\n")
 		} else {
@@ -171,12 +159,12 @@ func (cmd *Repair) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 		}
 	}
 
-	return 0, nil
+	return nil
 }
 
-func (cmd *Repair) Lock() (chan bool, error) {
+func lock(ctx *appcontext.AppContext, repo *repository.Repository, repairID objects.MAC) (chan bool, error) {
 	lockDone := make(chan bool)
-	lock := repository.NewExclusiveLock(cmd.repository.AppContext().Hostname)
+	lock := repository.NewExclusiveLock(ctx.Hostname)
 
 	buffer := &bytes.Buffer{}
 	err := lock.SerializeToStream(buffer)
@@ -184,42 +172,42 @@ func (cmd *Repair) Lock() (chan bool, error) {
 		return nil, err
 	}
 
-	_, err = cmd.repository.PutLock(cmd.repairID, buffer)
+	_, err = repo.PutLock(repairID, buffer)
 	if err != nil {
 		return nil, err
 	}
 
 	// We installed the lock, now let's see if there is a conflicting exclusive lock or not.
-	locksID, err := cmd.repository.GetLocks()
+	locksID, err := repo.GetLocks()
 	if err != nil {
 		// We still need to delete it, and we need to do so manually.
-		cmd.repository.DeleteLock(cmd.repairID)
+		repo.DeleteLock(repairID)
 		return nil, err
 	}
 
 	for _, lockID := range locksID {
-		if lockID == cmd.repairID {
+		if lockID == repairID {
 			continue
 		}
 
-		rd, err := cmd.repository.GetLock(lockID)
+		rd, err := repo.GetLock(lockID)
 		if err != nil {
-			cmd.repository.DeleteLock(cmd.repairID)
+			repo.DeleteLock(repairID)
 			return nil, err
 		}
 
 		lock, err := repository.NewLockFromStream(rd)
 		rd.Close()
 		if err != nil {
-			cmd.repository.DeleteLock(cmd.repairID)
+			repo.DeleteLock(repairID)
 			return nil, err
 		}
 
 		/* Kick out stale locks */
 		if lock.IsStale() {
-			err := cmd.repository.DeleteLock(lockID)
+			err := repo.DeleteLock(lockID)
 			if err != nil {
-				cmd.repository.DeleteLock(cmd.repairID)
+				repo.DeleteLock(repairID)
 				return nil, err
 			}
 
@@ -227,7 +215,7 @@ func (cmd *Repair) Lock() (chan bool, error) {
 		}
 
 		// There is a lock in place, we need to abort.
-		err = cmd.repository.DeleteLock(cmd.repairID)
+		err = repo.DeleteLock(repairID)
 		if err != nil {
 			return nil, err
 		}
@@ -241,10 +229,10 @@ func (cmd *Repair) Lock() (chan bool, error) {
 		for {
 			select {
 			case <-lockDone:
-				cmd.repository.DeleteLock(cmd.repairID)
+				repo.DeleteLock(repairID)
 				return
 			case <-time.After(repository.LOCK_REFRESH_RATE):
-				lock := repository.NewExclusiveLock(cmd.repository.AppContext().Hostname)
+				lock := repository.NewExclusiveLock(ctx.Hostname)
 
 				buffer := &bytes.Buffer{}
 
@@ -252,14 +240,10 @@ func (cmd *Repair) Lock() (chan bool, error) {
 				// correctly, and if they happen we will be ripped by the
 				// watchdog anyway.
 				lock.SerializeToStream(buffer)
-				cmd.repository.PutLock(cmd.repairID, buffer)
+				repo.PutLock(repairID, buffer)
 			}
 		}
 	}()
 
 	return lockDone, nil
-}
-
-func (cmd *Repair) Unlock(ping chan bool) {
-	close(ping)
 }

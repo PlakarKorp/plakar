@@ -30,21 +30,17 @@ import (
 	"github.com/google/uuid"
 )
 
-type Check struct {
-	subcommands.SubcommandBase
-
-	LocateOptions *locate.LocateOptions
-	FastCheck     bool
-	NoVerify      bool
-	Snapshots     []string
-}
-
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Check{} }, 0, "check")
+	subcommands.Register(Check, 0, "check")
 }
 
-func (cmd *Check) Parse(ctx *appcontext.AppContext, args []string) error {
-	cmd.LocateOptions = locate.NewDefaultLocateOptions()
+func Check(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	var (
+		LocateOptions = locate.NewDefaultLocateOptions()
+		FastCheck     bool
+		NoVerify      bool
+		Snapshots     []string
+	)
 
 	flags := flag.NewFlagSet("check", flag.ExitOnError)
 	flags.Usage = func() {
@@ -53,46 +49,38 @@ func (cmd *Check) Parse(ctx *appcontext.AppContext, args []string) error {
 		flags.PrintDefaults()
 	}
 
-	flags.BoolVar(&cmd.NoVerify, "no-verify", false, "disable signature verification")
-	flags.BoolVar(&cmd.FastCheck, "fast", false, "enable fast checking (no digest verification)")
-	cmd.LocateOptions.InstallLocateFlags(flags)
+	flags.BoolVar(&NoVerify, "no-verify", false, "disable signature verification")
+	flags.BoolVar(&FastCheck, "fast", false, "enable fast checking (no digest verification)")
+	LocateOptions.InstallLocateFlags(flags)
 
 	flags.Parse(args)
 
-	if flags.NArg() != 0 && !cmd.LocateOptions.Empty() {
+	if flags.NArg() != 0 && !LocateOptions.Empty() {
 		ctx.GetLogger().Warn("snapshot specified, filters will be ignored")
 	}
 
-	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.Snapshots = flags.Args()
-
-	return nil
-}
-
-func (cmd *Check) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	var snapshots []string
-	if len(cmd.Snapshots) == 0 {
-		snapshotIDs, err := locate.LocateSnapshotIDs(repo, cmd.LocateOptions)
+	if len(Snapshots) == 0 {
+		snapshotIDs, err := locate.LocateSnapshotIDs(repo, LocateOptions)
 		if err != nil {
-			return 1, err
+			return err
 		}
 		for _, snapshotID := range snapshotIDs {
 			snapshots = append(snapshots, fmt.Sprintf("%x:", snapshotID))
 		}
 	} else {
-		for _, snapshotPath := range cmd.Snapshots {
+		for _, snapshotPath := range Snapshots {
 			prefix, path := locate.ParseSnapshotPath(snapshotPath)
 			if prefix != "" {
 				if _, err := hex.DecodeString(prefix); err != nil {
-					return 1, fmt.Errorf("invalid snapshot prefix: %s", prefix)
+					return fmt.Errorf("invalid snapshot prefix: %s", prefix)
 				}
 			}
 
-			cmd.LocateOptions.Filters.IDs = []string{prefix}
-			snapshotIDs, err := locate.LocateSnapshotIDs(repo, cmd.LocateOptions)
+			LocateOptions.Filters.IDs = []string{prefix}
+			snapshotIDs, err := locate.LocateSnapshotIDs(repo, LocateOptions)
 			if err != nil {
-				fmt.Fprintln(ctx.Stderr, err)
-				return 1, err
+				return err
 			}
 
 			for _, snapshotID := range snapshotIDs {
@@ -102,12 +90,12 @@ func (cmd *Check) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 	}
 
 	opts := &snapshot.CheckOptions{
-		FastCheck: cmd.FastCheck,
+		FastCheck: FastCheck,
 	}
 
 	checkCache, err := ctx.GetCache().Check()
 	if err != nil {
-		return 1, err
+		return err
 	}
 	defer checkCache.Close()
 
@@ -118,13 +106,13 @@ func (cmd *Check) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 	for _, arg := range snapshots {
 		snap, pathname, err := locate.OpenSnapshotByPath(repo, arg)
 		if err != nil {
-			return 1, err
+			return err
 		}
 
 		snap.SetCheckCache(checkCache)
 
 		var failed bool
-		if !cmd.NoVerify && snap.Header.Identity.Identifier != uuid.Nil {
+		if !NoVerify && snap.Header.Identity.Identifier != uuid.Nil {
 			if ok, err := snap.Verify(); err != nil {
 				ctx.GetLogger().Warn("%s", err)
 			} else if !ok {
@@ -151,9 +139,9 @@ func (cmd *Check) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 		if failures == 1 {
 			snapshots = "snapshot"
 		}
-		return exitcodes.IntegrityFailure, fmt.Errorf("check failed for %d %s",
+		return subcommands.NewErrCode(exitcodes.IntegrityFailure, "check failed for %d %s",
 			failures, snapshots)
 	}
 
-	return 0, nil
+	return nil
 }

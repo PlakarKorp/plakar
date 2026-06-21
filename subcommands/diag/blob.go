@@ -11,17 +11,9 @@ import (
 	"github.com/PlakarKorp/kloset/snapshot/header"
 	"github.com/PlakarKorp/kloset/snapshot/vfs"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/subcommands"
 )
 
-type DiagBlob struct {
-	subcommands.SubcommandBase
-
-	blobtype string
-	mac      string
-}
-
-func (cmd *DiagBlob) Parse(ctx *appcontext.AppContext, args []string) error {
+func Blob(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
 	flags := flag.NewFlagSet("diag blob", flag.ExitOnError)
 	flags.Parse(args)
 
@@ -29,40 +21,32 @@ func (cmd *DiagBlob) Parse(ctx *appcontext.AppContext, args []string) error {
 		return fmt.Errorf("usage: %s blob type mac", flags.Name())
 	}
 
-	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.blobtype = flags.Arg(0)
-	cmd.mac = flags.Arg(1)
-
-	return nil
-}
-
-func (cmd *DiagBlob) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	blobtype, err := resources.FromString(cmd.blobtype)
+	blobtype, err := resources.FromString(flags.Arg(0))
 	if err != nil {
-		return 1, fmt.Errorf("%w: %s", err, cmd.blobtype)
+		return fmt.Errorf("%w: %s", err, blobtype)
 	}
 
-	macbytes, err := hex.DecodeString(cmd.mac)
+	macbytes, err := hex.DecodeString(flags.Arg(1))
 	if err != nil {
-		return 1, fmt.Errorf("%w: %s", err, cmd.mac)
+		return fmt.Errorf("%w: %s", err, flags.Arg(1))
 	}
 
 	if len(macbytes) != 32 {
-		return 1, fmt.Errorf("invalid length for the mac: %s", cmd.mac)
+		return fmt.Errorf("invalid length for the mac: %s", flags.Arg(1))
 	}
 
 	mac := objects.MAC(macbytes)
 
 	buf, err := repo.GetBlobBytes(blobtype, mac)
 	if err != nil {
-		return 1, fmt.Errorf("failed to open blob %s %x: %w", blobtype, mac, err)
+		return fmt.Errorf("failed to open blob %s %x: %w", blobtype, mac, err)
 	}
 
 	switch blobtype {
 	case resources.RT_SNAPSHOT:
 		hdr, err := header.NewFromBytes(buf)
 		if err != nil {
-			return 1, fmt.Errorf("failed to deserialize %s %x: %w",
+			return fmt.Errorf("failed to deserialize %s %x: %w",
 				blobtype, mac, err)
 		}
 		fmt.Fprintf(ctx.Stdout, "%+v\n", hdr)
@@ -70,7 +54,7 @@ func (cmd *DiagBlob) Execute(ctx *appcontext.AppContext, repo *repository.Reposi
 	case resources.RT_OBJECT:
 		obj, err := objects.NewObjectFromBytes(buf)
 		if err != nil {
-			return 1, fmt.Errorf("failed to deserialize %s %x: %w",
+			return fmt.Errorf("failed to deserialize %s %x: %w",
 				blobtype, mac, err)
 		}
 		fmt.Fprintf(ctx.Stdout, "%+v\n", obj)
@@ -78,7 +62,7 @@ func (cmd *DiagBlob) Execute(ctx *appcontext.AppContext, repo *repository.Reposi
 	case resources.RT_CHUNK:
 		chunk, err := objects.NewChunkFromBytes(buf)
 		if err != nil {
-			return 1, fmt.Errorf("failed to deserialize %s %x: %w",
+			return fmt.Errorf("failed to deserialize %s %x: %w",
 				blobtype, mac, err)
 		}
 		fmt.Fprintf(ctx.Stdout, "%+v\n", chunk)
@@ -86,7 +70,7 @@ func (cmd *DiagBlob) Execute(ctx *appcontext.AppContext, repo *repository.Reposi
 	case resources.RT_VFS_ENTRY:
 		entry, err := vfs.EntryFromBytes(buf)
 		if err != nil {
-			return 1, fmt.Errorf("failed to deserialize %s %x: %w",
+			return fmt.Errorf("failed to deserialize %s %x: %w",
 				blobtype, mac, err)
 		}
 		fmt.Fprintf(ctx.Stdout, "%+v\n", entry)
@@ -94,7 +78,7 @@ func (cmd *DiagBlob) Execute(ctx *appcontext.AppContext, repo *repository.Reposi
 	case resources.RT_ERROR_ENTRY:
 		error, err := vfs.ErrorItemFromBytes(buf)
 		if err != nil {
-			return 1, fmt.Errorf("failed to deserialize %s %x: %w",
+			return fmt.Errorf("failed to deserialize %s %x: %w",
 				blobtype, mac, err)
 		}
 		fmt.Fprintf(ctx.Stdout, "%+v\n", error)
@@ -102,14 +86,14 @@ func (cmd *DiagBlob) Execute(ctx *appcontext.AppContext, repo *repository.Reposi
 	case resources.RT_XATTR_ENTRY:
 		xattr, err := vfs.XattrFromBytes(buf)
 		if err != nil {
-			return 1, fmt.Errorf("failed to deserialize %s %x: %w",
+			return fmt.Errorf("failed to deserialize %s %x: %w",
 				blobtype, mac, err)
 		}
 		fmt.Fprintf(ctx.Stdout, "%+v\n", xattr)
 
 	default:
-		return 1, fmt.Errorf("don't know how to deserialize %s", blobtype)
+		return fmt.Errorf("don't know how to deserialize %s", blobtype)
 	}
 
-	return 0, nil
+	return nil
 }

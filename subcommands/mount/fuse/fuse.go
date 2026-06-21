@@ -36,20 +36,20 @@ import (
 	"github.com/google/uuid"
 )
 
-func ExecuteFUSE(ctx *appcontext.AppContext, repo *repository.Repository, mountpoint string, locateOptions *locate.LocateOptions, chrootfs fs.FS, allowOthers bool) (int, error) {
+func ExecuteFUSE(ctx *appcontext.AppContext, repo *repository.Repository, mountpoint string, locateOptions *locate.LocateOptions, chrootfs fs.FS, allowOthers bool) error {
 	if mountpoint == "" {
 		mountpoint = filepath.Join(ctx.CWD, uuid.New().String())
 		if err := os.MkdirAll(mountpoint, 0700); err != nil {
-			return 1, err
+			return err
 		}
 		defer os.Remove(mountpoint)
 	} else {
 		mp, err := looksLikeMountpoint(mountpoint)
 		if err != nil {
-			return 1, err
+			return err
 		}
 		if mp {
-			return 1, fmt.Errorf("%s already looks like a mountpoint; refusing to mount over it", mountpoint)
+			return fmt.Errorf("%s already looks like a mountpoint; refusing to mount over it", mountpoint)
 		}
 	}
 
@@ -63,7 +63,7 @@ func ExecuteFUSE(ctx *appcontext.AppContext, repo *repository.Repository, mountp
 	}
 	c, err := fuse.Mount(mountpoint, mountOptions...)
 	if err != nil {
-		return 1, fmt.Errorf("mount: %v", err)
+		return fmt.Errorf("mount: %v", err)
 	}
 	defer c.Close()
 
@@ -80,13 +80,13 @@ func ExecuteFUSE(ctx *appcontext.AppContext, repo *repository.Repository, mountp
 
 	err = fusefs.Serve(c, plakarfs.NewFS(ctx, repo, locateOptions, chrootfs))
 	if err != nil {
-		return 1, err
+		return err
 	}
 	<-c.Ready
 	if err := c.MountError; err != nil {
-		return 1, err
+		return err
 	}
-	return 0, nil
+	return nil
 }
 
 func looksLikeMountpoint(p string) (bool, error) {

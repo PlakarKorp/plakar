@@ -25,11 +25,11 @@ import (
 	"strings"
 
 	"github.com/PlakarKorp/kloset/compression"
+	"github.com/PlakarKorp/kloset/connectors/storage"
 	"github.com/PlakarKorp/kloset/encryption"
 	"github.com/PlakarKorp/kloset/hashing"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/resources"
-	"github.com/PlakarKorp/kloset/connectors/storage"
 	"github.com/PlakarKorp/kloset/versioning"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
@@ -37,11 +37,17 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Create{} }, subcommands.BeforeRepositoryWithStorage, "create")
+	subcommands.Register(Create, subcommands.BeforeRepositoryWithStorage, "create")
 }
 
-func (cmd *Create) Parse(ctx *appcontext.AppContext, args []string) error {
-	var allow_weak bool
+func Create(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	var (
+		allow_weak bool
+		hashalgo   string
+		plaintext  bool
+		nocompress bool
+		passphrase []byte
+	)
 
 	flags := flag.NewFlagSet("create", flag.ExitOnError)
 	flags.Usage = func() {
@@ -52,16 +58,16 @@ func (cmd *Create) Parse(ctx *appcontext.AppContext, args []string) error {
 	}
 
 	flags.BoolVar(&allow_weak, "weak-passphrase", false, "allow weak passphrase to protect the repository")
-	flags.StringVar(&cmd.Hashing, "hashing", hashing.DEFAULT_HASHING_ALGORITHM, "hashing algorithm to use for digests")
-	flags.BoolVar(&cmd.NoEncryption, "plaintext", false, "disable transparent encryption")
-	flags.BoolVar(&cmd.NoCompression, "no-compression", false, "disable transparent compression")
+	flags.StringVar(&hashalgo, "hashing", hashing.DEFAULT_HASHING_ALGORITHM, "hashing algorithm to use for digests")
+	flags.BoolVar(&plaintext, "plaintext", false, "disable transparent encryption")
+	flags.BoolVar(&nocompress, "no-compression", false, "disable transparent compression")
 	flags.Parse(args)
 
 	if flags.NArg() != 0 {
 		return fmt.Errorf("%s: too many parameters", flag.CommandLine.Name())
 	}
 
-	if hashing.GetHasher(strings.ToUpper(cmd.Hashing)) == nil {
+	if hashing.GetHasher(strings.ToUpper(hashalgo)) == nil {
 		return fmt.Errorf("%s: unknown hashing algorithm", flag.CommandLine.Name())
 	}
 
@@ -70,62 +76,50 @@ func (cmd *Create) Parse(ctx *appcontext.AppContext, args []string) error {
 		minEntropBits = 0.
 	}
 
-	if !cmd.NoEncryption {
-		var passphrase []byte
+	if !plaintext {
+		var pass []byte
 
 		if ctx.KeyFromFile == "" {
 			tmp, err := utils.GetPassphraseConfirm("repository", minEntropBits, 3)
 			if err != nil {
 				return err
 			}
-			passphrase = tmp
+			pass = tmp
 		} else {
-			passphrase = []byte(ctx.KeyFromFile)
+			pass = []byte(ctx.KeyFromFile)
 		}
 
-		if len(passphrase) == 0 {
+		if len(pass) == 0 {
 			return fmt.Errorf("can't encrypt the repository with an empty passphrase")
 		}
 
-		cmd.RepositorySecret = passphrase
+		passphrase = pass
 	}
 
-	return nil
-}
-
-type Create struct {
-	subcommands.SubcommandBase
-
-	Hashing       string
-	NoEncryption  bool
-	NoCompression bool
-}
-
-func (cmd *Create) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	storageConfiguration := storage.NewConfiguration()
-	if cmd.NoCompression {
+	if nocompress {
 		storageConfiguration.Compression = nil
 	} else {
 		storageConfiguration.Compression = compression.NewDefaultConfiguration()
 	}
 
-	hashingConfiguration, err := hashing.LookupDefaultConfiguration(strings.ToUpper(cmd.Hashing))
+	hashingConfiguration, err := hashing.LookupDefaultConfiguration(strings.ToUpper(hashalgo))
 	if err != nil {
-		return 1, err
+		return err
 	}
 	storageConfiguration.Hashing = *hashingConfiguration
 
 	var hasher hash.Hash
-	if !cmd.NoEncryption {
+	if !plaintext {
 		key, err := encryption.DeriveKey(storageConfiguration.Encryption.KDFParams,
-			cmd.RepositorySecret)
+			passphrase)
 		if err != nil {
-			return 1, err
+			return err
 		}
 
 		canary, err := encryption.DeriveCanary(storageConfiguration.Encryption, key)
 		if err != nil {
-			return 1, err
+			return err
 		}
 		storageConfiguration.Encryption.Canary = canary
 		hasher = hashing.GetMACHasher(storage.DEFAULT_HASHING_ALGORITHM, key)
@@ -136,21 +130,21 @@ func (cmd *Create) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 
 	serializedConfig, err := storageConfiguration.ToBytes()
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	rd, err := storage.Serialize(hasher, resources.RT_CONFIG, versioning.GetCurrentVersion(resources.RT_CONFIG), bytes.NewReader(serializedConfig))
 	if err != nil {
-		return 1, err
+		return err
 	}
 	wrappedConfig, err := io.ReadAll(rd)
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	if err := repo.Store().Create(ctx, wrappedConfig); err != nil {
-		return 1, err
+		return err
 	}
 
-	return 0, nil
+	return nil
 }

@@ -1,6 +1,7 @@
 package subcommands
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 
@@ -16,55 +17,43 @@ const (
 	BeforeRepositoryOpen
 )
 
-type Subcommand interface {
-	Parse(ctx *appcontext.AppContext, args []string) error
-	Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error)
-	GetRepositorySecret() []byte
-	GetFlags() CommandFlags
-	setFlags(CommandFlags)
+type ErrCode struct {
+	Err  error
+	Code int
 }
 
-type SubcommandBase struct {
-	RepositorySecret []byte
-	Flags            CommandFlags
+func NewErrCode(code int, reason string, args ...any) *ErrCode {
+	return &ErrCode{Err: fmt.Errorf(reason, args...), Code: code}
 }
 
-func (cmd *SubcommandBase) setFlags(flags CommandFlags) {
-	cmd.Flags = flags
-}
+func (e *ErrCode) Error() string  { return e.Err.Error() }
+func (e *ErrCode) String() string { return e.Error() }
 
-func (cmd *SubcommandBase) GetFlags() CommandFlags {
-	return cmd.Flags
-}
+type Subcommand func(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error
 
-func (cmd *SubcommandBase) GetRepositorySecret() []byte {
-	return cmd.RepositorySecret
-}
-
-type CmdFactory func() Subcommand
 type subcmd struct {
-	args    []string
-	nargs   int
-	flags   CommandFlags
-	factory CmdFactory
+	args  []string
+	nargs int
+	flags CommandFlags
+	fn    Subcommand
 }
 
 var subcommands []subcmd = make([]subcmd, 0)
 
-func Register(factory CmdFactory, flags CommandFlags, args ...string) {
+func Register(fn Subcommand, flags CommandFlags, args ...string) {
 	if len(args) == 0 {
 		panic("can't register commands with zero arguments")
 	}
 
 	subcommands = append(subcommands, subcmd{
-		args:    args,
-		nargs:   len(args),
-		flags:   flags,
-		factory: factory,
+		args:  args,
+		nargs: len(args),
+		flags: flags,
+		fn:    fn,
 	})
 }
 
-func Lookup(arguments []string) (Subcommand, []string, []string) {
+func Lookup(arguments []string) (Subcommand, CommandFlags, []string, []string) {
 	nargs := len(arguments)
 	for _, subcmd := range subcommands {
 		if nargs < subcmd.nargs {
@@ -75,12 +64,10 @@ func Lookup(arguments []string) (Subcommand, []string, []string) {
 			continue
 		}
 
-		cmd := subcmd.factory()
-		cmd.setFlags(subcmd.flags)
-		return cmd, arguments[:subcmd.nargs], arguments[subcmd.nargs:]
+		return subcmd.fn, subcmd.flags, arguments[:subcmd.nargs], arguments[subcmd.nargs:]
 	}
 
-	return nil, nil, arguments
+	return nil, 0, nil, arguments
 }
 
 func List() [][]string {

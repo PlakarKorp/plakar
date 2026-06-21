@@ -6,17 +6,9 @@ import (
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/subcommands"
 )
 
-type ServiceUnset struct {
-	subcommands.SubcommandBase
-
-	Service string
-	Keys    []string
-}
-
-func (cmd *ServiceUnset) Parse(ctx *appcontext.AppContext, args []string) error {
+func Unset(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
 	flags := flag.NewFlagSet("service unset", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s <name> <key>...\n", flags.Name())
@@ -27,34 +19,32 @@ func (cmd *ServiceUnset) Parse(ctx *appcontext.AppContext, args []string) error 
 		return fmt.Errorf("no service specified")
 	}
 
-	cmd.Service = flags.Arg(0)
-	cmd.Keys = flags.Args()[1:]
+	var (
+		service = flags.Arg(0)
+		keys    = flags.Args()[1:]
+	)
 
-	return nil
-}
-
-func (cmd *ServiceUnset) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	sc, err := getClient(ctx)
 	if err != nil {
-		return 1, err
+		return err
 	}
 
-	if len(cmd.Keys) == 0 {
-		return 0, nil
+	if len(keys) == 0 {
+		return nil
 	}
 
-	config, err := sc.GetServiceConfiguration(cmd.Service)
+	config, err := sc.GetServiceConfiguration(service)
 	if err != nil {
-		return 1, err
+		return err
 	}
 
-	for _, key := range cmd.Keys {
+	for _, key := range keys {
 		delete(config, key)
 	}
 
-	if err := sc.SetServiceConfiguration(cmd.Service, config); err != nil {
-		return 1, err
+	if err := sc.SetServiceConfiguration(service, config); err != nil {
+		return err
 	}
 
-	return 0, nil
+	return nil
 }

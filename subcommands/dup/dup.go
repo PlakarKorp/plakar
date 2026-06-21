@@ -27,17 +27,11 @@ import (
 	"github.com/PlakarKorp/plakar/subcommands"
 )
 
-type Dup struct {
-	subcommands.SubcommandBase
-
-	SnapshotIDS []string
-}
-
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Dup{} }, 0, "dup")
+	subcommands.Register(Dup, 0, "dup")
 }
 
-func (cmd *Dup) Parse(ctx *appcontext.AppContext, args []string) error {
+func Dup(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
 	flags := flag.NewFlagSet("dup", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS] [SNAPSHOT[:PATH]]...\n", flags.Name())
@@ -50,14 +44,8 @@ func (cmd *Dup) Parse(ctx *appcontext.AppContext, args []string) error {
 		return fmt.Errorf("at least one parameter is required")
 	}
 
-	cmd.SnapshotIDS = flags.Args()
-
-	return nil
-}
-
-func (cmd *Dup) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	errors := 0
-	for _, snapshotPath := range cmd.SnapshotIDS {
+	for _, snapshotPath := range flags.Args() {
 		snap, pathname, err := locate.OpenSnapshotByPath(repo, snapshotPath)
 		if err != nil {
 			ctx.GetLogger().Error("digest: %s: %s", pathname, err)
@@ -76,5 +64,5 @@ func (cmd *Dup) Execute(ctx *appcontext.AppContext, repo *repository.Repository)
 		snap.Close()
 	}
 
-	return 0, nil
+	return nil
 }

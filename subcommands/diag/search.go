@@ -10,22 +10,16 @@ import (
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/subcommands"
 )
 
-type DiagSearch struct {
-	subcommands.SubcommandBase
-
-	SnapshotPath string
-	Mimes        []string
-}
-
-func (cmd *DiagSearch) Parse(ctx *appcontext.AppContext, args []string) error {
+func Search(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
 	flags := flag.NewFlagSet("diag search", flag.ExitOnError)
 	flags.Parse(args)
 
-	var path string
-	var mimes []string
+	var (
+		path  string
+		mimes []string
+	)
 
 	switch flags.NArg() {
 	case 1:
@@ -37,36 +31,28 @@ func (cmd *DiagSearch) Parse(ctx *appcontext.AppContext, args []string) error {
 			flags.Name())
 	}
 
-	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.SnapshotPath = path
-	cmd.Mimes = mimes
-
-	return nil
-}
-
-func (cmd *DiagSearch) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	snap, pathname, err := locate.OpenSnapshotByPath(repo, cmd.SnapshotPath)
+	snap, pathname, err := locate.OpenSnapshotByPath(repo, path)
 	if err != nil {
-		return 1, err
+		return err
 	}
 	defer snap.Close()
 
 	opts := snapshot.SearchOpts{
 		Recursive: true,
 		Prefix:    pathname,
-		Mimes:     cmd.Mimes,
+		Mimes:     mimes,
 	}
 	it, err := snap.Search(context.Background(), &opts)
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	for entry, err := range it {
 		if err != nil {
-			return 1, err
+			return err
 		}
 		fmt.Fprintf(ctx.Stdout, "%x:%s\n", snap.Header.Identifier[0:4], entry.Path())
 	}
 
-	return 0, nil
+	return nil
 }
