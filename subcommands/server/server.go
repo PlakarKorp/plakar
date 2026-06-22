@@ -27,11 +27,17 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Server{} }, subcommands.BeforeRepositoryWithStorage, "server")
+	subcommands.Register(Server, subcommands.BeforeRepositoryWithStorage, "server")
 }
 
-func (cmd *Server) Parse(ctx *appcontext.AppContext, args []string) error {
-	var opt_allowdelete bool
+func Server(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	var (
+		listenAddr  string
+		allowDelete bool
+		cert        string
+		key         string
+	)
+
 	flags := flag.NewFlagSet("server", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS]\n", flags.Name())
@@ -39,44 +45,19 @@ func (cmd *Server) Parse(ctx *appcontext.AppContext, args []string) error {
 		flags.PrintDefaults()
 	}
 
-	flags.StringVar(&cmd.ListenAddr, "listen", "localhost:9876", "address to listen on")
-	flags.BoolVar(&opt_allowdelete, "allow-delete", false, "enable delete operations")
-	flags.StringVar(&cmd.Cert, "cert", "", "Full certificate chain")
-	flags.StringVar(&cmd.Key, "key", "", "Certificate private key")
+	flags.StringVar(&listenAddr, "listen", "localhost:9876", "address to listen on")
+	flags.BoolVar(&allowDelete, "allow-delete", false, "enable delete operations")
+	flags.StringVar(&cert, "cert", "", "Full certificate chain")
+	flags.StringVar(&key, "key", "", "Certificate private key")
 
 	flags.Parse(args)
 
-	noDelete := true
-	if opt_allowdelete {
-		noDelete = false
-	}
-
-	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.NoDelete = noDelete
-
-	return nil
-}
-
-type Server struct {
-	subcommands.SubcommandBase
-
-	ListenAddr string
-	NoDelete   bool
-	Cert       string
-	Key        string
-}
-
-func (cmd *Server) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	var protocol string
-	if cmd.Cert != "" && cmd.Key != "" {
+	if cert != "" && key != "" {
 		protocol = "https"
 	} else {
 		protocol = "http"
 	}
-	ctx.GetLogger().Info("listening on %s://%s", protocol, cmd.ListenAddr)
-	err := httpd.Server(ctx, repo, cmd.ListenAddr, cmd.NoDelete, cmd.Cert, cmd.Key)
-	if err != nil {
-		return 1, err
-	}
-	return 0, nil
+	ctx.GetLogger().Info("listening on %s://%s", protocol, listenAddr)
+	return httpd.Server(ctx, repo, listenAddr, !allowDelete, cert, key)
 }

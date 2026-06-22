@@ -30,68 +30,58 @@ import (
 	"github.com/PlakarKorp/plakar/subcommands/mount/http"
 )
 
-type Mount struct {
-	subcommands.SubcommandBase
-
-	Mountpoint    string
-	LocateOptions *locate.LocateOptions
-	AllowOthers   bool
-
-	SnapshotPath string
-
-	fs fs.FS
-}
-
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Mount{} }, 0, "mount")
+	subcommands.Register(Mount, 0, "mount")
 }
 
-func (cmd *Mount) Parse(ctx *appcontext.AppContext, args []string) error {
-	cmd.LocateOptions = locate.NewDefaultLocateOptions()
+func Mount(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	var (
+		Mountpoint    string
+		LocateOptions *locate.LocateOptions
+		AllowOthers   bool
+
+		SnapshotPath string
+	)
+
+	LocateOptions = locate.NewDefaultLocateOptions()
 
 	flags := flag.NewFlagSet("mount", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s [-to PATH] [snapshotID]\n", flags.Name())
 	}
-	flags.StringVar(&cmd.Mountpoint, "to", "", "mount point")
-	flags.BoolVar(&cmd.AllowOthers, "allow-others", false, "allow other users to access the mount")
-	cmd.LocateOptions.InstallLocateFlags(flags)
+	flags.StringVar(&Mountpoint, "to", "", "mount point")
+	flags.BoolVar(&AllowOthers, "allow-others", false, "allow other users to access the mount")
+	LocateOptions.InstallLocateFlags(flags)
 	flags.Parse(args)
-
-	cmd.RepositorySecret = ctx.GetSecret()
 
 	if flags.NArg() == 1 {
 		// snapshot(s) level, reset LocateOptions
-		cmd.LocateOptions = locate.NewDefaultLocateOptions()
-		cmd.SnapshotPath = flags.Arg(0)
+		LocateOptions = locate.NewDefaultLocateOptions()
+		SnapshotPath = flags.Arg(0)
 	}
 
-	return nil
-}
-
-func (cmd *Mount) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	var chrootFS fs.FS
 
-	if cmd.SnapshotPath != "" {
-		snap, path, err := locate.OpenSnapshotByPath(repo, cmd.SnapshotPath)
+	if SnapshotPath != "" {
+		snap, path, err := locate.OpenSnapshotByPath(repo, SnapshotPath)
 		if err != nil {
-			return 1, err
+			return err
 		}
 
 		pvfs, err := snap.Filesystem()
 		if err != nil {
-			return 1, err
+			return err
 		}
 
 		subFS, err := fs.Sub(pvfs, path[1:])
 		if err != nil {
-			return 1, err
+			return err
 		}
 		chrootFS = subFS
 	}
 
-	if strings.HasPrefix(cmd.Mountpoint, "http://") {
-		return http.ExecuteHTTP(ctx, repo, cmd.Mountpoint, cmd.LocateOptions, chrootFS)
+	if strings.HasPrefix(Mountpoint, "http://") {
+		return http.ExecuteHTTP(ctx, repo, Mountpoint, LocateOptions, chrootFS)
 	}
-	return fuse.ExecuteFUSE(ctx, repo, cmd.Mountpoint, cmd.LocateOptions, chrootFS, cmd.AllowOthers)
+	return fuse.ExecuteFUSE(ctx, repo, Mountpoint, LocateOptions, chrootFS, AllowOthers)
 }

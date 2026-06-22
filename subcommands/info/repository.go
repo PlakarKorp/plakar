@@ -9,7 +9,7 @@ import (
 	"github.com/dustin/go-humanize"
 )
 
-func (cmd *Info) executeRepository(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+func infoRepo(ctx *appcontext.AppContext, repo *repository.Repository) error {
 
 	fmt.Fprintln(ctx.Stdout, "Version:", repo.Configuration().Version)
 	fmt.Fprintln(ctx.Stdout, "Timestamp:", repo.Configuration().Timestamp)
@@ -72,18 +72,18 @@ func (cmd *Info) executeRepository(ctx *appcontext.AppContext, repo *repository.
 
 	nSnapshots, logicalSize, err := snapshot.LogicalSize(repo)
 	if err != nil {
-		return 1, fmt.Errorf("unable to calculate logical size: %w", err)
+		return fmt.Errorf("unable to calculate logical size: %w", err)
 	}
 
 	fmt.Fprintln(ctx.Stdout, "Snapshots:", nSnapshots)
 
 	storageSize, err := repo.Store().Size(ctx)
 	if err != nil {
-		return 1, fmt.Errorf("unable to compute storage size: %w", err)
+		return fmt.Errorf("unable to compute storage size: %w", err)
 	}
 
 	fmt.Fprintf(ctx.Stdout, "Storage size: %s (%d bytes)\n", humanize.IBytes(uint64(storageSize)), uint64(storageSize))
 	fmt.Fprintf(ctx.Stdout, "Logical size: %s (%d bytes)\n", humanize.IBytes(uint64(logicalSize)), logicalSize)
 
-	return 0, nil
+	return nil
 }

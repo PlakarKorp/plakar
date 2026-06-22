@@ -6,47 +6,33 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/repository"
-	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/PlakarKorp/plakar/appcontext"
 )
 
-type DiagPackfile struct {
-	subcommands.SubcommandBase
-
-	Args []string
-}
-
-func (cmd *DiagPackfile) Parse(ctx *appcontext.AppContext, args []string) error {
+func Packfile(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
 	flags := flag.NewFlagSet("diag packfile", flag.ExitOnError)
 	flags.Parse(args)
 
-	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.Args = flags.Args()[0:]
-
-	return nil
-}
-
-func (cmd *DiagPackfile) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	if len(cmd.Args) == 0 {
+	if len(flags.Args()[0:]) == 0 {
 		packfiles, err := repo.GetPackfiles()
 		if err != nil {
-			return 1, err
+			return err
 		}
 
 		for _, packfile := range packfiles {
 			fmt.Fprintf(ctx.Stdout, "%x\n", packfile)
 		}
 	} else {
-		for _, arg := range cmd.Args {
+		for _, arg := range flags.Args()[0:] {
 			// convert arg to [32]byte
 			if len(arg) != 64 {
-				return 1, fmt.Errorf("invalid packfile hash: %s", arg)
+				return fmt.Errorf("invalid packfile hash: %s", arg)
 			}
 
 			b, err := hex.DecodeString(arg)
 			if err != nil {
-				return 1, fmt.Errorf("invalid packfile hash: %s", arg)
+				return fmt.Errorf("invalid packfile hash: %s", arg)
 			}
 
 			// Convert the byte slice to a [32]byte
@@ -55,7 +41,7 @@ func (cmd *DiagPackfile) Execute(ctx *appcontext.AppContext, repo *repository.Re
 
 			p, err := repo.GetPackfile(byteArray)
 			if err != nil {
-				return 1, err
+				return err
 			}
 
 			fmt.Fprintf(ctx.Stdout, "Version: %s\n", p.Footer.Version)
@@ -68,5 +54,6 @@ func (cmd *DiagPackfile) Execute(ctx *appcontext.AppContext, repo *repository.Re
 			}
 		}
 	}
-	return 0, nil
+
+	return nil
 }

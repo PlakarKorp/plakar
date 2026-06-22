@@ -13,16 +13,9 @@ import (
 	"github.com/PlakarKorp/kloset/resources"
 	"github.com/PlakarKorp/kloset/snapshot/vfs"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/subcommands"
 )
 
-type DiagXattr struct {
-	subcommands.SubcommandBase
-
-	SnapshotPath string
-}
-
-func (cmd *DiagXattr) Parse(ctx *appcontext.AppContext, args []string) error {
+func Xattr(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
 	flags := flag.NewFlagSet("diag xattr", flag.ExitOnError)
 	flags.Parse(args)
 
@@ -30,15 +23,9 @@ func (cmd *DiagXattr) Parse(ctx *appcontext.AppContext, args []string) error {
 		return fmt.Errorf("usage: %s xattr SNAPSHOT[:PATH]", flags.Name())
 	}
 
-	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.SnapshotPath = flags.Args()[0]
-	return nil
-}
-
-func (cmd *DiagXattr) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	snap, pathname, err := locate.OpenSnapshotByPath(repo, cmd.SnapshotPath)
+	snap, pathname, err := locate.OpenSnapshotByPath(repo, flags.Args()[0])
 	if err != nil {
-		return 1, err
+		return err
 	}
 	defer snap.Close()
 
@@ -51,23 +38,23 @@ func (cmd *DiagXattr) Execute(ctx *appcontext.AppContext, repo *repository.Repos
 
 	rd, err := repo.GetBlob(resources.RT_XATTR_BTREE, snap.Header.GetSource(0).VFS.Xattrs)
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	store := repository.NewRepositoryStore[string, objects.MAC](repo, resources.RT_XATTR_NODE)
 	tree, err := btree.Deserialize(rd, store, vfs.PathCmp)
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	fs, err := snap.Filesystem()
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	it, err := tree.ScanFrom(pathname)
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	for it.Next() {
@@ -78,20 +65,20 @@ func (cmd *DiagXattr) Execute(ctx *appcontext.AppContext, repo *repository.Repos
 
 		xattr, err := fs.ResolveXattr(xattrmac)
 		if err != nil {
-			return 1, err
+			return err
 		}
 
 		rd := vfs.NewObjectReader(repo, xattr.ResolvedObject, xattr.Size, -1)
 		value, err := io.ReadAll(rd)
 		if err != nil {
-			return 1, err
+			return err
 		}
 
 		fmt.Fprintln(ctx.Stdout, xattr.Path, xattr.Name, string(value))
 	}
 	if err := it.Err(); err != nil {
-		return 1, err
+		return err
 	}
 
-	return 0, nil
+	return nil
 }

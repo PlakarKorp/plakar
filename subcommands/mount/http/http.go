@@ -42,7 +42,7 @@ import (
 type ListFn func(ctx context.Context, w http.ResponseWriter, r *http.Request)
 type OpenFn func(ctx context.Context, snapshot string) (fs.FS, error)
 
-func ExecuteHTTP(ctx *appcontext.AppContext, repo *repository.Repository, mountpoint string, locateOptions *locate.LocateOptions, chrootfs fs.FS) (int, error) {
+func ExecuteHTTP(ctx *appcontext.AppContext, repo *repository.Repository, mountpoint string, locateOptions *locate.LocateOptions, chrootfs fs.FS) error {
 	addr := strings.TrimPrefix(mountpoint, "http://")
 
 	var handler http.Handler
@@ -126,12 +126,12 @@ func ExecuteHTTP(ctx *appcontext.AppContext, repo *repository.Repository, mountp
 		defer cancel()
 		_ = srv.Shutdown(shutdownCtx)
 		<-errCh // wait for ListenAndServe to return
-		return 0, nil
+		return nil
 	case err := <-errCh:
 		if err != nil {
-			return 1, err
+			return err
 		}
-		return 0, nil
+		return nil
 	}
 }
 

@@ -8,17 +8,10 @@ import (
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
 )
 
-type ConfigPolicyCmd struct {
-	subcommands.SubcommandBase
-
-	args []string
-}
-
-func (cmd *ConfigPolicyCmd) Parse(ctx *appcontext.AppContext, args []string) error {
+func ConfigPolicy(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
 	flags := flag.NewFlagSet("policy", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s\n", flags.Name())
@@ -34,16 +27,8 @@ func (cmd *ConfigPolicyCmd) Parse(ctx *appcontext.AppContext, args []string) err
 	if flags.NArg() == 0 {
 		return fmt.Errorf("no action specified")
 	}
-	cmd.args = flags.Args()
-	return nil
-}
 
-func (cmd *ConfigPolicyCmd) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	err := dispatchPolicy(ctx, "policy", cmd.args[0], cmd.args[1:])
-	if err != nil {
-		return 1, err
-	}
-	return 0, nil
+	return dispatchPolicy(ctx, "policy", flags.Args()[0], flags.Args()[1:])
 }
 
 func dispatchPolicy(ctx *appcontext.AppContext, cmd, subcmd string, args []string) error {

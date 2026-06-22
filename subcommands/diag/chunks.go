@@ -7,16 +7,9 @@ import (
 	"github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/subcommands"
 )
 
-type DiagChunks struct {
-	subcommands.SubcommandBase
-
-	SnapshotPath string
-}
-
-func (cmd *DiagChunks) Parse(ctx *appcontext.AppContext, args []string) error {
+func Chunks(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
 	flags := flag.NewFlagSet("diag chunks", flag.ExitOnError)
 	flags.Parse(args)
 
@@ -24,31 +17,24 @@ func (cmd *DiagChunks) Parse(ctx *appcontext.AppContext, args []string) error {
 		return fmt.Errorf("usage: %s chunks SNAPSHOT:PATH", flags.Name())
 	}
 
-	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.SnapshotPath = flags.Args()[0]
-
-	return nil
-}
-
-func (cmd *DiagChunks) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	snap, pathname, err := locate.OpenSnapshotByPath(repo, cmd.SnapshotPath)
+	snap, pathname, err := locate.OpenSnapshotByPath(repo, flags.Args()[0])
 	if err != nil {
-		return 1, err
+		return err
 	}
 	defer snap.Close()
 
 	fs, err := snap.Filesystem()
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	entry, err := fs.GetEntry(pathname)
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	if entry.ResolvedObject == nil {
-		return 1, fmt.Errorf("no object for path: %s", pathname)
+		return fmt.Errorf("no object for path: %s", pathname)
 	}
 
 	var offset int64
@@ -58,5 +44,5 @@ func (cmd *DiagChunks) Execute(ctx *appcontext.AppContext, repo *repository.Repo
 		offset += int64(chunk.Length)
 	}
 
-	return 0, nil
+	return nil
 }

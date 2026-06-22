@@ -11,17 +11,10 @@ import (
 	"github.com/PlakarKorp/kloset/resources"
 	"github.com/PlakarKorp/kloset/snapshot/vfs"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/dustin/go-humanize"
 )
 
-type DiagVFS struct {
-	subcommands.SubcommandBase
-
-	SnapshotPath string
-}
-
-func (cmd *DiagVFS) Parse(ctx *appcontext.AppContext, args []string) error {
+func VFS(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
 	flags := flag.NewFlagSet("diag vfs", flag.ExitOnError)
 	flags.Parse(args)
 
@@ -29,28 +22,21 @@ func (cmd *DiagVFS) Parse(ctx *appcontext.AppContext, args []string) error {
 		return fmt.Errorf("usage: %s vfs SNAPSHOT[:PATH]", flags.Name())
 	}
 
-	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.SnapshotPath = flags.Args()[0]
-
-	return nil
-}
-
-func (cmd *DiagVFS) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	snap1, pathname, err := locate.OpenSnapshotByPath(repo, cmd.SnapshotPath)
+	snap1, pathname, err := locate.OpenSnapshotByPath(repo, flags.Args()[0])
 	if err != nil {
-		return 1, err
+		return err
 	}
 	defer snap1.Close()
 
 	fs, err := snap1.Filesystem()
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	pathname = path.Clean(pathname)
 	entry, err := fs.GetEntry(pathname)
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	if entry.Stat().Mode().IsDir() {
@@ -92,25 +78,25 @@ func (cmd *DiagVFS) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 	if summary == nil && entry.IsDir() {
 		tree, err := snap1.SummaryIdx()
 		if err != nil {
-			return 1, err
+			return err
 		}
 
 		key, found, err := tree.Find(pathname)
 		if err != nil {
-			return 1, err
+			return err
 		}
 		if !found {
-			return 1, fmt.Errorf("could not resolve pathname: %s", pathname)
+			return fmt.Errorf("could not resolve pathname: %s", pathname)
 		}
 
 		serializedSummary, err := repo.GetBlobBytes(resources.RT_VFS_SUMMARY, key)
 		if err != nil {
-			return 1, err
+			return err
 		}
 
 		summary, err = vfs.SummaryFromBytes(serializedSummary)
 		if err != nil {
-			return 1, err
+			return err
 		}
 	}
 
@@ -176,7 +162,7 @@ func (cmd *DiagVFS) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 	if entry.IsDir() {
 		iter, err := entry.Getdents(fs)
 		if err != nil {
-			return 1, err
+			return err
 		}
 		offset := 0
 		for child := range iter {
@@ -198,10 +184,10 @@ func (cmd *DiagVFS) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 	offset := 0
 	for entry, err := range fs.Errors(pathname) {
 		if err != nil {
-			return 1, fmt.Errorf("failure in scanning errors: %w", err)
+			return fmt.Errorf("failure in scanning errors: %w", err)
 		}
 		fmt.Fprintf(ctx.Stdout, "Error[%d]: %s: %s\n", offset, entry.Name, entry.Error)
 		offset++
 	}
-	return 0, nil
+	return nil
 }

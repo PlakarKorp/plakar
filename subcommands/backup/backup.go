@@ -43,32 +43,8 @@ import (
 	"github.com/PlakarKorp/plakar/utils"
 )
 
-type Backup struct {
-	subcommands.SubcommandBase
-
-	Job                 string
-	Tags                []string
-	Excludes            []string
-	Sources             []string
-	OptCheck            bool
-	Opts                map[string]string
-	DryRun              bool
-	PackfileTempStorage string
-	ForcedTimestamp     time.Time
-	PreHook             string
-	PostHook            string
-	FailHook            string
-	NoXattr             bool
-	Cache               string
-	NoProgress          bool
-	Name                string
-	Category            string
-	Environment         string
-	Perimeter           string
-}
-
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Backup{} }, 0, "backup")
+	subcommands.Register(Backup, 0, "backup")
 }
 
 type ignoreFlags []string
@@ -106,14 +82,31 @@ func (e *tagFlags) asList() []string {
 	return strings.Split(tags, ",")
 }
 
-func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
+func Backup(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	var (
+		job            string
+		check          bool
+		opts           = make(map[string]string)
+		dryRun         bool
+		packfiles      string
+		forceTimestamp time.Time
+		prehook        string
+		posthook       string
+		failhook       string
+		noXattr        bool
+		cache          string
+		noProgress     bool
+		name           string
+		category       string
+		environment    string
+		perimeter      string
+	)
+
 	var opt_ignore_files ignoreFlags
 	var opt_ignore ignoreFlags
 	var opt_tags tagFlags
 
 	excludes := []string{}
-
-	cmd.Opts = make(map[string]string)
 
 	flags := flag.NewFlagSet("backup", flag.ExitOnError)
 	flags.Usage = func() {
@@ -124,26 +117,28 @@ func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
 	}
 
 	flags.Var(&opt_tags, "tag", "comma-separated list of tags to apply to the snapshot")
-	flags.StringVar(&cmd.Name, "name", "default", "backup name")
-	flags.StringVar(&cmd.Category, "category", "", "backup category")
-	flags.StringVar(&cmd.Environment, "environment", "", "backup environment")
-	flags.StringVar(&cmd.Perimeter, "perimeter", "", "backup perimeter")
-	flags.StringVar(&cmd.Job, "job", "", "backup job")
+	flags.StringVar(&name, "name", "default", "backup name")
+	flags.StringVar(&category, "category", "", "backup category")
+	flags.StringVar(&environment, "environment", "", "backup environment")
+	flags.StringVar(&perimeter, "perimeter", "", "backup perimeter")
+	flags.StringVar(&job, "job", "", "backup job")
 	flags.Var(&opt_ignore_files, "ignore-file", "path to a file containing newline-separated gitignore patterns, treated as -ignore; can be specified multiple times")
 	flags.Var(&opt_ignore, "ignore", "gitignore pattern to exclude files, can be specified multiple times to add several exclusion patterns")
-	flags.StringVar(&cmd.PackfileTempStorage, "packfiles", "", "memory or a path to a directory to store temporary packfiles")
-	flags.BoolVar(&cmd.OptCheck, "check", false, "check the snapshot after creating it")
-	flags.Var(utils.NewOptsFlag(cmd.Opts), "o", "specify extra importer options")
-	flags.BoolVar(&cmd.DryRun, "dry-run", false, "do not actually perform a backup")
-	flags.BoolVar(&cmd.NoXattr, "no-xattr", false, "do not back up extended attributes")
-	flags.StringVar(&cmd.Cache, "cache", "vfs", "path to store vfs cache, 'no' for uncached and 'vfs' for the default in memory cache")
-	flags.BoolVar(&cmd.NoProgress, "no-progress", false, "do not display progress")
+	flags.StringVar(&packfiles, "packfiles", "", "memory or a path to a directory to store temporary packfiles")
+	flags.BoolVar(&check, "check", false, "check the snapshot after creating it")
+	flags.Var(utils.NewOptsFlag(opts), "o", "specify extra importer options")
+	flags.BoolVar(&dryRun, "dry-run", false, "do not actually perform a backup")
+	flags.BoolVar(&noXattr, "no-xattr", false, "do not back up extended attributes")
+	flags.StringVar(&cache, "cache", "vfs", "path to store vfs cache, 'no' for uncached and 'vfs' for the default in memory cache")
+	flags.BoolVar(&noProgress, "no-progress", false, "do not display progress")
+	flags.StringVar(&prehook, "pre-hook", "", "pre hook command")
+	flags.StringVar(&posthook, "post-hook", "", "post hook command")
 
-	flags.Var(locate.NewTimeFlag(&cmd.ForcedTimestamp), "force-timestamp", "force a timestamp")
+	flags.Var(locate.NewTimeFlag(&forceTimestamp), "force-timestamp", "force a timestamp")
 	flags.Parse(args)
 
-	if !cmd.ForcedTimestamp.IsZero() {
-		if cmd.ForcedTimestamp.After(time.Now()) {
+	if !forceTimestamp.IsZero() {
+		if forceTimestamp.After(time.Now()) {
 			return fmt.Errorf("forced timestamp cannot be in the future")
 		}
 	}
@@ -162,56 +157,40 @@ func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
 		excludes = append(excludes, item)
 	}
 
-	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.Excludes = excludes
-	cmd.Tags = opt_tags.asList()
-
-	// If no tags were provided via CLI flag, check PLAKAR_TAGS env var
-	if len(cmd.Tags) == 0 {
+	tags := opt_tags.asList()
+	if len(tags) == 0 {
 		if envTags, ok := os.LookupEnv("PLAKAR_TAGS"); ok && envTags != "" {
 			parts := strings.Split(envTags, ",")
-			var tags []string
 			for _, t := range parts {
 				t = strings.TrimSpace(t)
 				if t != "" {
 					tags = append(tags, t)
 				}
 			}
-			cmd.Tags = tags
 		}
 	}
 
-	cmd.Sources = flags.Args()
-
-	if len(cmd.Sources) == 0 {
-		cmd.Sources = append(cmd.Sources, "fs:"+ctx.CWD)
+	Sources := flags.Args()
+	if len(Sources) == 0 {
+		Sources = append(Sources, "fs:"+ctx.CWD)
 	}
 
-	return nil
-}
-
-func (cmd *Backup) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	ret, err, _, _ := cmd.DoBackup(ctx, repo)
-	return ret, err
-}
-
-func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Repository) (int, error, objects.MAC, error) {
 	emitter := repo.Emitter("import")
 	defer emitter.Close()
 
-	opts := &snapshot.BuilderOptions{
-		Name:           cmd.Name,
-		Tags:           cmd.Tags,
-		Job:            cmd.Job,
-		Category:       cmd.Category,
-		Environment:    cmd.Environment,
-		Perimeter:      cmd.Perimeter,
-		NoXattr:        cmd.NoXattr,
+	builderOpts := &snapshot.BuilderOptions{
+		Name:           name,
+		Tags:           tags,
+		Job:            job,
+		Category:       category,
+		Environment:    environment,
+		Perimeter:      perimeter,
+		NoXattr:        noXattr,
 		StateRefresher: stateRefresher(ctx, repo),
 	}
 
-	if !cmd.ForcedTimestamp.IsZero() {
-		opts.ForcedTimestamp = cmd.ForcedTimestamp
+	if !forceTimestamp.IsZero() {
+		builderOpts.ForcedTimestamp = forceTimestamp
 	}
 
 	sourcesPerOrig := make(map[string][]importer.Importer)
@@ -219,7 +198,7 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 	// otherwise it makes plugin development harder than needed.
 	sourcesPerOrigForStats := make(map[string][]importer.Importer)
 
-	for _, source := range cmd.Sources {
+	for _, source := range Sources {
 		scanDir := "fs:" + ctx.CWD
 		if source != "" {
 			scanDir = source
@@ -227,15 +206,15 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 
 		// We are going to mutate this, so do a copy
 		cmdOptsCopy := make(map[string]string)
-		maps.Copy(cmdOptsCopy, cmd.Opts)
+		maps.Copy(cmdOptsCopy, opts)
 
 		if strings.HasPrefix(scanDir, "@") {
 			remote, ok := ctx.Config.GetSource(scanDir[1:])
 			if !ok {
-				return 1, fmt.Errorf("could not resolve importer: %s", scanDir), objects.MAC{}, nil
+				return fmt.Errorf("could not resolve importer: %s", scanDir)
 			}
 			if _, ok := remote["location"]; !ok {
-				return 1, fmt.Errorf("could not resolve importer location: %s", scanDir), objects.MAC{}, nil
+				return fmt.Errorf("could not resolve importer location: %s", scanDir)
 			} else {
 				// inherit all the options -- but the ones
 				// specified in the command line takes the
@@ -253,17 +232,17 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 			cmdOptsCopy["location"] = scanDir
 		}
 
-		excludes := exclude.NewRuleSet()
-		if err := excludes.AddRulesFromArray(cmd.Excludes); err != nil {
-			return 1, fmt.Errorf("failed to setup exclude rules: %w", err), objects.MAC{}, nil
+		e := exclude.NewRuleSet()
+		if err := e.AddRulesFromArray(excludes); err != nil {
+			return fmt.Errorf("failed to setup exclude rules: %w", err)
 		}
 
 		importerOpts := ctx.ImporterOpts()
-		importerOpts.Excludes = cmd.Excludes
+		importerOpts.Excludes = excludes
 
 		imp, err := importer.NewImporter(ctx.GetInner(), importerOpts, cmdOptsCopy)
 		if err != nil {
-			return 1, fmt.Errorf("failed to create an importer for %s: %s", scanDir, err), objects.MAC{}, nil
+			return fmt.Errorf("failed to create an importer for %s: %s", scanDir, err)
 		}
 		defer imp.Close(ctx)
 
@@ -275,10 +254,10 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		importerKey := typ + ":" + orig
 		sourcesPerOrig[importerKey] = append(sourcesPerOrig[importerKey], imp)
 
-		if !cmd.NoProgress && (imp.Flags()&location.FLAG_STREAM) == 0 {
+		if !noProgress && (imp.Flags()&location.FLAG_STREAM) == 0 {
 			imp, err := importer.NewImporter(ctx.GetInner(), importerOpts, cmdOptsCopy)
 			if err != nil {
-				return 1, fmt.Errorf("failed to create an importer for %s: %s", scanDir, err), objects.MAC{}, nil
+				return fmt.Errorf("failed to create an importer for %s: %s", scanDir, err)
 			}
 			defer imp.Close(ctx)
 			sourcesPerOrigForStats[importerKey] = append(sourcesPerOrigForStats[importerKey], imp)
@@ -287,57 +266,57 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 
 	// XXX - until we unlock multi-source
 	if len(sourcesPerOrig) != 1 {
-		return 1, fmt.Errorf("multi-source backup not supported yet"), objects.MAC{}, nil
+		return fmt.Errorf("multi-source backup not supported yet")
 	}
 
-	if cmd.PackfileTempStorage == "memory" {
-		cmd.PackfileTempStorage = ""
+	if packfiles == "memory" {
+		packfiles = ""
 	} else {
-		tmpDir, err := os.MkdirTemp(cmd.PackfileTempStorage, "plakar-backup-"+repo.Configuration().RepositoryID.String()+"-*")
+		tmpDir, err := os.MkdirTemp(packfiles, "plakar-backup-"+repo.Configuration().RepositoryID.String()+"-*")
 		if err != nil {
-			return 1, err, objects.NilMac, nil
+			return err
 		}
-		cmd.PackfileTempStorage = tmpDir
-		defer os.RemoveAll(cmd.PackfileTempStorage)
+		packfiles = tmpDir
+		defer os.RemoveAll(packfiles)
 	}
 
 	// Execute pre-backup hook
-	if err := executeHook(ctx, cmd.PreHook); err != nil {
-		return 1, fmt.Errorf("pre-backup hook failed: %w", err), objects.MAC{}, nil
+	if err := executeHook(ctx, prehook); err != nil {
+		return fmt.Errorf("pre-backup hook failed: %w", err)
 	}
 
-	snap, err := snapshot.Create(repo, repository.DefaultType, cmd.PackfileTempStorage, objects.NilMac, opts)
+	snap, err := snapshot.Create(repo, repository.DefaultType, packfiles, objects.NilMac, builderOpts)
 	if err != nil {
 		ctx.GetLogger().Error("%s", err)
-		return 1, err, objects.MAC{}, nil
+		return err
 	}
 	defer snap.Close()
 
-	if cmd.Job != "" {
-		snap.Header.Job = cmd.Job
+	if job != "" {
+		snap.Header.Job = job
 	}
 
 	// Actual import of sources.
 	for key, sourceImporters := range sourcesPerOrig {
 		source, err := snapshot.NewSource(repo.AppContext(), sourceImporters...)
 		if err != nil {
-			return 1, err, objects.NilMac, nil
+			return err
 		}
 
-		if err := source.SetExcludes(cmd.Excludes); err != nil {
-			return 1, err, objects.MAC{}, nil
+		if err := source.SetExcludes(excludes); err != nil {
+			return err
 		}
 
-		if cmd.DryRun {
+		if dryRun {
 			if err := dryrun(ctx, source, emitter); err != nil {
-				return 1, err, objects.MAC{}, nil
+				return err
 			}
-			return 0, nil, objects.MAC{}, nil
+			return nil
 		}
 
 		var parentVFS *vfs.Filesystem
 
-		if cmd.Cache == "vfs" {
+		if cache == "vfs" {
 			parentID, _, err := locate.Match(repo, &locate.LocateOptions{
 				Filters: locate.LocateFilters{
 					Latest: true,
@@ -353,7 +332,7 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 				},
 			})
 			if err != nil {
-				return 1, nil, objects.MAC{}, err
+				return nil
 			}
 
 			if len(parentID) != 0 {
@@ -372,14 +351,14 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		}
 		snap.WithVFSCache(parentVFS)
 
-		if !cmd.NoProgress && (source.Flags()&location.FLAG_STREAM) == 0 {
+		if !noProgress && (source.Flags()&location.FLAG_STREAM) == 0 {
 			source, err := snapshot.NewSource(repo.AppContext(), sourcesPerOrigForStats[key]...)
 			if err != nil {
-				return 1, err, objects.NilMac, nil
+				return err
 			}
 
-			if err := source.SetExcludes(cmd.Excludes); err != nil {
-				return 1, err, objects.MAC{}, nil
+			if err := source.SetExcludes(excludes); err != nil {
+				return err
 			}
 
 			go func() {
@@ -395,24 +374,24 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		}
 
 		if err := snap.Backup(source); err != nil {
-			if err := executeHook(ctx, cmd.FailHook); err != nil {
+			if err := executeHook(ctx, failhook); err != nil {
 				ctx.GetLogger().Warn("post-backup fail hook failed: %s", err)
 			}
-			return 1, fmt.Errorf("failed to backup source: %w", err), objects.MAC{}, nil
+			return fmt.Errorf("failed to backup source: %w", err)
 		}
 	}
 
 	if err := snap.Commit(); err != nil {
-		if err := executeHook(ctx, cmd.FailHook); err != nil {
+		if err := executeHook(ctx, failhook); err != nil {
 			ctx.GetLogger().Warn("post-backup fail hook failed: %s", err)
 		}
-		return 1, fmt.Errorf("failed to commit snapshot: %w", err), objects.MAC{}, nil
+		return fmt.Errorf("failed to commit snapshot: %w", err)
 	}
 
-	if cmd.OptCheck {
+	if check {
 		_, err := cached.RebuildStateFromStore(ctx, repo.Configuration().RepositoryID, ctx.StoreConfig, false)
 		if err != nil {
-			return 1, fmt.Errorf("failed to rebuild state %w", err), objects.MAC{}, nil
+			return fmt.Errorf("failed to rebuild state %w", err)
 		}
 
 		checkOptions := &snapshot.CheckOptions{
@@ -421,41 +400,32 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 
 		checkSnap, err := snapshot.Load(repo, snap.Header.Identifier)
 		if err != nil {
-			return 1, fmt.Errorf("failed to load snapshot: %w", err), objects.MAC{}, nil
+			return fmt.Errorf("failed to load snapshot: %w", err)
 		}
 		defer checkSnap.Close()
 
 		checkCache, err := ctx.GetCache().Check()
 		if err != nil {
-			return 1, err, objects.MAC{}, nil
+			return err
 		}
 		defer checkCache.Close()
 
 		checkSnap.SetCheckCache(checkCache)
 
 		if err := checkSnap.Check("/", checkOptions); err != nil {
-			if err := executeHook(ctx, cmd.FailHook); err != nil {
+			if err := executeHook(ctx, failhook); err != nil {
 				ctx.GetLogger().Warn("post-backup fail hook failed: %s", err)
 			}
-			return 1, fmt.Errorf("failed to check snapshot: %w", err), objects.MAC{}, nil
+			return fmt.Errorf("failed to check snapshot: %w", err)
 		}
 	}
 
 	// Execute post-backup hook
-	if err := executeHook(ctx, cmd.PostHook); err != nil {
+	if err := executeHook(ctx, posthook); err != nil {
 		ctx.GetLogger().Warn("post-backup hook failed: %s", err)
 	}
 
-	totalErrors := uint64(0)
-	for i := 0; i < len(snap.Header.Sources); i++ {
-		s := snap.Header.GetSource(i)
-		totalErrors += s.Summary.Directory.Errors + s.Summary.Below.Errors
-	}
-	var warning error
-	if totalErrors > 0 {
-		warning = fmt.Errorf("%d errors during backup", totalErrors)
-	}
-	return 0, nil, snap.Header.Identifier, warning
+	return nil
 }
 
 func LoadIgnoreFile(filename string) ([]string, error) {

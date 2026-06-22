@@ -14,10 +14,10 @@ import (
 	"github.com/google/uuid"
 )
 
-func (cmd *Info) executeSnapshot(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	snap, _, err := locate.OpenSnapshotByPath(repo, cmd.SnapshotID)
+func infoSnapshot(ctx *appcontext.AppContext, repo *repository.Repository, snapshotID string) error {
+	snap, _, err := locate.OpenSnapshotByPath(repo, snapshotID)
 	if err != nil {
-		return 1, err
+		return err
 	}
 	defer snap.Close()
 
@@ -95,5 +95,5 @@ func (cmd *Info) executeSnapshot(ctx *appcontext.AppContext, repo *repository.Re
 	fmt.Fprintf(ctx.Stdout, " - MIMEOther: %d\n", header.GetSource(0).Summary.Directory.MIMEOther+header.GetSource(0).Summary.Below.MIMEOther)
 
 	fmt.Fprintf(ctx.Stdout, " - Errors: %d\n", header.GetSource(0).Summary.Directory.Errors+header.GetSource(0).Summary.Below.Errors)
-	return 0, nil
+	return nil
 }

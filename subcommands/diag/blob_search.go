@@ -11,16 +11,9 @@ import (
 	"github.com/PlakarKorp/kloset/repository/state"
 	"github.com/PlakarKorp/kloset/resources"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/subcommands"
 )
 
-type DiagBlobSearch struct {
-	subcommands.SubcommandBase
-
-	ObjectID string
-}
-
-func (cmd *DiagBlobSearch) Parse(ctx *appcontext.AppContext, args []string) error {
+func BlobSearch(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
 	flags := flag.NewFlagSet("diag packfile", flag.ExitOnError)
 	flags.Parse(args)
 
@@ -28,35 +21,30 @@ func (cmd *DiagBlobSearch) Parse(ctx *appcontext.AppContext, args []string) erro
 		return fmt.Errorf("usage: %s blobsearch OBJECT", flags.Name())
 	}
 
-	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.ObjectID = flags.Args()[0]
+	objectID := flags.Args()[0]
 
-	return nil
-}
-
-func (cmd *DiagBlobSearch) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	fmt.Fprintf(ctx.Stdout, "Warning this command is slow and expensive. Use with caution.\n")
 
-	if len(cmd.ObjectID) != 64 {
-		return 1, fmt.Errorf("invalid object hash: %s", cmd.ObjectID)
+	if len(objectID) != 64 {
+		return fmt.Errorf("invalid object hash: %s", objectID)
 	}
 
-	b, err := hex.DecodeString(cmd.ObjectID)
+	b, err := hex.DecodeString(objectID)
 	if err != nil {
-		return 1, fmt.Errorf("invalid object hash: %s", cmd.ObjectID)
+		return fmt.Errorf("invalid object hash: %s", objectID)
 	}
 
 	needleMAC := objects.MAC(b)
 
 	packfiles, err := repo.GetPackfiles()
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	for _, packfileMac := range packfiles {
 		p, err := repo.GetPackfile(packfileMac)
 		if err != nil {
-			return 1, err
+			return err
 		}
 
 		for _, entry := range p.Index {
@@ -65,26 +53,25 @@ func (cmd *DiagBlobSearch) Execute(ctx *appcontext.AppContext, repo *repository.
 				if entry.Type == resources.RT_OBJECT {
 					rd, err := repo.GetPackfileBlob(state.Location{Packfile: packfileMac, Offset: entry.Offset, Length: entry.Length})
 					if err != nil {
-						return 1, err
+						return err
 					}
 
 					blob, err := io.ReadAll(rd)
 					if err != nil {
-						return 1, err
+						return err
 					}
 
 					object, err := objects.NewObjectFromBytes(blob)
 					if err != nil {
-						return 1, err
+						return err
 					}
 
 					fmt.Fprintf(ctx.Stdout, "object: %x\n", object.ContentMAC)
 					fmt.Fprintln(ctx.Stdout, "  type:", object.ContentType)
 				}
 			}
-
 		}
 	}
 
-	return 0, nil
+	return nil
 }

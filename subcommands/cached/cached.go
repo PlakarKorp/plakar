@@ -42,13 +42,10 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Cached{} },
-		subcommands.BeforeRepositoryOpen, "cached")
+	subcommands.Register(Cached, subcommands.BeforeRepositoryOpen, "cached")
 }
 
-type Cached struct {
-	subcommands.SubcommandBase
-
+type Cmd struct {
 	socketPath string
 	listener   net.Listener
 
@@ -70,9 +67,19 @@ const (
 	jobDone = -1
 )
 
-func (cmd *Cached) Parse(ctx *appcontext.AppContext, args []string) error {
+func NewCmd(socketpath string, teardown time.Duration) *Cmd {
+	return &Cmd{
+		socketPath:  socketpath,
+		teardown:    teardown,
+		jobQueue:    make(map[uuid.UUID]chan jobReq),
+		runningJobs: make(chan int),
+	}
+}
+
+func Cached(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
 	var opt_foreground bool
 	var opt_logfile string
+	var opt_teardown time.Duration
 
 	flags := flag.NewFlagSet("cached", flag.ExitOnError)
 	flags.StringVar(&opt_logfile, "log", "", "log file")
@@ -83,7 +90,7 @@ func (cmd *Cached) Parse(ctx *appcontext.AppContext, args []string) error {
 		flags.PrintDefaults()
 	}
 
-	flags.DurationVar(&cmd.teardown, "teardown", 5*time.Second, "delay before tearing down cached")
+	flags.DurationVar(&opt_teardown, "teardown", 5*time.Second, "delay before tearing down cached")
 	flags.Parse(args)
 	if flags.NArg() != 0 {
 		return fmt.Errorf("too many arguments")
@@ -108,16 +115,10 @@ func (cmd *Cached) Parse(ctx *appcontext.AppContext, args []string) error {
 		}
 	}
 
-	cmd.socketPath = filepath.Join(ctx.CacheDir, "cached.sock")
-
-	cmd.jobMtx = sync.Mutex{}
-	cmd.jobQueue = make(map[uuid.UUID]chan jobReq)
-	cmd.runningJobs = make(chan int)
-
-	return nil
+	return NewCmd(filepath.Join(ctx.CacheDir, "cached.sock"), opt_teardown).Run(ctx)
 }
 
-func (cmd *Cached) Close() error {
+func (cmd *Cmd) Close() error {
 	if cmd.listener != nil {
 		cmd.listener.Close()
 	}
@@ -127,13 +128,13 @@ func (cmd *Cached) Close() error {
 	return nil
 }
 
-func (cmd *Cached) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+func (cmd *Cmd) Run(ctx *appcontext.AppContext) error {
 	// Since we are detaching, we lose all stack traces, with no possibility
 	// to recover them, try to log them to a known location.
 	crashLog := filepath.Join(ctx.GetInner().CacheDir, "crash-cached.log")
 	f, err := os.OpenFile(crashLog, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	debug.SetCrashOutput(f, debug.CrashOptions{})
@@ -142,11 +143,11 @@ func (cmd *Cached) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 	f.Close()
 
 	if err := cmd.ListenAndServe(ctx); err != nil {
-		return 1, err
+		return err
 	}
 
 	ctx.GetLogger().Info("Server gracefully stopped")
-	return 0, nil
+	return nil
 }
 
 // Background task dealing with the teardown, basically anything running sends a
@@ -157,7 +158,7 @@ func (cmd *Cached) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 // and is simpler. This is conceptually a waitgroup, except we can't use a
 // waitgroup as it has one special property (you can't reincrement the semaphore
 // while a Wait() is in progress) that our use case would transgress.
-func (cmd *Cached) Watcher(listener net.Listener) {
+func (cmd *Cmd) Watcher(listener net.Listener) {
 	var inflight int
 
 	for {
@@ -172,7 +173,7 @@ func (cmd *Cached) Watcher(listener net.Listener) {
 	}
 }
 
-func (cmd *Cached) ListenAndServe(ctx *appcontext.AppContext) error {
+func (cmd *Cmd) ListenAndServe(ctx *appcontext.AppContext) error {
 	lock, err := cached.LockedFile(cmd.socketPath + ".cached-lock")
 	if err != nil {
 		return fmt.Errorf("failed to obtain lock")
@@ -230,7 +231,7 @@ func (cmd *Cached) ListenAndServe(ctx *appcontext.AppContext) error {
 
 }
 
-func (cmd *Cached) handleCachedClient(ctx *appcontext.AppContext, conn net.Conn) {
+func (cmd *Cmd) handleCachedClient(ctx *appcontext.AppContext, conn net.Conn) {
 	defer conn.Close()
 
 	encoder := msgpack.NewEncoder(conn)
@@ -307,7 +308,7 @@ func (cmd *Cached) handleCachedClient(ctx *appcontext.AppContext, conn net.Conn)
 	}
 }
 
-func (cmd *Cached) rebuildJob(ctx *appcontext.AppContext, jobChan chan jobReq, repoID uuid.UUID, secret []byte, storeConfig map[string]string) error {
+func (cmd *Cmd) rebuildJob(ctx *appcontext.AppContext, jobChan chan jobReq, repoID uuid.UUID, secret []byte, storeConfig map[string]string) error {
 	var serializedConfig []byte
 	store, serializedConfig, err := storage.Open(ctx.GetInner(), storeConfig)
 	if err != nil {

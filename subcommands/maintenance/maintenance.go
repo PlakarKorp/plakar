@@ -37,31 +37,39 @@ import (
 const defaultDuration = 7 * 24 * time.Hour
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Maintenance{} }, 0, "maintenance")
+	subcommands.Register(Maintenance, 0, "maintenance")
 }
 
-func (cmd *Maintenance) Parse(ctx *appcontext.AppContext, args []string) error {
+func Maintenance(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
 	flags := flag.NewFlagSet("maintenance", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s\n", flags.Name())
 	}
 	flags.Parse(args)
 
-	cmd.RepositorySecret = ctx.GetSecret()
+	// This need to be configurable per repo, but we don't have a mechanism yet (comes in a PR soon!)
+	duration, err := time.ParseDuration(os.Getenv("PLAKAR_GRACEPERIOD"))
+	if err != nil {
+		duration = defaultDuration
+	}
 
-	return nil
+	cmd := &maintenance{
+		repository:    repo,
+		maintenanceID: objects.RandomMAC(),
+		cutoff:        time.Now().Add(-duration),
+	}
+
+	return cmd.Execute(ctx, repo)
 }
 
-type Maintenance struct {
-	subcommands.SubcommandBase
-
+type maintenance struct {
 	repository    *repository.Repository
 	maintenanceID objects.MAC
 	cutoff        time.Time
 }
 
 // Builds the local cache of snapshot -> packfiles
-func (cmd *Maintenance) updateCache(ctx *appcontext.AppContext, cache *caching.MaintenanceCache) error {
+func (cmd *maintenance) updateCache(ctx *appcontext.AppContext, cache *caching.MaintenanceCache) error {
 	wg := new(errgroup.Group)
 	wg.SetLimit(ctx.MaxConcurrency)
 
@@ -132,7 +140,7 @@ func (cmd *Maintenance) updateCache(ctx *appcontext.AppContext, cache *caching.M
 	return nil
 }
 
-func (cmd *Maintenance) colourPass(ctx *appcontext.AppContext, cache *caching.MaintenanceCache) error {
+func (cmd *maintenance) colourPass(ctx *appcontext.AppContext, cache *caching.MaintenanceCache) error {
 	var packfiles map[objects.MAC]struct{} = make(map[objects.MAC]struct{})
 	for packfileMAC := range cmd.repository.ListPackfiles() {
 		packfiles[packfileMAC] = struct{}{}
@@ -241,7 +249,7 @@ func (cmd *Maintenance) colourPass(ctx *appcontext.AppContext, cache *caching.Ma
 	return nil
 }
 
-func (cmd *Maintenance) sweepPass(ctx *appcontext.AppContext, cache *caching.MaintenanceCache) error {
+func (cmd *maintenance) sweepPass(ctx *appcontext.AppContext, cache *caching.MaintenanceCache) error {
 	noDeletion, _ := strconv.ParseBool(os.Getenv("PLAKAR_NODELETION"))
 
 	stateID := objects.RandomMAC()
@@ -318,7 +326,7 @@ func (cmd *Maintenance) sweepPass(ctx *appcontext.AppContext, cache *caching.Mai
 	return nil
 }
 
-func (cmd *Maintenance) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+func (cmd *maintenance) Execute(ctx *appcontext.AppContext, repo *repository.Repository) error {
 	// the maintenance algorithm is a bit tricky and needs to be done in the correct sequence,
 	// here's what it has to do:
 	//
@@ -330,48 +338,37 @@ func (cmd *Maintenance) Execute(ctx *appcontext.AppContext, repo *repository.Rep
 	// 6. remove the packfile in repository once it's flagged as deleted AND all snapshots have been `snapshot.Check`-ed
 	// 7. rebuild a new aggregate state with a new serial without the deleted packfiles
 
-	cmd.repository = repo
-
-	// This need to be configurable per repo, but we don't have a mechanism yet (comes in a PR soon!)
-	duration, err := time.ParseDuration(os.Getenv("PLAKAR_GRACEPERIOD"))
-	if err != nil {
-		duration = defaultDuration
-	}
-
-	cmd.cutoff = time.Now().Add(-duration)
-
-	cmd.maintenanceID = objects.RandomMAC()
 	done, err := cmd.Lock()
 	if err != nil {
-		return 1, err
+		return err
 	}
 	defer cmd.Unlock(done)
 
 	cache, err := repo.AppContext().GetCache().Maintenance(repo.Configuration().RepositoryID)
 	if err != nil {
 		fmt.Fprintf(ctx.Stderr, "maintenance: Failed to open local cache %s\n", err)
-		return 1, err
+		return err
 	}
 
 	if err := cmd.updateCache(ctx, cache); err != nil {
 		fmt.Fprintf(ctx.Stderr, "maintenance: Failed to update local cache %s\n", err)
-		return 1, err
+		return err
 	}
 
 	if err := cmd.colourPass(ctx, cache); err != nil {
 		fmt.Fprintf(ctx.Stderr, "maintenance: Colouring pass failed %s\n", err)
-		return 1, err
+		return err
 	}
 
 	if err := cmd.sweepPass(ctx, cache); err != nil {
 		fmt.Fprintf(ctx.Stderr, "maintenance: Sweep pass failed %s\n", err)
-		return 1, err
+		return err
 	}
 
-	return 0, nil
+	return nil
 }
 
-func (cmd *Maintenance) Lock() (chan bool, error) {
+func (cmd *maintenance) Lock() (chan bool, error) {
 	lockless, _ := strconv.ParseBool(os.Getenv("PLAKAR_LOCKLESS"))
 	lockDone := make(chan bool)
 	if lockless {
@@ -463,6 +460,6 @@ func (cmd *Maintenance) Lock() (chan bool, error) {
 	return lockDone, nil
 }
 
-func (cmd *Maintenance) Unlock(ping chan bool) {
+func (cmd *maintenance) Unlock(ping chan bool) {
 	close(ping)
 }

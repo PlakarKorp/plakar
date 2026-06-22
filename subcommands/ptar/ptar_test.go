@@ -32,15 +32,7 @@ func TestExecuteCmdPtarDefault(t *testing.T) {
 	})
 
 	args := []string{"-plaintext", "-o", filepath.Join(tmpDir, "test.ptar"), filepath.Join(tmpSourceDir, "subdir")}
-
-	subcommand := &Ptar{}
-	err = subcommand.Parse(ctx, args)
-	require.NoError(t, err)
-	require.NotNil(t, subcommand)
-
-	status, err := subcommand.Execute(ctx, repo)
-	require.NoError(t, err)
-	require.Equal(t, 0, status)
+	require.NoError(t, Ptar(ctx, repo, args))
 }
 
 func TestExecuteCmdPtarWithSync(t *testing.T) {
@@ -66,13 +58,5 @@ func TestExecuteCmdPtarWithSync(t *testing.T) {
 	})
 
 	args := []string{"-plaintext", "-o", filepath.Join(tmpDir, "test.ptar"), "-k", srcRepo.Root()}
-
-	subcommand := &Ptar{}
-	err = subcommand.Parse(ctx, args)
-	require.NoError(t, err)
-	require.NotNil(t, subcommand)
-
-	status, err := subcommand.Execute(ctx, dstRepo)
-	require.NoError(t, err)
-	require.Equal(t, 0, status)
+	require.NoError(t, Ptar(ctx, dstRepo, args))
 }

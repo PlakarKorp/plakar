@@ -27,23 +27,19 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &ServiceList{} }, 0, "service", "list")
-	subcommands.Register(func() subcommands.Subcommand { return &ServiceStatus{} }, 0, "service", "status")
-	subcommands.Register(func() subcommands.Subcommand { return &ServiceEnable{} }, 0, "service", "enable")
-	subcommands.Register(func() subcommands.Subcommand { return &ServiceDisable{} }, 0, "service", "disable")
-	subcommands.Register(func() subcommands.Subcommand { return &ServiceSet{} }, 0, "service", "set")
-	subcommands.Register(func() subcommands.Subcommand { return &ServiceUnset{} }, 0, "service", "unset")
-	subcommands.Register(func() subcommands.Subcommand { return &ServiceAdd{} }, 0, "service", "add")
-	subcommands.Register(func() subcommands.Subcommand { return &ServiceRm{} }, 0, "service", "rm")
-	subcommands.Register(func() subcommands.Subcommand { return &ServiceShow{} }, 0, "service", "show")
-	subcommands.Register(func() subcommands.Subcommand { return &Service{} }, subcommands.BeforeRepositoryOpen, "service")
+	subcommands.Register(List, 0, "service", "list")
+	subcommands.Register(Status, 0, "service", "status")
+	subcommands.Register(Enable, 0, "service", "enable")
+	subcommands.Register(Disable, 0, "service", "disable")
+	subcommands.Register(Set, 0, "service", "set")
+	subcommands.Register(Unset, 0, "service", "unset")
+	subcommands.Register(Add, 0, "service", "add")
+	subcommands.Register(Rm, 0, "service", "rm")
+	subcommands.Register(Show, 0, "service", "show")
+	subcommands.Register(Service, subcommands.BeforeRepositoryOpen, "service")
 }
 
-type Service struct {
-	subcommands.SubcommandBase
-}
-
-func (_ *Service) Parse(ctx *appcontext.AppContext, args []string) error {
+func Service(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
 	flags := flag.NewFlagSet("service", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s\n", flags.Name())
@@ -63,10 +59,6 @@ func (_ *Service) Parse(ctx *appcontext.AppContext, args []string) error {
 		return fmt.Errorf("invalid argument: %s", flags.Arg(0))
 	}
 	return fmt.Errorf("no action specified")
-}
-
-func (cmd *Service) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	return 1, fmt.Errorf("no action specified")
 }
 
 func getClient(ctx *appcontext.AppContext) (*services.ServiceConnector, error) {

@@ -19,6 +19,7 @@ package digest
 import (
 	"flag"
 	"fmt"
+	"hash"
 	"io"
 	"path"
 	"strings"
@@ -34,11 +35,13 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Digest{} }, 0, "digest")
+	subcommands.Register(Digest, 0, "digest")
 }
 
-func (cmd *Digest) Parse(ctx *appcontext.AppContext, args []string) error {
-	var opt_hashing string
+func Digest(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	var (
+		algo string
+	)
 
 	flags := flag.NewFlagSet("digest", flag.ExitOnError)
 	flags.Usage = func() {
@@ -47,35 +50,22 @@ func (cmd *Digest) Parse(ctx *appcontext.AppContext, args []string) error {
 		flags.PrintDefaults()
 	}
 
-	flags.StringVar(&opt_hashing, "hashing", "SHA256", "hashing algorithm to use")
+	flags.StringVar(&algo, "hashing", "SHA256", "hashing algorithm to use")
 	flags.Parse(args)
 
 	if flags.NArg() == 0 {
 		return fmt.Errorf("at least one parameter is required")
 	}
 
-	hashingFunction := strings.ToUpper(opt_hashing)
-	if hashing.GetHasher(hashingFunction) == nil {
-		return fmt.Errorf("unsupported hashing algorithm: %s", hashingFunction)
+	hasher := hashing.GetHasher(strings.ToUpper(algo))
+	if hasher == nil {
+		return fmt.Errorf("unsupported hashing algorithm: %s", algo)
 	}
 
-	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.HashingFunction = hashingFunction
-	cmd.Targets = flags.Args()
+	targets := flags.Args()
 
-	return nil
-}
-
-type Digest struct {
-	subcommands.SubcommandBase
-
-	HashingFunction string
-	Targets         []string
-}
-
-func (cmd *Digest) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	errors := 0
-	for _, snapshotPath := range cmd.Targets {
+	for _, snapshotPath := range targets {
 		snap, pathname, err := locate.OpenSnapshotByPath(repo, snapshotPath)
 		if err != nil {
 			ctx.GetLogger().Error("digest: %s: %s", pathname, err)
@@ -89,14 +79,22 @@ func (cmd *Digest) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 			continue
 		}
 
-		cmd.displayDigests(ctx, fs, repo, snap, pathname)
+		displayDigests(ctx, fs, repo, snap, pathname, hasher, algo)
 		snap.Close()
 	}
 
-	return 0, nil
+	return nil
 }
 
-func (cmd *Digest) displayDigests(ctx *appcontext.AppContext, fs *vfs.Filesystem, repo *repository.Repository, snap *snapshot.Snapshot, pathname string) error {
+func displayDigests(
+	ctx *appcontext.AppContext,
+	fs *vfs.Filesystem,
+	repo *repository.Repository,
+	snap *snapshot.Snapshot,
+	pathname string,
+	hasher hash.Hash,
+	algo string,
+) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -112,7 +110,8 @@ func (cmd *Digest) displayDigests(ctx *appcontext.AppContext, fs *vfs.Filesystem
 			return err
 		}
 		for child := range iter {
-			if err := cmd.displayDigests(ctx, fs, repo, snap, path.Join(pathname, child.Stat().Name())); err != nil {
+			pathname := path.Join(pathname, child.Stat().Name())
+			if err := displayDigests(ctx, fs, repo, snap, pathname, hasher, algo); err != nil {
 				return err
 			}
 		}
@@ -128,12 +127,11 @@ func (cmd *Digest) displayDigests(ctx *appcontext.AppContext, fs *vfs.Filesystem
 	}
 	defer rd.Close()
 
-	algorithm := cmd.HashingFunction
-	hasher := hashing.GetHasher(algorithm)
+	hasher.Reset()
 	if _, err := io.Copy(hasher, rd); err != nil {
 		return err
 	}
 	digest := hasher.Sum(nil)
-	fmt.Fprintf(ctx.Stdout, "%s (%s) = %x\n", algorithm, utils.SanitizeText(pathname), digest)
+	fmt.Fprintf(ctx.Stdout, "%s (%s) = %x\n", algo, utils.SanitizeText(pathname), digest)
 	return nil
 }

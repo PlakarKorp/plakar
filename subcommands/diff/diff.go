@@ -39,56 +39,44 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Diff{} }, 0, "diff")
+	subcommands.Register(Diff, 0, "diff")
 }
 
-func (cmd *Diff) Parse(ctx *appcontext.AppContext, args []string) error {
+func Diff(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	var (
+		highlight bool
+		recurse   bool
+	)
+
 	flags := flag.NewFlagSet("diff", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS] SNAPSHOT:PATH SNAPSHOT[:PATH]\n", flags.Name())
 		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
 		flags.PrintDefaults()
 	}
-	flags.BoolVar(&cmd.Highlight, "highlight", false, "highlight output")
-	flags.BoolVar(&cmd.Recursive, "recursive", false, "recursive diff of directories")
+	flags.BoolVar(&highlight, "highlight", false, "highlight output")
+	flags.BoolVar(&recurse, "recursive", false, "recursive diff of directories")
 	flags.Parse(args)
 
+	var path1, path2 string
 	if flags.NArg() == 1 {
-		cmd.Path1 = flags.Arg(0)
-		cmd.Path2 = ""
+		path1 = flags.Arg(0)
+		path2 = ""
 	} else if flags.NArg() == 2 {
-		cmd.Path1 = flags.Arg(0)
-		cmd.Path2 = flags.Arg(1)
+		path1 = flags.Arg(0)
+		path2 = flags.Arg(1)
 	} else {
 		return fmt.Errorf("needs at least a snapshot ID and/or snapshot file to diff")
 	}
-	cmd.RepositorySecret = ctx.GetSecret()
 
-	return nil
-}
-
-type Diff struct {
-	subcommands.SubcommandBase
-
-	Highlight bool
-	Recursive bool
-	Path1     string
-	Path2     string
-}
-
-func (cmd *Diff) Name() string {
-	return "diff"
-}
-
-func (cmd *Diff) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	snap1, pathname1, err := locate.OpenSnapshotByPath(repo, cmd.Path1)
+	snap1, pathname1, err := locate.OpenSnapshotByPath(repo, path1)
 	if err != nil {
-		return 1, fmt.Errorf("diff: could not open snapshot: %s", cmd.Path1)
+		return fmt.Errorf("diff: could not open snapshot: %s", path1)
 	}
 	defer snap1.Close()
 	vfs1, err := snap1.Filesystem()
 	if err != nil {
-		return 1, fmt.Errorf("diff: could not get filesystem for snapshot: %s", cmd.Path1)
+		return fmt.Errorf("diff: could not get filesystem for snapshot: %s", path1)
 	}
 	id1 := fmt.Sprintf("%x", snap1.Header.GetIndexShortID())
 
@@ -96,19 +84,19 @@ func (cmd *Diff) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 	var id2 string
 	var vfs2 fs.FS
 
-	if cmd.Path2 == "" {
+	if path2 == "" {
 		vfs2 = os.DirFS("/")
 		id2 = "local"
 	} else {
 		var snap2 *snapshot.Snapshot
-		snap2, pathname2, err = locate.OpenSnapshotByPath(repo, cmd.Path2)
+		snap2, pathname2, err = locate.OpenSnapshotByPath(repo, path2)
 		if err != nil {
-			return 1, fmt.Errorf("diff: could not open snapshot: %s", cmd.Path2)
+			return fmt.Errorf("diff: could not open snapshot: %s", path2)
 		}
 		defer snap2.Close()
 		vfs2, err = snap2.Filesystem()
 		if err != nil {
-			return 1, fmt.Errorf("diff: could not get filesystem for snapshot: %s", cmd.Path2)
+			return fmt.Errorf("diff: could not get filesystem for snapshot: %s", path2)
 		}
 		id2 = fmt.Sprintf("%x", snap2.Header.GetIndexShortID())
 	}
@@ -126,25 +114,25 @@ func (cmd *Diff) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 		out     io.Writer = ctx.Stdout
 		builder           = strings.Builder{}
 	)
-	if cmd.Highlight {
+	if highlight {
 		out = &builder
 	}
 
-	err = cmd.diff_pathnames(out, id1, vfs1, pathname1, id2, vfs2, pathname2)
+	err = diff_pathnames(out, id1, vfs1, pathname1, id2, vfs2, pathname2, recurse)
 	if err != nil {
-		return 1, fmt.Errorf("diff: could not diff pathnames: %w", err)
+		return fmt.Errorf("diff: could not diff pathnames: %w", err)
 	}
 
-	if cmd.Highlight {
+	if highlight {
 		err = quick.Highlight(ctx.Stdout, builder.String(), "diff", "terminal", "dracula")
 		if err != nil {
-			return 1, fmt.Errorf("diff: could not highlight diff: %w", err)
+			return fmt.Errorf("diff: could not highlight diff: %w", err)
 		}
 	}
-	return 0, nil
+	return nil
 }
 
-func (cmd *Diff) diff_pathnames(out io.Writer, id1 string, vfs1 fs.FS, pathname1 string, id2 string, vfs2 fs.FS, pathname2 string) error {
+func diff_pathnames(out io.Writer, id1 string, vfs1 fs.FS, pathname1 string, id2 string, vfs2 fs.FS, pathname2 string, recurse bool) error {
 	fsobj1, err := vfs1.Open(pathname1)
 	if err != nil {
 		return fmt.Errorf("could not open path %s in snapshot %s: %w", pathname1, id1, err)
@@ -172,18 +160,18 @@ func (cmd *Diff) diff_pathnames(out io.Writer, id1 string, vfs1 fs.FS, pathname1
 	}
 
 	if st1.IsDir() && st2.IsDir() {
-		if cmd.Recursive {
-			return cmd.diff_directories_recursive(out, id1, vfs1, pathname1, id2, vfs2, pathname1)
+		if recurse {
+			return diff_directories_recursive(out, id1, vfs1, pathname1, id2, vfs2, pathname1)
 		}
-		return cmd.diff_directories_flat(out, pathname1, fsobj1, pathname2, fsobj2)
+		return diff_directories_flat(out, pathname1, fsobj1, pathname2, fsobj2)
 	} else if st1.IsDir() || st2.IsDir() {
 		return fmt.Errorf("can't diff different file types")
 	} else {
-		return cmd.diff_readers(out, id1, pathname1, fsobj1, id2, pathname2, fsobj2)
+		return diff_readers(out, id1, pathname1, fsobj1, id2, pathname2, fsobj2)
 	}
 }
 
-func (cmd *Diff) diff_directories_flat(out io.Writer, pathname1 string, fsobj1 fs.File, pathname2 string, fsobj2 fs.File) error {
+func diff_directories_flat(out io.Writer, pathname1 string, fsobj1 fs.File, pathname2 string, fsobj2 fs.File) error {
 	// non VFS have their / stripped, reintroduce it
 	if !strings.HasPrefix(pathname2, "/") {
 		pathname2 = "/" + pathname2 // Ensure pathname starts with a slash
@@ -236,7 +224,7 @@ func (cmd *Diff) diff_directories_flat(out io.Writer, pathname1 string, fsobj1 f
 	return nil
 }
 
-func (cmd *Diff) diff_directories_recursive(out io.Writer, id1 string, fs1 fs.FS, path1 string, id2 string, fs2 fs.FS, path2 string) error {
+func diff_directories_recursive(out io.Writer, id1 string, fs1 fs.FS, path1 string, id2 string, fs2 fs.FS, path2 string) error {
 	entries1, err1 := fs.ReadDir(fs1, path1)
 	entries2, err2 := fs.ReadDir(fs2, path2)
 
@@ -290,7 +278,7 @@ func (cmd *Diff) diff_directories_recursive(out io.Writer, id1 string, fs1 fs.FS
 		case ok1 && ok2:
 			if e1.IsDir() && e2.IsDir() {
 				fmt.Fprintf(out, "Common subdirectories: %s and %s\n", full1, full2)
-				err := cmd.diff_directories_recursive(out, id1, fs1, full1, id2, fs2, full2)
+				err := diff_directories_recursive(out, id1, fs1, full1, id2, fs2, full2)
 				if err != nil {
 					return err
 				}
@@ -307,7 +295,7 @@ func (cmd *Diff) diff_directories_recursive(out io.Writer, id1 string, fs1 fs.FS
 					return err
 				}
 
-				err = cmd.diff_readers(out, id1, full1, rd1, id2, full2, rd2)
+				err = diff_readers(out, id1, full1, rd1, id2, full2, rd2)
 				rd1.Close()
 				rd2.Close()
 				if err != nil {
@@ -379,7 +367,7 @@ func binaryeq(rrd1 io.Reader, rrd2 io.Reader) (bool, error) {
 	}
 }
 
-func (cmd *Diff) diff_readers(out io.Writer, id1 string, pathname1 string, rd1 io.Reader, id2 string, pathname2 string, rd2 io.Reader) error {
+func diff_readers(out io.Writer, id1 string, pathname1 string, rd1 io.Reader, id2 string, pathname2 string, rd2 io.Reader) error {
 	if isbinary(rd1) || isbinary(rd2) {
 		same, err := binaryeq(rd1, rd2)
 		if err != nil {

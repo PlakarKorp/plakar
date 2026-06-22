@@ -11,18 +11,11 @@ import (
 	"github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/dustin/go-humanize"
 	"github.com/google/uuid"
 )
 
-type DiagSnapshot struct {
-	subcommands.SubcommandBase
-
-	SnapshotID string
-}
-
-func (cmd *DiagSnapshot) Parse(ctx *appcontext.AppContext, args []string) error {
+func Snapshot(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
 	flags := flag.NewFlagSet("diag snapshot", flag.ExitOnError)
 	flags.Parse(args)
 
@@ -30,16 +23,9 @@ func (cmd *DiagSnapshot) Parse(ctx *appcontext.AppContext, args []string) error 
 		return fmt.Errorf("usage: %s snapshot SNAPSHOT", flags.Name())
 	}
 
-	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.SnapshotID = flags.Args()[0]
-
-	return nil
-}
-
-func (cmd *DiagSnapshot) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	snap, _, err := locate.OpenSnapshotByPath(repo, cmd.SnapshotID)
+	snap, _, err := locate.OpenSnapshotByPath(repo, flags.Args()[0])
 	if err != nil {
-		return 1, err
+		return err
 	}
 	defer snap.Close()
 
@@ -114,5 +100,5 @@ func (cmd *DiagSnapshot) Execute(ctx *appcontext.AppContext, repo *repository.Re
 	fmt.Fprintf(ctx.Stdout, " - MIMEOther: %d\n", header.GetSource(0).Summary.Directory.MIMEOther+header.GetSource(0).Summary.Below.MIMEOther)
 
 	fmt.Fprintf(ctx.Stdout, " - Errors: %d\n", header.GetSource(0).Summary.Directory.Errors+header.GetSource(0).Summary.Below.Errors)
-	return 0, nil
+	return nil
 }

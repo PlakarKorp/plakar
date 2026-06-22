@@ -31,11 +31,14 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Locate{} }, 0, "locate")
+	subcommands.Register(Locate, 0, "locate")
 }
 
-func (cmd *Locate) Parse(ctx *appcontext.AppContext, args []string) error {
-	cmd.LocateOptions = plocate.NewDefaultLocateOptions()
+func Locate(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	var (
+		locateOpts = plocate.NewDefaultLocateOptions()
+		snap       string
+	)
 
 	flags := flag.NewFlagSet("locate", flag.ExitOnError)
 	flags.Usage = func() {
@@ -44,63 +47,50 @@ func (cmd *Locate) Parse(ctx *appcontext.AppContext, args []string) error {
 		flags.PrintDefaults()
 	}
 
-	flags.StringVar(&cmd.Snapshot, "snapshot", "", "snapshot to locate in")
-	cmd.LocateOptions.InstallLocateFlags(flags)
+	flags.StringVar(&snap, "snapshot", "", "snapshot to locate in")
+	locateOpts.InstallLocateFlags(flags)
 	flags.Parse(args)
 
-	if cmd.Snapshot != "" && !cmd.LocateOptions.Empty() {
+	if snap != "" && !locateOpts.Empty() {
 		ctx.GetLogger().Warn("snapshot specified, filters will be ignored")
 	}
 
-	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.Patterns = flags.Args()
+	patterns := flags.Args()
 
-	return nil
-}
-
-type Locate struct {
-	subcommands.SubcommandBase
-
-	LocateOptions *plocate.LocateOptions
-	Snapshot      string
-	Patterns      []string
-}
-
-func (cmd *Locate) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	var snapshots []objects.MAC
-	if len(cmd.Snapshot) == 0 {
-		snapshotIDs, err := plocate.LocateSnapshotIDs(repo, cmd.LocateOptions)
+	if len(snap) == 0 {
+		snapshotIDs, err := plocate.LocateSnapshotIDs(repo, locateOpts)
 		if err != nil {
-			return 1, fmt.Errorf("ls: could not fetch snapshots list: %w", err)
+			return fmt.Errorf("ls: could not fetch snapshots list: %w", err)
 		}
 		snapshots = append(snapshots, snapshotIDs...)
 	} else {
-		snapshotIDs := plocate.LookupSnapshotByPrefix(repo, cmd.Snapshot)
+		snapshotIDs := plocate.LookupSnapshotByPrefix(repo, snap)
 		snapshots = append(snapshots, snapshotIDs...)
 	}
 
 	for _, snapshotID := range snapshots {
 		snap, err := snapshot.Load(repo, snapshotID)
 		if err != nil {
-			return 1, fmt.Errorf("locate: could not get snapshot: %w", err)
+			return fmt.Errorf("locate: could not get snapshot: %w", err)
 		}
 
 		fs, err := snap.Filesystem()
 		if err != nil {
 			snap.Close()
-			return 1, fmt.Errorf("locate: could not get filesystem: %w", err)
+			return fmt.Errorf("locate: could not get filesystem: %w", err)
 		}
 		for pathname, err := range fs.Pathnames() {
 			if err != nil {
 				snap.Close()
-				return 1, fmt.Errorf("locate: could not get pathname: %w", err)
+				return fmt.Errorf("locate: could not get pathname: %w", err)
 			}
 
 			if err := ctx.Err(); err != nil {
-				return 1, err
+				return err
 			}
 
-			for _, pattern := range cmd.Patterns {
+			for _, pattern := range patterns {
 				matched := false
 				if path.Base(pathname) == pattern {
 					matched = true
@@ -109,7 +99,7 @@ func (cmd *Locate) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 					matched, err := path.Match(pattern, path.Base(pathname))
 					if err != nil {
 						snap.Close()
-						return 1, fmt.Errorf("locate: could not match pattern: %w", err)
+						return fmt.Errorf("locate: could not match pattern: %w", err)
 					}
 					if !matched {
 						continue
@@ -120,5 +110,5 @@ func (cmd *Locate) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 		}
 		snap.Close()
 	}
-	return 0, nil
+	return nil
 }

@@ -5,7 +5,6 @@ import (
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/reporting"
-	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/subcommands/backup"
 	"github.com/PlakarKorp/plakar/subcommands/check"
 	"github.com/PlakarKorp/plakar/subcommands/maintenance"
@@ -14,7 +13,7 @@ import (
 	"github.com/PlakarKorp/plakar/subcommands/sync"
 )
 
-func RunCommand(ctx *appcontext.AppContext, cmd subcommands.Subcommand, repo *repository.Repository, taskName string) (int, error) {
+func Report(ctx *appcontext.AppContext, repo *repository.Repository, taskKind, taskName string) error {
 	location := ""
 	var err error
 
@@ -25,31 +24,12 @@ func RunCommand(ctx *appcontext.AppContext, cmd subcommands.Subcommand, repo *re
 	reporter := reporting.NewReporter(ctx)
 	report := reporter.NewReport()
 
-	var taskKind string
-	switch cmd.(type) {
-	case *backup.Backup:
-		taskKind = "backup"
-	case *check.Check:
-		taskKind = "check"
-	case *restore.Restore:
-		taskKind = "restore"
-	case *sync.Sync:
-		taskKind = "sync"
-	case *rm.Rm:
-		taskKind = "rm"
-	case *maintenance.Maintenance:
-		taskKind = "maintenance"
-	default:
-		report.SetIgnore()
-	}
-
 	report.TaskStart(taskKind, taskName)
 	if repo != nil {
 		report.WithRepositoryName(location)
 		report.WithRepository(repo)
 	}
 
-	var status int
 	var snapshotID objects.MAC
 	var warning error
 	if _, ok := cmd.(*backup.Backup); ok {
@@ -59,7 +39,7 @@ func RunCommand(ctx *appcontext.AppContext, cmd subcommands.Subcommand, repo *re
 			report.WithSnapshotID(snapshotID)
 		}
 	} else {
-		status, err = cmd.Execute(ctx, repo)
+		status, err = cmd(ctx, repo)
 	}
 
 	if status == 0 {
@@ -74,5 +54,5 @@ func RunCommand(ctx *appcontext.AppContext, cmd subcommands.Subcommand, repo *re
 
 	reporter.StopAndWait()
 
-	return status, err
+	return err
 }

@@ -44,14 +44,8 @@ func TestExecuteCmdDiagSnapshot(t *testing.T) {
 	indexId := snap.Header.GetIndexID()
 	args := []string{"diag", "snapshot", fmt.Sprintf("%s", hex.EncodeToString(indexId[:]))}
 
-	subcommand, _, args := subcommands.Lookup(args)
-	err := subcommand.Parse(ctx, args)
-	require.NoError(t, err)
-	require.NotNil(t, subcommand)
-
-	status, err := subcommand.Execute(ctx, repo)
-	require.NoError(t, err)
-	require.Equal(t, 0, status)
+	subcommand, _, _, args := subcommands.Lookup(args)
+	require.NoError(t, subcommand(ctx, repo, args))
 
 	// output should look like this
 	// Version: 1.0.0
@@ -124,14 +118,8 @@ func TestExecuteCmdDiagState(t *testing.T) {
 	indexId := snap.Header.GetIndexID()
 	args := []string{"diag", "state"}
 
-	subcommand, _, args := subcommands.Lookup(args)
-	err := subcommand.Parse(ctx, args)
-	require.NoError(t, err)
-	require.NotNil(t, subcommand)
-
-	status, err := subcommand.Execute(ctx, repo)
-	require.NoError(t, err)
-	require.Equal(t, 0, status)
+	subcommand, _, _, args := subcommands.Lookup(args)
+	require.NoError(t, subcommand(ctx, repo, args))
 
 	// output should look like this
 	// aaf4c5b7b91ba00f5afde31c5a9f721bc78de202a491379339e011b9172db298
@@ -142,15 +130,8 @@ func TestExecuteCmdDiagState(t *testing.T) {
 	bufOut.Reset()
 	args = []string{"diag", "state", strings.Trim(output, "\n")}
 
-	subcommand, _, args = subcommands.Lookup(args)
-	err = subcommand.Parse(ctx, args)
-
-	require.NoError(t, err)
-	require.NotNil(t, subcommand)
-
-	status, err = subcommand.Execute(ctx, repo)
-	require.NoError(t, err)
-	require.Equal(t, 0, status)
+	subcommand, _, _, args = subcommands.Lookup(args)
+	require.NoError(t, subcommand(ctx, repo, args))
 
 	// output should look like this
 	// Version: 655.3.6
@@ -185,15 +166,9 @@ func TestExecuteCmdDiagPackfile(t *testing.T) {
 
 	indexId := snap.Header.GetIndexID()
 	args := []string{"diag", "state"}
-	subcommand, _, args := subcommands.Lookup(args)
-	err := subcommand.Parse(ctx, args)
+	subcommand, _, _, args := subcommands.Lookup(args)
 
-	require.NoError(t, err)
-	require.NotNil(t, subcommand)
-
-	status, err := subcommand.Execute(ctx, repo)
-	require.NoError(t, err)
-	require.Equal(t, 0, status)
+	require.NoError(t, subcommand(ctx, repo, args))
 
 	// output should look like this
 	// aaf4c5b7b91ba00f5afde31c5a9f721bc78de202a491379339e011b9172db298
@@ -204,14 +179,8 @@ func TestExecuteCmdDiagPackfile(t *testing.T) {
 	bufOut.Reset()
 	args = []string{"diag", "state", strings.Trim(output, "\n")}
 
-	subcommand, _, args = subcommands.Lookup(args)
-	err = subcommand.Parse(ctx, args)
-	require.NoError(t, err)
-	require.NotNil(t, subcommand)
-
-	status, err = subcommand.Execute(ctx, repo)
-	require.NoError(t, err)
-	require.Equal(t, 0, status)
+	subcommand, _, _, args = subcommands.Lookup(args)
+	require.NoError(t, subcommand(ctx, repo, args))
 
 	// output should look like this
 	// Version: 655.3.6
@@ -253,14 +222,8 @@ func TestExecuteCmdDiagPackfile(t *testing.T) {
 	bufOut.Reset()
 	args = []string{"diag", "packfile", hex.EncodeToString(partPackfile)}
 
-	subcommand, _, args = subcommands.Lookup(args)
-	err = subcommand.Parse(ctx, args)
-	require.NoError(t, err)
-	require.NotNil(t, subcommand)
-
-	status, err = subcommand.Execute(ctx, repo)
-	require.NoError(t, err)
-	require.Equal(t, 0, status)
+	subcommand, _, _, args = subcommands.Lookup(args)
+	require.NoError(t, subcommand(ctx, repo, args))
 
 	// output should look like this
 	// Version: 1.0.0
@@ -285,14 +248,8 @@ func TestExecuteCmdDiagObject(t *testing.T) {
 	indexId := snap.Header.GetIndexID()
 	args := []string{"diag", "state"}
 
-	subcommand, _, args := subcommands.Lookup(args)
-	err := subcommand.Parse(ctx, args)
-	require.NoError(t, err)
-	require.NotNil(t, subcommand)
-
-	status, err := subcommand.Execute(ctx, repo)
-	require.NoError(t, err)
-	require.Equal(t, 0, status)
+	subcommand, _, _, args := subcommands.Lookup(args)
+	require.NoError(t, subcommand(ctx, repo, args))
 
 	// output should look like this
 	// aaf4c5b7b91ba00f5afde31c5a9f721bc78de202a491379339e011b9172db298
@@ -303,14 +260,8 @@ func TestExecuteCmdDiagObject(t *testing.T) {
 	bufOut.Reset()
 	args = []string{"diag", "state", strings.Trim(output, "\n")}
 
-	subcommand, _, args = subcommands.Lookup(args)
-	err = subcommand.Parse(ctx, args)
-	require.NoError(t, err)
-	require.NotNil(t, subcommand)
-
-	status, err = subcommand.Execute(ctx, repo)
-	require.NoError(t, err)
-	require.Equal(t, 0, status)
+	subcommand, _, _, args = subcommands.Lookup(args)
+	require.NoError(t, subcommand(ctx, repo, args))
 
 	// output should look like this
 	// Version: 655.3.6
@@ -350,14 +301,8 @@ func TestExecuteCmdDiagObject(t *testing.T) {
 	bufOut.Reset()
 	args = []string{"diag", "object", hex.EncodeToString(partObject)}
 
-	subcommand, _, args = subcommands.Lookup(args)
-	err = subcommand.Parse(ctx, args)
-	require.NoError(t, err)
-	require.NotNil(t, subcommand)
-
-	status, err = subcommand.Execute(ctx, repo)
-	require.NoError(t, err)
-	require.Equal(t, 0, status)
+	subcommand, _, _, args = subcommands.Lookup(args)
+	require.NoError(t, subcommand(ctx, repo, args))
 
 	// output should look like this
 	// object: 096d53564d0216066f0d2aa6b0f6fc159e5e78271e49f5bee0676ed5f229741e
@@ -384,14 +329,8 @@ func TestExecuteCmdDiagVFS(t *testing.T) {
 	indexId := snap.Header.GetIndexID()
 	args := []string{"diag", "vfs", fmt.Sprintf("%s:subdir/dummy.txt", hex.EncodeToString(indexId[:]))}
 
-	subcommand, _, args := subcommands.Lookup(args)
-	err := subcommand.Parse(ctx, args)
-	require.NoError(t, err)
-	require.NotNil(t, subcommand)
-
-	status, err := subcommand.Execute(ctx, repo)
-	require.NoError(t, err)
-	require.Equal(t, 0, status)
+	subcommand, _, _, args := subcommands.Lookup(args)
+	require.NoError(t, subcommand(ctx, repo, args))
 
 	// output should look like this
 	// [FileEntry]
@@ -423,14 +362,8 @@ func TestExecuteCmdDiagVFS(t *testing.T) {
 	bufOut.Reset()
 	args = []string{"diag", "vfs", fmt.Sprintf("%s:/subdir", hex.EncodeToString(indexId[:]))}
 
-	subcommand, _, args = subcommands.Lookup(args)
-	err = subcommand.Parse(ctx, args)
-	require.NoError(t, err)
-	require.NotNil(t, subcommand)
-
-	status, err = subcommand.Execute(ctx, repo)
-	require.NoError(t, err)
-	require.Equal(t, 0, status)
+	subcommand, _, _, args = subcommands.Lookup(args)
+	require.NoError(t, subcommand(ctx, repo, args))
 
 	// output should look like this
 	// [DirEntry]
@@ -560,14 +493,8 @@ func TestExecuteCmdDiagXattr(t *testing.T) {
 	indexId := snap.Header.GetIndexID()
 	args := []string{"diag", "xattr", fmt.Sprintf("%s:subdir/dummy.txt", hex.EncodeToString(indexId[:]))}
 
-	subcommand, _, args := subcommands.Lookup(args)
-	err := subcommand.Parse(ctx, args)
-	require.NoError(t, err)
-	require.NotNil(t, subcommand)
-
-	status, err := subcommand.Execute(ctx, repo)
-	require.NoError(t, err)
-	require.Equal(t, 0, status)
+	subcommand, _, _, args := subcommands.Lookup(args)
+	require.NoError(t, subcommand(ctx, repo, args))
 
 	// output should look like this
 
@@ -585,14 +512,8 @@ func TestExecuteCmdDiagContentType(t *testing.T) {
 	indexId := snap.Header.GetIndexID()
 	args := []string{"diag", "contenttype", fmt.Sprintf("%s:subdir/dummy.txt", hex.EncodeToString(indexId[:]))}
 
-	subcommand, _, args := subcommands.Lookup(args)
-	err := subcommand.Parse(ctx, args)
-	require.NoError(t, err)
-	require.NotNil(t, subcommand)
-
-	status, err := subcommand.Execute(ctx, repo)
-	require.NoError(t, err)
-	require.Equal(t, 0, status)
+	subcommand, _, _, args := subcommands.Lookup(args)
+	require.NoError(t, subcommand(ctx, repo, args))
 
 	// output should look like this
 
@@ -609,14 +530,8 @@ func TestExecuteCmdDiagLocks(t *testing.T) {
 
 	args := []string{"diag", "locks"}
 
-	subcommand, _, args := subcommands.Lookup(args)
-	err := subcommand.Parse(ctx, args)
-	require.NoError(t, err)
-	require.NotNil(t, subcommand)
-
-	status, err := subcommand.Execute(ctx, repo)
-	require.NoError(t, err)
-	require.Equal(t, 0, status)
+	subcommand, _, _, args := subcommands.Lookup(args)
+	require.NoError(t, subcommand(ctx, repo, args))
 
 	// output should look like this
 
@@ -634,14 +549,8 @@ func TestExecuteCmdDiagSearch(t *testing.T) {
 	indexId := snap.Header.GetIndexID()
 	args := []string{"diag", "search", fmt.Sprintf("%s:subdir/", hex.EncodeToString(indexId[:]))}
 
-	subcommand, _, args := subcommands.Lookup(args)
-	err := subcommand.Parse(ctx, args)
-	require.NoError(t, err)
-	require.NotNil(t, subcommand)
-
-	status, err := subcommand.Execute(ctx, repo)
-	require.NoError(t, err)
-	require.Equal(t, 0, status)
+	subcommand, _, _, args := subcommands.Lookup(args)
+	require.NoError(t, subcommand(ctx, repo, args))
 
 	// output should look like this
 	// f3b3c31e:/tmp/tmp_to_backup3206526426/another_subdir/bar

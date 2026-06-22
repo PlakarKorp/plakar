@@ -26,15 +26,11 @@ import (
 	"github.com/PlakarKorp/plakar/subcommands"
 )
 
-type TokenCreate struct {
-	subcommands.SubcommandBase
-}
-
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &TokenCreate{} }, subcommands.BeforeRepositoryOpen, "token", "create")
+	subcommands.Register(TokenCreate, subcommands.BeforeRepositoryOpen, "token", "create")
 }
 
-func (cmd *TokenCreate) Parse(ctx *appcontext.AppContext, args []string) error {
+func TokenCreate(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
 	flags := flag.NewFlagSet("token create", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: token create\n")
@@ -44,15 +40,12 @@ func (cmd *TokenCreate) Parse(ctx *appcontext.AppContext, args []string) error {
 	if flags.NArg() > 0 {
 		return fmt.Errorf("Too many arguments")
 	}
-	return nil
-}
 
-func (cmd *TokenCreate) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	token, err := login.DeriveToken(ctx)
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	fmt.Fprintln(ctx.Stdout, token)
-	return 0, nil
+	return nil
 }

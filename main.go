@@ -376,7 +376,7 @@ func entryPoint() int {
 		return 1
 	}
 
-	cmd, _, args := subcommands.Lookup(args)
+	cmd, cmdflags, _, args := subcommands.Lookup(args)
 	if cmd == nil {
 		logger.Stderr("command not found: %s\n", args[0])
 		return 1
@@ -396,9 +396,9 @@ func entryPoint() int {
 	var store storage.Store
 	var repo *repository.Repository
 
-	if cmd.GetFlags()&subcommands.BeforeRepositoryOpen != 0 {
+	if cmdflags&subcommands.BeforeRepositoryOpen != 0 {
 		// store and repo can stay nil
-	} else if cmd.GetFlags()&subcommands.BeforeRepositoryWithStorage != 0 {
+	} else if cmdflags&subcommands.BeforeRepositoryWithStorage != 0 {
 		repo, err = repository.Inexistent(ctx.GetInner(), storeConfig)
 		if err != nil {
 			logger.Stderr("%s: %s\n", flag.CommandLine.Name(), err)
@@ -441,12 +441,6 @@ func entryPoint() int {
 
 	ctx.StoreConfig = storeConfig
 
-	t0 := time.Now()
-	if err := cmd.Parse(ctx, args); err != nil {
-		logger.Stderr("%s: %s\n", flag.CommandLine.Name(), err)
-		return 1
-	}
-
 	c := make(chan os.Signal, 1)
 	go func() {
 		<-c
@@ -462,16 +456,16 @@ func entryPoint() int {
 		}
 	}()
 
-	var status int
+	t0 := time.Now()
 
 	// If we are working on a repo, rebuild the state.
-	if cmd.GetFlags()&subcommands.BeforeRepositoryOpen == 0 && cmd.GetFlags()&subcommands.BeforeRepositoryWithStorage == 0 {
+	if cmdflags&subcommands.BeforeRepositoryOpen == 0 && cmdflags&subcommands.BeforeRepositoryWithStorage == 0 {
 		_, err = cached.RebuildStateFromStore(ctx, repo.Configuration().RepositoryID, storeConfig, false)
 		if err == nil {
-			status, err = task.RunCommand(ctx, cmd, repo, "@agentless")
+			err = task.RunCommand(ctx, cmd, repo, "@agentless")
 		}
 	} else {
-		status, err = task.RunCommand(ctx, cmd, repo, "@agentless")
+		err = task.RunCommand(ctx, cmd, repo, "@agentless")
 	}
 
 	t1 := time.Since(t0)

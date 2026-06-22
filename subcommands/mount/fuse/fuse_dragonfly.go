@@ -25,6 +25,6 @@ import (
 	"github.com/PlakarKorp/plakar/appcontext"
 )
 
-func ExecuteFUSE(ctx *appcontext.AppContext, repo *repository.Repository, mountpoint string, locateOptions *locate.LocateOptions, chrootfs fs.FS, allowOthers bool) (int, error) {
-	return 1, fmt.Errorf("mount not supported on %s", ctx.OperatingSystem)
+func ExecuteFUSE(ctx *appcontext.AppContext, repo *repository.Repository, mountpoint string, locateOptions *locate.LocateOptions, chrootfs fs.FS, allowOthers bool) error {
+	return fmt.Errorf("mount not supported on %s", ctx.OperatingSystem)
 }

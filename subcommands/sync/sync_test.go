@@ -98,16 +98,6 @@ func snapshotIDs(t *testing.T, repo *repository.Repository) map[objects.MAC]stru
 	return ids
 }
 
-func runSync(t *testing.T, fixture *syncFixture, args []string) {
-	subcommand := &Sync{}
-	err := subcommand.Parse(fixture.localCtx, args)
-	require.NoError(t, err)
-
-	status, err := subcommand.Execute(fixture.localCtx, fixture.localRepo)
-	require.NoError(t, err)
-	require.Equal(t, 0, status)
-}
-
 func testSyncDirection(t *testing.T, direction string, localPassphrase, peerPassphrase []byte) {
 	fixture := setupSync(t, localPassphrase, peerPassphrase)
 
@@ -132,7 +122,7 @@ func testSyncDirection(t *testing.T, direction string, localPassphrase, peerPass
 		wantSynchronized = 2
 	}
 
-	runSync(t, fixture, []string{direction, fixture.peerArg})
+	require.NoError(t, Sync(fixture.localCtx, fixture.localRepo, []string{direction, fixture.peerArg}))
 
 	// whatever the direction, both ends must now hold every snapshot
 	localIDs := snapshotIDs(t, fixture.localRepo)
@@ -186,7 +176,9 @@ func TestExecuteCmdSyncSnapshotID(t *testing.T) {
 	defer snap.Close()
 
 	indexId := snap.Header.GetIndexID()
-	runSync(t, fixture, []string{hex.EncodeToString(indexId[:]), "to", fixture.peerArg})
+
+	err := Sync(fixture.localCtx, fixture.localRepo, []string{hex.EncodeToString(indexId[:]), "to", fixture.peerArg})
+	require.NoError(t, err)
 
 	peerIDs := snapshotIDs(t, fixture.peerRepo)
 	require.Contains(t, peerIDs, snap.Header.Identifier)

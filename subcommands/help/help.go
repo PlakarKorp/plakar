@@ -35,10 +35,12 @@ import (
 var docs embed.FS
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Help{} }, subcommands.BeforeRepositoryOpen, "help")
+	subcommands.Register(Help, subcommands.BeforeRepositoryOpen, "help")
 }
 
-func (cmd *Help) Parse(ctx *appcontext.AppContext, args []string) error {
+func Help(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	var style string
+
 	flags := flag.NewFlagSet("help", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS]\n", flags.Name())
@@ -46,30 +48,20 @@ func (cmd *Help) Parse(ctx *appcontext.AppContext, args []string) error {
 		flags.PrintDefaults()
 		fmt.Fprint(flags.Output(), "\nTo view the man page for a specific command, run 'plakar help SUBCOMMAND'.\n")
 	}
-	flags.StringVar(&cmd.Style, "style", "auto", "style to use")
+	flags.StringVar(&style, "style", "auto", "style to use")
 	flags.Parse(args)
 
-	cmd.Command = strings.Join(flags.Args(), "-")
-	return nil
-}
+	command := strings.Join(flags.Args(), "-")
 
-type Help struct {
-	subcommands.SubcommandBase
-
-	Style   string
-	Command string
-}
-
-func (cmd *Help) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	document := "docs/plakar.md"
-	if cmd.Command != "" {
-		document = fmt.Sprintf("docs/plakar-%s.md", cmd.Command)
+	if command != "" {
+		document = fmt.Sprintf("docs/plakar-%s.md", command)
 	}
 
 	content, err := docs.ReadFile(document)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "unknown command: %s\n", cmd.Command)
-		return 1, err
+		fmt.Fprintf(os.Stderr, "unknown command: %s\n", command)
+		return err
 	}
 
 	disableColors := false
@@ -86,7 +78,7 @@ func (cmd *Help) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 		}
 	} else {
 		options = []glamour.TermRendererOption{
-			glamour.WithStandardStyle(cmd.Style),
+			glamour.WithStandardStyle(style),
 			glamour.WithColorProfile(termenv.TrueColor),
 		}
 	}
@@ -94,17 +86,15 @@ func (cmd *Help) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 		options...,
 	)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to create renderer: %s\n", err)
-		return 1, err
+		return fmt.Errorf("failed to create renderer: %w", err)
 	}
 
 	out, err := r.RenderBytes(content)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to render: %s\n", err)
-		return 1, err
+		return fmt.Errorf("renderer failed: %w", err)
 	}
 
 	fmt.Print(string(out))
 
-	return 0, err
+	return nil
 }

@@ -33,10 +33,15 @@ import (
 )
 
 func init() {
-	subcommands.Register(func() subcommands.Subcommand { return &Cat{} }, 0, "cat")
+	subcommands.Register(Cat, 0, "cat")
 }
 
-func (cmd *Cat) Parse(ctx *appcontext.AppContext, args []string) error {
+func Cat(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
+	var (
+		decompress bool
+		highlight  bool
+	)
+
 	flags := flag.NewFlagSet("cat", flag.ExitOnError)
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS] [SNAPSHOT[:PATH]]...\n", flags.Name())
@@ -44,31 +49,16 @@ func (cmd *Cat) Parse(ctx *appcontext.AppContext, args []string) error {
 		flags.PrintDefaults()
 	}
 
-	flags.BoolVar(&cmd.Decompress, "decompress", false, "decompress output")
-	flags.BoolVar(&cmd.Highlight, "highlight", false, "highlight output")
+	flags.BoolVar(&decompress, "decompress", false, "decompress output")
+	flags.BoolVar(&highlight, "highlight", false, "highlight output")
 	flags.Parse(args)
 
 	if flags.NArg() == 0 {
 		return fmt.Errorf("at least one parameter is required")
 	}
 
-	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.Paths = flags.Args()
-
-	return nil
-}
-
-type Cat struct {
-	subcommands.SubcommandBase
-
-	Decompress bool
-	Highlight  bool
-	Paths      []string
-}
-
-func (cmd *Cat) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
 	errors := 0
-	for _, snapPath := range cmd.Paths {
+	for _, snapPath := range flags.Args() {
 		snap, pathname, err := locate.OpenSnapshotByPath(repo, snapPath)
 		if err != nil {
 			ctx.GetLogger().Error("cat: %s: %s", snapPath, err)
@@ -109,12 +99,12 @@ func (cmd *Cat) Execute(ctx *appcontext.AppContext, repo *repository.Repository)
 
 		file, err := entry.Open(fs)
 		if err != nil {
-			return 1, err
+			return err
 		}
 
 		var rd io.ReadCloser = file
 
-		if cmd.Decompress && entry.ResolvedObject.ContentType == "application/gzip" {
+		if decompress && entry.ResolvedObject.ContentType == "application/gzip" {
 			gzRd, err := gzip.NewReader(rd)
 			if err != nil {
 				ctx.GetLogger().Error("cat: %s: %s", pathname, err)
@@ -126,7 +116,7 @@ func (cmd *Cat) Execute(ctx *appcontext.AppContext, repo *repository.Repository)
 			rd = gzRd
 		}
 
-		if cmd.Highlight {
+		if highlight {
 			lexer := lexers.Match(pathname)
 			if lexer == nil {
 				lexer = lexers.Get(entry.ResolvedObject.ContentType)
@@ -186,7 +176,7 @@ func (cmd *Cat) Execute(ctx *appcontext.AppContext, repo *repository.Repository)
 	}
 
 	if errors != 0 {
-		return 1, fmt.Errorf("errors occurred")
+		return fmt.Errorf("errors occurred")
 	}
-	return 0, nil
+	return nil
 }

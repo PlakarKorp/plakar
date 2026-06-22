@@ -10,45 +10,31 @@ import (
 	"github.com/PlakarKorp/kloset/repository/state"
 	"github.com/PlakarKorp/kloset/resources"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/subcommands"
 )
 
-type DiagState struct {
-	subcommands.SubcommandBase
-
-	Args []string
-}
-
-func (cmd *DiagState) Parse(ctx *appcontext.AppContext, args []string) error {
+func State(ctx *appcontext.AppContext, repo *repository.Repository, args []string) error {
 	flags := flag.NewFlagSet("diag state", flag.ExitOnError)
 	flags.Parse(args)
 
-	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.Args = flags.Args()
-
-	return nil
-}
-
-func (cmd *DiagState) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	if len(cmd.Args) == 0 {
+	if len(flags.Args()) == 0 {
 		states, err := repo.GetStates()
 		if err != nil {
-			return 1, err
+			return err
 		}
 
 		for _, state := range states {
 			fmt.Fprintf(ctx.Stdout, "%x\n", state)
 		}
 	} else {
-		for _, arg := range cmd.Args {
+		for _, arg := range flags.Args() {
 			// convert arg to [32]byte
 			if len(arg) != 64 {
-				return 1, fmt.Errorf("invalid packfile hash: %s", arg)
+				return fmt.Errorf("invalid packfile hash: %s", arg)
 			}
 
 			b, err := hex.DecodeString(arg)
 			if err != nil {
-				return 1, fmt.Errorf("invalid packfile hash: %s", arg)
+				return fmt.Errorf("invalid packfile hash: %s", arg)
 			}
 
 			// Convert the byte slice to a [32]byte
@@ -57,7 +43,7 @@ func (cmd *DiagState) Execute(ctx *appcontext.AppContext, repo *repository.Repos
 
 			rawStateRd, v, err := repo.GetState(byteArray)
 			if err != nil {
-				return 1, err
+				return err
 			}
 			defer rawStateRd.Close()
 
@@ -65,13 +51,13 @@ func (cmd *DiagState) Execute(ctx *appcontext.AppContext, repo *repository.Repos
 			identifier := objects.RandomMAC()
 			scanCache, err := repo.AppContext().GetCache().Scan(identifier)
 			if err != nil {
-				return 1, err
+				return err
 			}
 			defer scanCache.Close()
 
 			st, err := state.FromStream(rawStateRd, v, scanCache)
 			if err != nil {
-				return 1, err
+				return err
 			}
 
 			fmt.Fprintf(ctx.Stdout, "Version: %s\n", st.Metadata.Version)
@@ -111,5 +97,5 @@ func (cmd *DiagState) Execute(ctx *appcontext.AppContext, repo *repository.Repos
 			}
 		}
 	}
-	return 0, nil
+	return nil
 }

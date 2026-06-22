@@ -30,15 +30,15 @@ func TestServiceRegisteredFactories(t *testing.T) {
 		args []string
 		typ  interface{}
 	}{
-		{[]string{"service", "list"}, &ServiceList{}},
-		{[]string{"service", "status"}, &ServiceStatus{}},
-		{[]string{"service", "enable"}, &ServiceEnable{}},
-		{[]string{"service", "disable"}, &ServiceDisable{}},
-		{[]string{"service", "set"}, &ServiceSet{}},
-		{[]string{"service", "unset"}, &ServiceUnset{}},
-		{[]string{"service", "add"}, &ServiceAdd{}},
-		{[]string{"service", "rm"}, &ServiceRm{}},
-		{[]string{"service", "show"}, &ServiceShow{}},
+		{[]string{"service", "list"}, &List{}},
+		{[]string{"service", "status"}, &Status{}},
+		{[]string{"service", "enable"}, &Enable{}},
+		{[]string{"service", "disable"}, &Disable{}},
+		{[]string{"service", "set"}, &Set{}},
+		{[]string{"service", "unset"}, &Unset{}},
+		{[]string{"service", "add"}, &Add{}},
+		{[]string{"service", "rm"}, &Rm{}},
+		{[]string{"service", "show"}, &Show{}},
 	}
 	for _, c := range cases {
 		cmd, _, _ := subcommands.Lookup(c.args)
@@ -49,17 +49,17 @@ func TestServiceRegisteredFactories(t *testing.T) {
 
 func TestServiceListParse(t *testing.T) {
 	ctx := newCtx(t)
-	cmd := &ServiceList{}
+	cmd := &List{}
 	require.NoError(t, cmd.Parse(ctx, []string{}))
 	// extra argument is rejected
-	require.Error(t, (&ServiceList{}).Parse(ctx, []string{"extra"}))
+	require.Error(t, (&List{}).Parse(ctx, []string{"extra"}))
 }
 
 func TestServiceListExecuteRequiresLogin(t *testing.T) {
 	// With no auth token configured, getClient fails with a "requires login"
 	// error and Execute returns status 1.
 	ctx := newCtx(t)
-	cmd := &ServiceList{}
+	cmd := &List{}
 	require.NoError(t, cmd.Parse(ctx, []string{}))
 	status, err := cmd.Execute(ctx, &repository.Repository{})
 	require.Error(t, err)
@@ -68,7 +68,7 @@ func TestServiceListExecuteRequiresLogin(t *testing.T) {
 
 func TestServiceStatusExecuteRequiresLogin(t *testing.T) {
 	ctx := newCtx(t)
-	cmd := &ServiceStatus{}
+	cmd := &Status{}
 	require.NoError(t, cmd.Parse(ctx, []string{"alerting"}))
 	status, err := cmd.Execute(ctx, &repository.Repository{})
 	require.Error(t, err)

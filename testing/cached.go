@@ -19,17 +19,15 @@ import (
 func StartCached(t *testing.T, ctx *appcontext.AppContext) {
 	srvCtx := appcontext.NewAppContextFrom(ctx)
 
-	srv := &cachedcmd.Cached{}
-	err := srv.Parse(srvCtx, []string{"-foreground", "-teardown", "5m"})
-	require.NoError(t, err)
+	socketPath := filepath.Join(ctx.CacheDir, "cached.sock")
+	srv := cachedcmd.NewCmd(socketPath, 5*time.Minute)
 
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		srv.Execute(srvCtx, nil)
+		srv.Run(srvCtx)
 	}()
 
-	socketPath := filepath.Join(ctx.CacheDir, "cached.sock")
 	require.Eventually(t, func() bool {
 		conn, err := net.Dial("unix", socketPath)
 		if err != nil {
