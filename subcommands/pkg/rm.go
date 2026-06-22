@@ -19,8 +19,10 @@ package pkg
 import (
 	"flag"
 	"fmt"
+	"strings"
 
 	"github.com/PlakarKorp/kloset/repository"
+	"github.com/PlakarKorp/pkg"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
 )
@@ -46,8 +48,10 @@ func (cmd *PkgRm) Parse(ctx *appcontext.AppContext, args []string) error {
 
 func (cmd *PkgRm) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (int, error) {
 	pkgmgr := ctx.GetPkgManager()
-	for _, name := range cmd.Args {
-		if err := pkgmgr.Del(name, nil); err != nil {
+	for _, pkgspec := range cmd.Args {
+		name, version, _ := strings.Cut(pkgspec, "@")
+
+		if err := pkgmgr.Del(name, &pkg.DelOptions{Version: version}); err != nil {
 			return 1, fmt.Errorf("failed to remove %q: %w", name, err)
 		}
 	}

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"math"
 	"net/http"
 	"strconv"
@@ -23,6 +24,7 @@ var ErrInvalidRange = fmt.Errorf("Invalid range")
 type server struct {
 	store    storage.Store
 	noDelete bool
+	pushOnly bool
 }
 
 func (s *server) openRepository(w http.ResponseWriter, r *http.Request) {
@@ -43,6 +45,14 @@ func (s *server) listResource(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if s.pushOnly && typ != storage.StorageResourceState && typ != storage.StorageResourceLock {
+		log.Println("rejecting list request for", typ)
+		http.Error(w, "Authorization denied", http.StatusForbidden)
+		return
+	} else {
+		log.Println("allowing list", typ, "request")
+	}
+
 	if indexes, err := s.store.List(r.Context(), typ); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	} else {
@@ -56,6 +66,14 @@ func (s *server) getResource(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
+	}
+
+	if s.pushOnly && typ != storage.StorageResourceState && typ != storage.StorageResourceLock {
+		log.Println("disallowing get request for", typ)
+		http.Error(w, "Authorization denied", http.StatusForbidden)
+		return
+	} else {
+		log.Println("allowing get", typ, "request with pushonly", s.pushOnly)
 	}
 
 	mac, err := getMac(r)
@@ -106,14 +124,15 @@ func (s *server) putResource(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) deleteResource(w http.ResponseWriter, r *http.Request) {
-	if s.noDelete {
-		http.Error(w, fmt.Errorf("not allowed to delete").Error(), http.StatusForbidden)
-		return
-	}
-
 	typ, err := getResource(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// XXX could be better
+	if typ != storage.StorageResourceLock && (s.noDelete || s.pushOnly) {
+		http.Error(w, fmt.Errorf("not allowed to delete").Error(), http.StatusForbidden)
 		return
 	}
 
@@ -128,10 +147,11 @@ func (s *server) deleteResource(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func Server(ctx context.Context, repo *repository.Repository, addr string, noDelete bool, cert string, key string) error {
+func Server(ctx context.Context, repo *repository.Repository, addr string, noDelete, pushOnly bool, cert string, key string) error {
 	s := server{
 		store:    repo.Store(),
 		noDelete: noDelete,
+		pushOnly: pushOnly,
 	}
 
 	mux := http.NewServeMux()
