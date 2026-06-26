@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 
 	"github.com/PlakarKorp/plakar/appcontext"
 	//"github.com/santhosh-tekuri/jsonschema/v6"
@@ -22,10 +23,14 @@ type ServiceConnector struct {
 }
 
 func NewServiceConnector(ctx *appcontext.AppContext, authToken string) *ServiceConnector {
+	endpoint := SERVICE_ENDPOINT
+	if override := os.Getenv("PLAKAR_API_URL"); override != "" {
+		endpoint = override
+	}
 	return &ServiceConnector{
 		appCtx:    ctx,
 		authToken: authToken,
-		endpoint:  SERVICE_ENDPOINT,
+		endpoint:  endpoint,
 	}
 }
 
