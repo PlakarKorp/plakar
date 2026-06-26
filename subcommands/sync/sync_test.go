@@ -175,6 +175,11 @@ func TestExecuteCmdSync(t *testing.T) {
 	for _, direction := range []string{"to", "from", "with"} {
 		for _, combo := range combinations {
 			t.Run(direction+"_"+combo.name, func(t *testing.T) {
+				// Each case builds fully isolated repos and contexts, so the
+				// 12 combinations can run concurrently. Summed sequentially
+				// they take ~35s, which risks the CI per-test timeout; in
+				// parallel they finish well under it.
+				t.Parallel()
 				testSyncDirection(t, direction, combo.localPass, combo.peerPass)
 			})
 		}
