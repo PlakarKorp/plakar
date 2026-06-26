@@ -3,7 +3,6 @@ package sync
 import (
 	"bytes"
 	"encoding/hex"
-	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -13,6 +12,7 @@ import (
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/config"
 	ptesting "github.com/PlakarKorp/plakar/testing"
 	"github.com/PlakarKorp/plakar/utils"
 	"github.com/stretchr/testify/require"
@@ -22,12 +22,26 @@ func init() {
 	os.Setenv("TZ", "UTC")
 }
 
+// NOTE ON Execute COVERAGE:
+// Sync.Execute calls cached.RebuildStateFromStore, which spawns a "cached"
+// daemon by re-executing os.Executable() with the "cached" argument. Under
+// `go test` the executable is the test binary, which does not implement the
+// cached subcommand, so the helper retries the connection up to 1000 times,
+// spawning a process each round, and effectively hangs. This is why the
+// repo's pre-existing Execute tests were disabled (renamed with a leading
+// underscore). The hermetic, non-daemon surface of this package is Parse,
+// which is what these tests exercise thoroughly (argument validation, the
+// snapshot/filter forms, and all three encrypted-peer passphrase-derivation
+// branches including the wrong-passphrase failures).
+
 func generateSnapshot(t *testing.T, bufOut *bytes.Buffer, bufErr *bytes.Buffer) (*repository.Repository, *snapshot.Snapshot, *appcontext.AppContext) {
 	stateRefresher = func(*appcontext.AppContext, *repository.Repository) func(objects.MAC, bool) error {
 		return nil
 	}
 
 	repo, ctx := ptesting.GenerateRepository(t, bufOut, bufErr, nil)
+	// sync's Parse needs a non-nil config to resolve peer repository locations.
+	ctx.Config = config.NewConfig()
 	snap := ptesting.GenerateSnapshot(t, repo, []ptesting.MockFile{
 		ptesting.NewMockDir("subdir"),
 		ptesting.NewMockDir("another_subdir"),
@@ -39,97 +53,200 @@ func generateSnapshot(t *testing.T, bufOut *bytes.Buffer, bufErr *bytes.Buffer) 
 	return repo, snap, ctx
 }
 
-func _TestExecuteCmdSyncTo(t *testing.T) {
+// ---------------------------------------------------------------------------
+// Parse validation
+// ---------------------------------------------------------------------------
+
+func TestSyncParseTooManyArguments(t *testing.T) {
 	bufOut := bytes.NewBuffer(nil)
 	bufErr := bytes.NewBuffer(nil)
+	_, snap, ctx := generateSnapshot(t, bufOut, bufErr)
+	defer snap.Close()
 
-	localRepo, snap, lctx := generateSnapshot(t, bufOut, bufErr)
+	cmd := &Sync{}
+	err := cmd.Parse(ctx, []string{"a", "to", "b", "c"})
+	require.EqualError(t, err, "Too many arguments")
+}
+
+func TestSyncParseWrongArgCount(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	_, snap, ctx := generateSnapshot(t, bufOut, bufErr)
+	defer snap.Close()
+
+	t.Run("zero args", func(t *testing.T) {
+		cmd := &Sync{}
+		err := cmd.Parse(ctx, []string{})
+		require.EqualError(t, err, "usage: sync [SNAPSHOT] to|from|with REPOSITORY")
+	})
+	t.Run("one arg", func(t *testing.T) {
+		cmd := &Sync{}
+		err := cmd.Parse(ctx, []string{"to"})
+		require.EqualError(t, err, "usage: sync [SNAPSHOT] to|from|with REPOSITORY")
+	})
+}
+
+func TestSyncParseInvalidDirection(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	_, snap, ctx := generateSnapshot(t, bufOut, bufErr)
+	defer snap.Close()
+
+	cmd := &Sync{}
+	err := cmd.Parse(ctx, []string{"sideways", "somewhere"})
+	require.EqualError(t, err, "invalid direction, must be to, from or with")
+}
+
+func TestSyncParseUnknownPeer(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	_, snap, ctx := generateSnapshot(t, bufOut, bufErr)
+	defer snap.Close()
+
+	cmd := &Sync{}
+	err := cmd.Parse(ctx, []string{"to", "@doesnotexist"})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "peer store")
+	require.Contains(t, err.Error(), "could not resolve repository")
+}
+
+// Three-arg form: SNAPSHOT direction REPOSITORY, with a valid (plaintext) peer.
+func TestSyncParseSnapshotForm(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	_, snap, ctx := generateSnapshot(t, bufOut, bufErr)
 	defer snap.Close()
 
 	peerRepo, _ := ptesting.GenerateRepository(t, bufOut, bufErr, nil)
 
 	indexId := snap.Header.GetIndexID()
-	args := []string{fmt.Sprintf("%s", hex.EncodeToString(indexId[:])), "to", peerRepo.Root()}
-
-	subcommand := &Sync{}
-	fmt.Println(args)
-	err := subcommand.Parse(lctx, args)
+	cmd := &Sync{}
+	err := cmd.Parse(ctx, []string{hex.EncodeToString(indexId[:]), "to", peerRepo.Root()})
 	require.NoError(t, err)
-	require.NotNil(t, subcommand)
-
-	status, err := subcommand.Execute(lctx, localRepo)
-	require.NoError(t, err)
-	require.Equal(t, 0, status)
-
-	// output should look like this
-	// 2025-03-26T21:17:28Z info: sync: synchronization from /tmp/tmp_repo1957539148/repo to /tmp/tmp_repo2470692775/repo completed: 1 snapshots synchronized
-	output := bufOut.String()
-	require.Contains(t, strings.Trim(output, "\n"), fmt.Sprintf("info: sync: synchronization from %s to %s completed: 1 snapshots synchronized", localRepo.Origin(), peerRepo.Origin()))
+	require.Equal(t, "to", cmd.Direction)
+	require.Equal(t, peerRepo.Root(), cmd.PeerRepositoryLocation)
+	require.Equal(t, []string{hex.EncodeToString(indexId[:])}, cmd.SrcLocateOptions.Filters.IDs)
 }
 
-func _TestExecuteCmdSyncWith(t *testing.T) {
+// Two-arg form: direction REPOSITORY (no snapshot, filters keep defaults).
+func TestSyncParseFilterForm(t *testing.T) {
 	bufOut := bytes.NewBuffer(nil)
 	bufErr := bytes.NewBuffer(nil)
-
-	localRepo, snap, lctx := generateSnapshot(t, bufOut, bufErr)
+	_, snap, ctx := generateSnapshot(t, bufOut, bufErr)
 	defer snap.Close()
 
 	peerRepo, _ := ptesting.GenerateRepository(t, bufOut, bufErr, nil)
 
-	indexId := snap.Header.GetIndexID()
-	args := []string{fmt.Sprintf("%s", hex.EncodeToString(indexId[:])), "with", peerRepo.Root()}
-
-	subcommand := &Sync{}
-	err := subcommand.Parse(lctx, args)
+	cmd := &Sync{}
+	err := cmd.Parse(ctx, []string{"with", peerRepo.Root()})
 	require.NoError(t, err)
-	require.NotNil(t, subcommand)
-
-	status, err := subcommand.Execute(lctx, localRepo)
-	require.NoError(t, err)
-	require.Equal(t, 0, status)
-
-	// output should look like this
-	// 2025-03-26T21:28:23Z info: sync: synchronization between /tmp/tmp_repo3863826583/repo and /tmp/tmp_repo327669581/repo completed: 1 snapshots synchronized
-	output := bufOut.String()
-	require.Contains(t, strings.Trim(output, "\n"), fmt.Sprintf("info: sync: synchronization between %s and %s completed: 1 snapshots synchronized", localRepo.Origin(), peerRepo.Origin()))
+	require.Equal(t, "with", cmd.Direction)
+	require.Empty(t, cmd.SrcLocateOptions.Filters.IDs)
 }
 
-func _TestExecuteCmdSyncWithEncryption(t *testing.T) {
-	bufOut := bytes.NewBuffer(nil)
-	bufErr := bytes.NewBuffer(nil)
+// ---------------------------------------------------------------------------
+// Encrypted peer: passphrase derivation paths in Parse
+// ---------------------------------------------------------------------------
 
-	localRepo, snap, lctx := generateSnapshot(t, bufOut, bufErr)
-	defer snap.Close()
+// encryptedPeer creates an encrypted peer repository and registers it in the
+// caller's config under @peerRepo, then returns the config-file path so the
+// caller can tweak passphrase / passphrase_cmd before Parse.
+func encryptedPeer(t *testing.T, ctx *appcontext.AppContext, bufOut, bufErr *bytes.Buffer, passphrase string) *repository.Repository {
+	pp := []byte(passphrase)
+	peerRepo, _ := ptesting.GenerateRepository(t, bufOut, bufErr, &pp)
 
-	passphrase := []byte("aZeRtY123456$#@!@")
-	peerRepo, _ := ptesting.GenerateRepository(t, bufOut, bufErr, &passphrase)
-
-	// need to recreate configuration to store passphrase on peer repo
 	opt_configfile := strings.TrimPrefix(peerRepo.Root(), "fs://")
-
 	cfg, err := utils.LoadConfig(opt_configfile)
 	require.NoError(t, err)
-	lctx.Config = cfg
-	lctx.Config.Repositories["peerRepo"] = make(map[string]string)
-	lctx.Config.Repositories["peerRepo"]["passphrase"] = string(passphrase)
-	lctx.Config.Repositories["peerRepo"]["location"] = peerRepo.Root()
-	err = utils.SaveConfig(opt_configfile, lctx.Config)
+	ctx.Config = cfg
+	ctx.Config.Repositories["peerRepo"] = map[string]string{
+		"location": peerRepo.Root(),
+	}
+	err = utils.SaveConfig(opt_configfile, ctx.Config)
 	require.NoError(t, err)
+	return peerRepo
+}
+
+func TestSyncParseEncryptedPeerPassphrase(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	_, snap, ctx := generateSnapshot(t, bufOut, bufErr)
+	defer snap.Close()
+
+	passphrase := "aZeRtY123456$#@!@"
+	encryptedPeer(t, ctx, bufOut, bufErr, passphrase)
+	ctx.Config.Repositories["peerRepo"]["passphrase"] = passphrase
 
 	indexId := snap.Header.GetIndexID()
-	args := []string{fmt.Sprintf("%s", hex.EncodeToString(indexId[:])), "with", "@peerRepo"}
-
-	subcommand := &Sync{}
-	err = subcommand.Parse(lctx, args)
+	cmd := &Sync{}
+	err := cmd.Parse(ctx, []string{hex.EncodeToString(indexId[:]), "with", "@peerRepo"})
 	require.NoError(t, err)
-	require.NotNil(t, subcommand)
+	require.NotEmpty(t, cmd.PeerRepositorySecret)
+}
 
-	status, err := subcommand.Execute(lctx, localRepo)
+func TestSyncParseEncryptedPeerWrongPassphrase(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	_, snap, ctx := generateSnapshot(t, bufOut, bufErr)
+	defer snap.Close()
+
+	encryptedPeer(t, ctx, bufOut, bufErr, "correct-horse-battery")
+	ctx.Config.Repositories["peerRepo"]["passphrase"] = "totally-wrong"
+
+	indexId := snap.Header.GetIndexID()
+	cmd := &Sync{}
+	err := cmd.Parse(ctx, []string{hex.EncodeToString(indexId[:]), "with", "@peerRepo"})
+	require.EqualError(t, err, "invalid passphrase")
+}
+
+func TestSyncParseEncryptedPeerPassphraseCmd(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	_, snap, ctx := generateSnapshot(t, bufOut, bufErr)
+	defer snap.Close()
+
+	// Plain alphanumeric: the passphrase_cmd is run through /bin/sh -c, so shell
+	// metacharacters would be expanded and corrupt the value.
+	passphrase := "correcthorsebatterystaple"
+	encryptedPeer(t, ctx, bufOut, bufErr, passphrase)
+	ctx.Config.Repositories["peerRepo"]["passphrase_cmd"] = "echo " + passphrase
+
+	indexId := snap.Header.GetIndexID()
+	cmd := &Sync{}
+	err := cmd.Parse(ctx, []string{hex.EncodeToString(indexId[:]), "with", "@peerRepo"})
 	require.NoError(t, err)
-	require.Equal(t, 0, status)
+	require.NotEmpty(t, cmd.PeerRepositorySecret)
+}
 
-	// output should look like this
-	// 2025-03-26T21:28:23Z info: sync: synchronization between /tmp/tmp_repo3863826583/repo and /tmp/tmp_repo327669581/repo completed: 1 snapshots synchronized
-	output := bufOut.String()
-	require.Contains(t, strings.Trim(output, "\n"), fmt.Sprintf("info: sync: synchronization between %s and %s completed: 1 snapshots synchronized", localRepo.Origin(), peerRepo.Origin()))
+func TestSyncParseEncryptedPeerPassphraseCmdWrong(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	_, snap, ctx := generateSnapshot(t, bufOut, bufErr)
+	defer snap.Close()
+
+	encryptedPeer(t, ctx, bufOut, bufErr, "therightone")
+	ctx.Config.Repositories["peerRepo"]["passphrase_cmd"] = "echo nope"
+
+	indexId := snap.Header.GetIndexID()
+	cmd := &Sync{}
+	err := cmd.Parse(ctx, []string{hex.EncodeToString(indexId[:]), "with", "@peerRepo"})
+	require.EqualError(t, err, "invalid passphrase")
+}
+
+// A passphrase_cmd that fails (non-zero exit / no output) surfaces a read error.
+func TestSyncParseEncryptedPeerPassphraseCmdFails(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	_, snap, ctx := generateSnapshot(t, bufOut, bufErr)
+	defer snap.Close()
+
+	encryptedPeer(t, ctx, bufOut, bufErr, "whatever")
+	// emits zero lines -> GetPassphraseFromCommand returns "too many lines" error
+	ctx.Config.Repositories["peerRepo"]["passphrase_cmd"] = "true"
+
+	indexId := snap.Header.GetIndexID()
+	cmd := &Sync{}
+	err := cmd.Parse(ctx, []string{hex.EncodeToString(indexId[:]), "with", "@peerRepo"})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "failed to read passphrase from command")
 }
