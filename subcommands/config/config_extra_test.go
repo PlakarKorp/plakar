@@ -8,8 +8,8 @@ import (
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/config"
 	"github.com/PlakarKorp/plakar/subcommands"
-	"github.com/PlakarKorp/plakar/utils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -37,7 +37,7 @@ func TestConfigRegisteredFactories(t *testing.T) {
 func newConfigCtx(t *testing.T) (*appcontext.AppContext, *bytes.Buffer, *bytes.Buffer) {
 	t.Helper()
 	tmpDir := t.TempDir()
-	cfg, err := utils.LoadOldConfigIfExists(filepath.Join(tmpDir, "config.yaml"))
+	cfg, err := config.LoadOldConfigIfExists(filepath.Join(tmpDir, "config.yaml"))
 	require.NoError(t, err)
 
 	bufOut := bytes.NewBuffer(nil)
@@ -313,8 +313,8 @@ func TestDispatchPolicyLifecycle(t *testing.T) {
 
 	// set
 	require.Error(t, dispatchPolicy(ctx, "policy", "set", []string{"ghost", "k=v"}))
-	require.Error(t, dispatchPolicy(ctx, "policy", "set", []string{"daily"}))           // too few
-	require.Error(t, dispatchPolicy(ctx, "policy", "set", []string{"daily", "bad"}))    // malformed
+	require.Error(t, dispatchPolicy(ctx, "policy", "set", []string{"daily"}))        // too few
+	require.Error(t, dispatchPolicy(ctx, "policy", "set", []string{"daily", "bad"})) // malformed
 
 	// show (yaml + json), all + specific
 	bufOut.Reset()
@@ -323,7 +323,7 @@ func TestDispatchPolicyLifecycle(t *testing.T) {
 	require.NoError(t, dispatchPolicy(ctx, "policy", "show", []string{"-json", "daily"}))
 
 	// unset
-	require.Error(t, dispatchPolicy(ctx, "policy", "unset", []string{"daily"}))   // too few
+	require.Error(t, dispatchPolicy(ctx, "policy", "unset", []string{"daily"})) // too few
 	require.Error(t, dispatchPolicy(ctx, "policy", "unset", []string{"ghost", "tags"}))
 
 	// rm
