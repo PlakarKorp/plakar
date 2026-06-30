@@ -86,6 +86,14 @@ dockers_v2:
       "org.opencontainers.image.title": "plakar"
       "org.opencontainers.image.revision": "{{ .FullCommit }}"
 
+docker_signs:
+  - cmd: cosign
+    output: true
+    args:
+      - sign
+      - "${artifact}"
+      - "--yes"
+
 nfpms:
   - package_name: plakar
 
