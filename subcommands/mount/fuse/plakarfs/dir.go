@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -93,13 +94,23 @@ func NewDirectory(pfs *plakarFS, vfs fs.FS, parent *Dir, pathname string) (*Dir,
 					return nil, syscall.ENOENT
 				}
 
-				snapfs, err := snap.Filesystem()
+				snapshotFS, err := snap.Filesystem()
+				if err != nil {
+					return nil, err
+				}
+
+				sourceRoot := path.Clean(snap.Header.GetSource(0).Importer.Directory)
+				sourceRoot = strings.TrimPrefix(sourceRoot, "/")
+				if sourceRoot == "" {
+					sourceRoot = "."
+				}
+				subFS, err := fs.Sub(snapshotFS, sourceRoot)
 				if err != nil {
 					return nil, err
 				}
 
 				dir.snap = snap
-				dir.vfs = snapfs
+				dir.vfs = subFS
 				dir.path = ""
 				dir.snapKey = fmt.Sprintf("%x", dir.snap.Header.Identifier)
 
