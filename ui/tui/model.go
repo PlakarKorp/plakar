@@ -6,7 +6,6 @@ import (
 	"github.com/PlakarKorp/kloset/events"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -34,20 +33,18 @@ type appModel struct {
 	repo        *repository.Repository
 
 	forceQuit bool
+	finished  bool // completed; render nothing so tea tears down clean
+	debug     bool // 'd' toggles extra iostat detail
 
 	// geometry
 	width  int
 	height int
-
-	// UI
-	progress progress.Model
 }
 
 func newGenericModel(ctx *appcontext.AppContext, application *Application, repo *repository.Repository) tea.Model {
 	return appModel{
 		repo:        repo,
 		application: application,
-		progress:    progressBar(),
 	}
 }
 

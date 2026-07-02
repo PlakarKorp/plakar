@@ -93,7 +93,10 @@ func (tui *tui) Run() error {
 					default:
 					}
 
-					// Close app on matching workflow.end
+					// Close app on matching workflow.end. The final (completed)
+					// frame is reprinted after the program exits (see
+					// newApplication) so bubbletea's on-exit line clear doesn't
+					// wipe the summary.
 					if e.Type == "workflow.end" && e.Job == tui.app.job {
 						tui.app.Stop()
 						tui.app = nil

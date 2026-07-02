@@ -2,6 +2,8 @@ package tui
 
 import (
 	"fmt"
+	"os"
+	"sort"
 	"time"
 
 	"github.com/PlakarKorp/kloset/objects"
@@ -40,21 +42,6 @@ type Application struct {
 	done  chan struct{} // closed when Bubbletea program exits
 	prog  *tea.Program
 	err   error
-}
-
-// ioScopeStat is the latest sampled read/write figures for one iostat scope.
-// Totals are cumulative bytes. Rates are wall-clock throughput (bytes/sec)
-// derived from the delta between consecutive sampler ticks — the sampler's own
-// "overall" is computed over active (in-read) time, which is near-zero when
-// data comes from the OS page cache and yields absurd rates, so we don't use
-// it for display. sampledAt is the wall-clock time of this snapshot, used to
-// compute the next delta.
-type ioScopeStat struct {
-	readTotal  int64
-	writeTotal int64
-	readRate   float64
-	writeRate  float64
-	sampledAt  time.Time
 }
 
 type State struct {
@@ -117,24 +104,144 @@ type State struct {
 
 	workflow string
 
-	// ioRate is the latest throughput (bytes/sec) sampled by the kloset
-	// iostat sampler for the scope that tracks payload progress: the source
-	// read rate for a backup, the destination write rate for an export. It
-	// drives the ETA. ioRateAt records when it was last updated so a stalled
-	// stream doesn't keep a stale rate forever.
-	ioRate   float64
-	ioRateAt time.Time
+	// I/O movement tracking: the last observed read/write totals and the last
+	// time each advanced. Used to decide when a side is idle (show a status word)
+	// versus actively transferring (show a rate). hasRead/hasWrite record whether
+	// each side has ever moved, so no status shows before the first transfer.
+	lastReadTotal, lastWriteTotal int64
+	readMovedAt, writeMovedAt     time.Time
+	hasRead, hasWrite             bool
 
-	// ioScopes holds the latest sampled read/write stats per scope (e.g.
-	// "source", "storage") as reported by the kloset iostat sampler. Unlike
-	// the repository's raw counters, these are emitted on a fixed cadence and
-	// decoupled from packfile flush timing, so they move smoothly during a
-	// backup. Used to render the throughput/totals summary line.
-	ioScopes map[string]ioScopeStat
+	// Wall-clock throughput history per side, for the debug distribution. Each
+	// entry is bytes/sec over one fixed real-time interval, sampled from the
+	// cumulative totals. Sampling at a fixed cadence (rather than per I/O op) is
+	// what makes it correct for bursty writers — packfile flushes cluster many
+	// writes into a tiny window, which per-op bucketing would misread as an
+	// enormous rate.
+	readRates  rateSampler
+	writeRates rateSampler
 
 	lastItem string
 	errors   []string
 	logs     []string
+}
+
+// rateSampler keeps a bounded history of wall-clock throughput samples
+// (bytes/sec), one per fixed real-time interval, computed from successive
+// cumulative totals.
+type rateSampler struct {
+	lastTotal int64
+	lastAt    time.Time
+	rates     []float64
+}
+
+const (
+	rateInterval   = 250 * time.Millisecond
+	rateMaxSamples = 4096
+)
+
+// observe records the cumulative total at time now, appending a throughput
+// sample once a full interval has elapsed since the previous one.
+func (rs *rateSampler) observe(total int64, now time.Time) {
+	if rs.lastAt.IsZero() {
+		rs.lastTotal, rs.lastAt = total, now
+		return
+	}
+	dt := now.Sub(rs.lastAt)
+	if dt < rateInterval {
+		return
+	}
+	if d := total - rs.lastTotal; d >= 0 {
+		rs.rates = append(rs.rates, float64(d)/dt.Seconds())
+		if len(rs.rates) > rateMaxSamples {
+			rs.rates = rs.rates[len(rs.rates)-rateMaxSamples:]
+		}
+	}
+	rs.lastTotal, rs.lastAt = total, now
+}
+
+// rateDist is a throughput distribution over the sampled wall-clock rates.
+type rateDist struct {
+	n                     int
+	avg, min, max         float64
+	median, p90, p95, p99 float64
+}
+
+func (rs *rateSampler) dist() rateDist {
+	n := len(rs.rates)
+	if n == 0 {
+		return rateDist{}
+	}
+	sorted := make([]float64, n)
+	copy(sorted, rs.rates)
+	sort.Float64s(sorted)
+
+	var sum float64
+	for _, v := range sorted {
+		sum += v
+	}
+	pct := func(p float64) float64 {
+		if n == 1 {
+			return sorted[0]
+		}
+		pos := p / 100 * float64(n-1)
+		lo := int(pos)
+		hi := lo + 1
+		if hi >= n {
+			return sorted[n-1]
+		}
+		w := pos - float64(lo)
+		return sorted[lo]*(1-w) + sorted[hi]*w
+	}
+	return rateDist{
+		n:      n,
+		avg:    sum / float64(n),
+		min:    sorted[0],
+		max:    sorted[n-1],
+		median: pct(50),
+		p90:    pct(90),
+		p95:    pct(95),
+		p99:    pct(99),
+	}
+}
+
+// ioActivity is a side's transfer status for display.
+type ioActivity int
+
+const (
+	ioNone   ioActivity = iota // never transferred: show nothing
+	ioMoving                   // actively transferring: show a rate
+	ioIdle                     // transferred before, now idle: show a status word
+)
+
+// sampleIO records the current read/write totals at time now and returns each
+// side's activity. A side is "moving" if its total advanced within the recent
+// window, "idle" if it moved before but not lately, "none" if it never moved.
+func (s *State) sampleIO(readTotal, writeTotal int64, now time.Time) (read, write ioActivity) {
+	const window = 1500 * time.Millisecond
+
+	if readTotal > s.lastReadTotal {
+		s.lastReadTotal = readTotal
+		s.readMovedAt = now
+		s.hasRead = true
+	}
+	if writeTotal > s.lastWriteTotal {
+		s.lastWriteTotal = writeTotal
+		s.writeMovedAt = now
+		s.hasWrite = true
+	}
+
+	activity := func(has bool, movedAt time.Time) ioActivity {
+		switch {
+		case !has:
+			return ioNone
+		case now.Sub(movedAt) <= window:
+			return ioMoving
+		default:
+			return ioIdle
+		}
+	}
+	return activity(s.hasRead, s.readMovedAt), activity(s.hasWrite, s.writeMovedAt)
 }
 
 // processedBytes returns the number of bytes handled so far: bytes of
@@ -168,88 +275,6 @@ func (s *State) reconcile(size uint64) {
 	}
 }
 
-// payloadScope returns the iostats scope and direction ("r" or "w") whose
-// throughput tracks how fast the snapshot payload is being processed for the
-// current workflow, along with whether a scope is known. Backup ingests the
-// source (read); export emits to the destination (write).
-func (s *State) payloadScope() (scope, dir string, ok bool) {
-	switch s.workflow {
-	case "import":
-		return "source", "r", true
-	case "export":
-		return "destination", "w", true
-	default:
-		return "", "", false
-	}
-}
-
-// iostatTotal reads the cumulative "total" bytes from a sampled stats map.
-func iostatTotal(m map[string]any) int64 {
-	if m == nil {
-		return 0
-	}
-	switch v := m["total"].(type) {
-	case int64:
-		return v
-	case uint64:
-		return int64(v)
-	case float64:
-		return int64(v)
-	}
-	return 0
-}
-
-// updateIOStats records the latest sampler snapshot: the per-scope read/write
-// totals plus wall-clock rates (for the summary line), and the payload-scope
-// rate that drives the ETA. Rates are derived from the byte delta since the
-// previous sample for the same scope, divided by elapsed wall-clock time.
-func (s *State) updateIOStats(e Event) {
-	s.updateIOStatsAt(e, time.Now())
-}
-
-// updateIOStatsAt is updateIOStats with an injectable clock for testing the
-// delta-based rate computation.
-func (s *State) updateIOStatsAt(e Event, now time.Time) {
-	scope, _ := e.Data["scope"].(string)
-	if scope == "" {
-		return
-	}
-	r, _ := e.Data["r"].(map[string]any)
-	w, _ := e.Data["w"].(map[string]any)
-
-	rTotal := iostatTotal(r)
-	wTotal := iostatTotal(w)
-
-	if s.ioScopes == nil {
-		s.ioScopes = make(map[string]ioScopeStat)
-	}
-
-	cur := ioScopeStat{readTotal: rTotal, writeTotal: wTotal, sampledAt: now}
-	if prev, ok := s.ioScopes[scope]; ok && !prev.sampledAt.IsZero() {
-		if dt := now.Sub(prev.sampledAt).Seconds(); dt > 0 {
-			if d := rTotal - prev.readTotal; d > 0 {
-				cur.readRate = float64(d) / dt
-			}
-			if d := wTotal - prev.writeTotal; d > 0 {
-				cur.writeRate = float64(d) / dt
-			}
-		}
-	}
-	s.ioScopes[scope] = cur
-
-	// Feed the ETA from the payload scope's active direction.
-	if want, dir, ok := s.payloadScope(); ok && scope == want {
-		rate := cur.readRate
-		if dir == "w" {
-			rate = cur.writeRate
-		}
-		if rate > 0 {
-			s.ioRate = rate
-			s.ioRateAt = now
-		}
-	}
-}
-
 func newApplicationState() *State {
 	return &State{
 		lastItem: "",
@@ -276,9 +301,16 @@ func newApplication(ctx *appcontext.AppContext, name string, repo *repository.Re
 
 	go func() {
 		defer close(done)
-		_, err := capp.prog.Run()
+		final, err := capp.prog.Run()
 		if err != nil {
 			capp.err = err
+		}
+		// The model renders nothing once finished (so bubbletea tears down
+		// cleanly); print the completed summary exactly once here. Rendering
+		// with finished=false reproduces the full final frame.
+		if am, ok := final.(appModel); ok && am.finished {
+			am.finished = false
+			fmt.Fprint(os.Stdout, am.View())
 		}
 	}()
 
@@ -302,12 +334,12 @@ func (s *State) Update(e Event) {
 	case "workflow.start":
 		s.startTime = time.Now()
 		s.snapshotID = fmt.Sprintf("%x", e.Snapshot[0:4])
-		if w, ok := e.Data["workflow"].(string); ok {
+		// Keep the first workflow ("import"/"export"), which identifies the
+		// operation and drives scope selection. A nested workflow.start (the
+		// kloset Builder emits its own "backup"/"export") must not overwrite it.
+		if w, ok := e.Data["workflow"].(string); ok && s.workflow == "" {
 			s.workflow = w
 		}
-
-	case "iostats":
-		s.updateIOStats(e)
 
 	case "workflow.end":
 

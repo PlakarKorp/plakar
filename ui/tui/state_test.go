@@ -276,7 +276,7 @@ func TestStateUpdate_UnknownTypeIsNoOp(t *testing.T) {
 // (that spawns a bubbletea program) — we set application to nil and only
 // invoke branches that don't dereference it.
 func newAppModelForTest() appModel {
-	return appModel{progress: progressBar()}
+	return appModel{}
 }
 
 func TestAppModelUpdate_WindowSizeStoresGeometry(t *testing.T) {
