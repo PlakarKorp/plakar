@@ -87,6 +87,61 @@ func TestStateUpdate_FileCountersAndSizes(t *testing.T) {
 	}
 }
 
+func TestStateUpdate_CachedRebackupNoDoubleCount(t *testing.T) {
+	// Regression: a re-backup of an unchanged file emits file.cached AND
+	// file.ok for it. processedBytes() must report the file's size once, not
+	// twice (the bug reported a 10 GiB file as 20 GiB).
+	s := newApplicationState()
+	const size = int64(10 << 30) // 10 GiB
+	fi := objects.FileInfo{Lsize: size}
+
+	s.Update(Event{Type: "file"})
+	s.Update(Event{Type: "file.cached", Data: map[string]any{"fileinfo": fi}})
+	s.Update(Event{Type: "file.ok", Data: map[string]any{"fileinfo": fi}})
+
+	if got := s.processedBytes(); got != uint64(size) {
+		t.Fatalf("processedBytes = %d, want %d (10 GiB counted once)", got, size)
+	}
+}
+
+func TestStateUpdate_ChunkBytesAdvanceWithinFile(t *testing.T) {
+	s := newApplicationState()
+	fi := objects.FileInfo{Lsize: 1000}
+
+	// File starts streaming; chunks arrive before file.ok.
+	s.Update(Event{Type: "file"})
+	s.Update(Event{Type: "chunk.bytes", Data: map[string]any{"bytes": int64(300)}})
+	if got := s.processedBytes(); got != 300 {
+		t.Fatalf("mid-file processedBytes = %d, want 300", got)
+	}
+	s.Update(Event{Type: "chunk.bytes", Data: map[string]any{"bytes": int64(400)}})
+	if got := s.processedBytes(); got != 700 {
+		t.Fatalf("mid-file processedBytes = %d, want 700", got)
+	}
+
+	// file.ok commits the full size; the streamed bytes must reconcile so the
+	// total doesn't jump past the file's real size.
+	s.Update(Event{Type: "file.ok", Data: map[string]any{"fileinfo": fi}})
+	if got := s.processedBytes(); got != 1000 {
+		t.Fatalf("post-file.ok processedBytes = %d, want 1000 (no double count)", got)
+	}
+
+	// A cached file emits BOTH file.cached and file.ok (see processRecord in
+	// kloset backup.go — file.ok fires for every file, cache hit or not). Its
+	// size must be counted once, not twice.
+	s.Update(Event{Type: "file.cached", Data: map[string]any{"fileinfo": objects.FileInfo{Lsize: 500}}})
+	s.Update(Event{Type: "file.ok", Data: map[string]any{"fileinfo": objects.FileInfo{Lsize: 500}}})
+	if got := s.processedBytes(); got != 1500 {
+		t.Fatalf("after cached file processedBytes = %d, want 1500 (counted once, not double)", got)
+	}
+
+	// A second streaming file advances again from the committed floor.
+	s.Update(Event{Type: "chunk.bytes", Data: map[string]any{"bytes": int64(250)}})
+	if got := s.processedBytes(); got != 1750 {
+		t.Fatalf("second file mid-stream processedBytes = %d, want 1750", got)
+	}
+}
+
 func TestStateUpdate_XattrCounters(t *testing.T) {
 	s := newApplicationState()
 	s.Update(Event{Type: "xattr"})

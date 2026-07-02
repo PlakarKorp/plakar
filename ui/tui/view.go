@@ -218,7 +218,7 @@ func (m appModel) View() string {
 	}
 
 	var s strings.Builder
-	done := state.countPathOk + state.countPathError
+	bytesDone := state.processedBytes()
 
 	// --- summaries (unchanged logic) ---
 	writeProcessedSummary := func() {
@@ -247,23 +247,46 @@ func (m appModel) View() string {
 			return
 		}
 
-		if time.Since(m.application.debounceStat) >= 1*time.Second {
-			ioStats := m.repo.IOStats()
-			indent := strings.Repeat(" ", len(humanDuration(time.Since(state.startTime))))
-			r := ioStats.Read.Stats()
-			w := ioStats.Write.Stats()
-
-			m.application.lastStat = fmt.Sprintf(
-				"%s    store: read=%s, write=%s\n",
-				indent,
-				formatBytes(r.TotalBytes),
-				formatBytes(w.TotalBytes),
-			)
-
-			m.application.debounceStat = time.Now()
+		// The two I/O sides differ by workflow:
+		//   backup  (import): read from the source,  write to the store.
+		//   restore (export): read from the store,   write to the destination.
+		// Totals are read live from the repository's trackers each frame (no
+		// lag); rates come from the kloset iostat sampler, which needs two
+		// spaced samples to compute a wall-clock throughput.
+		var (
+			readLabel, writeLabel string
+			readTotal, writeTotal int64
+			readScope, writeScope string // iostat scope for the rate
+		)
+		switch state.workflow {
+		case "export": // restore
+			readLabel, writeLabel = "store: read", "target: write"
+			readTotal = m.repo.IOStats().Read.TotalBytes()
+			if m.repo.ExportStats != nil {
+				writeTotal = m.repo.ExportStats.Write.TotalBytes()
+			}
+			readScope, writeScope = "storage", "destination"
+		default: // import / backup
+			readLabel, writeLabel = "source: read", "store: write"
+			if m.repo.ImportStats != nil {
+				readTotal = m.repo.ImportStats.Read.TotalBytes()
+			}
+			writeTotal = m.repo.IOStats().Write.TotalBytes()
+			readScope, writeScope = "source", "storage"
 		}
 
-		fmt.Fprint(&s, m.application.lastStat)
+		indent := strings.Repeat(" ", len(humanDuration(time.Since(state.startTime))))
+		var b strings.Builder
+		fmt.Fprintf(&b, "%s    %s=%s", indent, readLabel, formatBytes(readTotal))
+		if sc, ok := state.ioScopes[readScope]; ok && sc.readRate > 0 {
+			fmt.Fprintf(&b, " (%s/s)", formatBytes(int64(sc.readRate)))
+		}
+		fmt.Fprintf(&b, ", %s=%s", writeLabel, formatBytes(writeTotal))
+		if sc, ok := state.ioScopes[writeScope]; ok && sc.writeRate > 0 {
+			fmt.Fprintf(&b, " (%s/s)", formatBytes(int64(sc.writeRate)))
+		}
+		b.WriteByte('\n')
+		fmt.Fprint(&s, b.String())
 	}
 
 	// --- shared line writer: prefix + item + right-aligned tail ---
@@ -318,16 +341,19 @@ func (m appModel) View() string {
 	}
 
 	// --- first line always shows last item + right-aligned size ---
-	sizeText := humanize.IBytes(uint64(state.countFileSize))
+	// Use processedBytes() (which includes the in-flight bytes of the file
+	// currently being chunked) so the size advances continuously rather than
+	// only stepping when a whole file completes.
+	sizeText := humanize.IBytes(state.processedBytes())
 
-	// Progress mode: we have a total and can show bar + ETA on bar line
-	if state.gotSummary && state.summaryPath > 0 {
-		total := state.summaryPath
+	// Progress mode: we have a byte total and can show bar + ETA on bar line
+	if state.gotSummary && state.summarySize > 0 {
+		total := state.summarySize
 
 		// ratio clamped to [0,1]
 		ratio := 0.0
 		if total > 0 {
-			ratio = float64(done) / float64(total)
+			ratio = float64(bytesDone) / float64(total)
 			if ratio < 0 {
 				ratio = 0
 			} else if ratio > 1 {
@@ -339,11 +365,18 @@ func (m appModel) View() string {
 		prefix := fmt.Sprintf("[%s] %s %s", humanDuration(time.Since(state.startTime)), state.snapshotID, state.phase)
 		writeLine(prefix, state.lastItem, sizeText)
 
-		// ETA (to be printed on the progress bar line)
+		// ETA (to be printed on the progress bar line). The rate comes from
+		// the kloset iostat sampler (source read for backup, destination
+		// write for export); it is ignored once it goes stale so a stalled
+		// stream stops advertising a bogus ETA.
 		etaText := ""
-		if m.rateEMA > 0 && done > 10 && time.Since(state.startTime) > 2*time.Second && total >= done {
-			remaining := float64(total - done)
-			etaDur := time.Duration(remaining / m.rateEMA * float64(time.Second))
+		rate := state.ioRate
+		if !state.ioRateAt.IsZero() && time.Since(state.ioRateAt) > 5*time.Second {
+			rate = 0
+		}
+		if rate > 0 && total >= bytesDone {
+			remaining := float64(total - bytesDone)
+			etaDur := time.Duration(remaining / rate * float64(time.Second))
 			if v := fmtETA(etaDur); v != "" {
 				etaText = "ETA " + v
 			}

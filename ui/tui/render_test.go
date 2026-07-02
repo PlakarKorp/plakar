@@ -25,7 +25,8 @@ func renderModel(s *State) appModel {
 // having processed a handful of files/dirs.
 func driveSummaryState() *State {
 	s := newApplicationState()
-	s.Update(Event{Type: "workflow.start", Snapshot: objects.MAC{0xde, 0xad, 0xbe, 0xef}})
+	s.Update(Event{Type: "workflow.start", Snapshot: objects.MAC{0xde, 0xad, 0xbe, 0xef},
+		Data: map[string]any{"workflow": "import"}})
 	s.startTime = time.Now().Add(-5 * time.Second)
 	s.Update(Event{Type: "snapshot.import.start"})
 	s.Update(Event{
@@ -44,6 +45,23 @@ func driveSummaryState() *State {
 	s.Update(Event{Type: "path.ok"})
 	s.Update(Event{Type: "file.ok", Data: map[string]any{"fileinfo": objects.FileInfo{Lsize: 2048}}})
 	return s
+}
+
+func TestRenderView_ProgressModeShowsETAFromSampler(t *testing.T) {
+	t.Parallel()
+	s := driveSummaryState()
+	// Two samples give a live wall-clock source read rate, which should
+	// surface an ETA on the bar line.
+	t0 := s.startTime
+	s.updateIOStatsAt(sourceSample(1<<20, 0), t0)
+	s.updateIOStatsAt(sourceSample(3<<20, 0), t0.Add(2*time.Second))
+	m := renderModel(s)
+	m.width = 80
+	m.height = 24
+	out := m.View()
+	if !strings.Contains(out, "ETA") {
+		t.Fatalf("progress mode with a sampled rate should render an ETA, got:\n%s", out)
+	}
 }
 
 func TestRenderView_ProgressModeNonEmpty(t *testing.T) {
@@ -224,40 +242,54 @@ func TestRenderUpdate_WindowSize(t *testing.T) {
 	}
 }
 
-func TestRenderUpdate_TickComputesRateAndRearms(t *testing.T) {
+func TestRenderUpdate_TickRearms(t *testing.T) {
 	t.Parallel()
-	s := driveSummaryState()
-	// boost result counters so resDone > lastDone yields a positive rate
-	s.countFileOk = 100
-	s.countSymlinkOk = 5
-	s.countXattrOk = 2
-	m := renderModel(s)
-	// pre-seed lastETAAt in the past so dt > 0.2 path runs
-	m.lastETAAt = time.Now().Add(-1 * time.Second)
-	m.lastDone = 0
-	next, cmd := m.Update(tickMsg{})
-	got := next.(appModel)
-	if got.rateEMA <= 0 {
-		t.Fatalf("tick should compute a positive rateEMA, got %v", got.rateEMA)
-	}
+	m := renderModel(driveSummaryState())
+	_, cmd := m.Update(tickMsg{})
 	if cmd == nil {
 		t.Fatal("tickMsg should re-arm the tick command")
 	}
 }
 
-func TestRenderUpdate_TickFirstSeedsETAClock(t *testing.T) {
+func sourceSample(readTotal, writeTotal int64) Event {
+	return Event{Type: "iostats", Data: map[string]any{
+		"scope": "source",
+		"r":     map[string]any{"total": readTotal},
+		"w":     map[string]any{"total": writeTotal},
+	}}
+}
+
+func TestStateUpdateIOStats_FeedsBackupRate(t *testing.T) {
 	t.Parallel()
-	m := renderModel(driveSummaryState())
-	if !m.lastETAAt.IsZero() {
-		t.Fatal("precondition: lastETAAt should start zero")
+	s := driveSummaryState() // workflow "import" (see driveSummaryState)
+	t0 := s.startTime
+
+	// A sample for a scope we don't care about must not feed the ETA rate.
+	s.updateIOStatsAt(Event{Type: "iostats", Data: map[string]any{
+		"scope": "storage",
+		"r":     map[string]any{"total": int64(999)},
+		"w":     map[string]any{"total": int64(999)},
+	}}, t0)
+	if s.ioRate != 0 {
+		t.Fatalf("storage scope should not set ioRate, got %v", s.ioRate)
 	}
-	next, cmd := m.Update(tickMsg{})
-	got := next.(appModel)
-	if got.lastETAAt.IsZero() {
-		t.Fatal("first tick should seed lastETAAt")
+
+	// A single source sample yields no rate yet (no prior delta).
+	s.updateIOStatsAt(sourceSample(1<<20, 0), t0)
+	if s.ioRate != 0 {
+		t.Fatalf("first source sample should not set a rate, got %v", s.ioRate)
 	}
-	if cmd == nil {
-		t.Fatal("tickMsg should always re-arm")
+
+	// A second sample 2s later, +2 MiB read => 1 MiB/s wall-clock rate.
+	s.updateIOStatsAt(sourceSample(3<<20, 0), t0.Add(2*time.Second))
+	if want := float64(1 << 20); s.ioRate != want {
+		t.Fatalf("source read rate = %v, want %v (1 MiB/s)", s.ioRate, want)
+	}
+	if s.ioRateAt.IsZero() {
+		t.Fatal("ioRateAt should be stamped when a rate is recorded")
+	}
+	if got := s.ioScopes["source"].readTotal; got != 3<<20 {
+		t.Fatalf("source readTotal = %d, want %d", got, 3<<20)
 	}
 }
 
@@ -426,6 +458,21 @@ func TestNewApplicationUnknownNameReturnsNil(t *testing.T) {
 	_, ctx := ptesting.GenerateRepository(t, &out, &errb, nil)
 	if app := newApplication(ctx, "totally-unknown", nil); app != nil {
 		t.Fatal("unknown application name should return nil")
+	}
+}
+
+func TestDisplayName(t *testing.T) {
+	t.Parallel()
+	// The export workflow is only ever driven by `restore`, so it is labelled
+	// "restore"; import is labelled "backup"; anything else passes through.
+	if got := displayName("export"); got != "restore" {
+		t.Fatalf("displayName(export) = %q, want restore", got)
+	}
+	if got := displayName("import"); got != "backup" {
+		t.Fatalf("displayName(import) = %q, want backup", got)
+	}
+	if got := displayName("check"); got != "check" {
+		t.Fatalf("displayName(check) = %q, want check (passthrough)", got)
 	}
 }
 
