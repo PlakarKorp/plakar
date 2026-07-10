@@ -13,6 +13,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	restoreWarningRootPath       = "/"
+	restoreWarningDataPath       = "/data.txt"
+	restoreWarningDeniedPath     = "/denied.txt"
+	restoreWarningDataName       = "data.txt"
+	restoreWarningPayload        = "payload"
+	restoreWarningExpectedOutput = "snapshot contains 1 backup error"
+)
 func mkRestoreDir(t *testing.T) string {
 	t.Helper()
 	dir, err := os.MkdirTemp("", "tmp_to_restore")
@@ -360,4 +368,34 @@ func TestRestoreToUnresolvableAlias(t *testing.T) {
 	require.Error(t, err)
 	require.Equal(t, 1, status)
 	require.Contains(t, err.Error(), "exporter")
+}
+
+func TestRestoreWarnsWhenSnapshotContainsBackupErrors(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	repo, ctx := ptesting.GenerateRepository(t, bufOut, bufErr, nil)
+	snap := ptesting.GenerateSnapshot(t, repo, nil,
+		ptesting.WithGenerator(func(ch chan<- *connectors.Record) {
+			ch <- connectors.NewRecord(restoreWarningRootPath, "", objects.FileInfo{
+				Lname: restoreWarningRootPath, Lmode: os.ModeDir | 0755,
+			}, nil, nil)
+			ch <- connectors.NewRecord(restoreWarningDataPath, "", objects.FileInfo{
+				Lname: restoreWarningDataName, Lmode: 0644, Lsize: int64(len(restoreWarningPayload)),
+			}, nil, func() (io.ReadCloser, error) {
+				return io.NopCloser(strings.NewReader(restoreWarningPayload)), nil
+			})
+			ch <- connectors.NewError(restoreWarningDeniedPath, os.ErrPermission)
+		}),
+	)
+	defer snap.Close()
+
+	dir := mkRestoreDir(t)
+	id := snap.Header.GetIndexID()
+	cmd := &Restore{}
+	require.NoError(t, cmd.Parse(ctx, []string{"-to", dir, hex.EncodeToString(id[:])}))
+
+	status, err := cmd.Execute(ctx, repo)
+	require.NoError(t, err)
+	require.Equal(t, 0, status)
+	require.Contains(t, bufErr.String(), restoreWarningExpectedOutput)
 }
