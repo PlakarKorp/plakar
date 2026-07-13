@@ -348,12 +348,14 @@ func shortenPathTailMax(path string, maxW int) string {
 	return best
 }
 
-// ioSummary describes the two I/O sides of the active workflow for the summary
-// rows. The direction meaning flips between backup and restore.
+// ioSummary describes the I/O sides of the active workflow for the summary row.
+// The direction meaning varies: backup reads the source and writes the store;
+// restore reads the store and writes the target; sync reads the source store
+// and writes the peer; check only reads the store (readOnly).
 type ioSummary struct {
 	readLabel, writeLabel string
 	readTotal, writeTotal int64
-	readScope, writeScope string // iostat scope for the wall-clock rate
+	readOnly              bool // no write side (check)
 }
 
 func (m appModel) ioSummary() (ioSummary, bool) {
@@ -369,7 +371,21 @@ func (m appModel) ioSummary() (ioSummary, bool) {
 		return ioSummary{
 			readLabel: "store", writeLabel: "target",
 			readTotal: m.repo.IOStats().Read.TotalBytes(), writeTotal: w,
-			readScope: "storage", writeScope: "destination",
+		}, true
+	case "synchronize": // sync: read from the source store, write to the peer
+		// The TUI holds only one of the two repositories, so totals come from
+		// the sampled scopes: "source-storage" (source reads) and "storage"
+		// (destination writes).
+		st := m.application.state.scopeTotals
+		return ioSummary{
+			readLabel: "source", writeLabel: "peer",
+			readTotal: st["source-storage"].read, writeTotal: st["storage"].write,
+		}, true
+	case "check": // check: read from the store, verify; nothing is written
+		return ioSummary{
+			readLabel: "store",
+			readTotal: m.repo.IOStats().Read.TotalBytes(),
+			readOnly:  true,
 		}, true
 	default: // backup: read from the source, write to the store
 		var r int64
@@ -379,7 +395,6 @@ func (m appModel) ioSummary() (ioSummary, bool) {
 		return ioSummary{
 			readLabel: "source", writeLabel: "store",
 			readTotal: r, writeTotal: m.repo.IOStats().Write.TotalBytes(),
-			readScope: "source", writeScope: "storage",
 		}, true
 	}
 }
@@ -391,6 +406,14 @@ func (m appModel) readTotal() int64 {
 		return io.readTotal
 	}
 	return 0
+}
+
+// progressBytes is the numerator for the progress bar and the size readout: the
+// logical payload processed so far (file.ok sizes + in-flight chunks). It shares
+// the same units as summarySize, so the bar reaches 100%. Sync emits file.ok
+// with each source entry's real size, so this advances there too.
+func (m appModel) progressBytes() uint64 {
+	return m.application.state.processedBytes()
 }
 
 // termWidth returns the usable width, defaulting to 80 when unknown.
@@ -435,7 +458,7 @@ func (m appModel) View() string {
 	}
 
 	var s strings.Builder
-	bytesDone := state.processedBytes()
+	bytesDone := m.progressBytes()
 	elapsed := time.Since(state.startTime)
 	done := state.phase == "completed"
 
@@ -620,15 +643,15 @@ func (m appModel) View() string {
 				}
 				return out
 			}
-			row2 := []string{
-				ioSeg(io.readLabel, "↓", downStyle, io.readTotal, readAct, true),
-				ioSeg(io.writeLabel, "↑", upStyle, io.writeTotal, writeAct, false),
-			}
-			// Savings: processed payload vs bytes written to the store.
-			processed := int64(bytesDone)
-			if state.workflow == "import" && io.writeTotal > 0 && io.writeTotal < processed {
-				savings := 100 * (1 - float64(io.writeTotal)/float64(processed))
-				row2 = append(row2, labelStyle.Render("savings")+" "+doneStyle.Render(fmt.Sprintf("%.0f%%", savings)))
+			row2 := []string{ioSeg(io.readLabel, "↓", downStyle, io.readTotal, readAct, true)}
+			if !io.readOnly {
+				row2 = append(row2, ioSeg(io.writeLabel, "↑", upStyle, io.writeTotal, writeAct, false))
+				// Savings: processed payload vs bytes written to the store.
+				processed := int64(bytesDone)
+				if state.workflow == "import" && io.writeTotal > 0 && io.writeTotal < processed {
+					savings := 100 * (1 - float64(io.writeTotal)/float64(processed))
+					row2 = append(row2, labelStyle.Render("savings")+" "+doneStyle.Render(fmt.Sprintf("%.0f%%", savings)))
+				}
 			}
 			rows = append(rows, row2)
 		}

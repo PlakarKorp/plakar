@@ -147,10 +147,6 @@ func testSyncDirection(t *testing.T, direction string, localPassphrase, peerPass
 		require.Contains(t, localIDs, *peerSnap)
 		require.Contains(t, peerIDs, *peerSnap)
 	}
-
-	require.Regexp(t,
-		`info: sync: synchronization .*completed: `+string(rune('0'+wantSynchronized))+` snapshots synchronized`,
-		fixture.output.String())
 }
 
 func TestExecuteCmdSync(t *testing.T) {

@@ -186,6 +186,13 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 	peerCtx := appcontext.NewAppContextFrom(ctx)
 	peerCtx.SetSecret(cmd.PeerRepositorySecret)
 	peerCtx.StoreConfig = storeConfig
+
+	// The peer context owns a separate events bus (see NewKContextFrom), so its
+	// progress — the destination writes for `sync to` — would never reach the
+	// renderer listening on ctx. Forward the peer bus onto ctx's bus so the UI
+	// sees a unified stream. The pump ends when the peer bus is closed.
+	go peerCtx.Events().Forward(ctx.Events())
+
 	peerRepository, err := repository.NewNoRebuild(peerCtx.GetInner(), peerCtx.GetSecret(), peerStore, peerStoreSerializedConfig, true)
 	if err != nil {
 		return 1, fmt.Errorf("could not open peer repository %s: %w", cmd.PeerRepositoryLocation, err)
@@ -288,24 +295,21 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 		}
 	}
 
-	srcSynced := 0
 	for _, snapshotID := range srcSyncList {
 		if err := ctx.Err(); err != nil {
 			return 1, err
 		}
 
-		err := cmd.synchronize(ctx, peerCtx, srcRepository, dstRepository, srcStoreConfig, snapshotID)
-		if err != nil {
+		if err := cmd.synchronize(ctx, peerCtx, srcRepository, dstRepository, srcStoreConfig, snapshotID); err != nil {
 			ctx.GetLogger().Error("failed to synchronize snapshot %x from store %s: %s",
 				snapshotID[:4], srcLocation, err)
-		} else {
-			srcSynced++
 		}
 	}
 
-	switch cmd.Direction {
-	case "with":
-
+	// "with" is bidirectional: also pull the snapshots the destination has that
+	// the source is missing. Per-snapshot progress is shown by the live UI, so
+	// no completion summary is logged here.
+	if cmd.Direction == "with" {
 		dstSnapshotIDs, err := locate.LocateSnapshotIDs(dstRepository, cmd.SrcLocateOptions)
 		if err != nil {
 			return 1, fmt.Errorf("could not locate snapshots in store %s: %s", dstLocation, err)
@@ -325,34 +329,16 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 			}
 		}
 
-		dstSynced := 0
 		for _, snapshotID := range dstSyncList {
 			if err := ctx.Err(); err != nil {
 				return 1, err
 			}
 
-			err := cmd.synchronize(ctx, peerCtx, srcRepository, dstRepository, srcStoreConfig, snapshotID)
-			if err != nil {
+			if err := cmd.synchronize(ctx, peerCtx, srcRepository, dstRepository, srcStoreConfig, snapshotID); err != nil {
 				ctx.GetLogger().Error("failed to synchronize snapshot %x from peer store %s: %s",
 					snapshotID[:4], dstLocation, err)
-			} else {
-				dstSynced++
 			}
 		}
-		ctx.GetLogger().Info("sync: synchronization between %s and %s completed: %d snapshots synchronized",
-			srcLocation,
-			dstLocation,
-			srcSynced+dstSynced)
-	case "to":
-		ctx.GetLogger().Info("sync: synchronization from %s to %s completed: %d snapshots synchronized",
-			srcLocation,
-			dstLocation,
-			srcSynced)
-	default:
-		ctx.GetLogger().Info("sync: synchronization from %s to %s completed: %d snapshots synchronized",
-			dstLocation,
-			srcLocation,
-			srcSynced)
 	}
 
 	return 0, nil
@@ -362,7 +348,9 @@ func (cmd *Sync) synchronize(ctx, peerCtx *appcontext.AppContext, srcRepository,
 	srcLocation := srcRepository.Origin()
 	dstLocation := dstRepository.Origin()
 
-	ctx.GetLogger().Info("Synchronizing snapshot %x from %s to %s", snapshotID, srcLocation, dstLocation)
+	// Per-snapshot progress is shown by the live UI; keep these at trace level
+	// (off unless tracing) so they don't punch through the TUI as stray lines.
+	ctx.GetLogger().Trace("sync", "synchronizing snapshot %x from %s to %s", snapshotID, srcLocation, dstLocation)
 	srcSnapshot, err := snapshot.Load(srcRepository, snapshotID)
 	if err != nil {
 		return err
@@ -422,7 +410,7 @@ func (cmd *Sync) synchronize(ctx, peerCtx *appcontext.AppContext, srcRepository,
 		return err
 	}
 
-	ctx.GetLogger().Info("Synchronization of %x finished", snapshotID)
+	ctx.GetLogger().Trace("sync", "synchronization of %x finished", snapshotID)
 	return err
 }
 

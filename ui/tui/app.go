@@ -15,16 +15,20 @@ import (
 )
 
 var applications = map[string]func(*appcontext.AppContext, *Application, *repository.Repository) tea.Model{
-	"import": newGenericModel,
-	"export": newGenericModel,
+	"import":      newGenericModel,
+	"export":      newGenericModel,
+	"synchronize": newGenericModel,
+	"check":       newGenericModel,
 }
 
 // displayNames maps a workflow key to the label shown to the user. plakar has
 // no standalone "export" command — the export workflow is only ever driven by
 // `restore` — so present it as "restore".
 var displayNames = map[string]string{
-	"import": "backup",
-	"export": "restore",
+	"import":      "backup",
+	"export":      "restore",
+	"synchronize": "sync",
+	"check":       "check",
 }
 
 func displayName(workflow string) string {
@@ -121,10 +125,20 @@ type State struct {
 	readRates  rateSampler
 	writeRates rateSampler
 
+	// scopeTotals holds cumulative read/write bytes per iostat scope, from the
+	// sampler's "iostats" events. Sync copies store→store and the TUI only holds
+	// one of the two repositories, so it can't read both sides' totals from a
+	// repository tracker as backup/restore do — it reads them from these sampled
+	// scopes instead ("source-storage" read, "storage" write).
+	scopeTotals map[string]ioTotals
+
 	lastItem string
 	errors   []string
 	logs     []string
 }
+
+// ioTotals is the cumulative read/write bytes reported for one iostat scope.
+type ioTotals struct{ read, write int64 }
 
 // rateSampler keeps a bounded history of wall-clock throughput samples
 // (bytes/sec), one per fixed real-time interval, computed from successive
@@ -244,6 +258,34 @@ func (s *State) sampleIO(readTotal, writeTotal int64, now time.Time) (read, writ
 	return activity(s.hasRead, s.readMovedAt), activity(s.hasWrite, s.writeMovedAt)
 }
 
+// recordIOStats stores the cumulative read/write totals for a sampled scope,
+// used by the sync I/O line (see ioSummary).
+func (s *State) recordIOStats(e Event) {
+	scope, _ := e.Data["scope"].(string)
+	if scope == "" {
+		return
+	}
+	total := func(dir string) int64 {
+		m, ok := e.Data[dir].(map[string]any)
+		if !ok {
+			return 0
+		}
+		switch v := m["total"].(type) {
+		case int64:
+			return v
+		case uint64:
+			return int64(v)
+		case float64:
+			return int64(v)
+		}
+		return 0
+	}
+	if s.scopeTotals == nil {
+		s.scopeTotals = make(map[string]ioTotals)
+	}
+	s.scopeTotals[scope] = ioTotals{read: total("r"), write: total("w")}
+}
+
 // processedBytes returns the number of bytes handled so far: bytes of
 // completed files/xattrs plus the in-flight bytes of files still being chunked.
 // It is measured against summarySize (the total scanned size) to drive the
@@ -340,6 +382,9 @@ func (s *State) Update(e Event) {
 		if w, ok := e.Data["workflow"].(string); ok && s.workflow == "" {
 			s.workflow = w
 		}
+
+	case "iostats":
+		s.recordIOStats(e)
 
 	case "workflow.end":
 

@@ -196,7 +196,7 @@ func entryPoint() int {
 	defer ctx.Close()
 
 	var renderer ui.UI
-	if opt_silent || opt_stdio || opt_quiet || opt_trace != "" || !isTerminal() {
+	if opt_silent || opt_stdio || opt_quiet || opt_trace != "" || (!isTerminal() && !opt_json) {
 		renderer = stdio.New(ctx)
 	} else if opt_json {
 		renderer = jsonui.New(ctx)

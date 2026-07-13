@@ -24,11 +24,13 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/api"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/utils"
+	"github.com/klauspost/compress/gzhttp"
 )
 
 type UiOptions struct {
@@ -54,9 +56,19 @@ func Ui(repo *repository.Repository, ctx *appcontext.AppContext, addr string, op
 	}
 	staticsFS := http.FS(statics)
 
-	// Serve files from the ./frontend directory
-	server.HandleFunc("/{path...}", func(w http.ResponseWriter, r *http.Request) {
+	// Serve files from the ./frontend directory. The handler is wrapped in
+	// gzhttp so the (large, uncompressed) JS/CSS bundles go out gzipped, with
+	// the Accept-Encoding/Vary handling done for us.
+	statichandler := gzhttp.GzipHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		p := path.Join("frontend", r.PathValue("path"))
+
+		// Assets under /assets are content-hashed by the bundler, so they can
+		// be cached forever; anything else (the SPA shell) must be revalidated.
+		if strings.HasPrefix(r.PathValue("path"), "assets/") {
+			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		} else {
+			w.Header().Set("Cache-Control", "no-cache")
+		}
 
 		// If the asset does not exist, serve index.html.
 		// All other errors are handled by the file server below.
@@ -67,7 +79,8 @@ func Ui(repo *repository.Repository, ctx *appcontext.AppContext, addr string, op
 		}
 
 		http.FileServer(staticsFS).ServeHTTP(w, r)
-	})
+	}))
+	server.Handle("/{path...}", statichandler)
 
 	if addr == "" {
 		var port uint16
