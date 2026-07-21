@@ -8,20 +8,20 @@ import (
 
 func TestHasRepository(t *testing.T) {
 	cfg := &Config{
-		Repositories: make(map[string]RepositoryConfig),
+		Repositories: make(map[string]map[string]string),
 	}
 
 	// Test non-existent repository
 	require.False(t, cfg.HasRepository("test-repo"))
 
 	// Test existing repository
-	cfg.Repositories["test-repo"] = RepositoryConfig{"location": "/test/path"}
+	cfg.Repositories["test-repo"] = map[string]string{"location": "/test/path"}
 	require.True(t, cfg.HasRepository("test-repo"))
 }
 
 func TestGetRepository(t *testing.T) {
 	cfg := &Config{
-		Repositories: make(map[string]RepositoryConfig),
+		Repositories: make(map[string]map[string]string),
 	}
 
 	// Test direct path
@@ -34,12 +34,12 @@ func TestGetRepository(t *testing.T) {
 	require.Error(t, err)
 
 	// Test repository without location
-	cfg.Repositories["test-repo"] = RepositoryConfig{"other": "value"}
+	cfg.Repositories["test-repo"] = map[string]string{"other": "value"}
 	_, err = cfg.GetRepository("@test-repo")
 	require.Error(t, err)
 
 	// Test valid repository
-	cfg.Repositories["test-repo"] = RepositoryConfig{"location": "/test/path"}
+	cfg.Repositories["test-repo"] = map[string]string{"location": "/test/path"}
 	repo, err = cfg.GetRepository("@test-repo")
 	require.NoError(t, err)
 	require.Equal(t, "/test/path", repo["location"])
@@ -47,30 +47,49 @@ func TestGetRepository(t *testing.T) {
 
 func TestHasSource(t *testing.T) {
 	cfg := &Config{
-		Sources: make(map[string]SourceConfig),
+		Sources: make(map[string]map[string]string),
 	}
 
 	// Test non-existent source
 	require.False(t, cfg.HasSource("test-source"))
 
 	// Test existing source
-	cfg.Sources["test-source"] = SourceConfig{"url": "test://url"}
+	cfg.Sources["test-source"] = map[string]string{"url": "test://url"}
 	require.True(t, cfg.HasSource("test-source"))
 }
 
 func TestGetSource(t *testing.T) {
 	cfg := &Config{
-		Sources: make(map[string]SourceConfig),
+		Sources: make(map[string]map[string]string),
 	}
 
 	// Test non-existent source
-	source, ok := cfg.GetSource("test-source")
-	require.False(t, ok)
+	source, err := cfg.GetSource("@test-source")
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrNotFound)
 	require.Nil(t, source)
 
 	// Test existing source
-	cfg.Sources["test-source"] = SourceConfig{"url": "test://url"}
-	source, ok = cfg.GetSource("test-source")
-	require.True(t, ok)
+	cfg.Sources["test-source"] = map[string]string{
+		"url":      "test://url",
+		"location": "xxx",
+	}
+	source, err = cfg.GetSource("@test-source")
+	require.NoError(t, err)
 	require.Equal(t, "test://url", source["url"])
+}
+
+func TestGetNoLocation(t *testing.T) {
+	cfg := Config{
+		Sources: map[string]map[string]string{
+			"foo": {
+				"option_a": "true",
+			},
+		},
+	}
+
+	opts, err := cfg.get("@foo", "source", cfg.Sources)
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrNoLocation)
+	require.Nil(t, opts)
 }

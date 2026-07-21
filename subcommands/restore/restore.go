@@ -147,25 +147,14 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 		return 1, fmt.Errorf("multiple snapshots found, please specify one")
 	}
 
-	exporterConfig := map[string]string{
-		"location": cmd.Target,
-	}
-	if strings.HasPrefix(cmd.Target, "@") {
-		remote, ok := ctx.Config.GetDestination(cmd.Target[1:])
-		if !ok {
-			return 1, fmt.Errorf("could not resolve exporter: %s", cmd.Target)
-		}
-		if _, ok := remote["location"]; !ok {
-			return 1, fmt.Errorf("could not resolve exporter location: %s", cmd.Target)
-		} else {
-			exporterConfig = remote
-		}
+	exporterConfig, err := ctx.Config.GetDestination(cmd.Target)
+	if err != nil {
+		return 1, err
 	}
 
 	maps.Copy(exporterConfig, cmd.Opts)
 
 	var exporterInstance exporter.Exporter
-	var err error
 	options := ctx.ExporterOpts()
 
 	exporterInstance, err = exporter.NewExporter(ctx.GetInner(), options, exporterConfig)

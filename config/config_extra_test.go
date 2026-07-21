@@ -21,7 +21,7 @@ func TestHasDestination(t *testing.T) {
 	c := NewConfig()
 	require.False(t, c.HasDestination("missing"))
 
-	c.Destinations["dst"] = DestinationConfig{"location": "/tmp/out"}
+	c.Destinations["dst"] = map[string]string{"location": "/tmp/out"}
 	require.True(t, c.HasDestination("dst"))
 }
 
@@ -29,14 +29,15 @@ func TestGetDestination(t *testing.T) {
 	c := NewConfig()
 
 	// missing
-	got, ok := c.GetDestination("missing")
-	require.False(t, ok)
+	got, err := c.GetDestination("@missing")
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrNotFound)
 	require.Nil(t, got)
 
 	// present
-	c.Destinations["dst"] = DestinationConfig{"location": "/tmp/out", "extra": "yes"}
-	got, ok = c.GetDestination("dst")
-	require.True(t, ok)
+	c.Destinations["dst"] = map[string]string{"location": "/tmp/out", "extra": "yes"}
+	got, err = c.GetDestination("@dst")
+	require.NoError(t, err)
 	require.Equal(t, "/tmp/out", got["location"])
 	require.Equal(t, "yes", got["extra"])
 
@@ -54,9 +55,9 @@ func TestResolveRootOverride(t *testing.T) {
 		{"plain", "plain", ""},
 		{"name:/abs/path", "name", "/abs/path"},
 		{"name:rel/path", "name", "rel/path"},
-		{"name:", "name", ""},   // trailing colon -> empty override
-		{":/abs", "", "/abs"},   // leading colon -> empty name
-		{"a:b:c", "a", "b:c"},   // only the first colon splits
+		{"name:", "name", ""}, // trailing colon -> empty override
+		{":/abs", "", "/abs"}, // leading colon -> empty name
+		{"a:b:c", "a", "b:c"}, // only the first colon splits
 	}
 	for _, c := range cases {
 		t.Run(c.input, func(t *testing.T) {
@@ -110,7 +111,7 @@ func TestApplyRootOverride_URL_BadLocationReturnsError(t *testing.T) {
 
 func TestGetRepository_RootOverrideAppliedToLocalLocation(t *testing.T) {
 	c := NewConfig()
-	c.Repositories["repo"] = RepositoryConfig{"location": "/var/backups"}
+	c.Repositories["repo"] = map[string]string{"location": "/var/backups"}
 
 	got, err := c.GetRepository("@repo:/elsewhere")
 	require.NoError(t, err)
@@ -123,7 +124,7 @@ func TestGetRepository_RootOverrideAppliedToLocalLocation(t *testing.T) {
 
 func TestGetRepository_RootOverrideAppliedToURL(t *testing.T) {
 	c := NewConfig()
-	c.Repositories["repo"] = RepositoryConfig{"location": "s3://bucket/base"}
+	c.Repositories["repo"] = map[string]string{"location": "s3://bucket/base"}
 
 	got, err := c.GetRepository("@repo:sub")
 	require.NoError(t, err)
@@ -132,7 +133,7 @@ func TestGetRepository_RootOverrideAppliedToURL(t *testing.T) {
 
 func TestGetRepository_RootOverridePropagatesURLParseError(t *testing.T) {
 	c := NewConfig()
-	c.Repositories["repo"] = RepositoryConfig{"location": "ht\x00tp://x"}
+	c.Repositories["repo"] = map[string]string{"location": "ht\x00tp://x"}
 
 	_, err := c.GetRepository("@repo:/x")
 	require.Error(t, err)
@@ -149,44 +150,44 @@ func TestGetRepository_DirectPathPassesThrough(t *testing.T) {
 
 func TestGetSource_RootOverrideAppliedToLocalLocation(t *testing.T) {
 	c := NewConfig()
-	c.Sources["src"] = SourceConfig{"location": "/data"}
+	c.Sources["src"] = map[string]string{"location": "/data"}
 
-	got, ok := c.GetSource("src:/elsewhere")
-	require.True(t, ok)
+	got, err := c.GetSource("@src:/elsewhere")
+	require.NoError(t, err)
 	require.Equal(t, "/elsewhere", got["location"])
 }
 
 func TestGetSource_RootOverrideReturnsFalseOnURLParseError(t *testing.T) {
 	c := NewConfig()
 	// GetSource swallows the applyRootOverride error and returns ok=false.
-	c.Sources["src"] = SourceConfig{"location": "ht\x00tp://x"}
+	c.Sources["src"] = map[string]string{"location": "ht\x00tp://x"}
 
-	_, ok := c.GetSource("src:/x")
-	require.False(t, ok)
+	_, err := c.GetSource("@src:/x")
+	require.Error(t, err)
 }
 
 func TestGetDestination_RootOverrideAppliedToLocalLocation(t *testing.T) {
 	c := NewConfig()
-	c.Destinations["dst"] = DestinationConfig{"location": "/out"}
+	c.Destinations["dst"] = map[string]string{"location": "/out"}
 
-	got, ok := c.GetDestination("dst:sub")
-	require.True(t, ok)
+	got, err := c.GetDestination("@dst:sub")
+	require.NoError(t, err)
 	require.Equal(t, "/out/sub", got["location"])
 }
 
 func TestGetDestination_RootOverrideReturnsFalseOnURLParseError(t *testing.T) {
 	c := NewConfig()
-	c.Destinations["dst"] = DestinationConfig{"location": "ht\x00tp://x"}
+	c.Destinations["dst"] = map[string]string{"location": "ht\x00tp://x"}
 
-	_, ok := c.GetDestination("dst:/x")
-	require.False(t, ok)
+	_, err := c.GetDestination("@dst:/x")
+	require.Error(t, err)
 }
 
 func TestGetRepository_ResolveRootOverrideStripsAtPrefix(t *testing.T) {
 	// Sanity: the "@" prefix is on the *full* token, then the colon split
 	// happens on what's left. So "@name:override" -> name lookup is "name".
 	c := NewConfig()
-	c.Repositories["repo"] = RepositoryConfig{"location": "/x"}
+	c.Repositories["repo"] = map[string]string{"location": "/x"}
 
 	got, err := c.GetRepository("@repo:sub")
 	require.NoError(t, err)

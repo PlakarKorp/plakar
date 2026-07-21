@@ -169,5 +169,5 @@ func TestPtarExecuteUnresolvableSource(t *testing.T) {
 	status, err := cmd.Execute(ctx, repo)
 	require.Error(t, err)
 	require.Equal(t, 1, status)
-	require.Contains(t, err.Error(), "could not resolve importer")
+	require.Contains(t, err.Error(), "source configuration not found")
 }

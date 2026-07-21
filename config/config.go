@@ -1,31 +1,31 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"path"
 	"path/filepath"
 	"strings"
+)
 
-	"maps"
+var (
+	ErrNoLocation = errors.New("location is missing")
+	ErrNotFound   = errors.New("configuration not found")
 )
 
 type Config struct {
 	DefaultRepository string
-	Repositories      map[string]RepositoryConfig
-	Sources           map[string]SourceConfig
-	Destinations      map[string]DestinationConfig
+	Repositories      map[string]map[string]string
+	Sources           map[string]map[string]string
+	Destinations      map[string]map[string]string
 }
-
-type RepositoryConfig = map[string]string
-type SourceConfig = map[string]string
-type DestinationConfig = map[string]string
 
 func NewConfig() *Config {
 	return &Config{
-		Repositories: make(map[string]RepositoryConfig),
-		Sources:      make(map[string]SourceConfig),
-		Destinations: make(map[string]DestinationConfig),
+		Repositories: make(map[string]map[string]string),
+		Sources:      make(map[string]map[string]string),
+		Destinations: make(map[string]map[string]string),
 	}
 }
 
@@ -34,30 +34,27 @@ func (c *Config) HasRepository(name string) bool {
 	return ok
 }
 
-func (c *Config) GetRepository(name string) (map[string]string, error) {
+func (c *Config) get(name, kind string, configs map[string]map[string]string) (map[string]string, error) {
 	if !strings.HasPrefix(name, "@") {
 		return map[string]string{"location": name}, nil
 	}
 
-	name, rootOverride := resolveRootOverride(name)
+	name, rootOverride := resolveRootOverride(name[1:])
 
-	kv, ok := c.Repositories[name[1:]]
+	kv, ok := configs[name]
 	if !ok {
-		return nil, fmt.Errorf("could not resolve repository: %s", name)
+		return nil, fmt.Errorf("%s %w: %q", kind, ErrNotFound, name)
 	}
-	if _, ok := kv["location"]; !ok {
-		return nil, fmt.Errorf("repository %s has no location", name)
-	} else {
-		res := make(map[string]string)
-		maps.Copy(res, kv)
 
-		location, err := applyRootOverride(res["location"], rootOverride)
-		if err != nil {
-			return nil, err
-		}
-		res["location"] = location
-		return res, nil
+	if _, ok := kv["location"]; !ok {
+		return nil, fmt.Errorf("%s %w", kind, ErrNoLocation)
 	}
+
+	return resolve(kv, rootOverride)
+}
+
+func (c *Config) GetRepository(name string) (map[string]string, error) {
+	return c.get(name, "repository", c.Repositories)
 }
 
 func (c *Config) HasSource(name string) bool {
@@ -65,22 +62,14 @@ func (c *Config) HasSource(name string) bool {
 	return ok
 }
 
-func (c *Config) GetSource(name string) (map[string]string, bool) {
-	name, rootOverride := resolveRootOverride(name)
-
-	if kv, ok := c.Sources[name]; !ok {
-		return nil, false
-	} else {
-		res := make(map[string]string)
-		maps.Copy(res, kv)
-
-		location, err := applyRootOverride(res["location"], rootOverride)
-		if err != nil {
-			return nil, false
-		}
-		res["location"] = location
-		return res, ok
+func (c *Config) GetSource(name string) (map[string]string, error) {
+	if c == nil {
+		panic("c is nil")
 	}
+	if c.Sources == nil {
+		panic("sources is nil")
+	}
+	return c.get(name, "source", c.Sources)
 }
 
 func (c *Config) HasDestination(name string) bool {
@@ -88,22 +77,8 @@ func (c *Config) HasDestination(name string) bool {
 	return ok
 }
 
-func (c *Config) GetDestination(name string) (map[string]string, bool) {
-	name, rootOverride := resolveRootOverride(name)
-
-	if kv, ok := c.Destinations[name]; !ok {
-		return nil, false
-	} else {
-		res := make(map[string]string)
-		maps.Copy(res, kv)
-
-		location, err := applyRootOverride(res["location"], rootOverride)
-		if err != nil {
-			return nil, false
-		}
-		res["location"] = location
-		return res, ok
-	}
+func (c *Config) GetDestination(name string) (map[string]string, error) {
+	return c.get(name, "source", c.Destinations)
 }
 
 func resolveRootOverride(name string) (string, string) {
