@@ -52,13 +52,6 @@ func newConfigCtx(t *testing.T) (*appcontext.AppContext, *bytes.Buffer, *bytes.B
 
 // ---------- helpers ----------
 
-func TestNormalizeHelpers(t *testing.T) {
-	require.Equal(t, "name", normalizeName("@name"))
-	require.Equal(t, "name", normalizeName("name"))
-	require.Equal(t, "fs:/x", normalizeLocation("location=fs:/x"))
-	require.Equal(t, "fs:/x", normalizeLocation("fs:/x"))
-}
-
 func TestMarshalINISections(t *testing.T) {
 	var buf bytes.Buffer
 	require.NoError(t, MarshalINISections("mysection", map[string]string{"key": "val"}, &buf))

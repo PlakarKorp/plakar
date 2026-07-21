@@ -67,7 +67,7 @@ func dispatchPolicy(ctx *appcontext.AppContext, cmd, subcmd string, args []strin
 			return fmt.Errorf("Usage: plakar %s %s <name> [<key>=<value>...]", cmd, p.Name())
 		}
 
-		name := normalizeName(args[0])
+		name := args[0]
 		if config.Has(name) {
 			return fmt.Errorf("%s %q already exists", cmd, name)
 		}
@@ -97,7 +97,7 @@ func dispatchPolicy(ctx *appcontext.AppContext, cmd, subcmd string, args []strin
 			return fmt.Errorf("Usage: plakar %s %s <name>", cmd, p.Name())
 		}
 
-		name := normalizeName(args[0])
+		name := args[0]
 		if !config.Has(name) {
 			return fmt.Errorf("%s %q does not exist", cmd, name)
 		}
@@ -116,7 +116,7 @@ func dispatchPolicy(ctx *appcontext.AppContext, cmd, subcmd string, args []strin
 			//nolint:staticcheck // ST1005: user-facing usage string, kept verbatim
 			return fmt.Errorf("Usage: plakar %s %s <name> <key>=<value>...", cmd, p.Name())
 		}
-		name := normalizeName(args[0])
+		name := args[0]
 		if !config.Has(name) {
 			return fmt.Errorf("%s %q does not exist", cmd, name)
 		}
@@ -144,10 +144,7 @@ func dispatchPolicy(ctx *appcontext.AppContext, cmd, subcmd string, args []strin
 		p.BoolVar(&opt_yaml, "yaml", false, "output in YAML format (default)")
 		p.Parse(args)
 
-		names := make([]string, 0)
-		for _, name := range p.Args() {
-			names = append(names, normalizeName(name))
-		}
+		names := p.Args()
 
 		format := "yaml"
 		if opt_json {
@@ -168,7 +165,7 @@ func dispatchPolicy(ctx *appcontext.AppContext, cmd, subcmd string, args []strin
 			//nolint:staticcheck // ST1005: user-facing usage string, kept verbatim
 			return fmt.Errorf("Usage: plakar %s %s <name> <key>...", cmd, p.Name())
 		}
-		name := normalizeName(args[0])
+		name := args[0]
 		if !config.Has(name) {
 			return fmt.Errorf("%s %q does not exist", cmd, name)
 		}

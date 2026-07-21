@@ -31,7 +31,7 @@ func TestFaultBackupEmptyAtSourceUnresolved(t *testing.T) {
 	status, err := cmd.Execute(ctx, repo)
 	require.Equal(t, 1, status)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "could not resolve importer")
+	require.Contains(t, err.Error(), "source configuration not found")
 }
 
 // TestFaultBackupPackfilesBadDir points -packfiles at a path under a file (not a

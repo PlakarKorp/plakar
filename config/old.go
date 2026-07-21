@@ -9,9 +9,9 @@ import (
 )
 
 type OldConfig struct {
-	DefaultRepository string                      `yaml:"default-repo"`
-	Repositories      map[string]RepositoryConfig `yaml:"repositories"`
-	Remotes           map[string]SourceConfig     `yaml:"remotes"`
+	DefaultRepository string                       `yaml:"default-repo"`
+	Repositories      map[string]map[string]string `yaml:"repositories"`
+	Remotes           map[string]map[string]string `yaml:"remotes"`
 }
 
 func LoadOldConfigIfExists(configFile string) (*Config, error) {
@@ -34,7 +34,7 @@ func LoadOldConfigIfExists(configFile string) (*Config, error) {
 	cfg.DefaultRepository = old.DefaultRepository
 	cfg.Repositories = old.Repositories
 	cfg.Sources = old.Remotes
-	cfg.Destinations = make(map[string]DestinationConfig)
+	cfg.Destinations = make(map[string]map[string]string)
 	for key, val := range cfg.Sources {
 		res := make(map[string]string)
 		maps.Copy(res, val)
