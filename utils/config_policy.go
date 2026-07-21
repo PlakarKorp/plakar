@@ -204,7 +204,7 @@ func (c *policiesConfig) SaveToFile(filename string) error {
 	if err != nil {
 		return err
 	}
-	err = yaml.NewEncoder(tmpFile).Encode(c)
+	err = YAMLEncode(tmpFile, c)
 	tmpFile.Close()
 	if err == nil {
 		err = os.Rename(tmpFile.Name(), filename)
@@ -234,7 +234,7 @@ func (c *policiesConfig) Dump(w io.Writer, format string, names []string) error 
 		case "json":
 			err = json.NewEncoder(w).Encode(map[string]*locate.LocateOptions{name: c.Policies[name]})
 		case "yaml":
-			err = yaml.NewEncoder(w).Encode(map[string]*locate.LocateOptions{name: c.Policies[name]})
+			err = YAMLEncode(w, map[string]*locate.LocateOptions{name: c.Policies[name]})
 		default:
 			return fmt.Errorf("unknown format %q", format)
 		}
