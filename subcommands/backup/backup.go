@@ -72,6 +72,8 @@ func init() {
 
 type ignoreFlags []string
 
+const excludeIncludePrefix = "!"
+
 func (e *ignoreFlags) String() string {
 	return strings.Join(*e, ",")
 }
@@ -79,6 +81,15 @@ func (e *ignoreFlags) String() string {
 func (e *ignoreFlags) Set(value string) error {
 	*e = append(*e, value)
 	return nil
+}
+
+func importerExcludes(excludes []string) []string {
+	for _, rule := range excludes {
+		if strings.HasPrefix(rule, excludeIncludePrefix) {
+			return nil
+		}
+	}
+	return excludes
 }
 
 type tagFlags string
@@ -256,7 +267,7 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		}
 
 		importerOpts := ctx.ImporterOpts()
-		importerOpts.Excludes = cmd.Excludes
+		importerOpts.Excludes = importerExcludes(cmd.Excludes)
 
 		imp, err := importer.NewImporter(ctx.GetInner(), importerOpts, cmdOptsCopy)
 		if err != nil {
