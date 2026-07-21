@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/PlakarKorp/plakar/config"
 	"github.com/PlakarKorp/plakar/ui/stdio"
 	"github.com/stretchr/testify/require"
 )
@@ -111,7 +110,6 @@ func TestCov80BackupAtSourceInheritsOptions(t *testing.T) {
 	t.Cleanup(func() { renderer.Wait() })
 	t.Cleanup(ctx.Close)
 	ctx.MaxConcurrency = 1
-	ctx.Config = config.NewConfig()
 
 	// A configured source whose location points at the backup dir, plus an
 	// extra option that must be inherited by the importer options.

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/PlakarKorp/plakar/config"
 	"github.com/PlakarKorp/plakar/ui/stdio"
 	"github.com/stretchr/testify/require"
 )
@@ -35,7 +34,6 @@ func TestCov2BackupUnknownAtSource(t *testing.T) {
 	t.Cleanup(func() { renderer.Wait() })
 	t.Cleanup(ctx.Close)
 	ctx.MaxConcurrency = 1
-	ctx.Config = config.NewConfig()
 
 	cmd := &Backup{}
 	require.NoError(t, cmd.Parse(ctx, []string{"@nope"}))
@@ -55,7 +53,6 @@ func TestCov2BackupAtSourceResolvedSucceeds(t *testing.T) {
 	t.Cleanup(func() { renderer.Wait() })
 	t.Cleanup(ctx.Close)
 	ctx.MaxConcurrency = 1
-	ctx.Config = config.NewConfig()
 
 	// a configured source whose location points at the backup dir
 	ctx.Config.Sources["good"] = map[string]string{"location": "fs:" + tmpBackupDir}

@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/PlakarKorp/plakar/config"
 	"github.com/PlakarKorp/plakar/ui/stdio"
 	"github.com/stretchr/testify/require"
 )
@@ -24,7 +23,6 @@ func TestFaultBackupEmptyAtSourceUnresolved(t *testing.T) {
 	t.Cleanup(func() { renderer.Wait() })
 	t.Cleanup(ctx.Close)
 	ctx.MaxConcurrency = 1
-	ctx.Config = config.NewConfig()
 	// An unrelated configured source so the lookup map is non-empty.
 	ctx.Config.Sources["other"] = map[string]string{"location": "fs:" + tmpBackupDir}
 
@@ -59,4 +57,3 @@ func TestFaultBackupPackfilesBadDir(t *testing.T) {
 	require.Equal(t, 1, status)
 	require.Error(t, err)
 }
-

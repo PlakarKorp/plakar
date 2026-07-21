@@ -7,7 +7,6 @@ import (
 
 	_ "github.com/PlakarKorp/integrations/fs/importer"
 	_ "github.com/PlakarKorp/integrations/ptar/storage"
-	"github.com/PlakarKorp/plakar/config"
 	ptesting "github.com/PlakarKorp/plakar/testing"
 	"github.com/stretchr/testify/require"
 )
@@ -86,7 +85,6 @@ func TestPtarParseMultipleTargets(t *testing.T) {
 
 func TestPtarParseUnknownPeer(t *testing.T) {
 	_, ctx := ptesting.GenerateRepositoryWithoutConfig(t, nil, nil, nil)
-	ctx.Config = config.NewConfig()
 	tmpDir := t.TempDir()
 
 	cmd := &Ptar{}
@@ -162,10 +160,6 @@ func TestPtarExecuteNoCompression(t *testing.T) {
 func TestPtarExecuteUnresolvableSource(t *testing.T) {
 	repo, ctx := ptesting.GenerateRepositoryWithoutConfig(t, nil, nil, nil)
 	tmpDir := t.TempDir()
-
-	// GenerateRepositoryWithoutConfig leaves ctx.Config nil; the @source
-	// resolution path dereferences it, so install an empty config.
-	ctx.Config = config.NewConfig()
 
 	cmd := &Ptar{}
 	require.NoError(t, cmd.Parse(ctx, []string{"-plaintext", "-o", filepath.Join(tmpDir, "u.ptar")}))
