@@ -107,10 +107,10 @@ func (c *Config) GetDestination(name string) (map[string]string, bool) {
 }
 
 func resolveRootOverride(name string) (string, string) {
-	if idx := strings.Index(name, ":"); idx == -1 {
+	if before, after, ok := strings.Cut(name, ":"); !ok {
 		return name, ""
 	} else {
-		return name[:idx], name[idx+1:]
+		return before, after
 	}
 }
 
