@@ -6,7 +6,6 @@ import (
 
 	"github.com/PlakarKorp/kloset/logging"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/config"
 	ptesting "github.com/PlakarKorp/plakar/testing"
 	"github.com/stretchr/testify/require"
 )
@@ -19,7 +18,6 @@ func cov3ParseCtx(t *testing.T) *appcontext.AppContext {
 	ctx.Stdout = bytes.NewBuffer(nil)
 	ctx.Stderr = bytes.NewBuffer(nil)
 	ctx.SetLogger(logging.NewLogger(ctx.Stdout, ctx.Stderr))
-	ctx.Config = config.NewConfig()
 	return ctx
 }
 

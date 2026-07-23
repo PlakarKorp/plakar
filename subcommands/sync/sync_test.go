@@ -9,7 +9,6 @@ import (
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/config"
 	ptesting "github.com/PlakarKorp/plakar/testing"
 	"github.com/stretchr/testify/require"
 )
@@ -73,7 +72,6 @@ func setupSync(t *testing.T, localPassphrase, peerPassphrase []byte) *syncFixtur
 		output:    bufOut,
 	}
 
-	localCtx.Config = config.NewConfig()
 	if peerPassphrase != nil {
 		// an encrypted peer can only provide its passphrase through the
 		// configuration (or interactively), address it as @peer.

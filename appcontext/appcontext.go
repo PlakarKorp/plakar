@@ -27,6 +27,7 @@ type AppContext struct {
 func NewAppContext() *AppContext {
 	return &AppContext{
 		KContext: kcontext.NewKContext(),
+		Config:   config.NewConfig(),
 	}
 }
 

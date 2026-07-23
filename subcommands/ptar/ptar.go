@@ -333,18 +333,9 @@ func (cmd *Ptar) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (
 
 func (cmd *Ptar) backup(ctx *appcontext.AppContext, repo *repository.RepositoryWriter) error {
 	for _, loc := range cmd.BackupTargets {
-		opts := map[string]string{
-			"location": loc,
-		}
-		if strings.HasPrefix(loc, "@") {
-			remote, ok := ctx.Config.GetSource(loc[1:])
-			if !ok {
-				return fmt.Errorf("could not resolve importer: %s", loc)
-			}
-			if _, ok := remote["location"]; !ok {
-				return fmt.Errorf("could not resolve importer location: %s", loc)
-			}
-			opts = remote
+		opts, err := ctx.Config.GetSource(loc)
+		if err != nil {
+			return err
 		}
 
 		imp, err := importer.NewImporter(ctx.GetInner(), ctx.ImporterOpts(), opts)

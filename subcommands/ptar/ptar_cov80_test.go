@@ -7,7 +7,6 @@ import (
 
 	_ "github.com/PlakarKorp/integrations/fs/importer"
 	_ "github.com/PlakarKorp/integrations/ptar/storage"
-	"github.com/PlakarKorp/plakar/config"
 	ptesting "github.com/PlakarKorp/plakar/testing"
 	"github.com/stretchr/testify/require"
 )
@@ -18,7 +17,6 @@ import (
 // any backup happens.
 func TestCov80PtarParseUnknownPeerInConfig(t *testing.T) {
 	_, ctx := ptesting.GenerateRepositoryWithoutConfig(t, nil, nil, nil)
-	ctx.Config = config.NewConfig()
 	tmpDir := t.TempDir()
 
 	cmd := &Ptar{}
@@ -40,7 +38,6 @@ func TestCov80PtarParseEncryptedPeerConfigPassphrase(t *testing.T) {
 	srcRepo, _ := ptesting.GenerateRepository(t, nil, nil, &peerPass)
 
 	_, ctx := ptesting.GenerateRepositoryWithoutConfig(t, nil, nil, nil)
-	ctx.Config = config.NewConfig()
 	ctx.Config.Repositories["peer"] = map[string]string{
 		"location":   srcRepo.Root(),
 		"passphrase": string(peerPass),
@@ -65,7 +62,6 @@ func TestCov80PtarParseEncryptedPeerWrongPassphrase(t *testing.T) {
 	srcRepo, _ := ptesting.GenerateRepository(t, nil, nil, &peerPass)
 
 	_, ctx := ptesting.GenerateRepositoryWithoutConfig(t, nil, nil, nil)
-	ctx.Config = config.NewConfig()
 	ctx.Config.Repositories["peer"] = map[string]string{
 		"location":   srcRepo.Root(),
 		"passphrase": "wrong-passphrase",
@@ -96,7 +92,6 @@ func TestCov80PtarSyncEncryptedPeerEndToEnd(t *testing.T) {
 	defer srcSnap.Close()
 
 	dstRepo, ctx := ptesting.GenerateRepositoryWithoutConfig(t, nil, nil, nil)
-	ctx.Config = config.NewConfig()
 	ctx.Config.Repositories["peer"] = map[string]string{
 		"location":   srcRepo.Root(),
 		"passphrase": string(peerPass),

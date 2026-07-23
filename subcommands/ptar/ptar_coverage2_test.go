@@ -7,7 +7,6 @@ import (
 
 	_ "github.com/PlakarKorp/integrations/fs/importer"
 	_ "github.com/PlakarKorp/integrations/ptar/storage"
-	"github.com/PlakarKorp/plakar/config"
 	ptesting "github.com/PlakarKorp/plakar/testing"
 	"github.com/stretchr/testify/require"
 )
@@ -85,7 +84,6 @@ func TestCov2ExecuteAtSourceResolved(t *testing.T) {
 	})
 	tmpDir := t.TempDir()
 
-	ctx.Config = config.NewConfig()
 	ctx.Config.Sources["mysrc"] = map[string]string{"location": "fs:" + filepath.Join(src, "subdir")}
 
 	cmd := &Ptar{}

@@ -47,10 +47,6 @@ func init() {
 		subcommands.BeforeRepositoryOpen, "policy")
 }
 
-func normalizeName(name string) string {
-	return strings.TrimPrefix(name, "@")
-}
-
 func normalizeLocation(location string) string {
 	return strings.TrimPrefix(location, "location=")
 }
@@ -97,7 +93,7 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 			return fmt.Errorf("Usage: plakar %s %s <name> <location> [<key>=<value>...]", cmd, p.Name())
 		}
 
-		name, location := normalizeName(args[0]), normalizeLocation(args[1])
+		name, location := args[0], normalizeLocation(args[1])
 
 		if hasFunc(name) {
 			return fmt.Errorf("%s %q already exists", cmd, name)
@@ -125,7 +121,7 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 		if len(args) != 1 {
 			return fmt.Errorf("usage: plakar %s check <name>", cmd)
 		}
-		name := normalizeName(args[0])
+		name := args[0]
 		if !hasFunc(name) {
 			return fmt.Errorf("%s %q does not exist", cmd, name)
 		}
@@ -139,9 +135,9 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 			store.Close(ctx)
 
 		case "source":
-			cfg, ok := ctx.Config.GetSource(name)
-			if !ok {
-				return fmt.Errorf("failed to retrieve configuration for source %q", name)
+			cfg, err := ctx.Config.GetSource(name)
+			if err != nil {
+				return err
 			}
 			imp, err := importer.NewImporter(ctx.GetInner(), ctx.ImporterOpts(), cfg)
 			if err != nil {
@@ -150,9 +146,9 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 			imp.Close(ctx)
 
 		case "destination":
-			cfg, ok := ctx.Config.GetDestination(name)
-			if !ok {
-				return fmt.Errorf("failed to retrieve configuration for destination %q", name)
+			cfg, err := ctx.Config.GetDestination(name)
+			if err != nil {
+				return err
 			}
 			exp, err := exporter.NewExporter(ctx.GetInner(), ctx.ExporterOpts(), cfg)
 			if err != nil {
@@ -222,7 +218,7 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 			for _, requestedName := range flags.Args() {
 				origName, targetName, found := strings.Cut(requestedName, ":")
 				if !found {
-					targetName = normalizeName(origName)
+					targetName = origName
 				}
 				if origName == "" || targetName == "" {
 					fmt.Fprintf(ctx.Stderr, "%s empty section name in %q, skipping\n", cmd, requestedName)
@@ -255,7 +251,7 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 		if len(args) != 1 {
 			return fmt.Errorf("usage: plakar %s ping <name>", cmd)
 		}
-		name := normalizeName(args[0])
+		name := args[0]
 		if !hasFunc(name) {
 			return fmt.Errorf("%s %q does not exist", cmd, name)
 		}
@@ -273,9 +269,9 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 			fmt.Println("configuration OK")
 
 		case "source":
-			cfg, ok := ctx.Config.GetSource(name)
-			if !ok {
-				return fmt.Errorf("failed to retrieve configuration for source %q", name)
+			cfg, err := ctx.Config.GetSource(name)
+			if err != nil {
+				return err
 			}
 			imp, err := importer.NewImporter(ctx.GetInner(), ctx.ImporterOpts(), cfg)
 			if err != nil {
@@ -288,9 +284,9 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 			fmt.Println("configuration OK")
 
 		case "destination":
-			cfg, ok := ctx.Config.GetDestination(name)
-			if !ok {
-				return fmt.Errorf("failed to retrieve configuration for destination %q", name)
+			cfg, err := ctx.Config.GetDestination(name)
+			if err != nil {
+				return err
 			}
 			exp, err := exporter.NewExporter(ctx.GetInner(), ctx.ExporterOpts(), cfg)
 			if err != nil {
@@ -318,7 +314,7 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 			return fmt.Errorf("Usage: plakar %s %s <name>", cmd, p.Name())
 		}
 
-		name := normalizeName(args[0])
+		name := args[0]
 		if !hasFunc(name) {
 			return fmt.Errorf("%s %q does not exist", cmd, name)
 		}
@@ -337,7 +333,7 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 			//nolint:staticcheck // ST1005: user-facing usage string, kept verbatim
 			return fmt.Errorf("Usage: plakar %s %s <name> <key>=<value>...", cmd, p.Name())
 		}
-		name := normalizeName(args[0])
+		name := args[0]
 		if !hasFunc(name) {
 			return fmt.Errorf("%s %q does not exist", cmd, name)
 		}
@@ -378,7 +374,6 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 
 		var hasErrors bool
 		for _, name := range names {
-			name = normalizeName(name)
 			if !hasFunc(name) {
 				fmt.Fprintf(ctx.Stderr, "%s %q does not exist\n", cmd, name)
 				hasErrors = true
@@ -442,7 +437,7 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 			//nolint:staticcheck // ST1005: user-facing usage string, kept verbatim
 			return fmt.Errorf("Usage: plakar %s %s <name> <key>...", cmd, p.Name())
 		}
-		name := normalizeName(args[0])
+		name := args[0]
 		if !hasFunc(name) {
 			return fmt.Errorf("%s %q does not exist", cmd, name)
 		}
