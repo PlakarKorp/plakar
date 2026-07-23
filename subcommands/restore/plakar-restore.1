@@ -11,6 +11,8 @@
 .Op Fl job Ar job
 .Op Fl name Ar name
 .Op Fl perimeter Ar perimeter
+.Op Fl ignore-ctime
+.Op Fl ignore-inode
 .Op Fl skip-permissions
 .Op Fl tag Ar tag
 .Op Fl to Ar directory
@@ -55,6 +57,10 @@ Only apply command to snapshots that match
 .It Fl skip-permissions
 Skip restoring file permissions and ownership during restore,
 defaulting to 0750 for directories and 0640 for files.
+.It Fl ignore-ctime
+Skip restoring stored file timestamps.
+.It Fl ignore-inode
+Skip restoring hardlinks from inode metadata and write separate files instead.
 .It Fl to Ar directory
 Specify the base directory to which the files will be restored.
 If omitted, files are restored to the current working directory.

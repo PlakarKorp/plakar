@@ -12,6 +12,8 @@ PLAKAR-RESTORE(1) - General Commands Manual
 \[**-job**&nbsp;*job*]
 \[**-name**&nbsp;*name*]
 \[**-perimeter**&nbsp;*perimeter*]
+\[**-ignore-ctime**]
+\[**-ignore-inode**]
 \[**-skip-permissions**]
 \[**-tag**&nbsp;*tag*]
 \[**-to**&nbsp;*directory*]
@@ -71,6 +73,14 @@ The options are as follows:
 
 > Skip restoring file permissions and ownership during restore,
 > defaulting to 0750 for directories and 0640 for files.
+
+**-ignore-ctime**
+
+> Skip restoring stored file timestamps.
+
+**-ignore-inode**
+
+> Skip restoring hardlinks from inode metadata and write separate files instead.
 
 **-to** *directory*
 

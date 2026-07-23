@@ -17,6 +17,7 @@
 package restore
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"maps"
@@ -24,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/PlakarKorp/kloset/connectors"
 	"github.com/PlakarKorp/kloset/connectors/exporter"
 	"github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/kloset/repository"
@@ -31,6 +33,12 @@ import (
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
+)
+
+const (
+	restoreClearedDeviceID uint64 = 0
+	restoreClearedInodeID  uint64 = 0
+	restoreSingleLinkCount uint16 = 1
 )
 
 type Restore struct {
@@ -43,6 +51,8 @@ type Restore struct {
 	OptJob             string
 	OptTag             string
 	OptSkipPermissions bool
+	OptIgnoreCtime     bool
+	OptIgnoreInode     bool
 	Opts               map[string]string
 
 	Target    string
@@ -76,6 +86,8 @@ func (cmd *Restore) Parse(ctx *appcontext.AppContext, args []string) error {
 
 	flags.StringVar(&pullPath, "to", "", "base directory where pull will restore")
 	flags.BoolVar(&cmd.OptSkipPermissions, "skip-permissions", false, "do not restore file permissions")
+	flags.BoolVar(&cmd.OptIgnoreCtime, "ignore-ctime", false, "do not restore file timestamps")
+	flags.BoolVar(&cmd.OptIgnoreInode, "ignore-inode", false, "do not restore hardlinks from inode metadata")
 	flags.Parse(args)
 
 	if flags.NArg() != 0 {
@@ -173,6 +185,7 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 		return 1, err
 	}
 	defer exporterInstance.Close(ctx)
+	exporterInstance = newRestoreMetadataExporter(exporterInstance, cmd.OptIgnoreCtime, cmd.OptIgnoreInode, time.Now)
 
 	opts := &snapshot.ExportOptions{}
 	if cmd.OptSkipPermissions {
@@ -202,3 +215,70 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 	}
 	return 0, nil
 }
+
+type restoreMetadataExporter struct {
+	exporter.Exporter
+	skipTimes     bool
+	skipHardlinks bool
+	now           func() time.Time
+}
+
+func newRestoreMetadataExporter(exp exporter.Exporter, skipTimes bool, skipHardlinks bool, now func() time.Time) exporter.Exporter {
+	if !skipTimes && !skipHardlinks {
+		return exp
+	}
+	return &restoreMetadataExporter{
+		Exporter:      exp,
+		skipTimes:     skipTimes,
+		skipHardlinks: skipHardlinks,
+		now:           now,
+	}
+}
+
+func (exp *restoreMetadataExporter) Export(ctx context.Context, records <-chan *connectors.Record, results chan<- *connectors.Result) error {
+	filtered := make(chan *connectors.Record)
+	go func() {
+		defer close(filtered)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case record, ok := <-records:
+				if !ok {
+					return
+				}
+
+				select {
+				case <-ctx.Done():
+					return
+				case filtered <- exp.filterRecord(record):
+				}
+			}
+		}
+	}()
+
+	return exp.Exporter.Export(ctx, filtered, results)
+}
+
+func (exp *restoreMetadataExporter) filterRecord(record *connectors.Record) *connectors.Record {
+	if record == nil {
+		return nil
+	}
+
+	filtered := *record
+	fileinfo := filtered.FileInfo
+
+	if exp.skipTimes {
+		fileinfo.LmodTime = exp.now()
+	}
+	if exp.skipHardlinks {
+		fileinfo.Ldev = restoreClearedDeviceID
+		fileinfo.Lino = restoreClearedInodeID
+		fileinfo.Lnlink = restoreSingleLinkCount
+	}
+
+	filtered.FileInfo = fileinfo
+	return &filtered
+}
+
+var _ exporter.Exporter = (*restoreMetadataExporter)(nil)

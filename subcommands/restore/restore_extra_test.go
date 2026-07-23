@@ -1,16 +1,41 @@
 package restore
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/PlakarKorp/kloset/connectors"
+	"github.com/PlakarKorp/kloset/objects"
+	"github.com/PlakarKorp/kloset/repository"
+	"github.com/PlakarKorp/kloset/snapshot"
+	"github.com/PlakarKorp/plakar/appcontext"
 	ptesting "github.com/PlakarKorp/plakar/testing"
 	"github.com/stretchr/testify/require"
 )
+
+const (
+	restoreMetadataFileMode   os.FileMode = 0644
+	restoreMetadataDirMode    os.FileMode = 0755
+	restoreMetadataDeviceID   uint64      = 42
+	restoreMetadataInodeID    uint64      = 9001
+	restoreMetadataHardlinkN  uint16      = 2
+	restoreSnapshotRootPath               = "/metadata"
+	restoreSnapshotFirstPath              = "/metadata/first.txt"
+	restoreSnapshotSecondPath             = "/metadata/second.txt"
+	restoreMetadataRootPath               = "metadata"
+	restoreMetadataFirstPath              = "metadata/first.txt"
+	restoreMetadataSecondPath             = "metadata/second.txt"
+	restoreMetadataContent                = "metadata payload"
+)
+
+var restoreMetadataSnapshotTime = time.Date(2025, time.March, 14, 15, 9, 26, 0, time.UTC)
 
 func mkRestoreDir(t *testing.T) string {
 	t.Helper()
@@ -18,6 +43,40 @@ func mkRestoreDir(t *testing.T) string {
 	require.NoError(t, err)
 	t.Cleanup(func() { os.RemoveAll(dir) })
 	return dir
+}
+
+func generateMetadataSnapshot(t *testing.T) (*repository.Repository, *snapshot.Snapshot, *appcontext.AppContext) {
+	t.Helper()
+
+	repo, ctx := ptesting.GenerateRepository(t, nil, nil, nil)
+	gen := func(records chan<- *connectors.Record) {
+		records <- &connectors.Record{
+			Pathname: restoreSnapshotRootPath,
+			FileInfo: objects.FileInfo{
+				Lname:    filepath.Base(restoreMetadataRootPath),
+				Lmode:    os.ModeDir | restoreMetadataDirMode,
+				LmodTime: restoreMetadataSnapshotTime,
+				Lnlink:   restoreSingleLinkCount,
+			},
+		}
+		for _, pathname := range []string{restoreSnapshotFirstPath, restoreSnapshotSecondPath} {
+			pathname := pathname
+			records <- connectors.NewRecord(pathname, "", objects.FileInfo{
+				Lname:    filepath.Base(pathname),
+				Lsize:    int64(len(restoreMetadataContent)),
+				Lmode:    restoreMetadataFileMode,
+				LmodTime: restoreMetadataSnapshotTime,
+				Ldev:     restoreMetadataDeviceID,
+				Lino:     restoreMetadataInodeID,
+				Lnlink:   restoreMetadataHardlinkN,
+			}, nil, func() (io.ReadCloser, error) {
+				return io.NopCloser(bytes.NewReader([]byte(restoreMetadataContent))), nil
+			})
+		}
+	}
+
+	snap := ptesting.GenerateSnapshot(t, repo, nil, ptesting.WithGenerator(gen))
+	return repo, snap, ctx
 }
 
 func TestRestoreParseRejectsMultiplePaths(t *testing.T) {
@@ -121,6 +180,70 @@ func TestRestoreSkipPermissionsFlag(t *testing.T) {
 	cmd := &Restore{}
 	require.NoError(t, cmd.Parse(ctx, []string{"-skip-permissions", "-to", "/tmp/x"}))
 	require.True(t, cmd.OptSkipPermissions)
+}
+
+func TestRestoreIgnoreMetadataFlags(t *testing.T) {
+	_, _, ctx := generateSnapshot(t)
+	cmd := &Restore{}
+	require.NoError(t, cmd.Parse(ctx, []string{"-ignore-ctime", "-ignore-inode", "-to", "/tmp/x"}))
+	require.True(t, cmd.OptIgnoreCtime)
+	require.True(t, cmd.OptIgnoreInode)
+}
+
+func TestRestoreIgnoreCtimeLeavesFreshTimestamps(t *testing.T) {
+	repo, snap, ctx := generateMetadataSnapshot(t)
+	defer snap.Close()
+
+	dir := mkRestoreDir(t)
+	id := snap.Header.GetIndexID()
+	cmd := &Restore{}
+	require.NoError(t, cmd.Parse(ctx, []string{"-ignore-ctime", "-to", dir, hex.EncodeToString(id[:]) + ":"}))
+
+	status, err := cmd.Execute(ctx, repo)
+	require.NoError(t, err)
+	require.Equal(t, 0, status)
+
+	info, err := os.Stat(filepath.Join(dir, restoreMetadataFirstPath))
+	require.NoError(t, err)
+	require.False(t, info.ModTime().Equal(restoreMetadataSnapshotTime), "restore should not preserve snapshot timestamp")
+}
+
+func TestRestorePreservesTimesByDefault(t *testing.T) {
+	repo, snap, ctx := generateMetadataSnapshot(t)
+	defer snap.Close()
+
+	dir := mkRestoreDir(t)
+	id := snap.Header.GetIndexID()
+	cmd := &Restore{}
+	require.NoError(t, cmd.Parse(ctx, []string{"-to", dir, hex.EncodeToString(id[:]) + ":"}))
+
+	status, err := cmd.Execute(ctx, repo)
+	require.NoError(t, err)
+	require.Equal(t, 0, status)
+
+	info, err := os.Stat(filepath.Join(dir, restoreMetadataFirstPath))
+	require.NoError(t, err)
+	require.True(t, info.ModTime().Equal(restoreMetadataSnapshotTime), "restore should preserve snapshot timestamp by default")
+}
+
+func TestRestoreIgnoreInodeWritesSeparateFiles(t *testing.T) {
+	repo, snap, ctx := generateMetadataSnapshot(t)
+	defer snap.Close()
+
+	dir := mkRestoreDir(t)
+	id := snap.Header.GetIndexID()
+	cmd := &Restore{}
+	require.NoError(t, cmd.Parse(ctx, []string{"-ignore-inode", "-to", dir, hex.EncodeToString(id[:]) + ":"}))
+
+	status, err := cmd.Execute(ctx, repo)
+	require.NoError(t, err)
+	require.Equal(t, 0, status)
+
+	firstInfo, err := os.Stat(filepath.Join(dir, restoreMetadataFirstPath))
+	require.NoError(t, err)
+	secondInfo, err := os.Stat(filepath.Join(dir, restoreMetadataSecondPath))
+	require.NoError(t, err)
+	require.False(t, os.SameFile(firstInfo, secondInfo), "restore should not recreate hardlinks")
 }
 
 func TestRestoreFilterFlagsAreParsed(t *testing.T) {
