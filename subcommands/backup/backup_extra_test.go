@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/PlakarKorp/kloset/caching"
+	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/ui/stdio"
 	"github.com/stretchr/testify/require"
@@ -21,6 +23,7 @@ const (
 	failingScanCacheErrMessage  = "scan cache open failed"
 	unexpectedCacheErrMessage   = "unexpected cache constructor call"
 	testPackfileTempStorageMode = "memory"
+	testCacheRootFile           = "cache-root"
 )
 
 // runBackup is a small wrapper around the standard Parse + Execute flow that
@@ -127,6 +130,49 @@ func TestBackupForcedTimestampInFutureRejected(t *testing.T) {
 	_, err, _, _ := runBackup(t, []string{"-force-timestamp", future}, nil)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "future")
+}
+
+func TestCleanupPartialScanCacheRemovesSnapshotDir(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	_, _, ctx := generateFixtures(t, bufOut, bufErr)
+	t.Cleanup(ctx.Close)
+
+	identifier := objects.RandomMAC()
+	ctx.CacheDir = t.TempDir()
+	scanDir := filepath.Join(ctx.CacheDir, caching.CACHE_VERSION, backupScanCacheName, fmt.Sprintf("%x", identifier))
+	require.NoError(t, os.MkdirAll(scanDir, 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(scanDir, failingScanCacheMarkerFile), []byte(failingScanCacheMarkerFile), 0o600))
+
+	cleanupPartialScanCache(ctx, identifier)
+
+	_, statErr := os.Stat(scanDir)
+	require.True(t, os.IsNotExist(statErr), "partial scan cache %q should be removed", scanDir)
+}
+
+func TestCleanupPartialScanCacheIgnoresUnsetInputs(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	_, _, ctx := generateFixtures(t, bufOut, bufErr)
+	t.Cleanup(ctx.Close)
+
+	cleanupPartialScanCache(ctx, objects.RandomMAC())
+
+	ctx.CacheDir = t.TempDir()
+	cleanupPartialScanCache(ctx, objects.NilMac)
+}
+
+func TestCleanupPartialScanCacheWarnsWhenRemovalFails(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	_, _, ctx := generateFixtures(t, bufOut, bufErr)
+	t.Cleanup(ctx.Close)
+
+	cacheRoot := filepath.Join(t.TempDir(), testCacheRootFile)
+	require.NoError(t, os.WriteFile(cacheRoot, []byte(testCacheRootFile), 0o600))
+	ctx.CacheDir = cacheRoot
+
+	cleanupPartialScanCache(ctx, objects.RandomMAC())
 }
 
 func TestBackupCleansPartialScanCacheOnCreateFailure(t *testing.T) {
