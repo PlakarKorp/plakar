@@ -10,9 +10,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/PlakarKorp/kloset/caching"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/ui/stdio"
 	"github.com/stretchr/testify/require"
+)
+
+const (
+	failingScanCacheMarkerFile  = "partial"
+	failingScanCacheErrMessage  = "scan cache open failed"
+	unexpectedCacheErrMessage   = "unexpected cache constructor call"
+	testPackfileTempStorageMode = "memory"
 )
 
 // runBackup is a small wrapper around the standard Parse + Execute flow that
@@ -119,6 +127,39 @@ func TestBackupForcedTimestampInFutureRejected(t *testing.T) {
 	_, err, _, _ := runBackup(t, []string{"-force-timestamp", future}, nil)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "future")
+}
+
+func TestBackupCleansPartialScanCacheOnCreateFailure(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	repo, tmpBackupDir, ctx := generateFixtures(t, bufOut, bufErr)
+	t.Cleanup(ctx.Close)
+
+	scanCacheErr := errors.New(failingScanCacheErrMessage)
+	cacheRoot := t.TempDir()
+	var scanDir string
+
+	ctx.CacheDir = cacheRoot
+	ctx.SetCache(caching.NewManager(func(version, name, repoid string, _ caching.Option) (caching.Cache, error) {
+		if name != backupScanCacheName {
+			return nil, errors.New(unexpectedCacheErrMessage)
+		}
+
+		scanDir = filepath.Join(cacheRoot, version, name, filepath.FromSlash(repoid))
+		require.NoError(t, os.MkdirAll(scanDir, 0o700))
+		require.NoError(t, os.WriteFile(filepath.Join(scanDir, failingScanCacheMarkerFile), []byte(failingScanCacheMarkerFile), 0o600))
+		return nil, scanCacheErr
+	}))
+
+	cmd := &Backup{}
+	require.NoError(t, cmd.Parse(ctx, []string{"-packfiles", testPackfileTempStorageMode, "-no-progress", tmpBackupDir}))
+
+	status, err := cmd.Execute(ctx, repo)
+	require.Equal(t, 1, status)
+	require.ErrorIs(t, err, scanCacheErr)
+
+	_, statErr := os.Stat(scanDir)
+	require.True(t, os.IsNotExist(statErr), "partial scan cache %q should be removed after create failure", scanDir)
 }
 
 func TestBackupTagViaFlag(t *testing.T) {
