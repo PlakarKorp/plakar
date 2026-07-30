@@ -1,0 +1,7 @@
+.gradle/
+build/
+local.properties
+app/build/
+
+# Produced by build-plakar.sh, not checked in.
+app/src/main/jniLibs/
