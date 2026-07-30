@@ -1,0 +1,48 @@
+name: Android PoC
+
+# Builds the unrooted-Android proof of concept in android/ and publishes the
+# debug APK as a workflow artifact, so an installable build does not require a
+# local Android SDK.
+
+on:
+  push:
+    paths:
+      - 'android/**'
+      - '.github/workflows/android-poc.yml'
+  workflow_dispatch:
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v6
+      with:
+        go-version-file: 'go.mod'
+
+    - name: Set up JDK
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '17'
+
+    - name: Set up Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Cross-compile plakar for android/arm64
+      run: ./android/build-plakar.sh
+
+    - name: Assemble debug APK
+      working-directory: android
+      run: gradle --no-daemon assembleDebug
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: plakar-poc-debug-apk
+        path: android/app/build/outputs/apk/debug/app-debug.apk
+        if-no-files-found: error
