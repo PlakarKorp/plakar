@@ -19,11 +19,12 @@ import (
 )
 
 const (
-	failingScanCacheMarkerFile  = "partial"
-	failingScanCacheErrMessage  = "scan cache open failed"
-	unexpectedCacheErrMessage   = "unexpected cache constructor call"
-	testPackfileTempStorageMode = "memory"
-	testCacheRootFile           = "cache-root"
+	failingSnapshotWorkspaceMarkerFile = "partial"
+	failingSnapshotWorkspaceErrMessage = "snapshot workspace open failed"
+	unexpectedCacheErrMessage          = "unexpected cache constructor call"
+	testSnapshotWorkCacheName          = "scan"
+	testPackfileTempStorageMode        = "memory"
+	testCacheRootFile                  = "cache-root"
 )
 
 // runBackup is a small wrapper around the standard Parse + Execute flow that
@@ -132,7 +133,7 @@ func TestBackupForcedTimestampInFutureRejected(t *testing.T) {
 	require.Contains(t, err.Error(), "future")
 }
 
-func TestCleanupPartialScanCacheRemovesSnapshotDir(t *testing.T) {
+func TestCleanupPartialSnapshotWorkspaceRemovesSnapshotDir(t *testing.T) {
 	bufOut := bytes.NewBuffer(nil)
 	bufErr := bytes.NewBuffer(nil)
 	_, _, ctx := generateFixtures(t, bufOut, bufErr)
@@ -140,29 +141,29 @@ func TestCleanupPartialScanCacheRemovesSnapshotDir(t *testing.T) {
 
 	identifier := objects.RandomMAC()
 	ctx.CacheDir = t.TempDir()
-	scanDir := filepath.Join(ctx.CacheDir, caching.CACHE_VERSION, backupScanCacheName, fmt.Sprintf("%x", identifier))
-	require.NoError(t, os.MkdirAll(scanDir, 0o700))
-	require.NoError(t, os.WriteFile(filepath.Join(scanDir, failingScanCacheMarkerFile), []byte(failingScanCacheMarkerFile), 0o600))
+	snapshotWorkDir := filepath.Join(ctx.CacheDir, caching.CACHE_VERSION, snapshotWorkCacheName, fmt.Sprintf("%x", identifier))
+	require.NoError(t, os.MkdirAll(snapshotWorkDir, 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(snapshotWorkDir, failingSnapshotWorkspaceMarkerFile), []byte(failingSnapshotWorkspaceMarkerFile), 0o600))
 
-	cleanupPartialScanCache(ctx, identifier)
+	cleanupPartialSnapshotWorkspace(ctx, identifier)
 
-	_, statErr := os.Stat(scanDir)
-	require.True(t, os.IsNotExist(statErr), "partial scan cache %q should be removed", scanDir)
+	_, statErr := os.Stat(snapshotWorkDir)
+	require.True(t, os.IsNotExist(statErr), "partial snapshot workspace %q should be removed", snapshotWorkDir)
 }
 
-func TestCleanupPartialScanCacheIgnoresUnsetInputs(t *testing.T) {
+func TestCleanupPartialSnapshotWorkspaceIgnoresUnsetInputs(t *testing.T) {
 	bufOut := bytes.NewBuffer(nil)
 	bufErr := bytes.NewBuffer(nil)
 	_, _, ctx := generateFixtures(t, bufOut, bufErr)
 	t.Cleanup(ctx.Close)
 
-	cleanupPartialScanCache(ctx, objects.RandomMAC())
+	cleanupPartialSnapshotWorkspace(ctx, objects.RandomMAC())
 
 	ctx.CacheDir = t.TempDir()
-	cleanupPartialScanCache(ctx, objects.NilMac)
+	cleanupPartialSnapshotWorkspace(ctx, objects.NilMac)
 }
 
-func TestCleanupPartialScanCacheWarnsWhenRemovalFails(t *testing.T) {
+func TestCleanupPartialSnapshotWorkspaceWarnsWhenRemovalFails(t *testing.T) {
 	bufOut := bytes.NewBuffer(nil)
 	bufErr := bytes.NewBuffer(nil)
 	_, _, ctx := generateFixtures(t, bufOut, bufErr)
@@ -172,29 +173,29 @@ func TestCleanupPartialScanCacheWarnsWhenRemovalFails(t *testing.T) {
 	require.NoError(t, os.WriteFile(cacheRoot, []byte(testCacheRootFile), 0o600))
 	ctx.CacheDir = cacheRoot
 
-	cleanupPartialScanCache(ctx, objects.RandomMAC())
+	cleanupPartialSnapshotWorkspace(ctx, objects.RandomMAC())
 }
 
-func TestBackupCleansPartialScanCacheOnCreateFailure(t *testing.T) {
+func TestBackupCleansPartialSnapshotWorkspaceOnCreateFailure(t *testing.T) {
 	bufOut := bytes.NewBuffer(nil)
 	bufErr := bytes.NewBuffer(nil)
 	repo, tmpBackupDir, ctx := generateFixtures(t, bufOut, bufErr)
 	t.Cleanup(ctx.Close)
 
-	scanCacheErr := errors.New(failingScanCacheErrMessage)
+	snapshotWorkspaceErr := errors.New(failingSnapshotWorkspaceErrMessage)
 	cacheRoot := t.TempDir()
-	var scanDir string
+	var snapshotWorkDir string
 
 	ctx.CacheDir = cacheRoot
 	ctx.SetCache(caching.NewManager(func(version, name, repoid string, _ caching.Option) (caching.Cache, error) {
-		if name != backupScanCacheName {
+		if name != testSnapshotWorkCacheName {
 			return nil, errors.New(unexpectedCacheErrMessage)
 		}
 
-		scanDir = filepath.Join(cacheRoot, version, name, filepath.FromSlash(repoid))
-		require.NoError(t, os.MkdirAll(scanDir, 0o700))
-		require.NoError(t, os.WriteFile(filepath.Join(scanDir, failingScanCacheMarkerFile), []byte(failingScanCacheMarkerFile), 0o600))
-		return nil, scanCacheErr
+		snapshotWorkDir = filepath.Join(cacheRoot, version, name, filepath.FromSlash(repoid))
+		require.NoError(t, os.MkdirAll(snapshotWorkDir, 0o700))
+		require.NoError(t, os.WriteFile(filepath.Join(snapshotWorkDir, failingSnapshotWorkspaceMarkerFile), []byte(failingSnapshotWorkspaceMarkerFile), 0o600))
+		return nil, snapshotWorkspaceErr
 	}))
 
 	cmd := &Backup{}
@@ -202,10 +203,10 @@ func TestBackupCleansPartialScanCacheOnCreateFailure(t *testing.T) {
 
 	status, err := cmd.Execute(ctx, repo)
 	require.Equal(t, 1, status)
-	require.ErrorIs(t, err, scanCacheErr)
+	require.ErrorIs(t, err, snapshotWorkspaceErr)
 
-	_, statErr := os.Stat(scanDir)
-	require.True(t, os.IsNotExist(statErr), "partial scan cache %q should be removed after create failure", scanDir)
+	_, statErr := os.Stat(snapshotWorkDir)
+	require.True(t, os.IsNotExist(statErr), "partial snapshot workspace %q should be removed after create failure", snapshotWorkDir)
 }
 
 func TestBackupTagViaFlag(t *testing.T) {

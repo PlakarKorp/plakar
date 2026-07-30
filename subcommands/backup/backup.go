@@ -68,20 +68,20 @@ type Backup struct {
 	Perimeter           string
 }
 
-const backupScanCacheName = "scan"
+const snapshotWorkCacheName = "scan"
 
 func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &Backup{} }, 0, "backup")
 }
 
-func cleanupPartialScanCache(ctx *appcontext.AppContext, identifier objects.MAC) {
+func cleanupPartialSnapshotWorkspace(ctx *appcontext.AppContext, identifier objects.MAC) {
 	if ctx.CacheDir == "" || identifier == objects.NilMac {
 		return
 	}
 
-	scanCacheDir := filepath.Join(ctx.CacheDir, caching.CACHE_VERSION, backupScanCacheName, fmt.Sprintf("%x", identifier))
-	if err := os.RemoveAll(scanCacheDir); err != nil {
-		ctx.GetLogger().Warn("failed to remove partial scan cache %s: %s", scanCacheDir, err)
+	snapshotWorkDir := filepath.Join(ctx.CacheDir, caching.CACHE_VERSION, snapshotWorkCacheName, fmt.Sprintf("%x", identifier))
+	if err := os.RemoveAll(snapshotWorkDir); err != nil {
+		ctx.GetLogger().Warn("failed to remove partial snapshot workspace %s: %s", snapshotWorkDir, err)
 	}
 }
 
@@ -321,7 +321,8 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 	snapshotID := objects.RandomMAC()
 	snap, err := snapshot.Create(repo, repository.DefaultType, cmd.PackfileTempStorage, snapshotID, opts)
 	if err != nil {
-		cleanupPartialScanCache(ctx, snapshotID)
+		// snapshot.Create may fail before returning a Builder whose Close cleans this workspace.
+		cleanupPartialSnapshotWorkspace(ctx, snapshotID)
 		ctx.GetLogger().Error("%s", err)
 		return 1, err, objects.MAC{}, nil
 	}
