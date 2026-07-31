@@ -103,8 +103,23 @@ func entryPoint() int {
 
 	userDefault, err := user.Current()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: go away casper !\n", progName())
-		return 1
+		username := os.Getenv("USER")
+		if username == "" {
+			username = os.Getenv("LOGNAME")
+		}
+		if username == "" {
+			username = "unknown"
+		}
+
+		homeDir := os.Getenv("HOME")
+		if homeDir == "" {
+			homeDir = cwd
+		}
+
+		userDefault = &user.User{
+			Username: username,
+			HomeDir:  homeDir,
+		}
 	}
 
 	hostnameDefault, err := os.Hostname()
