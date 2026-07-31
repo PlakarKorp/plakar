@@ -4,11 +4,15 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/PlakarKorp/kloset/connectors"
+	"github.com/PlakarKorp/kloset/objects"
 	ptesting "github.com/PlakarKorp/plakar/testing"
 	"github.com/stretchr/testify/require"
 )
@@ -21,6 +25,7 @@ const (
 	restoreWarningPayload        = "payload"
 	restoreWarningExpectedOutput = "snapshot contains 1 backup error"
 )
+
 func mkRestoreDir(t *testing.T) string {
 	t.Helper()
 	dir, err := os.MkdirTemp("", "tmp_to_restore")
@@ -374,17 +379,22 @@ func TestRestoreWarnsWhenSnapshotContainsBackupErrors(t *testing.T) {
 	bufOut := bytes.NewBuffer(nil)
 	bufErr := bytes.NewBuffer(nil)
 	repo, ctx := ptesting.GenerateRepository(t, bufOut, bufErr, nil)
+	mtime := time.Unix(0, 0).UTC()
 	snap := ptesting.GenerateSnapshot(t, repo, nil,
 		ptesting.WithGenerator(func(ch chan<- *connectors.Record) {
-			ch <- connectors.NewRecord(restoreWarningRootPath, "", objects.FileInfo{
-				Lname: restoreWarningRootPath, Lmode: os.ModeDir | 0755,
-			}, nil, nil)
-			ch <- connectors.NewRecord(restoreWarningDataPath, "", objects.FileInfo{
-				Lname: restoreWarningDataName, Lmode: 0644, Lsize: int64(len(restoreWarningPayload)),
-			}, nil, func() (io.ReadCloser, error) {
-				return io.NopCloser(strings.NewReader(restoreWarningPayload)), nil
-			})
-			ch <- connectors.NewError(restoreWarningDeniedPath, os.ErrPermission)
+			ch <- connectors.NewRecord(restoreWarningRootPath, "",
+				objects.NewFileInfo(restoreWarningRootPath, 0, os.ModeDir|0755, mtime, 0, 0, 0, 0, 1),
+				nil, nil)
+			ch <- connectors.NewRecord(restoreWarningDataPath, "",
+				objects.NewFileInfo(restoreWarningDataName, int64(len(restoreWarningPayload)), 0644, mtime, 0, 0, 0, 0, 1),
+				nil, func() (io.ReadCloser, error) {
+					return io.NopCloser(strings.NewReader(restoreWarningPayload)), nil
+				})
+			// A record whose reader fails is what the snapshot records as a
+			// backup error; restore must warn instead of staying silent.
+			ch <- connectors.NewRecord(restoreWarningDeniedPath, "",
+				objects.NewFileInfo("denied.txt", 3, 0000, mtime, 0, 0, 0, 0, 1),
+				nil, func() (io.ReadCloser, error) { return nil, os.ErrPermission })
 		}),
 	)
 	defer snap.Close()
