@@ -88,6 +88,36 @@ func progName() string {
 	return filepath.Base(os.Args[0])
 }
 
+const fallbackUsername = "unknown"
+
+func currentUserDefault(cwd string) *user.User {
+	userDefault, err := user.Current()
+	if err != nil {
+		username := os.Getenv("USER")
+		if username == "" {
+			username = os.Getenv("LOGNAME")
+		}
+		if username == "" {
+			username = fallbackUsername
+		}
+
+		userDefault = &user.User{
+			Username: username,
+		}
+	}
+
+	homeDir := os.Getenv("HOME")
+	if homeDir == "" {
+		homeDir = userDefault.HomeDir
+	}
+	if homeDir == "" {
+		homeDir = cwd
+	}
+	userDefault.HomeDir = homeDir
+
+	return userDefault
+}
+
 func entryPoint() int {
 	// default values
 	cwd, err := os.Getwd()
@@ -101,26 +131,7 @@ func entryPoint() int {
 		opt_cpuDefault = opt_cpuDefault - 1
 	}
 
-	userDefault, err := user.Current()
-	if err != nil {
-		username := os.Getenv("USER")
-		if username == "" {
-			username = os.Getenv("LOGNAME")
-		}
-		if username == "" {
-			username = "unknown"
-		}
-
-		homeDir := os.Getenv("HOME")
-		if homeDir == "" {
-			homeDir = cwd
-		}
-
-		userDefault = &user.User{
-			Username: username,
-			HomeDir:  homeDir,
-		}
-	}
+	userDefault := currentUserDefault(cwd)
 
 	hostnameDefault, err := os.Hostname()
 	if err != nil {
