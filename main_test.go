@@ -27,6 +27,16 @@ func newTestCtx(t *testing.T) *appcontext.AppContext {
 	return ctx
 }
 
+func TestCurrentUserDefaultHonorsHomeEnv(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	got := currentUserDefault(t.TempDir())
+	if got.HomeDir != home {
+		t.Fatalf("HomeDir = %q, want %q", got.HomeDir, home)
+	}
+}
+
 // ---------- getPassphraseFromEnv ----------
 
 func TestGetPassphraseFromEnv_KeyFromFileWins(t *testing.T) {
