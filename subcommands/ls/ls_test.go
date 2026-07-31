@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/PlakarKorp/kloset/connectors"
+	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/plakar/appcontext"
@@ -208,4 +210,108 @@ func TestExecuteCmdLsFilterUuid(t *testing.T) {
 	indexId := snap.Header.GetIndexID()
 	require.Equal(t, hex.EncodeToString(indexId[:]), fields[1])
 	require.Equal(t, snap.Header.GetSource(0).Importer.Directory, fields[len(fields)-1])
+}
+
+// errorSnapshot builds a snapshot holding two files whose readers fail during
+// the backup, one directly under /d and one further below, so that the listing
+// of /d has a recorded error both at and below its level.
+func errorSnapshot(t *testing.T) (*repository.Repository, *appcontext.AppContext, *bytes.Buffer, *bytes.Buffer, string) {
+	t.Helper()
+
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	repo, ctx := ptesting.GenerateRepository(t, bufOut, bufErr, nil)
+
+	var mtime time.Time
+	dir := func(pathname, name string) *connectors.Record {
+		return &connectors.Record{
+			Pathname: pathname,
+			FileInfo: objects.NewFileInfo(name, 0, 0700|os.ModeDir, mtime, 0, 0, 0, 0, 1),
+		}
+	}
+	denied := func(pathname, name string) *connectors.Record {
+		return connectors.NewRecord(pathname, "",
+			objects.NewFileInfo(name, 3, 0000, mtime, 0, 0, 0, 0, 1), nil,
+			func() (io.ReadCloser, error) { return nil, os.ErrPermission })
+	}
+
+	gen := func(ch chan<- *connectors.Record) {
+		ch <- dir("/", "/")
+		ch <- dir("/d", "d")
+		ch <- dir("/d/sub", "sub")
+		ch <- connectors.NewRecord("/d/readable.txt", "",
+			objects.NewFileInfo("readable.txt", 5, 0644, mtime, 0, 0, 0, 0, 1), nil,
+			func() (io.ReadCloser, error) { return io.NopCloser(strings.NewReader("hello")), nil })
+		ch <- denied("/d/denied.txt", "denied.txt")
+		ch <- denied("/d/sub/nested.txt", "nested.txt")
+	}
+
+	snap := ptesting.GenerateSnapshot(t, repo, nil, ptesting.WithGenerator(gen))
+	t.Cleanup(func() { snap.Close() })
+
+	indexID := snap.Header.GetIndexID()
+	bufOut.Reset()
+	bufErr.Reset()
+	return repo, ctx, bufOut, bufErr, hex.EncodeToString(indexID[:])
+}
+
+func TestLsListSnapshotErrors(t *testing.T) {
+	// A plain listing reports the errors of the directory it lists on stderr,
+	// by base name, and leaves out the ones recorded below it.
+	repo, ctx, bufOut, bufErr, id := errorSnapshot(t)
+
+	cmd := &Ls{}
+	require.NoError(t, cmd.Parse(ctx, []string{id + ":/d"}))
+
+	status, err := cmd.Execute(ctx, repo)
+	require.NoError(t, err)
+	require.Equal(t, 0, status)
+
+	require.Contains(t, bufOut.String(), "readable.txt")
+
+	errout := bufErr.String()
+	require.Contains(t, errout, "denied.txt: ")
+	require.Contains(t, errout, "permission denied")
+	require.NotContains(t, errout, "nested.txt")
+}
+
+func TestLsListSnapshotErrorsRecursive(t *testing.T) {
+	// A recursive listing reports the errors recorded below the directory too,
+	// by full path, like the entries themselves.
+	repo, ctx, _, bufErr, id := errorSnapshot(t)
+
+	cmd := &Ls{}
+	require.NoError(t, cmd.Parse(ctx, []string{"-recursive", id + ":/d"}))
+
+	status, err := cmd.Execute(ctx, repo)
+	require.NoError(t, err)
+	require.Equal(t, 0, status)
+
+	errout := bufErr.String()
+	require.Contains(t, errout, "/d/denied.txt: ")
+	require.Contains(t, errout, "/d/sub/nested.txt: ")
+}
+
+func TestLsListSnapshotNoErrors(t *testing.T) {
+	// A snapshot without recorded errors leaves stderr untouched.
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	repo, ctx := ptesting.GenerateRepository(t, bufOut, bufErr, nil)
+	snap := ptesting.GenerateSnapshot(t, repo, []ptesting.MockFile{
+		ptesting.NewMockDir("subdir"),
+		ptesting.NewMockFile("subdir/dummy.txt", 0644, "hello dummy"),
+	})
+	defer snap.Close()
+	bufOut.Reset()
+	bufErr.Reset()
+
+	cmd := &Ls{}
+	require.NoError(t, cmd.Parse(ctx, []string{hex.EncodeToString(snap.Header.GetIndexShortID()) + ":/subdir"}))
+
+	status, err := cmd.Execute(ctx, repo)
+	require.NoError(t, err)
+	require.Equal(t, 0, status)
+
+	require.Contains(t, bufOut.String(), "dummy.txt")
+	require.Empty(t, bufErr.String())
 }

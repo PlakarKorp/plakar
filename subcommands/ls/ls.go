@@ -21,6 +21,8 @@ import (
 	"flag"
 	"fmt"
 	"io/fs"
+	"iter"
+	gopath "path"
 	"strings"
 	"time"
 
@@ -150,8 +152,17 @@ func (cmd *Ls) list_snapshot(ctx *appcontext.AppContext, repo *repository.Reposi
 		return err
 	}
 
+	// Errors recorded during the backup are kept aside from the entries
+	// themselves; list them on stderr, interleaved with the listing.
+	var errs *errorLister
+	defer func() {
+		if errs != nil {
+			errs.close()
+		}
+	}()
+
 	resolved := false
-	return pvfs.WalkDir(pathname, func(path string, d *vfs.Entry, err error) error {
+	err = pvfs.WalkDir(pathname, func(path string, d *vfs.Entry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -165,9 +176,14 @@ func (cmd *Ls) list_snapshot(ctx *appcontext.AppContext, repo *repository.Reposi
 			// right physical path and do our logic on it.
 			resolved = true
 			pathname = d.Path()
+			errs = newErrorLister(pvfs, pathname)
 		}
 		if d.IsDir() && path == pathname {
 			return nil
+		}
+
+		if err := errs.flush(ctx, recursive, pathname, path); err != nil {
+			return err
 		}
 
 		sb, err := d.Info()
@@ -212,4 +228,76 @@ func (cmd *Ls) list_snapshot(ctx *appcontext.AppContext, repo *repository.Reposi
 		}
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+
+	if errs == nil {
+		// the walk yielded nothing, so the lister was never set up
+		errs = newErrorLister(pvfs, pathname)
+	}
+	// entries are exhausted, whatever is left only sorts after them
+	return errs.flush(ctx, recursive, pathname, "")
+}
+
+// errorLister walks the errors recorded in a snapshot, which are sorted by
+// pathname, so that they can be merged into the listing of a directory.
+type errorLister struct {
+	next func() (*vfs.ErrorItem, error, bool)
+	stop func()
+
+	item *vfs.ErrorItem
+	err  error
+}
+
+func newErrorLister(pvfs *vfs.Filesystem, beneath string) *errorLister {
+	next, stop := iter.Pull2(pvfs.Errors(beneath))
+	el := &errorLister{next: next, stop: stop}
+	el.advance()
+	return el
+}
+
+func (el *errorLister) close() {
+	el.stop()
+}
+
+func (el *errorLister) advance() {
+	item, err, ok := el.next()
+	switch {
+	case !ok:
+		el.item = nil
+	case err != nil:
+		el.item, el.err = nil, err
+	default:
+		el.item = item
+	}
+}
+
+// flush reports every error that sorts before upto, or all the remaining ones
+// when upto is empty.  Unless the listing is recursive, errors below beneath
+// are skipped: they belong to entries that are not listed either.
+func (el *errorLister) flush(ctx *appcontext.AppContext, recursive bool, beneath, upto string) error {
+	for el.err == nil && el.item != nil {
+		if upto != "" && el.item.Name >= upto {
+			return nil
+		}
+
+		name := el.item.Name
+		if !recursive {
+			if gopath.Dir(name) != beneath {
+				el.advance()
+				continue
+			}
+			name = gopath.Base(name)
+		}
+
+		fmt.Fprintf(ctx.Stderr, "%s: %s\n", utils.SanitizeText(name),
+			utils.SanitizeText(el.item.Error))
+		el.advance()
+	}
+
+	if el.err != nil {
+		return fmt.Errorf("ls: failed to scan errors: %w", el.err)
+	}
+	return nil
 }
