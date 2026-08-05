@@ -443,7 +443,7 @@ func TestLoadDestinationsParseError2(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(dir, name), []byte(body), 0o600))
 	}
 	must("sources.yml", "version: v1.0.0\nsources: {}\n")
-	// destinations.yml present but unparseable in both new and old format
+	// destinations.yml present but unparsable in both new and old format
 	must("destinations.yml", "version: v1.0.0\ndestinations: [this, is, a, list]\n")
 	_, err := Load(dir)
 	require.Error(t, err)

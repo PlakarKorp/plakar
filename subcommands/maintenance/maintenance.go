@@ -281,7 +281,7 @@ func (cmd *Maintenance) sweepPass(ctx *appcontext.AppContext, cache *caching.Mai
 
 	// Second garbage collect dangling blobs in our state.
 	// Note: This is not the blobs from the packfile we just removed, since we
-	// do not operate on our local state, it's the responsability of the
+	// do not operate on our local state, it's the responsibility of the
 	// LocalState ingestion to unroll packfiles -> blobs deletion (which is a
 	// nice property as it makes for way smaller delta states).
 	// We still do this pass as a sanity check, but maybe we should get rid of

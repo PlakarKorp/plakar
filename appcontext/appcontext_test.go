@@ -154,7 +154,7 @@ func TestReloadConfig_PropagatesLoadError(t *testing.T) {
 	dir := t.TempDir()
 	ctx.ConfigDir = dir
 
-	// A sources.yml that exists but is unparseable causes LoadConfig to return
+	// A sources.yml that exists but is unparsable causes LoadConfig to return
 	// a non-IsNotExist error, exercising the error-propagation branch.
 	if err := os.WriteFile(filepath.Join(dir, "sources.yml"),
 		[]byte("not: [valid: yaml"), 0o600); err != nil {

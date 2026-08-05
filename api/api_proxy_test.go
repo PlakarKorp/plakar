@@ -72,7 +72,7 @@ func TestProxyIntegrationPathNotImplemented(t *testing.T) {
 	require.Equal(t, http.StatusInternalServerError, w.Code, "body=%s", w.Body.String())
 }
 
-// TestServicesProxyBadEndpoint points the proxy at an unparseable
+// TestServicesProxyBadEndpoint points the proxy at an unparsable
 // endpoint URL, exercising the `targetBase, err := url.Parse(...); if
 // err != nil` branch of servicesProxy.
 func TestProxyBadEndpoint(t *testing.T) {
