@@ -8,7 +8,7 @@ import (
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
-	"go.yaml.in/yaml/v3"
+	"github.com/PlakarKorp/plakar/utils"
 )
 
 type ServiceShow struct {
@@ -56,7 +56,7 @@ func (cmd *ServiceShow) Execute(ctx *appcontext.AppContext, repo *repository.Rep
 	if cmd.AsJson {
 		err = json.NewEncoder(ctx.Stdout).Encode(map[string]any{cmd.Service: config})
 	} else {
-		err = yaml.NewEncoder(ctx.Stdout).Encode(map[string]any{cmd.Service: config})
+		err = utils.YAMLEncode(ctx.Stdout, map[string]any{cmd.Service: config})
 	}
 	if err != nil {
 		return 1, fmt.Errorf("failed to encode config: %w", err)
