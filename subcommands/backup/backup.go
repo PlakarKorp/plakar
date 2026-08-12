@@ -264,6 +264,10 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		}
 		defer imp.Close(ctx)
 
+		if len(cmd.Excludes) > 0 && imp.Flags()&location.FLAG_LOCALFS == 0 {
+			ctx.GetLogger().Warn("exclude patterns are applied after traversal for %q source; the connector may still enumerate excluded entries over the network", imp.Type())
+		}
+
 		var (
 			typ  = imp.Type()
 			orig = imp.Origin()
