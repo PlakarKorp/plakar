@@ -17,9 +17,10 @@ plakar:
 install:
 	mkdir -p ${DESTDIR}${BINDIR}
 	mkdir -p ${DESTDIR}${MANDIR}/man1
+	mkdir -p ${DESTDIR}${MANDIR}/man7
 	${INSTALL_PROGRAM} plakar ${DESTDIR}${BINDIR}
-	find cmd/plakar -iname \*.1 -exec \
-		${INSTALL_MAN} {} ${DESTDIR}${MANDIR}/man1 \;
+	${INSTALL_MAN} *.1 ${DESTDIR}${MANDIR}/man1
+	${INSTALL_MAN} *.7 ${DESTDIR}${MANDIR}/man7
 
 check: test
 test:
