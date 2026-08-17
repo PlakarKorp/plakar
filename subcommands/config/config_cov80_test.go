@@ -1,7 +1,6 @@
 package config
 
 import (
-	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,30 +9,13 @@ import (
 	_ "github.com/PlakarKorp/integrations/fs/exporter"
 	_ "github.com/PlakarKorp/integrations/fs/importer"
 	_ "github.com/PlakarKorp/integrations/fs/storage"
-	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/config"
 	"github.com/stretchr/testify/require"
 )
-
-func cov80Ctx(t *testing.T) (*appcontext.AppContext, *bytes.Buffer, *bytes.Buffer) {
-	t.Helper()
-	tmpDir := t.TempDir()
-	cfg, err := config.LoadOldConfigIfExists(filepath.Join(tmpDir, "config.yaml"))
-	require.NoError(t, err)
-	bufOut := bytes.NewBuffer(nil)
-	bufErr := bytes.NewBuffer(nil)
-	ctx := appcontext.NewAppContext()
-	ctx.Config = cfg
-	ctx.ConfigDir = tmpDir
-	ctx.Stdout = bufOut
-	ctx.Stderr = bufErr
-	return ctx, bufOut, bufErr
-}
 
 // ---------- import with -rclone (third-party prefix synthesis) ----------
 
 func TestDispatchImportRcloneCov80(t *testing.T) {
-	ctx, _, _ := cov80Ctx(t)
+	ctx, _, _ := newConfigCtx(t)
 
 	// An rclone-style INI section; with -rclone the importer synthesizes a
 	// "rclone://" location and prefixes each key.
@@ -51,7 +33,7 @@ func TestDispatchImportRcloneCov80(t *testing.T) {
 // import of a config that contains no usable sections must error with "no
 // valid ...s found".
 func TestDispatchImportEmptyAfterParseCov80(t *testing.T) {
-	ctx, _, _ := cov80Ctx(t)
+	ctx, _, _ := newConfigCtx(t)
 
 	// A YAML doc whose only top-level entry is a scalar (skipped by LoadYAML)
 	// plus a location so GetConf doesn't reject it, but yields no real
@@ -70,7 +52,7 @@ func TestDispatchImportEmptyAfterParseCov80(t *testing.T) {
 // ---------- ping / check error branches ----------
 
 func TestDispatchPingStoreOpenErrorCov80(t *testing.T) {
-	ctx, _, _ := cov80Ctx(t)
+	ctx, _, _ := newConfigCtx(t)
 	// Register a store whose location uses an unknown scheme so storage.New
 	// fails inside the ping handler (config.go store-ping error branch).
 	require.NoError(t, dispatchSubcommand(ctx, "store", "add",
@@ -80,7 +62,7 @@ func TestDispatchPingStoreOpenErrorCov80(t *testing.T) {
 }
 
 func TestDispatchCheckStoreOpenErrorCov80(t *testing.T) {
-	ctx, _, _ := cov80Ctx(t)
+	ctx, _, _ := newConfigCtx(t)
 	require.NoError(t, dispatchSubcommand(ctx, "store", "add",
 		[]string{"r", "no-such-scheme://nowhere"}))
 	err := dispatchSubcommand(ctx, "store", "check", []string{"r"})
@@ -88,7 +70,7 @@ func TestDispatchCheckStoreOpenErrorCov80(t *testing.T) {
 }
 
 func TestDispatchCheckSourceBadProtoCov80(t *testing.T) {
-	ctx, _, _ := cov80Ctx(t)
+	ctx, _, _ := newConfigCtx(t)
 	require.NoError(t, dispatchSubcommand(ctx, "source", "add",
 		[]string{"s", "no-such-scheme://nowhere"}))
 	err := dispatchSubcommand(ctx, "source", "check", []string{"s"})
@@ -96,7 +78,7 @@ func TestDispatchCheckSourceBadProtoCov80(t *testing.T) {
 }
 
 func TestDispatchCheckDestinationBadProtoCov80(t *testing.T) {
-	ctx, _, _ := cov80Ctx(t)
+	ctx, _, _ := newConfigCtx(t)
 	require.NoError(t, dispatchSubcommand(ctx, "destination", "add",
 		[]string{"d", "no-such-scheme://nowhere"}))
 	err := dispatchSubcommand(ctx, "destination", "check", []string{"d"})
@@ -106,7 +88,7 @@ func TestDispatchCheckDestinationBadProtoCov80(t *testing.T) {
 // ---------- policy add/set with an invalid value (config.Set error) ----------
 
 func TestDispatchPolicyAddSetErrorCov80(t *testing.T) {
-	ctx, _, _ := cov80Ctx(t)
+	ctx, _, _ := newConfigCtx(t)
 	// "minutes" expects a non-negative int; a garbage value makes config.Set
 	// fail inside the policy add handler.
 	err := dispatchPolicy(ctx, "policy", "add", []string{"p", "minutes=notanint"})
@@ -115,7 +97,7 @@ func TestDispatchPolicyAddSetErrorCov80(t *testing.T) {
 }
 
 func TestDispatchPolicySetErrorCov80(t *testing.T) {
-	ctx, _, _ := cov80Ctx(t)
+	ctx, _, _ := newConfigCtx(t)
 	require.NoError(t, dispatchPolicy(ctx, "policy", "add", []string{"p"}))
 	err := dispatchPolicy(ctx, "policy", "set", []string{"p", "minutes=notanint"})
 	require.Error(t, err)
@@ -125,7 +107,7 @@ func TestDispatchPolicySetErrorCov80(t *testing.T) {
 // ---------- policy show in both formats over a populated policy ----------
 
 func TestDispatchPolicyShowYAMLAndJSONCov80(t *testing.T) {
-	ctx, bufOut, _ := cov80Ctx(t)
+	ctx, bufOut, _ := newConfigCtx(t)
 	require.NoError(t, dispatchPolicy(ctx, "policy", "add", []string{"keep", "days=7"}))
 
 	// YAML (default)
@@ -142,7 +124,7 @@ func TestDispatchPolicyShowYAMLAndJSONCov80(t *testing.T) {
 // ---------- policy default subcommand (unknown action) ----------
 
 func TestDispatchPolicyUnknownActionCov80(t *testing.T) {
-	ctx, _, _ := cov80Ctx(t)
+	ctx, _, _ := newConfigCtx(t)
 	err := dispatchPolicy(ctx, "policy", "bogus", nil)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "usage:")
@@ -151,7 +133,7 @@ func TestDispatchPolicyUnknownActionCov80(t *testing.T) {
 // ---------- store show -ini format over a populated store ----------
 
 func TestDispatchShowINIFormatCov80(t *testing.T) {
-	ctx, bufOut, _ := cov80Ctx(t)
+	ctx, bufOut, _ := newConfigCtx(t)
 	require.NoError(t, dispatchSubcommand(ctx, "store", "add",
 		[]string{"r", "fs://" + t.TempDir(), "extra=val"}))
 	bufOut.Reset()

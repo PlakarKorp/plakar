@@ -1,7 +1,6 @@
 package config
 
 import (
-	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
@@ -10,30 +9,13 @@ import (
 	_ "github.com/PlakarKorp/integrations/fs/importer"
 	_ "github.com/PlakarKorp/integrations/fs/storage"
 	"github.com/PlakarKorp/kloset/repository"
-	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/config"
 	"github.com/stretchr/testify/require"
 )
-
-func cov2Ctx(t *testing.T) (*appcontext.AppContext, *bytes.Buffer, *bytes.Buffer) {
-	t.Helper()
-	tmpDir := t.TempDir()
-	cfg, err := config.LoadOldConfigIfExists(filepath.Join(tmpDir, "config.yaml"))
-	require.NoError(t, err)
-	bufOut := bytes.NewBuffer(nil)
-	bufErr := bytes.NewBuffer(nil)
-	ctx := appcontext.NewAppContext()
-	ctx.Config = cfg
-	ctx.ConfigDir = tmpDir
-	ctx.Stdout = bufOut
-	ctx.Stderr = bufErr
-	return ctx, bufOut, bufErr
-}
 
 // ---------- Execute error path returns status 1 ----------
 
 func TestCov2StoreExecuteErrorStatus2(t *testing.T) {
-	ctx, _, _ := cov2Ctx(t)
+	ctx, _, _ := newConfigCtx(t)
 	cmd := &ConfigStoreCmd{}
 	require.NoError(t, cmd.Parse(ctx, []string{"rm", "does-not-exist"}))
 	status, err := cmd.Execute(ctx, &repository.Repository{})
@@ -42,7 +24,7 @@ func TestCov2StoreExecuteErrorStatus2(t *testing.T) {
 }
 
 func TestCov2SourceExecuteErrorStatus2(t *testing.T) {
-	ctx, _, _ := cov2Ctx(t)
+	ctx, _, _ := newConfigCtx(t)
 	cmd := &ConfigSourceCmd{}
 	require.NoError(t, cmd.Parse(ctx, []string{"rm", "nope"}))
 	status, err := cmd.Execute(ctx, &repository.Repository{})
@@ -51,7 +33,7 @@ func TestCov2SourceExecuteErrorStatus2(t *testing.T) {
 }
 
 func TestCov2DestinationExecuteErrorStatus2(t *testing.T) {
-	ctx, _, _ := cov2Ctx(t)
+	ctx, _, _ := newConfigCtx(t)
 	cmd := &ConfigDestinationCmd{}
 	require.NoError(t, cmd.Parse(ctx, []string{"rm", "nope"}))
 	status, err := cmd.Execute(ctx, &repository.Repository{})
@@ -60,7 +42,7 @@ func TestCov2DestinationExecuteErrorStatus2(t *testing.T) {
 }
 
 func TestCov2PolicyExecuteErrorStatus2(t *testing.T) {
-	ctx, _, _ := cov2Ctx(t)
+	ctx, _, _ := newConfigCtx(t)
 	cmd := &ConfigPolicyCmd{}
 	require.NoError(t, cmd.Parse(ctx, []string{"rm", "nope"}))
 	status, err := cmd.Execute(ctx, &repository.Repository{})
@@ -69,7 +51,7 @@ func TestCov2PolicyExecuteErrorStatus2(t *testing.T) {
 }
 
 func TestCov2StoreExecuteSuccessStatus2(t *testing.T) {
-	ctx, _, _ := cov2Ctx(t)
+	ctx, _, _ := newConfigCtx(t)
 	cmd := &ConfigStoreCmd{}
 	require.NoError(t, cmd.Parse(ctx, []string{"add", "r", "fs://" + t.TempDir()}))
 	status, err := cmd.Execute(ctx, &repository.Repository{})
@@ -80,7 +62,7 @@ func TestCov2StoreExecuteSuccessStatus2(t *testing.T) {
 // ---------- import: overwrite, rename, skip-missing, empty-name ----------
 
 func TestCov2ImportOverwriteAllSections2(t *testing.T) {
-	ctx, _, bufErr := cov2Ctx(t)
+	ctx, _, bufErr := newConfigCtx(t)
 	// seed an existing source
 	require.NoError(t, dispatchSubcommand(ctx, "source", "add", []string{"alpha", "fs:///old"}))
 
@@ -100,7 +82,7 @@ func TestCov2ImportOverwriteAllSections2(t *testing.T) {
 }
 
 func TestCov2ImportSelectedRenameAndSkips2(t *testing.T) {
-	ctx, _, bufErr := cov2Ctx(t)
+	ctx, _, bufErr := newConfigCtx(t)
 	cfgFile := filepath.Join(t.TempDir(), "import.yml")
 	body := "alpha:\n  location: fs:///a\nbeta:\n  location: fs:///b\n"
 	require.NoError(t, os.WriteFile(cfgFile, []byte(body), 0o600))
@@ -116,7 +98,7 @@ func TestCov2ImportSelectedRenameAndSkips2(t *testing.T) {
 }
 
 func TestCov2ImportSelectedAlreadyExistsSkip2(t *testing.T) {
-	ctx, _, bufErr := cov2Ctx(t)
+	ctx, _, bufErr := newConfigCtx(t)
 	require.NoError(t, dispatchSubcommand(ctx, "source", "add", []string{"alpha", "fs:///old"}))
 	cfgFile := filepath.Join(t.TempDir(), "import.yml")
 	require.NoError(t, os.WriteFile(cfgFile, []byte("alpha:\n  location: fs:///new\n"), 0o600))
@@ -128,7 +110,7 @@ func TestCov2ImportSelectedAlreadyExistsSkip2(t *testing.T) {
 }
 
 func TestCov2ImportEmptyConfigError2(t *testing.T) {
-	ctx, _, _ := cov2Ctx(t)
+	ctx, _, _ := newConfigCtx(t)
 	cfgFile := filepath.Join(t.TempDir(), "empty.yml")
 	// valid yaml with a location but a section that becomes empty? Use a doc with
 	// only a scalar top-level so GetConf returns no sections -> "no valid".
@@ -140,7 +122,7 @@ func TestCov2ImportEmptyConfigError2(t *testing.T) {
 // ---------- show: aggregate missing-name error & default masking ----------
 
 func TestCov2ShowMissingNameAggregateError2(t *testing.T) {
-	ctx, _, bufErr := cov2Ctx(t)
+	ctx, _, bufErr := newConfigCtx(t)
 	require.NoError(t, dispatchSubcommand(ctx, "store", "add", []string{"r", "fs:///x"}))
 	err := dispatchSubcommand(ctx, "store", "show", []string{"r", "ghost"})
 	require.Error(t, err)
@@ -148,7 +130,7 @@ func TestCov2ShowMissingNameAggregateError2(t *testing.T) {
 }
 
 func TestCov2ShowMasksSecretsByDefault2(t *testing.T) {
-	ctx, bufOut, _ := cov2Ctx(t)
+	ctx, bufOut, _ := newConfigCtx(t)
 	require.NoError(t, dispatchSubcommand(ctx, "store", "add",
 		[]string{"r", "fs:///x", "secret_access_key=topsecret", "x_token=abc"}))
 	bufOut.Reset()
@@ -160,7 +142,7 @@ func TestCov2ShowMasksSecretsByDefault2(t *testing.T) {
 }
 
 func TestCov2ShowJSONFormat2(t *testing.T) {
-	ctx, bufOut, _ := cov2Ctx(t)
+	ctx, bufOut, _ := newConfigCtx(t)
 	require.NoError(t, dispatchSubcommand(ctx, "store", "add", []string{"r", "fs:///x"}))
 	bufOut.Reset()
 	require.NoError(t, dispatchSubcommand(ctx, "store", "show", []string{"-json", "r"}))
@@ -170,7 +152,7 @@ func TestCov2ShowJSONFormat2(t *testing.T) {
 // ---------- unset cannot remove location ----------
 
 func TestCov2UnsetLocationRejected2(t *testing.T) {
-	ctx, _, _ := cov2Ctx(t)
+	ctx, _, _ := newConfigCtx(t)
 	require.NoError(t, dispatchSubcommand(ctx, "store", "add", []string{"r", "fs:///x"}))
 	err := dispatchSubcommand(ctx, "store", "unset", []string{"r", "location"})
 	require.Error(t, err)
@@ -179,13 +161,13 @@ func TestCov2UnsetLocationRejected2(t *testing.T) {
 // ---------- policy dispatch default + show yaml/json ----------
 
 func TestCov2PolicyDefaultSubcommand2(t *testing.T) {
-	ctx, _, _ := cov2Ctx(t)
+	ctx, _, _ := newConfigCtx(t)
 	err := dispatchPolicy(ctx, "policy", "bogus", nil)
 	require.Error(t, err)
 }
 
 func TestCov2PolicyShowJSON2(t *testing.T) {
-	ctx, bufOut, _ := cov2Ctx(t)
+	ctx, bufOut, _ := newConfigCtx(t)
 	require.NoError(t, dispatchPolicy(ctx, "policy", "add", []string{"daily", "days=7"}))
 	bufOut.Reset()
 	require.NoError(t, dispatchPolicy(ctx, "policy", "show", []string{"-json", "daily"}))
