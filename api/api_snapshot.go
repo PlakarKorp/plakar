@@ -771,9 +771,7 @@ type DownloadQuery struct {
 }
 
 const (
-	mediaTypeSeparator          = "/"
-	mediaTypeParameterSeparator = ";"
-	mediaSubtypeWildcard        = "*"
+	mediaTypeSeparator = "/"
 )
 
 func searchMIMEFilterMatches(filters []string, contentType string) bool {
@@ -783,7 +781,7 @@ func searchMIMEFilterMatches(filters []string, contentType string) bool {
 
 	mediaType, _, err := mime.ParseMediaType(contentType)
 	if err != nil {
-		mediaType = strings.TrimSpace(strings.SplitN(contentType, mediaTypeParameterSeparator, 2)[0])
+		mediaType = strings.TrimSpace(strings.SplitN(contentType, ";", 2)[0])
 	}
 	targetType, targetSubtype, ok := strings.Cut(mediaType, mediaTypeSeparator)
 	if !ok {
@@ -798,7 +796,7 @@ func searchMIMEFilterMatches(filters []string, contentType string) bool {
 			}
 			continue
 		}
-		if filterType == targetType && (filterSubtype == mediaSubtypeWildcard || filterSubtype == targetSubtype) {
+		if filterType == targetType && (filterSubtype == "*" || filterSubtype == targetSubtype) {
 			return true
 		}
 	}
