@@ -4,6 +4,7 @@ go 1.25.0
 
 require (
 	github.com/PlakarKorp/go-human2duration v0.1.6
+	github.com/PlakarKorp/go-signify v0.1.0
 	github.com/PlakarKorp/integration-grpc v1.1.0
 	github.com/PlakarKorp/integrations/fs v1.1.5
 	github.com/PlakarKorp/integrations/http v1.1.0
@@ -32,8 +33,8 @@ require (
 	go.yaml.in/yaml/v3 v3.0.4
 	golang.org/x/mod v0.37.0
 	golang.org/x/sync v0.21.0
-	golang.org/x/sys v0.46.0
-	golang.org/x/term v0.44.0
+	golang.org/x/sys v0.47.0
+	golang.org/x/term v0.45.0
 	golang.org/x/tools v0.45.0
 	google.golang.org/grpc v1.81.1
 	gopkg.in/ini.v1 v1.67.2
@@ -72,7 +73,8 @@ require (
 	github.com/cockroachdb/swiss v0.0.0-20251224182025-b0f6560f979b // indirect
 	github.com/cockroachdb/tokenbucket v0.0.0-20250429170803-42689b6311bb // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
-	github.com/dlclark/regexp2 v1.11.5 // indirect
+	github.com/dlclark/regexp2 v1.12.0 // indirect
+	github.com/ebfe/bcrypt_pbkdf v0.0.0-20140212075826-3c8d2dcb253a // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
 	github.com/felixge/fgprof v0.9.5 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.13 // indirect

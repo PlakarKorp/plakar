@@ -33,19 +33,27 @@ import (
 type PkgAdd struct {
 	subcommands.SubcommandBase
 
-	upgrade bool
-	Args    []string
+	upgrade       bool
+	allowUnsigned bool
+	Args          []string
 }
 
 func (cmd *PkgAdd) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags := flag.NewFlagSet("pkg add", flag.ExitOnError)
 	flags.BoolVar(&cmd.upgrade, "u", false, "Update packages")
+	flags.BoolVar(&cmd.allowUnsigned, "allow-unsigned", false,
+		"Install packages that carry no signature")
 	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), `Usage: %s [-u] <package> ...
+		fmt.Fprintf(flags.Output(), `Usage: %s [-u] [-allow-unsigned] <package> ...
 
 Arguments:
   <package>    Local .ptar file, or recipe name to fetch from plugins.plakar.io
                (local files take precedence over remote recipes)
+
+Options:
+  -allow-unsigned
+               Install packages that carry no signature. Packages that are
+               signed are still verified, and a bad signature is still fatal.
 
 Examples:
   pkg add imap           Fetch and install the 'imap' plugin
@@ -81,6 +89,19 @@ Examples:
 
 func (cmd *PkgAdd) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (int, error) {
 	pkgmgr := ctx.GetPkgManager()
+
+	if cmd.allowUnsigned {
+		verifier := ctx.GetPkgVerifier()
+		if verifier == nil {
+			return 1, fmt.Errorf("-allow-unsigned: no package verifier configured")
+		}
+
+		verifier.SetAllowUnsigned(true)
+
+		fmt.Fprintln(ctx.Stderr, "WARNING: -allow-unsigned: installing unsigned packages.")
+		fmt.Fprintln(ctx.Stderr, "WARNING: their contents and origin cannot be verified.")
+	}
+
 	for _, plugin := range cmd.Args {
 		plugin, version, _ := strings.Cut(plugin, "@")
 		addopts := pkg.AddOptions{

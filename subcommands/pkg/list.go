@@ -31,12 +31,14 @@ type PkgList struct {
 	subcommands.SubcommandBase
 	LongName bool
 	ListAll  bool
+	Signers  bool
 }
 
 func (cmd *PkgList) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags := flag.NewFlagSet("pkg list", flag.ExitOnError)
 	flags.BoolVar(&cmd.LongName, "long", false, "show full package name")
 	flags.BoolVar(&cmd.ListAll, "available", false, "list available prebuilt packages")
+	flags.BoolVar(&cmd.Signers, "signers", false, "show which key signed each installed package")
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS]\n", flags.Name())
 		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
@@ -53,15 +55,44 @@ func (cmd *PkgList) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 func (cmd *PkgList) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (int, error) {
-	print := func(name, version, os, arch string) {
-		if cmd.LongName {
-			fmt.Fprintf(ctx.Stdout, "%s_%s_%s_%s.ptar\n", name, version, os, arch)
-		} else {
-			fmt.Fprintf(ctx.Stdout, "%s@%s\n", name, version)
+	pkgmgr := ctx.GetPkgManager()
+
+	// signer reports who signed an installed package. Reported from the
+	// signature retained at install time, so it needs no network and
+	// stays accurate for a package whose key has since rotated out.
+	signer := func(name, version string) string {
+		verifier := ctx.GetPkgVerifier()
+		if verifier == nil {
+			return ""
 		}
+
+		sig, err := pkgmgr.Signature(&pkg.Package{
+			Name:            name,
+			Version:         version,
+			OperatingSystem: runtime.GOOS,
+			Architecture:    runtime.GOARCH,
+		})
+		if err != nil || sig == nil {
+			return "unsigned"
+		}
+
+		return verifier.Signer(sig)
 	}
 
-	pkgmgr := ctx.GetPkgManager()
+	print := func(name, version, os, arch string) {
+		if cmd.LongName {
+			fmt.Fprintf(ctx.Stdout, "%s_%s_%s_%s.ptar", name, version, os, arch)
+		} else {
+			fmt.Fprintf(ctx.Stdout, "%s@%s", name, version)
+		}
+
+		if cmd.Signers && !cmd.ListAll {
+			fmt.Fprintf(ctx.Stdout, "\t%s", signer(name, version))
+		}
+
+		fmt.Fprintln(ctx.Stdout)
+	}
+
 	integrations, err := pkgmgr.Query(&pkg.QueryOptions{
 		OnlyLocal: !cmd.ListAll,
 	})

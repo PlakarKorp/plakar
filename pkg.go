@@ -13,10 +13,11 @@ import (
 	"github.com/PlakarKorp/pkg"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/plugins"
+	"github.com/PlakarKorp/plakar/signify"
 	"github.com/PlakarKorp/plakar/utils"
 )
 
-func setupPkgManager(ctx *appcontext.AppContext, dataDir, cacheDir string) error {
+func setupPkgManager(ctx *appcontext.AppContext, configDir, dataDir, cacheDir string) error {
 	plugdir := filepath.Join(dataDir, "plugins", pkg.PLUGIN_API_VERSION)
 	cachedir := filepath.Join(cacheDir, "plugins", pkg.PLUGIN_API_VERSION)
 
@@ -29,6 +30,17 @@ func setupPkgManager(ctx *appcontext.AppContext, dataDir, cacheDir string) error
 		return fmt.Errorf("failed to init the package manager: %w", err)
 	}
 
+	// The trust store is built once per run from the keys compiled into
+	// this binary plus any the user added. A failure to read it is fatal
+	// rather than degraded: continuing with fewer keys than the user
+	// configured would silently install packages they never trusted.
+	trust, err := signify.LoadTrustStore(configDir)
+	if err != nil {
+		return fmt.Errorf("failed to load the package trust store: %w", err)
+	}
+
+	verifier := signify.NewVerifier(trust)
+
 	token, _ := ctx.GetCookies().GetAuthToken()
 	manager, err := pkg.New(backend, &pkg.Options{
 		InstallURL:      "https://plakar.io/dist/plugins/kloset/community/",
@@ -36,6 +48,7 @@ func setupPkgManager(ctx *appcontext.AppContext, dataDir, cacheDir string) error
 		BinaryNeedsAuth: true,
 		UserAgent:       "plakar/" + utils.VERSION,
 		RequestHook:     pkg.WithBearer(func() (string, error) { return token, nil }),
+		Verifier:        verifier,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to init the package manager: %w", err)
@@ -46,6 +59,7 @@ func setupPkgManager(ctx *appcontext.AppContext, dataDir, cacheDir string) error
 	}
 
 	ctx.SetPkgManager(manager)
+	ctx.SetPkgVerifier(verifier)
 
 	return nil
 }
