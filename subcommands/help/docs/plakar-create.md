@@ -7,6 +7,8 @@ PLAKAR-CREATE(1) - General Commands Manual
 # SYNOPSIS
 
 **plakar&nbsp;create**
+\[**-compression**&nbsp;*algorithm*]
+\[**-no-compression**]
 \[**-plaintext**]
 
 # DESCRIPTION
@@ -17,6 +19,26 @@ command creates a new Plakar repository at the specified path which defaults to
 *~/.plakar*.
 
 The options are as follows:
+
+**-compression**&nbsp;*algorithm*
+
+> Select the algorithm used for transparent compression.
+> Supported values are
+> **LZ4**,
+> **GZIP**
+> and
+> **ZSTD**,
+> and the name is matched case-insensitively.
+> Defaults to
+> **LZ4**.
+> The algorithm is recorded in the repository configuration when it is created and
+> cannot be changed afterwards.
+
+**-no-compression**
+
+> Disable transparent compression for the repository.
+> Mutually exclusive with
+> **-compression**.
 
 **-plaintext**
 

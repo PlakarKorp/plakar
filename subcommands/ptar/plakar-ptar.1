@@ -6,6 +6,8 @@
 .Nd generate a self-contained Kloset archive (.ptar)
 .Sh SYNOPSIS
 .Nm plakar ptar
+.Op Fl compression Ar algorithm
+.Op Fl no-compression
 .Op Fl plaintext
 .Op Fl overwrite
 .Op Fl ignore Ar pattern
@@ -54,6 +56,20 @@ arguments, which are always backed up in full.
 .Pp
 The options are as follows:
 .Bl -tag -width Ds
+.It Fl compression Ar algorithm
+Select the algorithm used for transparent compression.
+Supported values are
+.Cm LZ4 ,
+.Cm GZIP
+and
+.Cm ZSTD ,
+and the name is matched case-insensitively.
+Defaults to
+.Cm LZ4 .
+.It Fl no-compression
+Disable transparent compression of the archive.
+Mutually exclusive with
+.Fl compression .
 .It Fl plaintext
 Disable transparent encryption of the archive.
 If omitted,

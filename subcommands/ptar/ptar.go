@@ -52,6 +52,7 @@ type Ptar struct {
 
 	AllowWeak     bool
 	Hashing       string
+	Compression   string
 	NoEncryption  bool
 	NoCompression bool
 	Overwrite     bool
@@ -93,6 +94,7 @@ func (cmd *Ptar) CobraCommand() *cobra.Command {
 		Use: "ptar [OPTIONS] -o out.ptar [@location | path]...",
 	}
 	c.Flags().StringVar(&cmd.Hashing, "hashing", hashing.DEFAULT_HASHING_ALGORITHM, "hashing algorithm to use for digests")
+	c.Flags().StringVar(&cmd.Compression, "compression", compression.DEFAULT_COMPRESSION_ALGORITHM, "compression algorithm to use for transparent compression")
 	c.Flags().BoolVar(&cmd.NoEncryption, "plaintext", false, "disable transparent encryption")
 	c.Flags().BoolVar(&cmd.NoCompression, "no-compression", false, "disable transparent compression")
 	c.Flags().BoolVar(&cmd.Overwrite, "overwrite", false, "overwrite the ptar archive if it already exists")
@@ -106,7 +108,7 @@ func (cmd *Ptar) CobraCommand() *cobra.Command {
 }
 
 func (cmd *Ptar) Parse(ctx *appcontext.AppContext, args []string) error {
-	rest, err := subcommands.ParseCobra(cmd, args)
+	rest, flags, err := subcommands.ParseCobraFlags(cmd, args)
 	if err != nil {
 		return err
 	}
@@ -198,6 +200,16 @@ func (cmd *Ptar) Parse(ctx *appcontext.AppContext, args []string) error {
 		return fmt.Errorf("unknown hashing algorithm")
 	}
 
+	if cmd.NoCompression && flags.Changed("compression") {
+		return fmt.Errorf("--compression and --no-compression are mutually exclusive")
+	}
+
+	if !cmd.NoCompression {
+		if _, err := compression.LookupDefaultConfiguration(strings.ToUpper(cmd.Compression)); err != nil {
+			return err
+		}
+	}
+
 	if !cmd.NoEncryption {
 		var passphrase []byte
 
@@ -235,7 +247,11 @@ func (cmd *Ptar) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (
 	if cmd.NoCompression {
 		storageConfiguration.Compression = nil
 	} else {
-		storageConfiguration.Compression = compression.NewDefaultConfiguration()
+		compressionConfiguration, err := compression.LookupDefaultConfiguration(strings.ToUpper(cmd.Compression))
+		if err != nil {
+			return 1, err
+		}
+		storageConfiguration.Compression = compressionConfiguration
 	}
 
 	hashingConfiguration, err := hashing.LookupDefaultConfiguration(strings.ToUpper(cmd.Hashing))

@@ -7,6 +7,8 @@ PLAKAR-PTAR(1) - General Commands Manual
 # SYNOPSIS
 
 **plakar&nbsp;ptar**
+\[**-compression**&nbsp;*algorithm*]
+\[**-no-compression**]
 \[**-plaintext**]
 \[**-overwrite**]
 \[**-ignore**&nbsp;*pattern*]
@@ -44,6 +46,24 @@ flag is given,
 refuses to replace an existing archive.
 
 The options are as follows:
+
+**-compression**&nbsp;*algorithm*
+
+> Select the algorithm used for transparent compression.
+> Supported values are
+> **LZ4**,
+> **GZIP**
+> and
+> **ZSTD**,
+> and the name is matched case-insensitively.
+> Defaults to
+> **LZ4**.
+
+**-no-compression**
+
+> Disable transparent compression of the archive.
+> Mutually exclusive with
+> **-compression**.
 
 **-plaintext**
 
