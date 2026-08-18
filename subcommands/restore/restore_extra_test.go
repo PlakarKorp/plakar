@@ -1,6 +1,7 @@
 package restore
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"os"
@@ -150,6 +151,96 @@ func TestRestoreExporterOptsParsed(t *testing.T) {
 	require.NoError(t, cmd.Parse(ctx, []string{"-o", "k=v", "-o", "x=y", "-to", "/tmp/x"}))
 	require.Equal(t, "v", cmd.Opts["k"])
 	require.Equal(t, "y", cmd.Opts["x"])
+}
+
+func TestRestoreHooksFlagsAreParsed(t *testing.T) {
+	_, _, ctx := generateSnapshot(t)
+	cmd := &Restore{}
+	require.NoError(t, cmd.Parse(ctx, []string{
+		"-pre-hook", "echo 'pre-restore hook'",
+		"-post-hook", "echo 'post-restore hook'",
+		"-to", "/tmp/x",
+	}))
+	require.Equal(t, "echo 'pre-restore hook'", cmd.OptPreHook)
+	require.Equal(t, "echo 'post-restore hook'", cmd.OptPostHook)
+}
+
+func TestRestoreWithHooks(t *testing.T) {
+	repo, snap, ctx := generateSnapshot(t)
+	defer snap.Close()
+
+	dir := mkRestoreDir(t)
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	ctx.Stdout = bufOut
+	ctx.Stderr = bufErr
+
+	id := snap.Header.GetIndexID()
+	cmd := &Restore{}
+	require.NoError(t, cmd.Parse(ctx, []string{
+		"-to", dir,
+		"-pre-hook", "echo 'pre-restore hook executed'",
+		"-post-hook", "echo 'post-restore hook executed'",
+		hex.EncodeToString(id[:]) + ":",
+	}))
+
+	status, err := cmd.Execute(ctx, repo)
+	require.NoError(t, err)
+	require.Equal(t, 0, status)
+
+	output := bufOut.String()
+	require.Contains(t, output, "pre-restore hook executed")
+	require.Contains(t, output, "post-restore hook executed")
+
+	checkRestored(t, dir)
+}
+
+func TestRestorePreHookFailureAbortsRestore(t *testing.T) {
+	repo, snap, ctx := generateSnapshot(t)
+	defer snap.Close()
+
+	dir := mkRestoreDir(t)
+	id := snap.Header.GetIndexID()
+	cmd := &Restore{}
+	require.NoError(t, cmd.Parse(ctx, []string{
+		"-to", dir,
+		"-pre-hook", "exit 7",
+		hex.EncodeToString(id[:]) + ":",
+	}))
+
+	status, err := cmd.Execute(ctx, repo)
+	require.Error(t, err)
+	require.Equal(t, 1, status)
+	require.Contains(t, err.Error(), "pre-restore hook failed")
+
+	rest, readErr := os.ReadDir(dir)
+	require.NoError(t, readErr)
+	require.Empty(t, rest)
+}
+
+func TestRestorePostHookFailureIsNotFatal(t *testing.T) {
+	repo, snap, ctx := generateSnapshot(t)
+	defer snap.Close()
+
+	dir := mkRestoreDir(t)
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	ctx.Stdout = bufOut
+	ctx.Stderr = bufErr
+
+	id := snap.Header.GetIndexID()
+	cmd := &Restore{}
+	require.NoError(t, cmd.Parse(ctx, []string{
+		"-to", dir,
+		"-post-hook", "exit 9",
+		hex.EncodeToString(id[:]) + ":",
+	}))
+
+	status, err := cmd.Execute(ctx, repo)
+	require.NoError(t, err)
+	require.Equal(t, 0, status)
+
+	checkRestored(t, dir)
 }
 
 func TestRestoreInvalidSnapshotID(t *testing.T) {

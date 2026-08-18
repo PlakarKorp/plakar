@@ -20,7 +20,9 @@ import (
 	"flag"
 	"fmt"
 	"maps"
+	"os/exec"
 	"path"
+	"runtime"
 	"strings"
 	"time"
 
@@ -44,6 +46,8 @@ type Restore struct {
 	OptTag             string
 	OptSkipPermissions bool
 	Opts               map[string]string
+	OptPreHook         string
+	OptPostHook        string
 
 	Target    string
 	Strip     string
@@ -76,6 +80,8 @@ func (cmd *Restore) Parse(ctx *appcontext.AppContext, args []string) error {
 
 	flags.StringVar(&pullPath, "to", "", "base directory where pull will restore")
 	flags.BoolVar(&cmd.OptSkipPermissions, "skip-permissions", false, "do not restore file permissions")
+	flags.StringVar(&cmd.OptPreHook, "pre-hook", "", "shell command to run before restore")
+	flags.StringVar(&cmd.OptPostHook, "post-hook", "", "shell command to run after restore")
 	flags.Parse(args)
 
 	if flags.NArg() != 0 {
@@ -147,6 +153,10 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 		return 1, fmt.Errorf("multiple snapshots found, please specify one")
 	}
 
+	if err := executeHook(ctx, cmd.OptPreHook); err != nil {
+		return 1, fmt.Errorf("pre-restore hook failed: %w", err)
+	}
+
 	exporterConfig := map[string]string{
 		"location": cmd.Target,
 	}
@@ -200,5 +210,29 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 
 		snap.Close()
 	}
+
+	if err := executeHook(ctx, cmd.OptPostHook); err != nil {
+		ctx.GetLogger().Warn("post-restore hook failed: %s", err)
+	}
+
 	return 0, nil
+}
+
+func executeHook(ctx *appcontext.AppContext, hook string) error {
+	if hook == "" {
+		return nil
+	}
+	ctx.GetLogger().Info("executing hook: %s", hook)
+
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("cmd", "/C", hook)
+	default: // assume unix-esque
+		cmd = exec.Command("/bin/sh", "-c", hook)
+	}
+
+	cmd.Stdout = ctx.Stdout
+	cmd.Stderr = ctx.Stderr
+	return cmd.Run()
 }

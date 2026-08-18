@@ -11,6 +11,8 @@
 .Op Fl job Ar job
 .Op Fl name Ar name
 .Op Fl perimeter Ar perimeter
+.Op Fl post-hook Ar command
+.Op Fl pre-hook Ar command
 .Op Fl skip-permissions
 .Op Fl tag Ar tag
 .Op Fl to Ar directory
@@ -52,6 +54,17 @@ Only apply command to snapshots that match
 .It Fl tag Ar string
 Only apply command to snapshots that match
 .Ar tag .
+.It Fl pre-hook Ar command
+Run
+.Ar command
+in a shell before starting the restore.
+If the command exits with a non-zero status, restore is aborted.
+.It Fl post-hook Ar command
+Run
+.Ar command
+in a shell after a successful restore.
+If the command exits with a non-zero status, a warning is logged and
+the restore still succeeds.
 .It Fl skip-permissions
 Skip restoring file permissions and ownership during restore,
 defaulting to 0750 for directories and 0640 for files.
