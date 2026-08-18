@@ -16,7 +16,9 @@ plakar:
 
 install:
 	mkdir -p ${DESTDIR}${BINDIR}
-	mkdir -p ${DESTDIR}${MANDIR}/man{1,5,7}
+	mkdir -p ${DESTDIR}${MANDIR}/man1
+	mkdir -p ${DESTDIR}${MANDIR}/man5
+	mkdir -p ${DESTDIR}${MANDIR}/man7
 	${INSTALL_PROGRAM} plakar ${DESTDIR}${BINDIR}
 	find . -name \*.1 -exec ${INSTALL_MAN} {} ${DESTDIR}${MANDIR}/man1 \;
 	find . -name \*.5 -exec ${INSTALL_MAN} {} ${DESTDIR}${MANDIR}/man5 \;
