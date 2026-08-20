@@ -36,6 +36,12 @@ type RepositoryInfoResponse struct {
 	Browsable     bool                    `json:"browsable"`
 }
 
+type RepositorySource struct {
+	Type      string `json:"type"`
+	Origin    string `json:"origin"`
+	Directory string `json:"directory"`
+}
+
 func getNSnapshotsPerDay(repo *repository.Repository, ndays int) ([]int, error) {
 	nSnapshotsPerDay := make([]int, ndays)
 	for snapshotID, err := range repo.ListSnapshots() {
@@ -253,6 +259,55 @@ func (ui *uiserver) repositoryImporterTypes(w http.ResponseWriter, r *http.Reque
 	}
 
 	return json.NewEncoder(w).Encode(items)
+}
+
+func (ui *uiserver) repositorySources(w http.ResponseWriter, r *http.Request) error {
+	if !ui.norefresh {
+		if _, err := cached.RebuildStateFromStore(ui.ctx, ui.repository.Configuration().RepositoryID, ui.ctx.StoreConfig, false); err != nil {
+			return err
+		}
+	}
+
+	sourcesMap := make(map[RepositorySource]struct{})
+	for snapshotID, err := range ui.repository.ListSnapshots() {
+		if err != nil {
+			// XXX - temporarily ignore errors in List snapshots iteration, it is safe here
+			continue
+		}
+
+		snap, err := snapshot.Load(ui.repository, snapshotID)
+		if err != nil {
+			return err
+		}
+
+		for _, source := range snap.Header.Sources {
+			sourcesMap[RepositorySource{
+				Type:      source.Importer.Type,
+				Origin:    source.Importer.Origin,
+				Directory: source.Importer.Directory,
+			}] = struct{}{}
+		}
+		snap.Close()
+	}
+
+	sources := make([]RepositorySource, 0, len(sourcesMap))
+	for source := range sourcesMap {
+		sources = append(sources, source)
+	}
+	sort.Slice(sources, func(i, j int) bool {
+		if sources[i].Type != sources[j].Type {
+			return sources[i].Type < sources[j].Type
+		}
+		if sources[i].Origin != sources[j].Origin {
+			return sources[i].Origin < sources[j].Origin
+		}
+		return sources[i].Directory < sources[j].Directory
+	})
+
+	return json.NewEncoder(w).Encode(Items[RepositorySource]{
+		Total: len(sources),
+		Items: sources,
+	})
 }
 
 type TimelineLocation struct {

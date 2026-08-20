@@ -4,8 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
+	"path/filepath"
 	"testing"
 
+	"github.com/PlakarKorp/kloset/caching"
+	"github.com/PlakarKorp/kloset/connectors/storage"
+	"github.com/PlakarKorp/kloset/objects"
+	"github.com/PlakarKorp/kloset/resources"
 	ptesting "github.com/PlakarKorp/plakar/testing"
 	"github.com/stretchr/testify/require"
 )
@@ -20,6 +25,7 @@ func TestRepositoryEmpty(t *testing.T) {
 		for _, path := range []string{
 			"/api/repository/snapshots",
 			"/api/repository/importer-types",
+			"/api/repository/sources",
 			"/api/repository/locate-pathname",
 			"/api/repository/info",
 		} {
@@ -67,6 +73,94 @@ func TestRepository(t *testing.T) {
 		var items Items[map[string]string]
 		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &items))
 		require.Equal(t, items.Total, len(items.Items))
+	})
+
+	t.Run("sources", func(t *testing.T) {
+		repo, ctx := ptesting.GenerateRepository(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil), nil)
+		snap := ptesting.GenerateSnapshot(t, repo, nil)
+		defer snap.Close()
+		secondSnap := ptesting.GenerateSnapshot(t, repo, nil, ptesting.WithName("second"))
+		defer secondSnap.Close()
+		baseSource := snap.Header.Sources[0]
+		sortByType := baseSource
+		sortByType.Importer.Type = "a"
+		sortByType.Importer.Origin = "z"
+		sortByType.Importer.Directory = "z"
+		sortByOrigin := sortByType
+		sortByOrigin.Importer.Origin = "a"
+		sortByDirectory := sortByOrigin
+		sortByDirectory.Importer.Directory = "a"
+		snap.Header.Sources = append(snap.Header.Sources, sortByType, sortByOrigin, sortByDirectory)
+		serializedHeader, err := snap.Header.Serialize()
+		require.NoError(t, err)
+		cache, err := repo.AppContext().GetCache().Repository(repo.Configuration().RepositoryID)
+		require.NoError(t, err)
+		require.NoError(t, cache.PutSnapshot(snap.Header.Identifier, serializedHeader))
+
+		mux := http.NewServeMux()
+		SetupRoutes(mux, repo, ctx, "", true)
+
+		w := get(t, mux, "/api/repository/sources")
+		require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
+
+		var items Items[RepositorySource]
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &items))
+		require.Equal(t, []RepositorySource{
+			{Type: "a", Origin: "a", Directory: "a"},
+			{Type: "a", Origin: "a", Directory: "z"},
+			{Type: "a", Origin: "z", Directory: "z"},
+			{Type: baseSource.Importer.Type, Origin: baseSource.Importer.Origin, Directory: baseSource.Importer.Directory},
+		}, items.Items)
+		require.Equal(t, len(items.Items), items.Total)
+	})
+
+	t.Run("sources refresh error", func(t *testing.T) {
+		repo, ctx := ptesting.GenerateRepository(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil), nil)
+		mux := http.NewServeMux()
+		SetupRoutes(mux, repo, ctx, "", false)
+
+		w := get(t, mux, "/api/repository/sources")
+		require.Equal(t, http.StatusInternalServerError, w.Code, "body=%s", w.Body.String())
+	})
+
+	t.Run("sources snapshot load error", func(t *testing.T) {
+		repo, ctx := ptesting.GenerateRepository(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil), nil)
+		snap := ptesting.GenerateSnapshot(t, repo, nil)
+		packfiles, err := snap.ListPackfiles()
+		require.NoError(t, err)
+		packfile, err := func() (objects.MAC, error) {
+			for packfile, err := range packfiles {
+				return packfile, err
+			}
+			return objects.MAC{}, nil
+		}()
+		require.NoError(t, err)
+		require.NotEqual(t, objects.MAC{}, packfile)
+		cache, err := repo.AppContext().GetCache().Repository(repo.Configuration().RepositoryID)
+		require.NoError(t, err)
+		require.NoError(t, cache.DelSnapshot(snap.Header.Identifier))
+		require.NoError(t, repo.Store().Delete(repo.AppContext(), storage.StorageResourcePackfile, packfile))
+		require.NoError(t, snap.Close())
+
+		mux := http.NewServeMux()
+		SetupRoutes(mux, repo, ctx, "", true)
+		w := get(t, mux, "/api/repository/sources")
+		require.Equal(t, http.StatusInternalServerError, w.Code, "body=%s", w.Body.String())
+	})
+
+	t.Run("sources snapshot list error", func(t *testing.T) {
+		repo, ctx := ptesting.GenerateRepository(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil), nil)
+		snap := ptesting.GenerateSnapshot(t, repo, nil)
+		require.NoError(t, snap.Close())
+		stateCache, err := caching.NewSQLState(filepath.Join(ctx.CacheDir, caching.CACHE_VERSION, "store", repo.Configuration().RepositoryID.String()), false)
+		require.NoError(t, err)
+		require.NoError(t, stateCache.PutDelta(resources.RT_SNAPSHOT, objects.MAC{1}, objects.MAC{2}, []byte("invalid delta")))
+
+		mux := http.NewServeMux()
+		SetupRoutes(mux, repo, ctx, "", true)
+		w := get(t, mux, "/api/repository/sources")
+		require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
+		require.Contains(t, w.Body.String(), `"total":1`)
 	})
 
 	t.Run("snapshots", func(t *testing.T) {
