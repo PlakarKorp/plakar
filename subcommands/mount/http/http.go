@@ -148,7 +148,7 @@ func NewDynamicSnapshotHandler(list ListFn, open OpenFn) http.Handler {
 		}
 
 		p = strings.TrimPrefix(p, "/")
-		snap, _, _ := strings.Cut(p, "/")
+		snap, entrypath, _ := strings.Cut(p, "/")
 
 		snapFS, err := open(r.Context(), snap)
 		if err != nil {
@@ -159,6 +159,35 @@ func NewDynamicSnapshotHandler(list ListFn, open OpenFn) http.Handler {
 			http.Error(w, "failed to open snapshot", http.StatusInternalServerError)
 			return
 		}
+
+		if target, ok := absoluteDirRedirect(snapFS, r, entrypath); ok {
+			http.Redirect(w, r, target, http.StatusMovedPermanently)
+			return
+		}
+
 		http.StripPrefix("/"+snap, http.FileServer(http.FS(snapFS))).ServeHTTP(w, r)
 	})
+}
+
+func absoluteDirRedirect(snapFS fs.FS, r *http.Request, entrypath string) (string, bool) {
+	escapedPath := r.URL.EscapedPath()
+	if entrypath == "" || strings.HasSuffix(escapedPath, "/") {
+		return "", false
+	}
+	if !relativeRedirectParsesAsScheme(entrypath) {
+		return "", false
+	}
+	if info, err := fs.Stat(snapFS, entrypath); err != nil || !info.IsDir() {
+		return "", false
+	}
+
+	target := escapedPath + "/"
+	if r.URL.RawQuery != "" {
+		target += "?" + r.URL.RawQuery
+	}
+	return target, true
+}
+
+func relativeRedirectParsesAsScheme(entrypath string) bool {
+	return strings.Contains(path.Base(entrypath), ":")
 }
