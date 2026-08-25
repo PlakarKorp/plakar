@@ -7,6 +7,7 @@ PLAKAR-PKG-ADD(1) - General Commands Manual
 # SYNOPSIS
 
 **plakar&nbsp;pkg&nbsp;add**
+\[**-allow-unsigned**]
 \[**-u**]
 *plugin&nbsp;...*
 
@@ -35,6 +36,11 @@ To install a specific version of a plugin, use the
 syntax.
 
 The options are as follows:
+
+**-allow-unsigned**
+
+> Install packages that carry no signature.
+> By default, package are expected to be signed.
 
 **-u**
 
@@ -65,4 +71,4 @@ plakar-pkg-create(1),
 plakar-pkg-rm(1),
 plakar-pkg-show(1)
 
-Plakar - March 23, 2026 - PLAKAR-PKG-ADD(1)
+Plakar - August 25, 2026 - PLAKAR-PKG-ADD(1)
