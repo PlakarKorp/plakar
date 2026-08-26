@@ -44,7 +44,12 @@ jobs:
         # per-test timeout -- which kills the whole package and reports every
         # test in it as failed-to-return to Codecov. Capping concurrency keeps
         # the run both fast and reliable.
+        #
+        # The `tee >(jq ...)` branch replays the JSON stream as plain `go
+        # test -v`-style text on stdout, so failures are visible in the CI
+        # log instead of being silently absorbed by go-junit-report.
         timeout -s QUIT 5m go test -v -p 4 -coverprofile=coverage.out -covermode=atomic -timeout 2m -json ./... \
+          | tee >(jq -j 'select(.Output != null) | .Output') \
           | go tool go-junit-report -parser gojson -set-exit-code > junit.xml
         status=$?
         echo "test_exit=$status" >> "$GITHUB_OUTPUT"
