@@ -38,8 +38,6 @@ type TokenResponse struct {
 }
 
 
-const rateLimitErrorMarker = "limit-reached"
-
 // ErrRateLimited marks a login failure caused by the auth API rate limiting the
 // caller. It is wrapped into the returned error so callers can react to it with
 // errors.Is without depending on a concrete error type or HTTP status code.
