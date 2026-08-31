@@ -127,6 +127,14 @@ func (e ErrUsage) Unwrap() error { return e.err }
 // positional arguments.  Errors come back to the caller instead of cobra
 // printing its own message and usage tree.
 func ParseCobra(cmd Subcommand, args []string) ([]string, error) {
+	rest, _, err := ParseCobraFlags(cmd, args)
+	return rest, err
+}
+
+// ParseCobraFlags is ParseCobra, additionally handing back the flag set it
+// parsed into.  Commands need it to tell an explicitly-passed option from one
+// left at its default value, via flags.Changed().
+func ParseCobraFlags(cmd Subcommand, args []string) ([]string, *pflag.FlagSet, error) {
 	c := cmd.CobraCommand()
 	c.SilenceUsage = true
 	c.SilenceErrors = true
@@ -136,13 +144,13 @@ func ParseCobra(cmd Subcommand, args []string) ([]string, error) {
 
 	rewritten, err := SingleDash(flags, args)
 	if err != nil {
-		return nil, ErrUsage{err}
+		return nil, nil, ErrUsage{err}
 	}
 	if err := flags.Parse(rewritten); err != nil {
-		return nil, ErrUsage{err}
+		return nil, nil, ErrUsage{err}
 	}
 
-	return flags.Args(), nil
+	return flags.Args(), flags, nil
 }
 
 type CmdFactory func() Subcommand

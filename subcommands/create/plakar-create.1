@@ -6,6 +6,8 @@
 .Nd Create a new Plakar repository
 .Sh SYNOPSIS
 .Nm plakar create
+.Op Fl compression Ar algorithm
+.Op Fl no-compression
 .Op Fl plaintext
 .Sh DESCRIPTION
 The
@@ -15,6 +17,22 @@ command creates a new Plakar repository at the specified path which defaults to
 .Pp
 The options are as follows:
 .Bl -tag -width Ds
+.It Fl compression Ar algorithm
+Select the algorithm used for transparent compression.
+Supported values are
+.Cm LZ4 ,
+.Cm GZIP
+and
+.Cm ZSTD ,
+and the name is matched case-insensitively.
+Defaults to
+.Cm LZ4 .
+The algorithm is recorded in the repository configuration when it is created and
+cannot be changed afterwards.
+.It Fl no-compression
+Disable transparent compression for the repository.
+Mutually exclusive with
+.Fl compression .
 .It Fl plaintext
 Disable transparent encryption for the repository.
 If specified, the repository will not use encryption.
