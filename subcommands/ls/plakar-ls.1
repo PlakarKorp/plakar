@@ -18,6 +18,16 @@ displays the contents of
 .Ar path
 in a specified snapshot.
 .Pp
+Files that could not be read when the snapshot was made are missing
+from the listing.
+When listing the contents of a snapshot,
+.Nm plakar ls
+reports the errors recorded for them on standard error, interleaved
+with the listing.
+Errors recorded below the listed directory are only reported when
+.Fl recursive
+is given.
+.Pp
 In addition to the flags described below,
 .Nm plakar ls
 supports the location flags documented in
