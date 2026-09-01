@@ -8,6 +8,7 @@ PLAKAR-PKG-SHOW(1) - General Commands Manual
 
 **plakar&nbsp;pkg&nbsp;show**
 \[**-available**]
+\[**-devel**]
 \[**-long**]
 
 # DESCRIPTION
@@ -22,6 +23,10 @@ The options are as follows:
 
 > Instead of installed packages,
 > show the set of prebuilt packages available for this system.
+
+**-devel**
+
+> Use the integration devel tree.
 
 **-long**
 
@@ -50,4 +55,4 @@ plakar-pkg-build(1),
 plakar-pkg-create(1),
 plakar-pkg-rm(1)
 
-Plakar - July 11, 2025 - PLAKAR-PKG-SHOW(1)
+Plakar - August 26, 2026 - PLAKAR-PKG-SHOW(1)

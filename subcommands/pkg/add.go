@@ -34,6 +34,7 @@ type PkgAdd struct {
 	subcommands.SubcommandBase
 
 	upgrade       bool
+	devel         bool
 	allowUnsigned bool
 	Args          []string
 }
@@ -43,6 +44,7 @@ func (cmd *PkgAdd) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags.BoolVar(&cmd.upgrade, "u", false, "Update packages")
 	flags.BoolVar(&cmd.allowUnsigned, "allow-unsigned", false,
 		"Install packages that carry no signature")
+	flags.BoolVar(&cmd.devel, "devel", false, "Opt-in to the devel integration tree")
 	flags.Usage = func() {
 		fmt.Fprintf(flags.Output(), `Usage: %s [-u] [-allow-unsigned] <package> ...
 
@@ -54,6 +56,7 @@ Options:
   -allow-unsigned
                Install packages that carry no signature. Packages that are
                signed are still verified, and a bad signature is still fatal.
+  -devel       Use the integration devel tree.
 
 Examples:
   pkg add imap           Fetch and install the 'imap' plugin
@@ -90,6 +93,11 @@ Examples:
 func (cmd *PkgAdd) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (int, error) {
 	pkgmgr := ctx.GetPkgManager()
 
+	var edition string
+	if cmd.devel {
+		edition = "devel"
+	}
+
 	if cmd.allowUnsigned {
 		verifier := ctx.GetPkgVerifier()
 		if verifier == nil {
@@ -105,6 +113,7 @@ func (cmd *PkgAdd) Execute(ctx *appcontext.AppContext, _ *repository.Repository)
 	for _, plugin := range cmd.Args {
 		plugin, version, _ := strings.Cut(plugin, "@")
 		addopts := pkg.AddOptions{
+			Edition:       edition,
 			ImplicitFetch: true,
 			Version:       version,
 			Upgrade:       cmd.upgrade,
@@ -128,6 +137,7 @@ func (cmd *PkgAdd) Execute(ctx *appcontext.AppContext, _ *repository.Repository)
 			}
 
 			addopts := pkg.AddOptions{
+				Edition:       edition,
 				ImplicitFetch: true,
 				Upgrade:       cmd.upgrade,
 			}

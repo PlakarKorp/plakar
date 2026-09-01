@@ -1,4 +1,4 @@
-.Dd August 25, 2026
+.Dd August 26, 2026
 .Dt PLAKAR-PKG-ADD 1
 .Os
 .Sh NAME
@@ -7,6 +7,7 @@
 .Sh SYNOPSIS
 .Nm plakar pkg add
 .Op Fl allow-unsigned
+.Op Fl devel
 .Op Fl u
 .Ar plugin ...
 .Sh DESCRIPTION
@@ -37,6 +38,8 @@ The options are as follows:
 .It Fl allow-unsigned
 Install packages that carry no signature.
 By default, package are expected to be signed.
+.It Fl devel
+Use the integration devel tree.
 .It Fl u
 Update the specific plugins.
 If none are given, attempt to update all the installed ones.
