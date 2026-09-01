@@ -47,6 +47,24 @@ func init() {
 		subcommands.BeforeRepositoryOpen, "policy")
 }
 
+func validAliasName(name string) bool {
+	if name == "" || name[0] == '-' {
+		return false
+	}
+	for _, r := range name {
+		switch {
+		case r == '_' || r == '-',
+			r >= 'a' && r <= 'z',
+			r >= 'A' && r <= 'Z',
+			r >= '0' && r <= '9':
+			continue
+		default:
+			return false
+		}
+	}
+	return true
+}
+
 func normalizeName(name string) string {
 	return strings.TrimPrefix(name, "@")
 }
@@ -97,6 +115,9 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 		}
 
 		name, location := normalizeName(args[0]), normalizeLocation(args[1])
+		if !validAliasName(name) {
+			return fmt.Errorf("invalid configuration name %q", name)
+		}
 
 		if hasFunc(name) {
 			return fmt.Errorf("%s %q already exists", cmd, name)

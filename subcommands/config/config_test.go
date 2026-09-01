@@ -26,6 +26,26 @@ func configure(ctx *appcontext.AppContext, cmd string, args []string) error {
 	return nil
 }
 
+func TestValidAliasName(t *testing.T) {
+	suite := map[string]bool{
+		"":         false,
+		"foo":      true,
+		"Fo0_B47":  true,
+		"b@r":      false,
+		"/foo/":    false,
+		"-bar":     false,
+		"b-ar":     true,
+		"s3://foo": false,
+	}
+
+	for name, expect := range suite {
+		got := validAliasName(name)
+		if got != expect {
+			t.Errorf("%s: got %v but expected %v", name, got, expect)
+		}
+	}
+}
+
 func TestConfigEmpty(t *testing.T) {
 	bufOut := bytes.NewBuffer(nil)
 	bufErr := bytes.NewBuffer(nil)
