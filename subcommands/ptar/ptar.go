@@ -129,6 +129,10 @@ func (cmd *Ptar) Parse(ctx *appcontext.AppContext, args []string) error {
 			return err
 		}
 
+		if err := utils.CheckPlaintext(storeConfig["location"], peerStoreConfig.Encryption != nil); err != nil {
+			return err
+		}
+
 		if peerStoreConfig.Encryption != nil {
 			if pass, ok := storeConfig["passphrase"]; ok {
 				key, err := encryption.DeriveKey(peerStoreConfig.Encryption.KDFParams, []byte(pass))

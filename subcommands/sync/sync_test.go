@@ -16,6 +16,8 @@ import (
 
 func init() {
 	os.Setenv("TZ", "UTC")
+	// several fixtures below use a plaintext peer on purpose
+	os.Setenv("PLAKAR_INSECURE_PLAINTEXT", "1")
 }
 
 var mockFiles = []ptesting.MockFile{

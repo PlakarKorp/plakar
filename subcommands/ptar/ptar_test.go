@@ -12,6 +12,8 @@ import (
 
 func init() {
 	os.Setenv("TZ", "UTC")
+	// several fixtures below use a plaintext -k source on purpose
+	os.Setenv("PLAKAR_INSECURE_PLAINTEXT", "1")
 }
 
 func TestExecuteCmdPtarDefault(t *testing.T) {
