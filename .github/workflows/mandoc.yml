@@ -3,6 +3,7 @@ name: check manpage formatting
 on:
   push:
     branches:
+      - release/v1.1
     paths:
       - "**.[1-9]"
   pull_request:
