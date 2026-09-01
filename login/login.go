@@ -19,6 +19,7 @@ package login
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -32,6 +33,13 @@ import (
 type TokenResponse struct {
 	Token string `json:"token"`
 }
+
+const rateLimitErrorMarker = "limit-reached"
+
+// ErrRateLimited marks a login failure caused by the auth API rate limiting the
+// caller. It is wrapped into the returned error so callers can react to it with
+// errors.Is without depending on a concrete error type or HTTP status code.
+var ErrRateLimited = errors.New("rate limited")
 
 type loginFlow struct {
 	appCtx  *appcontext.AppContext
@@ -64,18 +72,25 @@ func (flow *loginFlow) Poll(pollID string, iterations int, delay time.Duration, 
 			if err != nil {
 				return "", fmt.Errorf("the /auth/login/github/poll API endpoint failed: %w", err)
 			}
-			// leaking resp for now
-			if resp.StatusCode == http.StatusOK {
+			switch resp.StatusCode {
+			case http.StatusOK:
 				var tokenResponse TokenResponse
-				if err := json.NewDecoder(resp.Body).Decode(&tokenResponse); err != nil {
-					return "", fmt.Errorf("failed to decode response JSON: %v", err)
+				decodeErr := json.NewDecoder(resp.Body).Decode(&tokenResponse)
+				resp.Body.Close()
+				if decodeErr != nil {
+					return "", fmt.Errorf("failed to decode response JSON: %v", decodeErr)
 				}
 				return tokenResponse.Token, nil
-			} else if resp.StatusCode == http.StatusNotFound {
+			case http.StatusNotFound:
+				resp.Body.Close()
 				return "", fmt.Errorf("unknown ID")
-			} else if resp.StatusCode == http.StatusAccepted {
+			case http.StatusAccepted:
+				resp.Body.Close()
 				progressCb()
-			} else {
+			case http.StatusTooManyRequests:
+				return "", ErrRateLimited
+			default:
+				resp.Body.Close()
 				return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 			}
 		}
@@ -110,8 +125,10 @@ func (flow *loginFlow) Run(provider string, parameters map[string]string) (strin
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		data, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("unexpected status code: %d : %s", resp.StatusCode, data)
+		if resp.StatusCode == http.StatusTooManyRequests {
+			return "", ErrRateLimited
+		}
+		return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
 	switch provider {
@@ -187,8 +204,10 @@ func (flow *loginFlow) RunUI(provider string, parameters map[string]string) (str
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		data, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("unexpected status code: %d : %s", resp.StatusCode, data)
+		if resp.StatusCode == http.StatusTooManyRequests {
+			return "", ErrRateLimited
+		}
+		return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
 	switch provider {
