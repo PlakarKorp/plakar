@@ -6,15 +6,20 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/PlakarKorp/kloset/connectors/storage"
 	"github.com/PlakarKorp/kloset/location"
 	"github.com/PlakarKorp/kloset/objects"
+	ptesting "github.com/PlakarKorp/plakar/testing"
+	"github.com/stretchr/testify/require"
 )
 
 // fakeStore is a minimal storage.Store that records the calls the httpd
@@ -78,12 +83,12 @@ func (f *fakeStore) Delete(ctx context.Context, typ storage.StorageResource, mac
 }
 
 // Unused methods — panic so an accidentally widened surface is loud.
-func (f *fakeStore) Create(context.Context, []byte) error      { panic("unused") }
-func (f *fakeStore) Ping(context.Context) error                { panic("unused") }
-func (f *fakeStore) Origin() string                            { panic("unused") }
-func (f *fakeStore) Type() string                              { panic("unused") }
-func (f *fakeStore) Root() string                              { panic("unused") }
-func (f *fakeStore) Flags() location.Flags                     { panic("unused") }
+func (f *fakeStore) Create(context.Context, []byte) error { panic("unused") }
+func (f *fakeStore) Ping(context.Context) error           { panic("unused") }
+func (f *fakeStore) Origin() string                       { panic("unused") }
+func (f *fakeStore) Type() string                         { panic("unused") }
+func (f *fakeStore) Root() string                         { panic("unused") }
+func (f *fakeStore) Flags() location.Flags                { panic("unused") }
 func (f *fakeStore) Mode(context.Context) (storage.Mode, error) {
 	panic("unused")
 }
@@ -563,5 +568,127 @@ func TestDeleteResource_StoreError(t *testing.T) {
 
 	if rec.Code != http.StatusInternalServerError {
 		t.Fatalf("status = %d", rec.Code)
+	}
+}
+
+// freePort asks the kernel for an unused TCP port and returns it as a string.
+func freePort(t *testing.T) string {
+	t.Helper()
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	addr := l.Addr().(*net.TCPAddr)
+	_ = l.Close()
+	return fmt.Sprintf("127.0.0.1:%d", addr.Port)
+}
+
+func TestServer_StartServeAndShutdown(t *testing.T) {
+	repo, ctx := ptesting.GenerateRepository(t, nil, nil, nil)
+
+	addr := freePort(t)
+	errCh := make(chan error, 1)
+	go func() {
+		// noDelete=false, no TLS — exercises the plain ListenAndServe path.
+		errCh <- Server(ctx, repo, addr, false, "", "", "")
+	}()
+
+	// Wait until the server accepts connections, then make one request so the
+	// wired routes are exercised through a real listener.
+	base := "http://" + addr
+	var resp *http.Response
+	deadline := 2 * time.Second
+	for waited := time.Duration(0); waited < deadline; waited += 20 * time.Millisecond {
+		r, err := http.Get(base + "/")
+		if err == nil {
+			resp = r
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	if resp == nil {
+		t.Fatal("server never became reachable")
+	}
+	_ = resp.Body.Close()
+
+	// Cancelling the context triggers the goroutine inside Server() to call
+	// Shutdown, which makes ListenAndServe return.
+	ctx.GetInner().Cancel(nil)
+
+	select {
+	case err := <-errCh:
+		// http.ErrServerClosed is the expected return after a graceful Shutdown.
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			t.Fatalf("Server returned %v, want ErrServerClosed or nil", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("Server did not return after context cancellation")
+	}
+}
+
+func TestServer_TLSConfigErrors(t *testing.T) {
+	// With cert/key set but pointing at nonexistent files, ListenAndServeTLS
+	// returns an error immediately — this covers the TLS branch of Server().
+	repo, ctx := ptesting.GenerateRepository(t, nil, nil, nil)
+
+	addr := freePort(t)
+	err := Server(ctx, repo, addr, false, "", "/nonexistent/cert.pem", "/nonexistent/key.pem")
+	if err == nil {
+		t.Fatal("expected error from ListenAndServeTLS with missing cert/key")
+	}
+}
+
+func TestServerToken(t *testing.T) {
+	repo, ctx := ptesting.GenerateRepository(t, nil, nil, nil)
+
+	token := "nestor"
+
+	addr := freePort(t)
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- Server(ctx, repo, addr, false, token, "", "")
+	}()
+
+	// Wait until the server accepts connections, then make one request so the
+	// wired routes are exercised through a real listener.
+	base := "http://" + addr
+	var resp *http.Response
+	deadline := 2 * time.Second
+	for waited := time.Duration(0); waited < deadline; waited += 20 * time.Millisecond {
+		r, err := http.Get(base + "/")
+		if err == nil {
+			resp = r
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	if resp == nil {
+		t.Fatal("server never became reachable")
+	}
+	_ = resp.Body.Close()
+
+	require.Equal(t, 401, resp.StatusCode)
+
+	req, err := http.NewRequest("GET", base+"/", nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err = http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	resp.Body.Close()
+	require.Equal(t, 200, resp.StatusCode)
+
+	// Cancelling the context triggers the goroutine inside Server() to call
+	// Shutdown, which makes ListenAndServe return.
+	ctx.GetInner().Cancel(nil)
+
+	select {
+	case err := <-errCh:
+		// http.ErrServerClosed is the expected return after a graceful Shutdown.
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			t.Fatalf("Server returned %v, want ErrServerClosed or nil", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("Server did not return after context cancellation")
 	}
 }

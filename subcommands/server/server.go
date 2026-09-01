@@ -40,6 +40,7 @@ func (cmd *Server) Parse(ctx *appcontext.AppContext, args []string) error {
 	}
 
 	flags.StringVar(&cmd.ListenAddr, "listen", "localhost:9876", "address to listen on")
+	flags.StringVar(&cmd.Token, "token", "", "Bearer token")
 	flags.BoolVar(&opt_allowdelete, "allow-delete", false, "enable delete operations")
 	flags.StringVar(&cmd.Cert, "cert", "", "Full certificate chain")
 	flags.StringVar(&cmd.Key, "key", "", "Certificate private key")
@@ -62,6 +63,7 @@ type Server struct {
 
 	ListenAddr string
 	NoDelete   bool
+	Token      string
 	Cert       string
 	Key        string
 }
@@ -74,7 +76,7 @@ func (cmd *Server) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 		protocol = "http"
 	}
 	ctx.GetLogger().Info("listening on %s://%s", protocol, cmd.ListenAddr)
-	err := httpd.Server(ctx, repo, cmd.ListenAddr, cmd.NoDelete, cmd.Cert, cmd.Key)
+	err := httpd.Server(ctx, repo, cmd.ListenAddr, cmd.NoDelete, cmd.Token, cmd.Cert, cmd.Key)
 	if err != nil {
 		return 1, err
 	}
