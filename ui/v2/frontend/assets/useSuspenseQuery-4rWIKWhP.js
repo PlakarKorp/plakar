@@ -1,0 +1,1 @@
+import{i as e,r as t,s as n}from"./queryOptions-Dy10_Nr4.js";function r(r,i){return t({...r,enabled:!0,suspense:!0,throwOnError:e,placeholderData:void 0},n,i)}export{r as t};
