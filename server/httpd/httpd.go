@@ -1,7 +1,6 @@
 package httpd
 
 import (
-	"context"
 	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
@@ -16,7 +15,6 @@ import (
 
 	"github.com/PlakarKorp/kloset/connectors/storage"
 	"github.com/PlakarKorp/kloset/objects"
-	"github.com/PlakarKorp/kloset/repository"
 )
 
 var ErrInvalidResourceType = fmt.Errorf("Invalid resource type")
@@ -141,7 +139,7 @@ func (s *server) deleteResource(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func auth(token string, next http.Handler) http.Handler {
+func Auth(token string, next http.Handler) http.Handler {
 	if token == "" {
 		return next
 	}
@@ -158,7 +156,7 @@ func auth(token string, next http.Handler) http.Handler {
 	})
 }
 
-func logging(next http.Handler) http.Handler {
+func Logging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		sr := &statusRecorder{ResponseWriter: w, status: 200}
 
@@ -168,9 +166,9 @@ func logging(next http.Handler) http.Handler {
 	})
 }
 
-func Server(ctx context.Context, repo *repository.Repository, addr string, noDelete bool, token, cert, key string) error {
+func Mux(store storage.Store, noDelete bool) http.Handler {
 	s := server{
-		store:    repo.Store(),
+		store:    store,
 		noDelete: noDelete,
 	}
 
@@ -183,16 +181,7 @@ func Server(ctx context.Context, repo *repository.Repository, addr string, noDel
 	mux.HandleFunc("PUT /resources/{resource}/{mac}", s.putResource)
 	mux.HandleFunc("DELETE /resources/{resource}/{mac}", s.deleteResource)
 
-	server := &http.Server{Addr: addr, Handler: logging(auth(token, mux))}
-	go func() {
-		<-repo.AppContext().Done()
-		server.Shutdown(repo.AppContext().Context)
-	}()
-
-	if cert != "" && key != "" {
-		return server.ListenAndServeTLS(cert, key)
-	}
-	return server.ListenAndServe()
+	return mux
 }
 
 func getResource(r *http.Request) (storage.StorageResource, error) {

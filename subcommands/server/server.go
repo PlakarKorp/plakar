@@ -24,6 +24,7 @@ import (
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/server/httpd"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"net/http"
 )
 
 func init() {
@@ -76,7 +77,24 @@ func (cmd *Server) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 		protocol = "http"
 	}
 	ctx.GetLogger().Info("listening on %s://%s", protocol, cmd.ListenAddr)
-	err := httpd.Server(ctx, repo, cmd.ListenAddr, cmd.NoDelete, cmd.Token, cmd.Cert, cmd.Key)
+	mux := httpd.Mux(repo.Store(), cmd.NoDelete)
+
+	server := &http.Server{
+		Addr:    cmd.ListenAddr,
+		Handler: httpd.Logging(httpd.Auth(cmd.Token, mux)),
+	}
+	go func() {
+		<-ctx.Done()
+		server.Shutdown(ctx)
+	}()
+
+	var err error
+	if cmd.Cert != "" && cmd.Key != "" {
+		err = server.ListenAndServeTLS(cmd.Cert, cmd.Key)
+	} else {
+		err = server.ListenAndServe()
+	}
+
 	if err != nil {
 		return 1, err
 	}
