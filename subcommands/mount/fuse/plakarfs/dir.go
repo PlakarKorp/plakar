@@ -70,6 +70,17 @@ func NewDirectory(pfs *plakarFS, vfs fs.FS, parent *Dir, pathname string) (*Dir,
 		}
 		if parent == nil {
 			dir.parent = dir
+			// The root has no backing snapshot entry, so its timestamps would
+			// otherwise stay at the zero value and show up as an invalid date.
+			// Use the mounted directory's time when mounting a single snapshot,
+			// and fall back to the mount time for the snapshot lister.
+			ts := time.Now()
+			if vfs != nil {
+				if st, err := fs.Stat(vfs, "."); err == nil {
+					ts = st.ModTime()
+				}
+			}
+			dir.attr.Ctime, dir.attr.Mtime, dir.attr.Atime = ts, ts, ts
 		}
 		if parent != nil {
 			dir.snapKey = parent.snapKey
