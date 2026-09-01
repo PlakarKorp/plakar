@@ -123,5 +123,9 @@ func (c *Manager) SetDisabledSecurityCheck() error {
 }
 
 func (c *Manager) RemoveDisabledSecurityCheck() error {
-	return os.Remove(filepath.Join(c.cookiesDir, ".disabled-security-check"))
+	err := os.Remove(filepath.Join(c.cookiesDir, ".disabled-security-check"))
+	if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	return nil
 }
