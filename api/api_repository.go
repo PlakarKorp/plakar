@@ -105,11 +105,6 @@ func (ui *uiserver) repositoryInfo(w http.ResponseWriter, r *http.Request) error
 		loc += root
 	}
 
-	mode, err := ui.repository.Store().Mode(r.Context())
-	if err != nil {
-		return err
-	}
-
 	return json.NewEncoder(w).Encode(Item[RepositoryInfoResponse]{Item: RepositoryInfoResponse{
 		Location: loc,
 		Snapshots: RepositoryInfoSnapshots{
@@ -122,7 +117,7 @@ func (ui *uiserver) repositoryInfo(w http.ResponseWriter, r *http.Request) error
 		Configuration: ui.config,
 		OS:            runtime.GOOS,
 		Arch:          runtime.GOARCH,
-		Browsable:     mode&storage.ModeRead != 0,
+		Browsable:     true,
 	}})
 }
 

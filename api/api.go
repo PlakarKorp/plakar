@@ -133,11 +133,6 @@ func (ui *uiserver) apiInfo(w http.ResponseWriter, r *http.Request) error {
 
 	isDemoMode, _ := strconv.ParseBool(os.Getenv("PLAKAR_DEMO_MODE"))
 
-	mode, err := ui.store.Mode(r.Context())
-	if err != nil {
-		return err
-	}
-
 	res := &struct {
 		RepositoryId  string `json:"repository_id"`
 		Authenticated bool   `json:"authenticated"`
@@ -148,7 +143,7 @@ func (ui *uiserver) apiInfo(w http.ResponseWriter, r *http.Request) error {
 		RepositoryId:  configuration.RepositoryID.String(),
 		Authenticated: authenticated,
 		Version:       utils.GetVersion(),
-		Browsable:     mode&storage.ModeRead != 0,
+		Browsable:     true,
 		DemoMode:      isDemoMode,
 	}
 	return json.NewEncoder(w).Encode(res)

@@ -246,6 +246,29 @@ func (signer SnapshotReaderURLSigner) Sign(w http.ResponseWriter, r *http.Reques
 	}
 	snapshotId := fmt.Sprintf("%0x", snapshotID32[:])
 
+	snap, err := loadsnap(signer.ui.repository, snapshotID32)
+	if err != nil {
+		return err
+	}
+
+	fs, err := snap.Filesystem()
+	if err != nil {
+		return err
+	}
+
+	entry, err := fs.GetEntry(path)
+	if err != nil {
+		return err
+	}
+
+	// Try to open the file, if it's unreadable (glacier store) we flag it as
+	// such and the UI can show the file as non readable.
+	file, err := entry.Open(fs)
+	if err != nil {
+		return err
+	}
+	file.Close()
+
 	now := time.Now()
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, SnapshotSignedURLClaims{
 		SnapshotID: snapshotId,
