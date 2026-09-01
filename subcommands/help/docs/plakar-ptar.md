@@ -41,18 +41,6 @@ flag is given,
 **plakar ptar**
 refuses to replace an existing archive.
 
-In addition to the flags described below,
-**plakar ptar**
-supports the location flags documented in
-plakar-query(7)
-to precisely select which snapshots of the
-**-k**
-klosets are bundled.
-Without any of them every snapshot is included.
-They do not affect the
-*path*
-arguments, which are always backed up in full.
-
 The options are as follows:
 
 **-plaintext**
@@ -75,7 +63,6 @@ The options are as follows:
 
 > Add a kloset repository to include in the archive.
 > May be specified multiple times to bundle several repositories.
-> The location flags apply to each of them.
 
 **-o** *file.ptar*
 

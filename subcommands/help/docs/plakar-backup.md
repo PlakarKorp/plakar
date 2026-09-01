@@ -23,7 +23,7 @@ PLAKAR-BACKUP(1) - General Commands Manual
 \[**-packfiles**&nbsp;*path*]
 \[**-perimeter**&nbsp;*perimeter*]
 \[**-tag**&nbsp;*tag*]
-\[*place*]
+\[*place&nbsp;...*]
 
 # DESCRIPTION
 
@@ -40,6 +40,24 @@ can be either a path, an URI, or a label with the form
 "@*name*"
 to reference a source connector configured with
 plakar-source(1).
+
+The alias can also be in the form of
+"@*name*\[:path-override]"
+to override the alias path on the command line.
+If
+*path-override*
+starts with
+'/'
+the whole path is replaced with the override, otherwise it is
+appended to the existing path.
+
+Multiple
+*places*
+can be given, as long as they all refer to different paths
+on the same remote, e.g. different files or different prefixes
+on the same bucket.
+Not all importer connectors support this feature, refer to their
+documentation for more information.
 
 The options are as follows:
 
@@ -158,9 +176,15 @@ Ignore files using patterns in a given file:
 
 	$ plakar backup -ignore-file ~/my-ignore-file /var/www
 
-or by using patterns specified inline:
+Ignore files using patterns in one or more files or from the command line:
 
-	$ plakar backup -ignore "*.tmp" -ignore "*.log" /var/www
+	$ plakar backup -ignore-file ~/.plkignore -ignore "*.tmp" /var/www
+
+Define an alias for an s3 bucket and backup multiple path prefixes
+
+	$ plakar source add bucket s3://example.com \
+	        access_key=... secret_access_key=...
+	$ plakar backup @bucket:/assets @bucket:/uploads @bucket:/logs
 
 Pass an option to the importer, in this case to don't traverse mount
 points:
@@ -172,4 +196,4 @@ points:
 plakar(1),
 plakar-source(1)
 
-Plakar - May 5, 2026 - PLAKAR-BACKUP(1)
+Plakar - July 23, 2026 - PLAKAR-BACKUP(1)
