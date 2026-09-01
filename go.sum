@@ -20,8 +20,8 @@ github.com/PlakarKorp/integrations/stdio v1.1.0 h1:kvZma7XfqW4p21DH/mHUC4WTa3tiP
 github.com/PlakarKorp/integrations/stdio v1.1.0/go.mod h1:Hoef62hqivDoEFC4ewyUE1ZAFSd6Kncd2Wr+R7tBcug=
 github.com/PlakarKorp/integrations/tar v1.1.0 h1:hw2vhiwlAzJMWVS2py9sRVqhF9K9kUD+S1L7JsRzwrc=
 github.com/PlakarKorp/integrations/tar v1.1.0/go.mod h1:lq8UXspuZFCKqOZUsUL9f4pM3xWXqZNeLTAc7GIBMsg=
-github.com/PlakarKorp/kloset v1.1.4 h1:hzavzNj79f5IN6Xg4/19QwDUMz4sj8O6Zau8kAXrJZY=
-github.com/PlakarKorp/kloset v1.1.4/go.mod h1:tDJRg9YBSmgJHQJzNubt+jZiETRcakPUpbO7PFcYUNM=
+github.com/PlakarKorp/kloset v1.1.5 h1:m+ESyqK/rdG0jHSrJnT5xkXOANFodmY16WlSJeEIAn4=
+github.com/PlakarKorp/kloset v1.1.5/go.mod h1:tDJRg9YBSmgJHQJzNubt+jZiETRcakPUpbO7PFcYUNM=
 github.com/PlakarKorp/pkg v1.1.3 h1:07SafXIpR7EVBgwWbJIsC1RFHBvqcW8umnFjQu7Soog=
 github.com/PlakarKorp/pkg v1.1.3/go.mod h1:2mnpmH0ZbJXIjYjhvjLQhmw4Tj5TIVDXZWuINtPNdaU=
 github.com/RaduBerinde/axisds v0.1.0 h1:YItk/RmU5nvlsv/awo2Fjx97Mfpt4JfgtEVAGPrLdz8=
