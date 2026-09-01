@@ -2,6 +2,8 @@ package appcontext
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -19,6 +21,25 @@ func TestNewAppContext(t *testing.T) {
 	}
 	if ctx.GetInner() != ctx.KContext {
 		t.Fatal("GetInner did not return the embedded KContext")
+	}
+}
+
+func TestErrorCauseReturnsCancelCause(t *testing.T) {
+	ctx := NewAppContext()
+	cause := errors.New("underlying failure")
+	ctx.Cancel(cause)
+
+	if got := ctx.ErrorCause(context.Canceled); !errors.Is(got, cause) {
+		t.Fatalf("ErrorCause() = %v, want %v", got, cause)
+	}
+}
+
+func TestErrorCauseReturnsOriginalError(t *testing.T) {
+	ctx := NewAppContext()
+	err := errors.New("regular failure")
+
+	if got := ctx.ErrorCause(err); !errors.Is(got, err) {
+		t.Fatalf("ErrorCause() = %v, want %v", got, err)
 	}
 }
 

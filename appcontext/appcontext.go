@@ -1,6 +1,9 @@
 package appcontext
 
 import (
+	"context"
+	"errors"
+
 	"github.com/PlakarKorp/kloset/connectors"
 	"github.com/PlakarKorp/kloset/kcontext"
 	"github.com/PlakarKorp/pkg"
@@ -47,6 +50,15 @@ func NewAppContextFrom(ctx *AppContext) *AppContext {
 // XXX: This needs to go away progressively by migrating to AppContext.
 func (c *AppContext) GetInner() *kcontext.KContext {
 	return c.KContext
+}
+
+func (c *AppContext) ErrorCause(err error) error {
+	if errors.Is(err, context.Canceled) {
+		if cause := context.Cause(c.Context); cause != nil {
+			return cause
+		}
+	}
+	return err
 }
 
 func (c *AppContext) SetSecret(secret []byte) {

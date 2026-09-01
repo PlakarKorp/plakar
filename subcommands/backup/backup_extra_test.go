@@ -2,6 +2,8 @@ package backup
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -156,6 +158,36 @@ func TestBackupIgnoreFileFlag(t *testing.T) {
 	require.NotContains(t, bufOut.String(), "/subdir/")
 }
 
+func TestBackupMultipleIgnoreFileFlags(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	repo, tmpBackupDir, ctx := generateFixtures(t, bufOut, bufErr)
+
+	t.Cleanup(ctx.Close)
+	ctx.MaxConcurrency = 1
+
+	ignoreDir := t.TempDir()
+	macOSIgnoreFile := filepath.Join(ignoreDir, "macos-ignore")
+	sourceIgnoreFile := filepath.Join(ignoreDir, "source-ignore")
+	require.NoError(t, os.WriteFile(macOSIgnoreFile, []byte(".DS_Store\n"), 0o600))
+	require.NoError(t, os.WriteFile(sourceIgnoreFile, []byte("**/subdir\n"), 0o600))
+
+	cmd := &Backup{}
+	require.NoError(t, cmd.Parse(ctx, []string{
+		"-ignore-file", macOSIgnoreFile,
+		"-ignore-file", sourceIgnoreFile,
+		"-ignore", "**/another_subdir",
+		tmpBackupDir,
+	}))
+	require.Equal(t, []string{".DS_Store", "**/subdir", "**/another_subdir"}, cmd.Excludes)
+
+	status, err := cmd.Execute(ctx, repo)
+	require.NoError(t, err)
+	require.Equal(t, 0, status)
+	require.NotContains(t, bufOut.String(), "/subdir/")
+	require.NotContains(t, bufOut.String(), "/another_subdir/")
+}
+
 func TestBackupIgnoreFileMissing(t *testing.T) {
 	bufOut := bytes.NewBuffer(nil)
 	bufErr := bytes.NewBuffer(nil)
@@ -251,6 +283,27 @@ func TestBackupPackfilesMemory(t *testing.T) {
 	status, err, _, _ := runBackup(t, []string{"-packfiles", "memory"}, nil)
 	require.NoError(t, err)
 	require.Equal(t, 0, status)
+}
+
+func TestBackupPropagatesContextCause(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	repo, tmpBackupDir, ctx := generateFixtures(t, bufOut, bufErr)
+
+	t.Cleanup(ctx.Close)
+	ctx.MaxConcurrency = 1
+
+	cause := errors.New("packfile temp creation failed")
+	ctx.Cancel(cause)
+
+	cmd := &Backup{}
+	require.NoError(t, cmd.Parse(ctx, []string{tmpBackupDir}))
+
+	status, err := cmd.Execute(ctx, repo)
+	require.Error(t, err)
+	require.Equal(t, 1, status)
+	require.NotErrorIs(t, err, context.Canceled)
+	require.ErrorIs(t, err, cause)
 }
 
 func TestBackupParsesMultipleIgnoreFlags(t *testing.T) {
