@@ -21,7 +21,6 @@ import (
 	"flag"
 	"fmt"
 	"io/fs"
-	"os/user"
 	"strings"
 	"time"
 
@@ -176,18 +175,16 @@ func (cmd *Ls) list_snapshot(ctx *appcontext.AppContext, repo *repository.Reposi
 			return err
 		}
 
-		var username, groupname string
+		username, groupname := "<unknown>", "<unknown>"
 		if finfo, ok := sb.Sys().(objects.FileInfo); ok {
-			pwUserLookup, err := user.LookupId(fmt.Sprintf("%d", finfo.Uid()))
-			username = fmt.Sprintf("%d", finfo.Uid())
-			if err == nil {
-				username = pwUserLookup.Username
+			username, groupname = finfo.Lusername, finfo.Lgroupname
+
+			if username == "" {
+				username = fmt.Sprint(finfo.Luid)
 			}
 
-			grGroupLookup, err := user.LookupGroupId(fmt.Sprintf("%d", finfo.Gid()))
-			groupname = fmt.Sprintf("%d", finfo.Gid())
-			if err == nil {
-				groupname = grGroupLookup.Name
+			if groupname == "" {
+				groupname = fmt.Sprint(finfo.Lgid)
 			}
 		}
 
