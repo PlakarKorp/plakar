@@ -101,6 +101,11 @@ func (cmd *Sync) Parse(ctx *appcontext.AppContext, args []string) error {
 		return fmt.Errorf("peer store: %w", err)
 	}
 
+	pass, hasPass := storeConfig["passphrase"]
+	delete(storeConfig, "passphrase")
+	passCmd, hasPassCmd := storeConfig["passphrase_cmd"]
+	delete(storeConfig, "passphrase_cmd")
+
 	peerStore, peerStoreSerializedConfig, err := storage.Open(ctx.GetInner(), storeConfig)
 	if err != nil {
 		return err
@@ -117,7 +122,7 @@ func (cmd *Sync) Parse(ctx *appcontext.AppContext, args []string) error {
 
 	var peerSecret []byte
 	if peerStoreConfig.Encryption != nil {
-		if pass, ok := storeConfig["passphrase"]; ok {
+		if hasPass {
 			key, err := encryption.DeriveKey(peerStoreConfig.Encryption.KDFParams, []byte(pass))
 			if err != nil {
 				return err
@@ -126,8 +131,8 @@ func (cmd *Sync) Parse(ctx *appcontext.AppContext, args []string) error {
 				return fmt.Errorf("invalid passphrase")
 			}
 			peerSecret = key
-		} else if cmd, ok := storeConfig["passphrase_cmd"]; ok {
-			passphrase, err := utils.GetPassphraseFromCommand(cmd)
+		} else if hasPassCmd {
+			passphrase, err := utils.GetPassphraseFromCommand(passCmd)
 			if err != nil {
 				return fmt.Errorf("failed to read passphrase from command: %w", err)
 			}
@@ -180,6 +185,9 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 	if err != nil {
 		return 1, fmt.Errorf("peer store: %w", err)
 	}
+
+	delete(storeConfig, "passphrase")
+	delete(storeConfig, "passphrase_cmd")
 
 	peerStore, peerStoreSerializedConfig, err := storage.Open(ctx.GetInner(), storeConfig)
 	if err != nil {
