@@ -1,4 +1,4 @@
-.Dd May 5, 2026
+.Dd September 2, 2026
 .Dt PLAKAR-STORE 1
 .Os
 .Sh NAME
@@ -93,6 +93,33 @@ Remove the
 .Ar option
 for the store entry identified by
 .Ar name .
+.El
+.Ss HTTP AND HTTPS STORE OPTIONS
+When using an
+.Cm http://
+or
+.Cm https://
+location, the following additional options are available:
+.Bl -tag -width tls_no_verify
+.It Cm auth_token
+Bearer token sent in the
+.Dq Authorization
+header for every request.
+.It Cm insecure
+Optional, set to
+.Cm true
+to opt-in the usage of the
+.Cm auth_token
+on HTTP plaintext connections.
+.It Cm timeout
+Per-request timeout, default to
+.Dq 5m
+i.e. five minutes .
+.It Cm tls_no_verify
+Set to
+.Cm true
+to disable TLS certificate verification.
+Useful when the server uses a self-signed certificate.
 .El
 .Sh EXIT STATUS
 .Ex -std

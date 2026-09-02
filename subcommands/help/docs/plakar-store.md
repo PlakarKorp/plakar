@@ -110,6 +110,41 @@ The subcommands are as follows:
 > for the store entry identified by
 > *name*.
 
+## HTTP AND HTTPS STORE OPTIONS
+
+When using an
+**http://**
+or
+**https://**
+location, the following additional options are available:
+
+**auth\_token**
+
+> Bearer token sent in the
+> "Authorization"
+> header for every request.
+
+**insecure**
+
+> Optional, set to
+> **true**
+> to opt-in the usage of the
+> **auth\_token**
+> on HTTP plaintext connections.
+
+**timeout**
+
+> Per-request timeout, default to
+> "5m"
+> i.e. five minutes .
+
+**tls\_no\_verify**
+
+> Set to
+> **true**
+> to disable TLS certificate verification.
+> Useful when the server uses a self-signed certificate.
+
 # EXIT STATUS
 
 The **plakar-store** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
@@ -118,4 +153,4 @@ The **plakar-store** utility exits&#160;0 on success, and&#160;&gt;0 if an error
 
 plakar(1)
 
-Plakar - May 5, 2026 - PLAKAR-STORE(1)
+Plakar - September 2, 2026 - PLAKAR-STORE(1)
