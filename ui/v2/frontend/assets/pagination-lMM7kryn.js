@@ -1,0 +1,1 @@
+import{Jr as e}from"./queryOptions-Dy10_Nr4.js";import{ft as t}from"./components-D7eFPllv.js";var n=500;function r(r=50){return e({page:t().nonnegative().catch(0).default(0),per_page:t().nonnegative().catch(r).default(r).transform(e=>Math.min(e,n))})}export{r as t};
