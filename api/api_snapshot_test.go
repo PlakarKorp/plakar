@@ -74,6 +74,12 @@ func TestSnapshot(t *testing.T) {
 		require.Contains(t, w.Body.String(), "has_next")
 	})
 
+	t.Run("vfs search mime filter keeps partial name match", func(t *testing.T) {
+		w := get(t, mux, "/api/snapshot/vfs/search/"+id+":/?recursive=true&pattern=CODE&mime=text/plain&limit=10")
+		require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
+		require.Contains(t, w.Body.String(), "CODE_OF_CONDUCT")
+	})
+
 	t.Run("vfs search non recursive", func(t *testing.T) {
 		// non-recursive search of a directory.
 		w := get(t, mux, "/api/snapshot/vfs/search/"+id+":/subdir?limit=10")

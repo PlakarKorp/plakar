@@ -31,6 +31,7 @@ func server(t *testing.T, token string) (*http.ServeMux, *repository.Repository,
 		ptesting.NewMockDir("subdir/nested"),
 		ptesting.NewMockFile("subdir/nested/deep.txt", 0644, "deep content"),
 		ptesting.NewMockFile("top.txt", 0644, "top level"),
+		ptesting.NewMockFile("CODE_OF_CONDUCT", 0644, "project conduct"),
 	})
 	mux := http.NewServeMux()
 	SetupRoutes(mux, repo, ctx, token, true /* norefresh */)
