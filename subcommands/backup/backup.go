@@ -21,10 +21,12 @@ import (
 	"maps"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
 
+	"github.com/PlakarKorp/kloset/caching"
 	"github.com/PlakarKorp/kloset/connectors"
 	"github.com/PlakarKorp/kloset/connectors/importer"
 	"github.com/PlakarKorp/kloset/events"
@@ -70,8 +72,21 @@ type Backup struct {
 	optTags        tagFlags
 }
 
+const snapshotWorkCacheName = "scan"
+
 func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &Backup{} }, 0, "backup")
+}
+
+func cleanupPartialSnapshotWorkspace(ctx *appcontext.AppContext, identifier objects.MAC) {
+	if ctx.CacheDir == "" || identifier == objects.NilMac {
+		return
+	}
+
+	snapshotWorkDir := filepath.Join(ctx.CacheDir, caching.CACHE_VERSION, snapshotWorkCacheName, fmt.Sprintf("%x", identifier))
+	if err := os.RemoveAll(snapshotWorkDir); err != nil {
+		ctx.GetLogger().Warn("failed to remove partial snapshot workspace %s: %s", snapshotWorkDir, err)
+	}
 }
 
 type ignoreFlags []string
@@ -304,8 +319,11 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		return 1, fmt.Errorf("pre-backup hook failed: %w", err), objects.MAC{}, nil
 	}
 
-	snap, err := snapshot.Create(repo, repository.DefaultType, cmd.PackfileTempStorage, objects.NilMac, opts)
+	snapshotID := objects.RandomMAC()
+	snap, err := snapshot.Create(repo, repository.DefaultType, cmd.PackfileTempStorage, snapshotID, opts)
 	if err != nil {
+		// snapshot.Create may fail before returning a Builder whose Close cleans this workspace.
+		cleanupPartialSnapshotWorkspace(ctx, snapshotID)
 		ctx.GetLogger().Error("%s", err)
 		return 1, err, objects.MAC{}, nil
 	}
