@@ -258,6 +258,7 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 
 		importerOpts := ctx.ImporterOpts()
 		importerOpts.Excludes = cmd.Excludes
+		importerOpts.NoXattr = cmd.NoXattr
 
 		imp, err := importer.NewImporter(ctx.GetInner(), importerOpts, cmdOptsCopy)
 		if err != nil {
