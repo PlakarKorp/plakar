@@ -226,6 +226,7 @@ func SetupRoutes(server *http.ServeMux, repo *repository.Repository, ctx *appcon
 	server.Handle("GET /api/snapshot/vfs/{snapshot_path...}", authToken(JSONAPIView(ui.snapshotVFSBrowse)))
 	server.Handle("GET /api/snapshot/vfs/children/{snapshot_path...}", authToken(JSONAPIView(ui.snapshotVFSChildren)))
 	server.Handle("GET /api/snapshot/vfs/chunks/{snapshot_path...}", authToken(JSONAPIView(ui.snapshotVFSChunks)))
+	server.Handle("GET /api/snapshot/chunkmap", authToken(JSONAPIView(ui.snapshotChunkmap)))
 	server.Handle("GET /api/snapshot/vfs/search/{snapshot_path...}", authToken(JSONAPIView(ui.snapshotVFSSearch)))
 	server.Handle("GET /api/snapshot/vfs/errors/{snapshot_path...}", authToken(JSONAPIView(ui.snapshotVFSErrors)))
 
