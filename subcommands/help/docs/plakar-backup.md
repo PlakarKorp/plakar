@@ -40,6 +40,11 @@ can be either a path, an URI, or a label with the form
 "@*name*"
 to reference a source connector configured with
 plakar-source(1).
+Such a source can carry its own
+**ignore**
+and
+**ignore-file**
+rules; the ones given below are applied after them and take precedence.
 
 The alias can also be in the form of
 "@*name*\[:path-override]"
@@ -58,6 +63,12 @@ on the same remote, e.g. different files or different prefixes
 on the same bucket.
 Not all importer connectors support this feature, refer to their
 documentation for more information.
+They are backed up through a single set of exclusion rules, so a run in
+which two of them carry different
+**ignore**
+or
+**ignore-file**
+rules is refused.
 
 The options are as follows:
 

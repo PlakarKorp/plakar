@@ -33,6 +33,17 @@ options naming remote or local kloset repositories, and/or one or more
 arguments identifying files or directories to back up.
 The destination archive name is mandatory and supplied with
 .Fl o .
+A
+.Ar path
+of the form
+.Dq @ Ns Ar name
+references a source connector configured with
+.Xr plakar-source 1 ,
+whose own
+.Cm ignore
+and
+.Cm ignore-file
+rules are applied before, and overridden by, the flags below.
 .Pp
 Unless the
 .Fl overwrite
@@ -96,4 +107,5 @@ enabled.
 .Sh SEE ALSO
 .Xr plakar 1 ,
 .Xr plakar-backup 1 ,
-.Xr plakar-create 1
+.Xr plakar-create 1 ,
+.Xr plakar-source 1
