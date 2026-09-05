@@ -44,6 +44,7 @@ import (
 	_ "github.com/PlakarKorp/plakar/subcommands/cat"
 	_ "github.com/PlakarKorp/plakar/subcommands/check"
 	_ "github.com/PlakarKorp/plakar/subcommands/config"
+	_ "github.com/PlakarKorp/plakar/subcommands/cp"
 	_ "github.com/PlakarKorp/plakar/subcommands/create"
 	_ "github.com/PlakarKorp/plakar/subcommands/diag"
 	_ "github.com/PlakarKorp/plakar/subcommands/diff"
