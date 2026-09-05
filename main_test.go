@@ -9,6 +9,7 @@ import (
 	"github.com/PlakarKorp/kloset/connectors/storage"
 	"github.com/PlakarKorp/pkg"
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/config"
 	"github.com/PlakarKorp/plakar/cookies"
 )
 
@@ -32,14 +33,18 @@ func newTestCtx(t *testing.T) *appcontext.AppContext {
 func TestGetPassphraseFromEnv_KeyFromFileWins(t *testing.T) {
 	ctx := newTestCtx(t)
 	ctx.KeyFromFile = "secret-from-keyfile"
+	params := map[string]string{"passphrase": "ignored-too"}
 	t.Setenv("PLAKAR_PASSPHRASE", "ignored")
 
-	got, err := getPassphraseFromEnv(ctx, map[string]string{"passphrase": "ignored-too"})
+	got, err := getPassphraseFromEnv(ctx, params)
 	if err != nil {
 		t.Fatalf("err = %v", err)
 	}
 	if got != "secret-from-keyfile" {
 		t.Fatalf("got %q, want secret-from-keyfile", got)
+	}
+	if _, present := params["passphrase"]; present {
+		t.Fatal("passphrase key should have been deleted from params")
 	}
 }
 
@@ -59,6 +64,25 @@ func TestGetPassphraseFromEnv_ParamsPassphraseConsumed(t *testing.T) {
 	}
 	if params["other"] != "keep" {
 		t.Fatal("unrelated params keys must be preserved")
+	}
+}
+
+func TestGetPassphraseFromEnv_RepositoryEnvWinsAndScrubsParams(t *testing.T) {
+	ctx := newTestCtx(t)
+	ctx.Config = config.NewConfig()
+	ctx.Config.Repositories["remote-store"] = map[string]string{"location": "/repo"}
+	params := map[string]string{"passphrase": "from-config", "location": "/repo"}
+	t.Setenv("PLAKAR_REPOSITORIES_REMOTE_STORE_PASSPHRASE", "from-env")
+
+	got, err := getPassphraseFromEnv(ctx, params, "@remote-store")
+	if err != nil {
+		t.Fatalf("err = %v", err)
+	}
+	if got != "from-env" {
+		t.Fatalf("got %q, want from-env", got)
+	}
+	if _, present := params["passphrase"]; present {
+		t.Fatal("passphrase key should have been deleted from params")
 	}
 }
 

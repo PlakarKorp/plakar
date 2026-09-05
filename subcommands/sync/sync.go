@@ -106,6 +106,18 @@ func (cmd *Sync) Parse(ctx *appcontext.AppContext, args []string) error {
 	delete(storeConfig, "passphrase")
 	passCmd, hasPassCmd := storeConfig["passphrase_cmd"]
 	delete(storeConfig, "passphrase_cmd")
+	if envPass, ok, err := ctx.Config.GetRepositoryPassphrase(peerRepositoryPath); err != nil {
+		return err
+	} else if ok {
+		pass = envPass
+		hasPass = true
+		hasPassCmd = false
+	} else if envPassCmd, ok, err := ctx.Config.GetRepositoryPassphraseCommand(peerRepositoryPath); err != nil {
+		return err
+	} else if ok {
+		passCmd = envPassCmd
+		hasPassCmd = true
+	}
 
 	peerStore, peerStoreSerializedConfig, err := storage.Open(ctx.GetInner(), storeConfig)
 	if err != nil {
