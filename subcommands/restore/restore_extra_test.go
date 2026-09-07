@@ -1,15 +1,28 @@
 package restore
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/PlakarKorp/kloset/connectors"
+	"github.com/PlakarKorp/kloset/objects"
 	ptesting "github.com/PlakarKorp/plakar/testing"
 	"github.com/stretchr/testify/require"
+)
+
+const (
+	restoreWarningRootPath       = "/"
+	restoreWarningDataPath       = "/data.txt"
+	restoreWarningDeniedPath     = "/denied.txt"
+	restoreWarningDataName       = "data.txt"
+	restoreWarningPayload        = "payload"
+	restoreWarningExpectedOutput = "snapshot contains 1 backup error"
 )
 
 func mkRestoreDir(t *testing.T) string {
@@ -114,6 +127,36 @@ func TestRestoreWithSnapshotPath(t *testing.T) {
 	}))
 	require.True(t, sawDummy, "expected dummy.txt content under %s", dir)
 	require.False(t, sawBar, "another_subdir should not have been restored")
+}
+
+func TestRestoreWarnsWhenSnapshotContainsBackupErrors(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	repo, ctx := ptesting.GenerateRepository(t, bufOut, bufErr, nil)
+	snap := ptesting.GenerateSnapshot(t, repo, nil,
+		ptesting.WithGenerator(func(ch chan<- *connectors.Record) {
+			ch <- connectors.NewRecord(restoreWarningRootPath, "", objects.FileInfo{
+				Lname: restoreWarningRootPath, Lmode: os.ModeDir | 0755,
+			}, nil, nil)
+			ch <- connectors.NewRecord(restoreWarningDataPath, "", objects.FileInfo{
+				Lname: restoreWarningDataName, Lmode: 0644, Lsize: int64(len(restoreWarningPayload)),
+			}, nil, func() (io.ReadCloser, error) {
+				return io.NopCloser(strings.NewReader(restoreWarningPayload)), nil
+			})
+			ch <- connectors.NewError(restoreWarningDeniedPath, os.ErrPermission)
+		}),
+	)
+	defer snap.Close()
+
+	dir := mkRestoreDir(t)
+	id := snap.Header.GetIndexID()
+	cmd := &Restore{}
+	require.NoError(t, cmd.Parse(ctx, []string{"-to", dir, hex.EncodeToString(id[:])}))
+
+	status, err := cmd.Execute(ctx, repo)
+	require.NoError(t, err)
+	require.Equal(t, 0, status)
+	require.Contains(t, bufErr.String(), restoreWarningExpectedOutput)
 }
 
 func TestRestoreSkipPermissionsFlag(t *testing.T) {

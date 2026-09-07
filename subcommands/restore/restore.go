@@ -200,7 +200,34 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 			return 1, err
 		}
 
+		backupErrorCount, err := snapshotBackupErrorCount(snap)
+		if err != nil {
+			ctx.GetLogger().Warn("could not inspect snapshot backup errors: %s", err)
+		} else if backupErrorCount != 0 {
+			errorWord := "errors"
+			if backupErrorCount == 1 {
+				errorWord = "error"
+			}
+			ctx.GetLogger().Warn("snapshot contains %d backup %s; restored files are limited to data that was backed up", backupErrorCount, errorWord)
+		}
+
 		snap.Close()
 	}
 	return 0, nil
+}
+
+func snapshotBackupErrorCount(snap *snapshot.Snapshot) (int, error) {
+	fsc, err := snap.Filesystem()
+	if err != nil {
+		return 0, err
+	}
+
+	count := 0
+	for _, err := range fsc.Errors("/") {
+		if err != nil {
+			return 0, err
+		}
+		count++
+	}
+	return count, nil
 }
