@@ -18,7 +18,6 @@ package repair
 
 import (
 	"bytes"
-	"flag"
 	"fmt"
 	"io"
 	"time"
@@ -28,6 +27,7 @@ import (
 	"github.com/PlakarKorp/kloset/repository/state"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/spf13/cobra"
 )
 
 type Repair struct {
@@ -43,15 +43,18 @@ func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &Repair{} }, 0, "repair")
 }
 
-func (cmd *Repair) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("repair", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
-		flags.PrintDefaults()
+func (cmd *Repair) CobraCommand() *cobra.Command {
+	c := &cobra.Command{
+		Use: "repair",
 	}
-	flags.BoolVar(&cmd.Apply, "apply", false, "do the actual repair")
-	flags.Parse(args)
+	c.Flags().BoolVar(&cmd.Apply, "apply", false, "do the actual repair")
+	return c
+}
+
+func (cmd *Repair) Parse(ctx *appcontext.AppContext, args []string) error {
+	if _, err := subcommands.ParseCobra(cmd, args); err != nil {
+		return err
+	}
 
 	cmd.RepositorySecret = ctx.GetSecret()
 

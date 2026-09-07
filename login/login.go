@@ -25,7 +25,6 @@ import (
 	"net/http"
 	"os"
 	"runtime"
-	"strings"
 	"time"
 
 	"github.com/PlakarKorp/plakar/appcontext"
@@ -39,8 +38,6 @@ type TokenResponse struct {
 // defaultBaseURL is the plakar.io auth API root. It is overridable per-flow
 // (via the baseURL field) so tests can point the login flow at a local server.
 const defaultBaseURL = "https://api.plakar.io"
-
-const rateLimitErrorMarker = "limit-reached"
 
 // ErrRateLimited marks a login failure caused by the auth API rate limiting the
 // caller. It is wrapped into the returned error so callers can react to it with
@@ -60,22 +57,6 @@ func NewLoginFlow(appCtx *appcontext.AppContext, noSpawn bool) (*loginFlow, erro
 		baseURL: defaultBaseURL,
 	}
 	return flow, nil
-}
-
-// unexpectedStatusError reads resp.Body to build a descriptive error for a
-// non-OK response. It does not close resp.Body; the caller owns closing it.
-// When the response signals rate limiting, the returned error wraps
-// ErrRateLimited so callers can detect it via errors.Is.
-func unexpectedStatusError(resp *http.Response) error {
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("failed to read error response body: %w", err)
-	}
-	statusErr := fmt.Errorf("unexpected status code: %d : %s", resp.StatusCode, data)
-	if resp.StatusCode == http.StatusTooManyRequests || strings.Contains(string(data), rateLimitErrorMarker) {
-		return fmt.Errorf("%w: %w", ErrRateLimited, statusErr)
-	}
-	return statusErr
 }
 
 func (flow *loginFlow) Poll(pollID string, iterations int, delay time.Duration, progressCb func()) (string, error) {
@@ -111,10 +92,11 @@ func (flow *loginFlow) Poll(pollID string, iterations int, delay time.Duration, 
 			case http.StatusAccepted:
 				resp.Body.Close()
 				progressCb()
+			case http.StatusTooManyRequests:
+				return "", ErrRateLimited
 			default:
-				statusErr := unexpectedStatusError(resp)
 				resp.Body.Close()
-				return "", statusErr
+				return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 			}
 		}
 		tick = time.After(delay)
@@ -148,7 +130,10 @@ func (flow *loginFlow) Run(provider string, parameters map[string]string) (strin
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", unexpectedStatusError(resp)
+		if resp.StatusCode == http.StatusTooManyRequests {
+			return "", ErrRateLimited
+		}
+		return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
 	switch provider {
@@ -224,7 +209,10 @@ func (flow *loginFlow) RunUI(provider string, parameters map[string]string) (str
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", unexpectedStatusError(resp)
+		if resp.StatusCode == http.StatusTooManyRequests {
+			return "", ErrRateLimited
+		}
+		return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
 	switch provider {

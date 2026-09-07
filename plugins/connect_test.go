@@ -23,17 +23,17 @@ func lookPath(t *testing.T, name string) string {
 	return p
 }
 
-func TestSpawnStartsProcess(t *testing.T) {
+func TestNativeRunnerStartsProcess(t *testing.T) {
 	// `cat` reads stdin and writes stdout, matching the stdio transport, and
-	// stays alive until its stdin is closed — perfect for exercising spawn().
+	// stays alive until its stdin is closed — perfect for exercising Run().
 	catPath := lookPath(t, "cat")
 
-	conn, err := spawn(context.Background(), catPath, nil)
+	conn, err := (&NativeRunner{Path: catPath}).Run(context.Background())
 	if err != nil {
-		t.Fatalf("spawn: %v", err)
+		t.Fatalf("run: %v", err)
 	}
 	if conn == nil {
-		t.Fatal("spawn returned a nil conn")
+		t.Fatal("Run returned a nil conn")
 	}
 
 	// Round-trip a byte through cat to prove the process is wired up.
@@ -55,22 +55,22 @@ func TestSpawnStartsProcess(t *testing.T) {
 	}
 }
 
-func TestSpawnNonexistentExecutable(t *testing.T) {
-	_, err := spawn(context.Background(), "/nonexistent/plugin-binary", nil)
+func TestNativeRunnerNonexistentExecutable(t *testing.T) {
+	_, err := (&NativeRunner{Path: "/nonexistent/plugin-binary"}).Run(context.Background())
 	if err == nil {
-		t.Fatal("expected spawn to fail starting a missing executable")
+		t.Fatal("expected Run to fail starting a missing executable")
 	}
 }
 
-func TestSpawnCancelledContextWaitErrors(t *testing.T) {
+func TestNativeRunnerCancelledContextWaitErrors(t *testing.T) {
 	// A cancelled context kills the spawned process, so Close's cmd.Wait()
 	// reports the signal as an error — covering the Wait error branch.
 	catPath := lookPath(t, "cat")
 
 	ctx, cancel := context.WithCancel(context.Background())
-	conn, err := spawn(ctx, catPath, nil)
+	conn, err := (&NativeRunner{Path: catPath}).Run(ctx)
 	if err != nil {
-		t.Fatalf("spawn: %v", err)
+		t.Fatalf("run: %v", err)
 	}
 
 	cancel() // sends SIGKILL to cat via CommandContext
@@ -86,7 +86,7 @@ func TestConnectPluginBuildsClient(t *testing.T) {
 	// We only assert it builds a non-nil client without error; no RPC is made.
 	catPath := lookPath(t, "cat")
 
-	client, err := connectPlugin(context.Background(), catPath, nil)
+	client, err := connectPlugin(context.Background(), &NativeRunner{Path: catPath})
 	if err != nil {
 		t.Fatalf("connectPlugin: %v", err)
 	}
@@ -96,9 +96,9 @@ func TestConnectPluginBuildsClient(t *testing.T) {
 }
 
 func TestConnectPluginSpawnError(t *testing.T) {
-	_, err := connectPlugin(context.Background(), "/nonexistent/plugin-binary", nil)
+	_, err := connectPlugin(context.Background(), &NativeRunner{Path: "/nonexistent/plugin-binary"})
 	if err == nil {
-		t.Fatal("expected connectPlugin to fail when spawn fails")
+		t.Fatal("expected connectPlugin to fail when the runner fails")
 	}
 }
 
@@ -111,7 +111,7 @@ func factoryProto(t *testing.T) string {
 // The following tests register a connector pointing at a helper binary that
 // exits immediately (`true`), then invoke the connector through the kloset
 // registry. This drives the factory closure inside RegisterStorage/Importer/
-// Exporter: spawn succeeds, connectPlugin builds the client, and the first gRPC
+// Exporter: the runner starts, connectPlugin builds the client, and the first gRPC
 // call fails because the helper has already exited — which is enough to cover
 // the closure body and its error handling.
 
@@ -120,7 +120,7 @@ func TestRegisterStorageFactoryInvoked(t *testing.T) {
 	proto := factoryProto(t)
 	t.Cleanup(func() { _ = storage.Unregister(proto) })
 
-	if err := RegisterStorage(proto, 0, truePath, nil); err != nil {
+	if err := RegisterStorage(proto, 0, &NativeRunner{Path: truePath}); err != nil {
 		t.Fatalf("register: %v", err)
 	}
 
@@ -137,7 +137,7 @@ func TestRegisterImporterFactoryInvoked(t *testing.T) {
 	proto := factoryProto(t)
 	t.Cleanup(func() { _ = importer.Unregister(proto) })
 
-	if err := RegisterImporter(proto, 0, truePath, nil); err != nil {
+	if err := RegisterImporter(proto, 0, &NativeRunner{Path: truePath}); err != nil {
 		t.Fatalf("register: %v", err)
 	}
 
@@ -154,7 +154,7 @@ func TestRegisterExporterFactoryInvoked(t *testing.T) {
 	proto := factoryProto(t)
 	t.Cleanup(func() { _ = exporter.Unregister(proto) })
 
-	if err := RegisterExporter(proto, 0, truePath, nil); err != nil {
+	if err := RegisterExporter(proto, 0, &NativeRunner{Path: truePath}); err != nil {
 		t.Fatalf("register: %v", err)
 	}
 

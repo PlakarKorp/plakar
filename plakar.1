@@ -208,6 +208,10 @@ List installed plugins, refer to
 .El
 .Sh ENVIRONMENT
 .Bl -tag -width Ds
+.It Ev PLAKAR_INSECURE_PLAINTEXT
+Must be set to work with a Kloset store that is not encrypted.
+Without it, every command that would read from or write to an unencrypted
+store refuses to run.
 .It Ev PLAKAR_PASSPHRASE
 Passphrase to unlock the Kloset store; overrides the one from the configuration.
 If set,
@@ -250,7 +254,9 @@ Data integrity check failed (corrupted chunks, verification mismatch).
 .It 66 (EX_NOINPUT)
 The repository could not be opened or located.
 .It 77 (EX_NOPERM)
-Authentication or decryption failure (wrong passphrase, missing keyfile).
+Authentication or decryption failure (wrong passphrase, missing keyfile), or
+an unencrypted store used without
+.Ev PLAKAR_INSECURE_PLAINTEXT .
 .It 78 (EX_CONFIG)
 Incompatible repository version.
 .El

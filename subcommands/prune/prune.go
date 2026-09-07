@@ -18,7 +18,6 @@ package prune
 
 import (
 	"encoding/hex"
-	"flag"
 	"fmt"
 	"path/filepath"
 	"sort"
@@ -34,6 +33,7 @@ import (
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
 	"github.com/dustin/go-humanize"
+	"github.com/spf13/cobra"
 )
 
 type Prune struct {
@@ -42,42 +42,48 @@ type Prune struct {
 	LocateOptions *locate.LocateOptions
 
 	Apply bool
+
+	policyName     string
+	policyOverride *locate.LocateOptions
 }
 
 func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &Prune{} }, 0, "prune")
 }
 
-func (cmd *Prune) Parse(ctx *appcontext.AppContext, args []string) error {
-	policyName := ""
+func (cmd *Prune) CobraCommand() *cobra.Command {
 	cmd.LocateOptions = locate.NewDefaultLocateOptions()
-	policyOverride := locate.NewDefaultLocateOptions()
+	cmd.policyOverride = locate.NewDefaultLocateOptions()
 
-	flags := flag.NewFlagSet("prune", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS] SNAPSHOT...\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
-		flags.PrintDefaults()
+	c := &cobra.Command{
+		Use: "prune [OPTIONS] SNAPSHOT...",
 	}
-	flags.BoolVar(&cmd.Apply, "apply", false, "do the actual removal")
-	flags.StringVar(&policyName, "policy", "", "policy to use")
-	policyOverride.InstallLocateFlags(flags)
-	flags.Parse(args)
+	c.Flags().BoolVar(&cmd.Apply, "apply", false, "do the actual removal")
+	c.Flags().StringVar(&cmd.policyName, "policy", "", "policy to use")
+	subcommands.InstallGoFlags(c.Flags(), cmd.policyOverride.InstallLocateFlags)
+	return c
+}
 
-	if policyName != "" {
+func (cmd *Prune) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
+	}
+
+	if cmd.policyName != "" {
 		configFile := filepath.Join(ctx.ConfigDir, "policies.yml")
 		cfg, err := utils.LoadPolicyConfigFile(configFile)
 		if err != nil {
 			return fmt.Errorf("failed to load policies config: %w", err)
 		}
-		if !cfg.Has(policyName) {
-			return fmt.Errorf("policy %q not found", policyName)
+		if !cfg.Has(cmd.policyName) {
+			return fmt.Errorf("policy %q not found", cmd.policyName)
 		}
-		cfg.ApplyConfig(policyName, cmd.LocateOptions)
+		cfg.ApplyConfig(cmd.policyName, cmd.LocateOptions)
 	}
-	mergePolicyOptions(cmd.LocateOptions, policyOverride)
+	mergePolicyOptions(cmd.LocateOptions, cmd.policyOverride)
 
-	if flags.NArg() == 0 && cmd.LocateOptions.Empty() {
+	if len(rest) == 0 && cmd.LocateOptions.Empty() {
 		return fmt.Errorf("no filter specified, not going to prune everything")
 	}
 

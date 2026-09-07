@@ -1,7 +1,6 @@
 package diag
 
 import (
-	"flag"
 	"fmt"
 
 	"github.com/PlakarKorp/kloset/locate"
@@ -10,6 +9,7 @@ import (
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/dustin/go-humanize"
+	"github.com/spf13/cobra"
 )
 
 type DiagRepository struct {
@@ -18,22 +18,16 @@ type DiagRepository struct {
 	RepositoryLocation string
 }
 
-func (cmd *DiagRepository) Parse(ctx *appcontext.AppContext, args []string) error {
-	// Since this is the default action, we plug the general USAGE here.
-	flags := flag.NewFlagSet("diag", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s snapshot SNAPSHOT\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s state [STATE]...\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s search snapshot[:path] mime\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s packfile [PACKFILE]...\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s object [OBJECT]\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s vfs SNAPSHOT[:PATH]\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s xattr SNAPSHOT[:PATH]\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s contenttype SNAPSHOT[:PATH]\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s locks\n", flags.Name())
+func (cmd *DiagRepository) CobraCommand() *cobra.Command {
+	return &cobra.Command{
+		Use: "diag",
 	}
-	flags.Parse(args)
+}
+
+func (cmd *DiagRepository) Parse(ctx *appcontext.AppContext, args []string) error {
+	if _, err := subcommands.ParseCobra(cmd, args); err != nil {
+		return err
+	}
 
 	cmd.RepositorySecret = ctx.GetSecret()
 

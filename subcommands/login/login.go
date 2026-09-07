@@ -18,7 +18,6 @@ package login
 
 import (
 	_ "embed"
-	"flag"
 	"fmt"
 
 	"github.com/PlakarKorp/kloset/repository"
@@ -26,28 +25,32 @@ import (
 	plogin "github.com/PlakarKorp/plakar/login"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
+	"github.com/spf13/cobra"
 )
 
 func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &Login{} }, subcommands.BeforeRepositoryOpen, "login")
 }
 
+func (cmd *Login) CobraCommand() *cobra.Command {
+	c := &cobra.Command{
+		Use: "login",
+	}
+	c.Flags().BoolVar(&cmd.Status, "status", false, "do not login, just display the status")
+	c.Flags().BoolVar(&cmd.NoSpawn, "no-spawn", false, "don't spawn browser")
+	c.Flags().BoolVar(&cmd.Github, "github", false, "login with GitHub")
+	c.Flags().StringVar(&cmd.Email, "email", "", "login with email")
+	c.Flags().BoolVar(&cmd.Env, "env", false, "use token from environment variable PLAKAR_TOKEN")
+	return c
+}
+
 func (cmd *Login) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("login", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS]\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
-		flags.PrintDefaults()
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
 	}
 
-	flags.BoolVar(&cmd.Status, "status", false, "do not login, just display the status")
-	flags.BoolVar(&cmd.NoSpawn, "no-spawn", false, "don't spawn browser")
-	flags.BoolVar(&cmd.Github, "github", false, "login with GitHub")
-	flags.StringVar(&cmd.Email, "email", "", "login with email")
-	flags.BoolVar(&cmd.Env, "env", false, "use token from environment variable PLAKAR_TOKEN")
-	flags.Parse(args)
-
-	if flags.NArg() > 0 {
+	if len(rest) > 0 {
 		return fmt.Errorf("too many arguments")
 	}
 

@@ -3,7 +3,6 @@ package diag
 import (
 	"encoding/binary"
 	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"strings"
@@ -14,6 +13,7 @@ import (
 	"github.com/PlakarKorp/kloset/snapshot/vfs"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/spf13/cobra"
 	"github.com/vmihailenco/msgpack/v5"
 )
 
@@ -23,16 +23,24 @@ type DiagDirPack struct {
 	SnapshotPath string
 }
 
-func (cmd *DiagDirPack) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("diag dirpack", flag.ExitOnError)
-	flags.Parse(args)
+func (cmd *DiagDirPack) CobraCommand() *cobra.Command {
+	return &cobra.Command{
+		Use: "diag dirpack",
+	}
+}
 
-	if len(flags.Args()) < 1 {
-		return fmt.Errorf("usage: %s dirpack SNAPSHOT[:PATH]", flags.Name())
+func (cmd *DiagDirPack) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
+	}
+
+	if len(rest) < 1 {
+		return fmt.Errorf("usage: %s dirpack SNAPSHOT[:PATH]", "diag dirpack")
 	}
 
 	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.SnapshotPath = flags.Args()[0]
+	cmd.SnapshotPath = rest[0]
 
 	return nil
 }

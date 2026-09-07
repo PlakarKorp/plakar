@@ -1,4 +1,4 @@
-.Dd May 5, 2026
+.Dd August 25, 2026
 .Dt PLAKAR-SERVER 1
 .Os
 .Sh NAME
@@ -10,6 +10,7 @@
 .Op Fl listen Oo Ar host Ns Oc : Ns Ar port
 .Op Fl cert Ar path
 .Op Fl key Ar path
+.Op Fl token Ar string
 .Sh DESCRIPTION
 The
 .Nm plakar server
@@ -43,6 +44,10 @@ are provided, the server will expect https connections.
 If one or both are missing, the server will fall back to http.
 .It Fl key Ar path
 Path to a certificate private key file in PEM format.
+.It Fl token Ar string
+Require clients to provide the given Authorization Bearer token in order
+to interact with
+.Nm plakar server .
 .El
 .Sh EXIT STATUS
 .Ex -std

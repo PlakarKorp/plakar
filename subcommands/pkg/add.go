@@ -18,7 +18,6 @@ package pkg
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -28,38 +27,42 @@ import (
 	"github.com/PlakarKorp/pkg"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/spf13/cobra"
 )
 
 type PkgAdd struct {
 	subcommands.SubcommandBase
 
-	upgrade bool
-	Args    []string
+	upgrade       bool
+	devel         bool
+	allowUnsigned bool
+	container     bool
+	Args          []string
+}
+
+func (cmd *PkgAdd) CobraCommand() *cobra.Command {
+	c := &cobra.Command{
+		Use: "pkg add",
+	}
+	c.Flags().BoolVar(&cmd.upgrade, "u", false, "Update packages")
+	c.Flags().BoolVar(&cmd.devel, "devel", false, "Opt-in to the devel integration tree")
+	c.Flags().BoolVar(&cmd.allowUnsigned, "allow-unsigned", false,
+		"Install packages that carry no signature")
+	c.Flags().BoolVar(&cmd.container, "container", false, "Install the container flavor of remote packages")
+	return c
 }
 
 func (cmd *PkgAdd) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("pkg add", flag.ExitOnError)
-	flags.BoolVar(&cmd.upgrade, "u", false, "Update packages")
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), `Usage: %s [-u] <package> ...
-
-Arguments:
-  <package>    Local .ptar file, or recipe name to fetch from plugins.plakar.io
-               (local files take precedence over remote recipes)
-
-Examples:
-  pkg add imap           Fetch and install the 'imap' plugin
-  pkg add ./plugin.ptar  Install from local file
-`, flags.Name())
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
 	}
 
-	flags.Parse(args)
-
-	if flags.NArg() < 1 && !cmd.upgrade {
+	if len(rest) < 1 && !cmd.upgrade {
 		return fmt.Errorf("not enough arguments")
 	}
 
-	cmd.Args = flags.Args()
+	cmd.Args = rest
 	for i, name := range cmd.Args {
 		absolute := name
 		if !filepath.IsAbs(absolute) {
@@ -81,12 +84,40 @@ Examples:
 
 func (cmd *PkgAdd) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (int, error) {
 	pkgmgr := ctx.GetPkgManager()
+
+	var edition string
+	if cmd.devel {
+		edition = "devel"
+	}
+
+	if cmd.allowUnsigned {
+		verifier := ctx.GetPkgVerifier()
+		if verifier == nil {
+			return 1, fmt.Errorf("-allow-unsigned: no package verifier configured")
+		}
+
+		verifier.SetAllowUnsigned(true)
+
+		fmt.Fprintln(ctx.Stderr, "WARNING: -allow-unsigned: installing unsigned packages.")
+		fmt.Fprintln(ctx.Stderr, "WARNING: their contents and origin cannot be verified.")
+	}
+
 	for _, plugin := range cmd.Args {
 		plugin, version, _ := strings.Cut(plugin, "@")
+		if version == "latest" {
+			// "latest" spells out the default: leave the version empty so
+			// the manager picks it from the recipe instead of looking for
+			// a release named "latest".
+			version = ""
+		}
 		addopts := pkg.AddOptions{
+			Edition:       edition,
 			ImplicitFetch: true,
 			Version:       version,
 			Upgrade:       cmd.upgrade,
+		}
+		if cmd.container {
+			addopts.Container = true
 		}
 		if err := pkgmgr.Add(plugin, &addopts); err != nil {
 			if cmd.upgrade && errors.Is(err, pkg.ErrAlreadyInstalled) {
@@ -107,8 +138,12 @@ func (cmd *PkgAdd) Execute(ctx *appcontext.AppContext, _ *repository.Repository)
 			}
 
 			addopts := pkg.AddOptions{
+				Edition:       edition,
 				ImplicitFetch: true,
 				Upgrade:       cmd.upgrade,
+				// Keep whatever flavor is installed rather than
+				// silently switching a container install to native.
+				Container: plugin.OperatingSystem == pkg.OSContainer,
 			}
 
 			if err := pkgmgr.Add(plugin.Name, &addopts); err != nil {

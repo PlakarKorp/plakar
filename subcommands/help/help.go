@@ -18,7 +18,6 @@ package help
 
 import (
 	"embed"
-	"flag"
 	"fmt"
 	"os"
 	"strings"
@@ -28,6 +27,7 @@ import (
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/charmbracelet/glamour"
 	"github.com/muesli/termenv"
+	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
 
@@ -38,18 +38,21 @@ func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &Help{} }, subcommands.BeforeRepositoryOpen, "help")
 }
 
-func (cmd *Help) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("help", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS]\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
-		flags.PrintDefaults()
-		fmt.Fprint(flags.Output(), "\nTo view the man page for a specific command, run 'plakar help SUBCOMMAND'.\n")
+func (cmd *Help) CobraCommand() *cobra.Command {
+	c := &cobra.Command{
+		Use: "help",
 	}
-	flags.StringVar(&cmd.Style, "style", "auto", "style to use")
-	flags.Parse(args)
+	c.Flags().StringVar(&cmd.Style, "style", "auto", "style to use")
+	return c
+}
 
-	cmd.Command = strings.Join(flags.Args(), "-")
+func (cmd *Help) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
+	}
+
+	cmd.Command = strings.Join(rest, "-")
 	return nil
 }
 

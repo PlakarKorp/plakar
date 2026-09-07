@@ -31,7 +31,7 @@ func runEntryPoint(t *testing.T, args ...string) (status int, stdout, stderr str
 		{"XDG_CONFIG_HOME", filepath.Join(base, "config")},
 		{"XDG_CACHE_HOME", filepath.Join(base, "cache")},
 		{"XDG_DATA_HOME", filepath.Join(base, "data")},
-		{"TERM", "dumb"},        // force stdio renderer, no TUI
+		{"TERM", "dumb"},          // force stdio renderer, no TUI
 		{"PLAKAR_REPOSITORY", ""}, // don't inherit a real repo
 		{"PLAKAR_PASSPHRASE", ""}, // don't inherit a real passphrase
 	} {
@@ -167,6 +167,7 @@ func TestEntryPoint_MissingKeyfile(t *testing.T) {
 
 func TestEntryPoint_CreateThenInfo(t *testing.T) {
 	repoDir := filepath.Join(t.TempDir(), "repo")
+	t.Setenv(plaintextEnv, "1") // the repository below is plaintext
 
 	// Create a plaintext repository at an explicit location.
 	status, _, stderr := runEntryPoint(t, "at", repoDir, "create", "-plaintext")
@@ -186,14 +187,19 @@ func TestEntryPoint_CreateThenInfo(t *testing.T) {
 }
 
 func TestEntryPoint_AtMissingCommand(t *testing.T) {
-	// `at <loc>` with no following command currently calls log.Fatalf, which
-	// would exit the test process. We only drive the parse branch that does
-	// NOT terminate: `at` with a location and a real (but failing) command.
 	// Opening a non-existent repo location yields the RepoNotFound exit code.
 	missing := filepath.Join(t.TempDir(), "does-not-exist")
 	status, _, stderr := runEntryPoint(t, "at", missing, "info")
 	require.NotEqual(t, 0, status)
 	require.Contains(t, stderr, "failed to open the repository")
+
+	// A dangling "at" is reported for what it is, rather than falling
+	// through to the generic "a subcommand must be provided".  These used
+	// to go through log.Fatalf, which would have taken the test process
+	// down with them.
+	status, _, stderr = runEntryPoint(t, "at")
+	require.Equal(t, 1, status)
+	require.Contains(t, stderr, "missing plakar repository")
 }
 
 // ---------- entryPoint: keyfile + plaintext repo unlock (nil secret) ----------
@@ -202,6 +208,7 @@ func TestEntryPoint_KeyfileWithPlaintextRepo(t *testing.T) {
 	// A keyfile is supplied but the repo is plaintext: setupEncryption sees a
 	// nil Encryption config and the keyfile secret is simply ignored.
 	repoDir := filepath.Join(t.TempDir(), "repo")
+	t.Setenv(plaintextEnv, "1") // the repository below is plaintext
 	status, _, stderr := runEntryPoint(t, "at", repoDir, "create", "-plaintext")
 	require.Equalf(t, 0, status, "create stderr: %s", stderr)
 

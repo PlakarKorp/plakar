@@ -2,7 +2,6 @@ package diag
 
 import (
 	"encoding/hex"
-	"flag"
 	"fmt"
 
 	"github.com/PlakarKorp/kloset/objects"
@@ -11,6 +10,7 @@ import (
 	"github.com/PlakarKorp/kloset/resources"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/spf13/cobra"
 )
 
 type DiagState struct {
@@ -19,12 +19,20 @@ type DiagState struct {
 	Args []string
 }
 
+func (cmd *DiagState) CobraCommand() *cobra.Command {
+	return &cobra.Command{
+		Use: "diag state",
+	}
+}
+
 func (cmd *DiagState) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("diag state", flag.ExitOnError)
-	flags.Parse(args)
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
+	}
 
 	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.Args = flags.Args()
+	cmd.Args = rest
 
 	return nil
 }

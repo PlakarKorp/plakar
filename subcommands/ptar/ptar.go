@@ -18,7 +18,6 @@ package ptar
 
 import (
 	"bytes"
-	"flag"
 	"fmt"
 	"hash"
 	"io"
@@ -42,6 +41,7 @@ import (
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
 	"github.com/google/uuid"
+	"github.com/spf13/cobra"
 )
 
 type Ptar struct {
@@ -62,6 +62,9 @@ type Ptar struct {
 	Excludes      []string
 
 	LocateOptions *locate.LocateOptions
+
+	optIgnoreFiles listFlag
+	optIgnore      listFlag
 }
 
 func init() {
@@ -82,46 +85,48 @@ func (l *listFlag) Set(value string) error {
 	return nil
 }
 
-func (cmd *Ptar) Parse(ctx *appcontext.AppContext, args []string) error {
+func (cmd *Ptar) CobraCommand() *cobra.Command {
 	cmd.KlosetUUID = uuid.Must(uuid.NewRandom())
 	cmd.LocateOptions = locate.NewDefaultLocateOptions()
-	var optIgnoreFiles listFlag
-	var optIgnore listFlag
+
+	c := &cobra.Command{
+		Use: "ptar [OPTIONS] -o out.ptar [@location | path]...",
+	}
+	c.Flags().StringVar(&cmd.Hashing, "hashing", hashing.DEFAULT_HASHING_ALGORITHM, "hashing algorithm to use for digests")
+	c.Flags().BoolVar(&cmd.NoEncryption, "plaintext", false, "disable transparent encryption")
+	c.Flags().BoolVar(&cmd.NoCompression, "no-compression", false, "disable transparent compression")
+	c.Flags().BoolVar(&cmd.Overwrite, "overwrite", false, "overwrite the ptar archive if it already exists")
+	c.Flags().Var(subcommands.GoValue(&cmd.SyncTargets), "k", "add a kloset location to include in the ptar archive (can be specified multiple times)")
+	c.Flags().Var(subcommands.GoValue(&cmd.SyncTargets), "kloset", "add a kloset location to include in the ptar archive (can be specified multiple times)")
+	c.Flags().Var(subcommands.GoValue(&cmd.optIgnoreFiles), "ignore-file", "path to a file containing newline-separated gitignore patterns, treated as -ignore; can be specified multiple times")
+	c.Flags().Var(subcommands.GoValue(&cmd.optIgnore), "ignore", "gitignore pattern to exclude files, can be specified multiple times to add several exclusion patterns")
+	c.Flags().StringVar(&cmd.KlosetPath, "o", "", "name of the ptar archive to create")
+	subcommands.InstallGoFlags(c.Flags(), cmd.LocateOptions.InstallLocateFlags)
+	return c
+}
+
+func (cmd *Ptar) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
+	}
+
 	excludes := []string{}
 
-	flags := flag.NewFlagSet("ptar", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: plakar %s [OPTIONS] -o out.ptar [@location | path]...\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
-		flags.PrintDefaults()
-	}
-
-	flags.StringVar(&cmd.Hashing, "hashing", hashing.DEFAULT_HASHING_ALGORITHM, "hashing algorithm to use for digests")
-	flags.BoolVar(&cmd.NoEncryption, "plaintext", false, "disable transparent encryption")
-	flags.BoolVar(&cmd.NoCompression, "no-compression", false, "disable transparent compression")
-	flags.BoolVar(&cmd.Overwrite, "overwrite", false, "overwrite the ptar archive if it already exists")
-	flags.Var(&cmd.SyncTargets, "k", "add a kloset location to include in the ptar archive (can be specified multiple times)")
-	flags.Var(&cmd.SyncTargets, "kloset", "add a kloset location to include in the ptar archive (can be specified multiple times)")
-	flags.Var(&optIgnoreFiles, "ignore-file", "path to a file containing newline-separated gitignore patterns, treated as -ignore; can be specified multiple times")
-	flags.Var(&optIgnore, "ignore", "gitignore pattern to exclude files, can be specified multiple times to add several exclusion patterns")
-	flags.StringVar(&cmd.KlosetPath, "o", "", "name of the ptar archive to create")
-	cmd.LocateOptions.InstallLocateFlags(flags)
-	flags.Parse(args)
-
 	if cmd.KlosetPath == "" {
-		return fmt.Errorf("%s: -o option must be specified", flag.CommandLine.Name())
+		return fmt.Errorf("-o option must be specified")
 	}
 
-	if len(cmd.SyncTargets) == 0 && flags.NArg() == 0 {
+	if len(cmd.SyncTargets) == 0 && len(rest) == 0 {
 		cmd.BackupTargets = []string{ctx.CWD}
 	}
 
-	if len(flags.Args()) > 0 {
-		cmd.BackupTargets = make([]string, len(flags.Args()))
-		copy(cmd.BackupTargets, flags.Args())
+	if len(rest) > 0 {
+		cmd.BackupTargets = make([]string, len(rest))
+		copy(cmd.BackupTargets, rest)
 	}
 
-	for _, ignoreFile := range optIgnoreFiles {
+	for _, ignoreFile := range cmd.optIgnoreFiles {
 		lines, err := utils.LoadIgnoreFile(ignoreFile)
 		if err != nil {
 			return err
@@ -129,7 +134,7 @@ func (cmd *Ptar) Parse(ctx *appcontext.AppContext, args []string) error {
 		excludes = append(excludes, lines...)
 	}
 
-	excludes = append(excludes, optIgnore...)
+	excludes = append(excludes, cmd.optIgnore...)
 	cmd.Excludes = excludes
 
 	for _, syncTarget := range cmd.SyncTargets {
@@ -147,6 +152,10 @@ func (cmd *Ptar) Parse(ctx *appcontext.AppContext, args []string) error {
 
 		peerStoreConfig, err := storage.NewConfigurationFromWrappedBytes(peerStoreSerializedConfig)
 		if err != nil {
+			return err
+		}
+
+		if err := utils.CheckPlaintext(storeConfig["location"], peerStoreConfig.Encryption != nil); err != nil {
 			return err
 		}
 
@@ -190,7 +199,7 @@ func (cmd *Ptar) Parse(ctx *appcontext.AppContext, args []string) error {
 	}
 
 	if hashing.GetHasher(strings.ToUpper(cmd.Hashing)) == nil {
-		return fmt.Errorf("%s: unknown hashing algorithm", flag.CommandLine.Name())
+		return fmt.Errorf("unknown hashing algorithm")
 	}
 
 	if !cmd.NoEncryption {

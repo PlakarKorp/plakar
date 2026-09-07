@@ -17,7 +17,6 @@
 package archive
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"time"
@@ -26,29 +25,33 @@ import (
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/spf13/cobra"
 )
 
 func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &Archive{} }, 0, "archive")
 }
 
+func (cmd *Archive) CobraCommand() *cobra.Command {
+	c := &cobra.Command{
+		Use: "archive [OPTIONS] [SNAPSHOT[:PATH]]",
+	}
+	c.Flags().StringVar(&cmd.Output, "output", "", "archive pathname")
+	c.Flags().BoolVar(&cmd.Rebase, "rebase", false, "strip pathname when pulling")
+	c.Flags().StringVar(&cmd.Format, "format", "tarball", "archive format: tar, tarball, zip")
+	return c
+}
+
 func (cmd *Archive) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("archive", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS] [SNAPSHOT[:PATH]]\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
-		flags.PrintDefaults()
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
 	}
 
-	flags.StringVar(&cmd.Output, "output", "", "archive pathname")
-	flags.BoolVar(&cmd.Rebase, "rebase", false, "strip pathname when pulling")
-	flags.StringVar(&cmd.Format, "format", "tarball", "archive format: tar, tarball, zip")
-	flags.Parse(args)
-
-	if flags.NArg() == 0 {
+	if len(rest) == 0 {
 		return fmt.Errorf("need at least one snapshot ID to pull")
 	}
-	cmd.SnapshotPrefix = flags.Arg(0)
+	cmd.SnapshotPrefix = rest[0]
 
 	supportedFormats := map[string]string{
 		"tar":     "tar",

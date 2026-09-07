@@ -9,12 +9,16 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/PlakarKorp/kloset/connectors/storage"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
+	"github.com/PlakarKorp/pkg"
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/login"
 	"github.com/PlakarKorp/plakar/utils"
+	"go.omarpolo.com/ttlmap"
 )
 
 type uiserver struct {
@@ -22,6 +26,15 @@ type uiserver struct {
 	config     storage.Configuration
 	repository *repository.Repository
 	norefresh  bool
+
+	// integrationsCache used used by api_proxy.go to cache the results of
+	// pkg.Manager.Query() across requests so the /integration list and detail
+	// endpoints don't fetch the ~449 KB remote catalog from api.plakar.io on
+	// every hit.
+	// In the future, this cache should be moved to the pkg.Manager itself, and
+	// the API should call pkg.Manager.Query() directly instead of caching the
+	// results here.
+	integrationsCache *ttlmap.TTLMap[string, []*pkg.Integration]
 
 	// XXX: Adding this for transition, it needs to go away. Some
 	// places we only have Repository and out of AppContext we
@@ -55,6 +68,12 @@ func handleError(w http.ResponseWriter, r *http.Request, err error) {
 			HttpCode: 400,
 			ErrCode:  "bad-request",
 			Message:  err.Error(),
+		}
+	case errors.Is(err, login.ErrRateLimited):
+		err = &ApiError{
+			HttpCode: http.StatusTooManyRequests,
+			ErrCode:  "rate-limited",
+			Message:  "Rate limit reached. Please retry later.",
 		}
 	case errors.Is(err, repository.ErrBlobNotFound):
 		fallthrough
@@ -149,12 +168,14 @@ func (ui *uiserver) apiInfo(w http.ResponseWriter, r *http.Request) error {
 
 func SetupRoutes(server *http.ServeMux, repo *repository.Repository, ctx *appcontext.AppContext, token string, norefresh bool) {
 	ui := uiserver{
-		store:      repo.Store(),
-		config:     repo.Configuration(),
-		repository: repo,
-		ctx:        ctx,
-		norefresh:  norefresh,
+		store:             repo.Store(),
+		config:            repo.Configuration(),
+		repository:        repo,
+		ctx:               ctx,
+		norefresh:         norefresh,
+		integrationsCache: ttlmap.New[string, []*pkg.Integration](5 * time.Minute),
 	}
+	ui.integrationsCache.AutoExpire()
 
 	authToken := TokenAuthMiddleware(token)
 	urlSigner := NewSnapshotReaderURLSigner(&ui, token)

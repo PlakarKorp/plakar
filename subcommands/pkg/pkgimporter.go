@@ -18,6 +18,7 @@
 package pkg
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -27,6 +28,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/PlakarKorp/kloset/connectors"
 	"github.com/PlakarKorp/kloset/location"
@@ -37,7 +39,7 @@ import (
 type pkgerImporter struct {
 	cwd          string
 	manifest     *pkg.Manifest
-	manifestPath string
+	manifestData []byte
 }
 
 type itemtype int
@@ -118,12 +120,17 @@ func (imp *pkgerImporter) dofile(p string, ch chan<- *connectors.Record, it item
 func (imp *pkgerImporter) Import(ctx context.Context, records chan<- *connectors.Record, results <-chan *connectors.Result) error {
 	defer close(records)
 
-	if err := imp.dofile(imp.manifestPath, records, itextra); err != nil {
-		return err
+	records <- &connectors.Record{
+		Pathname: "/manifest.yaml",
+		FileInfo: objects.NewFileInfo("manifest.yaml", int64(len(imp.manifestData)), 0644, time.Now(), 0, 0, 0, 0, 1),
+		Reader:   io.NopCloser(bytes.NewReader(imp.manifestData)),
 	}
 	for _, conn := range imp.manifest.Connectors {
-		if err := imp.dofile(conn.Executable, records, itexe); err != nil {
-			return err
+		// Image connectors carry no executable; the binary lives in the image.
+		if conn.Executable != "" {
+			if err := imp.dofile(conn.Executable, records, itexe); err != nil {
+				return err
+			}
 		}
 		if conn.Validator != "" {
 			if err := imp.dofile(conn.Validator, records, itjson); err != nil {

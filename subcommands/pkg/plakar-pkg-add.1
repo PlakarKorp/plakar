@@ -1,4 +1,4 @@
-.Dd March 23, 2026
+.Dd August 26, 2026
 .Dt PLAKAR-PKG-ADD 1
 .Os
 .Sh NAME
@@ -6,6 +6,8 @@
 .Nd Install Plakar plugins
 .Sh SYNOPSIS
 .Nm plakar pkg add
+.Op Fl allow-unsigned
+.Op Fl devel
 .Op Fl u
 .Ar plugin ...
 .Sh DESCRIPTION
@@ -30,9 +32,18 @@ it locally
 To install a specific version of a plugin, use the
 .Ar name Ns @ Ns Ar version
 syntax.
+.Ar version
+may be
+.Cm latest ,
+which is also what is used when no version is given.
 .Pp
 The options are as follows:
 .Bl -tag -width Ds
+.It Fl allow-unsigned
+Install packages that carry no signature.
+By default, package are expected to be signed.
+.It Fl devel
+Use the integration devel tree.
 .It Fl u
 Update the specific plugins.
 If none are given, attempt to update all the installed ones.

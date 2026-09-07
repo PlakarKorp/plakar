@@ -1,12 +1,12 @@
 package services
 
 import (
-	"flag"
 	"fmt"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/spf13/cobra"
 )
 
 type ServiceRm struct {
@@ -15,22 +15,27 @@ type ServiceRm struct {
 	Service string
 }
 
-func (cmd *ServiceRm) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("service rm", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s <name>\n", flags.Name())
+func (cmd *ServiceRm) CobraCommand() *cobra.Command {
+	return &cobra.Command{
+		Use: "service rm",
 	}
-	flags.Parse(args)
+}
 
-	if flags.NArg() == 0 {
+func (cmd *ServiceRm) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
+	}
+
+	if len(rest) == 0 {
 		return fmt.Errorf("no service specified")
 	}
 
-	if flags.NArg() > 1 {
-		return fmt.Errorf("invalid argument %q", flags.Arg(1))
+	if len(rest) > 1 {
+		return fmt.Errorf("invalid argument %q", rest[1])
 	}
 
-	cmd.Service = flags.Arg(0)
+	cmd.Service = rest[0]
 
 	return nil
 }

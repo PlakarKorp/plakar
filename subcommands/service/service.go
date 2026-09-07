@@ -17,13 +17,13 @@
 package services
 
 import (
-	"flag"
 	"fmt"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/services"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/spf13/cobra"
 )
 
 func init() {
@@ -43,24 +43,20 @@ type Service struct {
 	subcommands.SubcommandBase
 }
 
-func (*Service) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("service", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s list\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s add <name> <key>=<value>...\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s rm <name>\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s set <name> <key>=<value>...\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s unset <name> <key>...\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s status <name>\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s enable <name>\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s disable <name>\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s show <name>\n", flags.Name())
+func (cmd *Service) CobraCommand() *cobra.Command {
+	return &cobra.Command{
+		Use: "service",
 	}
-	flags.Parse(args)
+}
 
-	if flags.NArg() > 0 {
-		return fmt.Errorf("invalid argument: %s", flags.Arg(0))
+func (cmd *Service) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
+	}
+
+	if len(rest) > 0 {
+		return fmt.Errorf("invalid argument: %s", rest[0])
 	}
 	return fmt.Errorf("no action specified")
 }

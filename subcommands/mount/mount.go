@@ -17,8 +17,6 @@
 package mount
 
 import (
-	"flag"
-	"fmt"
 	"io/fs"
 	"strings"
 
@@ -28,6 +26,7 @@ import (
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/subcommands/mount/fuse"
 	"github.com/PlakarKorp/plakar/subcommands/mount/http"
+	"github.com/spf13/cobra"
 )
 
 type Mount struct {
@@ -44,24 +43,30 @@ func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &Mount{} }, 0, "mount")
 }
 
-func (cmd *Mount) Parse(ctx *appcontext.AppContext, args []string) error {
+func (cmd *Mount) CobraCommand() *cobra.Command {
 	cmd.LocateOptions = locate.NewDefaultLocateOptions()
 
-	flags := flag.NewFlagSet("mount", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s [-to PATH] [snapshotID]\n", flags.Name())
+	c := &cobra.Command{
+		Use: "mount [-to PATH] [snapshotID]",
 	}
-	flags.StringVar(&cmd.Mountpoint, "to", "", "mount point")
-	flags.BoolVar(&cmd.AllowOthers, "allow-others", false, "allow other users to access the mount")
-	cmd.LocateOptions.InstallLocateFlags(flags)
-	flags.Parse(args)
+	c.Flags().StringVar(&cmd.Mountpoint, "to", "", "mount point")
+	c.Flags().BoolVar(&cmd.AllowOthers, "allow-others", false, "allow other users to access the mount")
+	subcommands.InstallGoFlags(c.Flags(), cmd.LocateOptions.InstallLocateFlags)
+	return c
+}
+
+func (cmd *Mount) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
+	}
 
 	cmd.RepositorySecret = ctx.GetSecret()
 
-	if flags.NArg() == 1 {
+	if len(rest) == 1 {
 		// snapshot(s) level, reset LocateOptions
 		cmd.LocateOptions = locate.NewDefaultLocateOptions()
-		cmd.SnapshotPath = flags.Arg(0)
+		cmd.SnapshotPath = rest[0]
 	}
 
 	return nil

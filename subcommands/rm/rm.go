@@ -18,7 +18,6 @@ package rm
 
 import (
 	"encoding/hex"
-	"flag"
 	"fmt"
 	"sort"
 	"strings"
@@ -33,6 +32,7 @@ import (
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
 	"github.com/dustin/go-humanize"
+	"github.com/spf13/cobra"
 )
 
 type Rm struct {
@@ -47,24 +47,28 @@ func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &Rm{} }, 0, "rm")
 }
 
-func (cmd *Rm) Parse(ctx *appcontext.AppContext, args []string) error {
+func (cmd *Rm) CobraCommand() *cobra.Command {
 	cmd.LocateOptions = locate.NewDefaultLocateOptions()
 
-	flags := flag.NewFlagSet("rm", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS] SNAPSHOT...\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
-		flags.PrintDefaults()
+	c := &cobra.Command{
+		Use: "rm [OPTIONS] SNAPSHOT...",
 	}
-	flags.BoolVar(&cmd.Apply, "apply", false, "do the actual removal")
-	cmd.LocateOptions.InstallDeletionFlags(flags)
-	flags.Parse(args)
+	c.Flags().BoolVar(&cmd.Apply, "apply", false, "do the actual removal")
+	subcommands.InstallGoFlags(c.Flags(), cmd.LocateOptions.InstallDeletionFlags)
+	return c
+}
 
-	if flags.NArg() == 0 && cmd.LocateOptions.Empty() {
+func (cmd *Rm) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
+	}
+
+	if len(rest) == 0 && cmd.LocateOptions.Empty() {
 		return fmt.Errorf("no filter specified, not going to remove everything")
 	}
 
-	cmd.LocateOptions.Filters.IDs = flags.Args()
+	cmd.LocateOptions.Filters.IDs = rest
 
 	cmd.RepositorySecret = ctx.GetSecret()
 

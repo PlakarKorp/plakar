@@ -17,7 +17,6 @@
 package digest
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"path"
@@ -31,37 +30,39 @@ import (
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
+	"github.com/spf13/cobra"
 )
 
 func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &Digest{} }, 0, "digest")
 }
 
-func (cmd *Digest) Parse(ctx *appcontext.AppContext, args []string) error {
-	var opt_hashing string
+func (cmd *Digest) CobraCommand() *cobra.Command {
+	c := &cobra.Command{
+		Use: "digest [OPTIONS] [SNAPSHOT[:PATH]]...",
+	}
+	c.Flags().StringVar(&cmd.HashingFunction, "hashing", "SHA256", "hashing algorithm to use")
+	return c
+}
 
-	flags := flag.NewFlagSet("digest", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS] [SNAPSHOT[:PATH]]...\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
-		flags.PrintDefaults()
+func (cmd *Digest) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
 	}
 
-	flags.StringVar(&opt_hashing, "hashing", "SHA256", "hashing algorithm to use")
-	flags.Parse(args)
-
-	if flags.NArg() == 0 {
+	if len(rest) == 0 {
 		return fmt.Errorf("at least one parameter is required")
 	}
 
-	hashingFunction := strings.ToUpper(opt_hashing)
+	hashingFunction := strings.ToUpper(cmd.HashingFunction)
 	if hashing.GetHasher(hashingFunction) == nil {
 		return fmt.Errorf("unsupported hashing algorithm: %s", hashingFunction)
 	}
 
 	cmd.RepositorySecret = ctx.GetSecret()
 	cmd.HashingFunction = hashingFunction
-	cmd.Targets = flags.Args()
+	cmd.Targets = rest
 
 	return nil
 }

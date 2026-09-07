@@ -40,7 +40,7 @@ func (ui *uiserver) servicesLoginGithub(w http.ResponseWriter, r *http.Request) 
 
 	redirectURL, err := lf.RunUI("github", parameters)
 	if err != nil {
-		return loginFlowError(err)
+		return fmt.Errorf("failed to run login flow: %w", err)
 	}
 
 	ret := struct {
@@ -70,7 +70,7 @@ func (ui *uiserver) servicesLoginEmail(w http.ResponseWriter, r *http.Request) e
 
 	redirectURL, err := lf.RunUI("email", parameters)
 	if err != nil {
-		return loginFlowError(err)
+		return fmt.Errorf("failed to run login flow: %w", err)
 	}
 
 	ret := struct {
@@ -79,17 +79,6 @@ func (ui *uiserver) servicesLoginEmail(w http.ResponseWriter, r *http.Request) e
 		URL: redirectURL,
 	}
 	return json.NewEncoder(w).Encode(ret)
-}
-
-func loginFlowError(err error) error {
-	if errors.Is(err, login.ErrRateLimited) {
-		return &ApiError{
-			HttpCode: http.StatusTooManyRequests,
-			ErrCode:  "rate-limited",
-			Message:  "Rate limit reached. Please retry later.",
-		}
-	}
-	return fmt.Errorf("failed to run login flow: %w", err)
 }
 
 func (ui *uiserver) servicesLogout(w http.ResponseWriter, r *http.Request) error {

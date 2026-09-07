@@ -19,7 +19,6 @@ package cat
 import (
 	"bufio"
 	"compress/gzip"
-	"flag"
 	"fmt"
 	"io"
 
@@ -30,30 +29,34 @@ import (
 	"github.com/alecthomas/chroma/formatters"
 	"github.com/alecthomas/chroma/lexers"
 	"github.com/alecthomas/chroma/styles"
+	"github.com/spf13/cobra"
 )
 
 func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &Cat{} }, 0, "cat")
 }
 
+func (cmd *Cat) CobraCommand() *cobra.Command {
+	c := &cobra.Command{
+		Use: "cat [OPTIONS] [SNAPSHOT[:PATH]]...",
+	}
+	c.Flags().BoolVar(&cmd.Decompress, "decompress", false, "decompress output")
+	c.Flags().BoolVar(&cmd.Highlight, "highlight", false, "highlight output")
+	return c
+}
+
 func (cmd *Cat) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("cat", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS] [SNAPSHOT[:PATH]]...\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
-		flags.PrintDefaults()
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
 	}
 
-	flags.BoolVar(&cmd.Decompress, "decompress", false, "decompress output")
-	flags.BoolVar(&cmd.Highlight, "highlight", false, "highlight output")
-	flags.Parse(args)
-
-	if flags.NArg() == 0 {
+	if len(rest) == 0 {
 		return fmt.Errorf("at least one parameter is required")
 	}
 
 	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.Paths = flags.Args()
+	cmd.Paths = rest
 
 	return nil
 }

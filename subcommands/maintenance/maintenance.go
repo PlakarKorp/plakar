@@ -18,7 +18,6 @@ package maintenance
 
 import (
 	"bytes"
-	"flag"
 	"fmt"
 	"os"
 	"strconv"
@@ -31,6 +30,7 @@ import (
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -40,12 +40,16 @@ func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &Maintenance{} }, 0, "maintenance")
 }
 
-func (cmd *Maintenance) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("maintenance", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s\n", flags.Name())
+func (cmd *Maintenance) CobraCommand() *cobra.Command {
+	return &cobra.Command{
+		Use: "maintenance",
 	}
-	flags.Parse(args)
+}
+
+func (cmd *Maintenance) Parse(ctx *appcontext.AppContext, args []string) error {
+	if _, err := subcommands.ParseCobra(cmd, args); err != nil {
+		return err
+	}
 
 	cmd.RepositorySecret = ctx.GetSecret()
 

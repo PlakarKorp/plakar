@@ -18,7 +18,6 @@ package ls
 
 import (
 	"encoding/hex"
-	"flag"
 	"fmt"
 	"io/fs"
 	"strings"
@@ -33,34 +32,36 @@ import (
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
 	"github.com/dustin/go-humanize"
+	"github.com/spf13/cobra"
 )
 
 func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &Ls{} }, 0, "ls")
 }
 
-func (cmd *Ls) Parse(ctx *appcontext.AppContext, args []string) error {
+func (cmd *Ls) CobraCommand() *cobra.Command {
 	cmd.LocateOptions = locate.NewDefaultLocateOptions()
 
-	flags := flag.NewFlagSet("ls", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS] [SNAPSHOT[:PATH]]\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
-		flags.PrintDefaults()
+	c := &cobra.Command{
+		Use: "ls [OPTIONS] [SNAPSHOT[:PATH]]",
+	}
+	c.Flags().BoolVar(&cmd.DisplayUUID, "uuid", false, "display uuid instead of short ID")
+	c.Flags().BoolVar(&cmd.Recursive, "recursive", false, "recursive listing")
+	c.Flags().BoolVar(&cmd.ShowTags, "tags", false, "show tags")
+	subcommands.InstallGoFlags(c.Flags(), cmd.LocateOptions.InstallLocateFlags)
+	return c
+}
+
+func (cmd *Ls) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
 	}
 
-	flags.BoolVar(&cmd.DisplayUUID, "uuid", false, "display uuid instead of short ID")
-	flags.BoolVar(&cmd.Recursive, "recursive", false, "recursive listing")
-	flags.BoolVar(&cmd.ShowTags, "tags", false, "show tags")
-
-	cmd.LocateOptions.InstallLocateFlags(flags)
-
-	flags.Parse(args)
-
-	switch flags.NArg() {
+	switch len(rest) {
 	case 0: // nothing
 	case 1:
-		cmd.Path = []string{flags.Arg(0)}
+		cmd.Path = []string{rest[0]}
 	default:
 		return fmt.Errorf("too many arguments")
 	}
