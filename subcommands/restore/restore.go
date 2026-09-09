@@ -170,13 +170,20 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 	var err error
 	options := ctx.ExporterOpts()
 
+	_, writeRate, err := utils.ParseThrottlerConfig(exporterConfig)
+	if err != nil {
+		return 1, fmt.Errorf("%s: %w", cmd.Target, err)
+	}
+
 	exporterInstance, err = exporter.NewExporter(ctx.GetInner(), options, exporterConfig)
 	if err != nil {
 		return 1, err
 	}
 	defer exporterInstance.Close(ctx)
 
-	opts := &snapshot.ExportOptions{}
+	opts := &snapshot.ExportOptions{
+		MaxWriteRate: writeRate,
+	}
 	if cmd.OptSkipPermissions {
 		opts.SkipPermissions = true
 	}
