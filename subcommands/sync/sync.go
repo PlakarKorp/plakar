@@ -18,6 +18,7 @@ package sync
 
 import (
 	"fmt"
+	"maps"
 	"os"
 
 	"github.com/PlakarKorp/kloset/connectors/storage"
@@ -102,6 +103,11 @@ func (cmd *Sync) Parse(ctx *appcontext.AppContext, args []string) error {
 		return fmt.Errorf("peer store: %w", err)
 	}
 
+	readRate, writeRate, err := utils.ParseThrottlerConfig(storeConfig)
+	if err != nil {
+		return fmt.Errorf("peer store: %w", err)
+	}
+
 	pass, hasPass := storeConfig["passphrase"]
 	delete(storeConfig, "passphrase")
 	passCmd, hasPassCmd := storeConfig["passphrase_cmd"]
@@ -168,7 +174,15 @@ func (cmd *Sync) Parse(ctx *appcontext.AppContext, args []string) error {
 
 	peerCtx := appcontext.NewAppContextFrom(ctx)
 	peerCtx.SetSecret(peerSecret)
-	_, err = repository.NewNoRebuild(peerCtx.GetInner(), peerCtx.GetSecret(), peerStore, peerStoreSerializedConfig, true)
+
+	opts := &repository.RepositoryOpts{
+		DoRebuild:    false,
+		RWStateCache: false,
+
+		MaxReadRate:  readRate,
+		MaxWriteRate: writeRate,
+	}
+	_, err = repository.NewRepository(peerCtx.GetInner(), peerCtx.GetSecret(), peerStore, peerStoreSerializedConfig, opts)
 	if err != nil {
 		return err
 	}
@@ -190,6 +204,15 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 	delete(storeConfig, "passphrase")
 	delete(storeConfig, "passphrase_cmd")
 
+	// Save a copy after stripping passphrases, but before stripping the
+	// throttling information.
+	fullStoreConfig := maps.Clone(storeConfig)
+
+	readRate, writeRate, err := utils.ParseThrottlerConfig(storeConfig)
+	if err != nil {
+		return 1, fmt.Errorf("peer store: %w", err)
+	}
+
 	peerStore, peerStoreSerializedConfig, err := storage.Open(ctx.GetInner(), storeConfig)
 	if err != nil {
 		return 1, fmt.Errorf("could not open peer store %s: %w", cmd.PeerRepositoryLocation, err)
@@ -198,12 +221,20 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 	peerCtx := appcontext.NewAppContextFrom(ctx)
 	peerCtx.SetSecret(cmd.PeerRepositorySecret)
 	peerCtx.StoreConfig = storeConfig
-	peerRepository, err := repository.NewNoRebuild(peerCtx.GetInner(), peerCtx.GetSecret(), peerStore, peerStoreSerializedConfig, true)
+
+	opts := &repository.RepositoryOpts{
+		DoRebuild:    false,
+		RWStateCache: false,
+
+		MaxReadRate:  readRate,
+		MaxWriteRate: writeRate,
+	}
+	peerRepository, err := repository.NewRepository(peerCtx.GetInner(), peerCtx.GetSecret(), peerStore, peerStoreSerializedConfig, opts)
 	if err != nil {
 		return 1, fmt.Errorf("could not open peer repository %s: %w", cmd.PeerRepositoryLocation, err)
 	}
 
-	if _, err = cached.RebuildStateFromStore(peerCtx, peerRepository.Configuration().RepositoryID, storeConfig, false); err != nil {
+	if _, err = cached.RebuildStateFromStore(peerCtx, peerRepository.Configuration().RepositoryID, fullStoreConfig, false); err != nil {
 		return 1, fmt.Errorf("failed to rebuild peer repository's state %s: %w", cmd.PeerRepositoryLocation, err)
 	}
 
