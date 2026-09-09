@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/mail"
 	"os"
@@ -35,6 +36,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/dustin/go-humanize"
 	passwordvalidator "github.com/wagslane/go-password-validator"
 	"golang.org/x/mod/semver"
 	"golang.org/x/term"
@@ -331,6 +333,49 @@ func GetDataDir(appName string) (string, error) {
 	}
 
 	return dataDir, nil
+}
+
+func ParseThrottlerConfig(cfg map[string]string) (int64, int64, error) {
+	var (
+		readRate  int64
+		writeRate int64
+	)
+
+	if v, ok := cfg["read_rate"]; ok {
+		var err error
+		var rate uint64
+		rate, err = humanize.ParseBytes(v)
+		if err != nil {
+			return 0, 0, fmt.Errorf("read_rate: %w", err)
+		}
+
+		if rate >= math.MaxInt64 {
+			return 0, 0, fmt.Errorf("read rate %q: rate too large", v)
+		}
+
+		readRate = int64(rate)
+	}
+
+	if v, ok := cfg["write_rate"]; ok {
+		var err error
+		var rate uint64
+		rate, err = humanize.ParseBytes(v)
+		if err != nil {
+			return 0, 0, fmt.Errorf("write_rate: %w", err)
+		}
+
+		if rate >= math.MaxInt64 {
+			return 0, 0, fmt.Errorf("write rate %q: rate too large", v)
+		}
+
+		writeRate = int64(rate)
+	}
+
+	// We don't want this to be seen by the integrations
+	delete(cfg, "read_rate")
+	delete(cfg, "write_rate")
+
+	return readRate, writeRate, nil
 }
 
 var VERSION = func() string {
