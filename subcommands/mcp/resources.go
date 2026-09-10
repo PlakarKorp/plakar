@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/url"
 	"strings"
 	"unicode/utf8"
 
@@ -48,6 +49,13 @@ func (cmd *Mcp) registerResources(repo *repository.Repository, server *mcp.Serve
 		if !ok || snapshotID == "" || pathname == "" {
 			return nil, mcp.ResourceNotFoundError(uri)
 		}
+		// A client that encodes per the advertised RFC 6570 template escapes
+		// reserved characters, so undo that before treating it as a path.
+		decoded, err := url.PathUnescape(pathname)
+		if err != nil {
+			return nil, mcp.ResourceNotFoundError(uri)
+		}
+		pathname = decoded
 
 		data, contentType, err := readResource(repo, snapshotID, "/"+pathname, cmd.MaxFileSize)
 		if err != nil {

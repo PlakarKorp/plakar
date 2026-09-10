@@ -18,6 +18,7 @@ package mcp
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io/fs"
 	"sort"
@@ -254,9 +255,14 @@ func fileVersionIn(snap *snapshot.Snapshot, pathname string) (fileVersion, bool,
 	}
 
 	entry, err := pvfs.GetEntry(snapshotAbsPath(pathname))
-	if err != nil {
+	if errors.Is(err, fs.ErrNotExist) {
 		// The file is simply absent from this snapshot.
 		return fileVersion{}, false, nil
+	}
+	if err != nil {
+		// Anything else is a snapshot that could not be read: reporting it as
+		// absent would fabricate a history with versions missing.
+		return fileVersion{}, false, fmt.Errorf("%x: %w", snap.Header.GetIndexShortID(), err)
 	}
 	if entry.IsDir() {
 		return fileVersion{}, false, fmt.Errorf("%s: is a directory", pathname)
