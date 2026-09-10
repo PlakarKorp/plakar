@@ -79,7 +79,7 @@ func TestCreateBackupDryRunWritesNothing(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "hello.txt"), []byte("hello backup"), 0644))
 
-	before, err := listSnapshots(repo)
+	before, err := listSnapshots(repo, listSnapshotsInput{})
 	require.NoError(t, err)
 
 	out, err := createBackup(ctx, repo, createBackupInput{Source: dir, DryRun: true})
@@ -87,7 +87,7 @@ func TestCreateBackupDryRunWritesNothing(t *testing.T) {
 	require.True(t, out.DryRun)
 	require.Empty(t, out.Snapshot, "a dry run has no snapshot to report")
 
-	after, err := listSnapshots(repo)
+	after, err := listSnapshots(repo, listSnapshotsInput{})
 	require.NoError(t, err)
 	require.Len(t, after.Snapshots, len(before.Snapshots), "a dry run must not create a snapshot")
 }
@@ -119,7 +119,7 @@ func TestRemoveSnapshotsDryRunKeepsSnapshot(t *testing.T) {
 	require.Equal(t, snapID, out.Snapshots[0].ID)
 
 	// still there: without apply, nothing is removed
-	after, err := listSnapshots(repo)
+	after, err := listSnapshots(repo, listSnapshotsInput{})
 	require.NoError(t, err)
 	require.Len(t, after.Snapshots, 1)
 }
@@ -186,7 +186,7 @@ func TestPruneSnapshotsDryRun(t *testing.T) {
 	require.False(t, out.Applied)
 
 	// whatever the policy selects, a dry run leaves the repository alone
-	after, err := listSnapshots(repo)
+	after, err := listSnapshots(repo, listSnapshotsInput{})
 	require.NoError(t, err)
 	require.Len(t, after.Snapshots, 1)
 }

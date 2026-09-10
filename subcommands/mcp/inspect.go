@@ -77,6 +77,7 @@ type searchFilesInput struct {
 	Path     string   `json:"path,omitempty" jsonschema:"restrict the search to this directory prefix"`
 	Mimes    []string `json:"mimes,omitempty" jsonschema:"restrict results to these MIME types, for example text/plain"`
 	Limit    int      `json:"limit,omitempty" jsonschema:"maximum number of matches to return, defaults to 1000"`
+	Offset   int      `json:"offset,omitempty" jsonschema:"number of matches to skip, for paging through a truncated search"`
 }
 
 type searchMatch struct {
@@ -87,8 +88,9 @@ type searchMatch struct {
 }
 
 type searchFilesOutput struct {
-	Matches   []searchMatch `json:"matches"`
-	Truncated bool          `json:"truncated" jsonschema:"true when more matches existed than limit allowed"`
+	Matches    []searchMatch `json:"matches"`
+	Truncated  bool          `json:"truncated" jsonschema:"true when more matches existed than limit allowed"`
+	NextOffset int           `json:"next_offset,omitempty" jsonschema:"offset to pass to fetch the next page, present when truncated"`
 }
 
 // diffSnapshotsInput mirrors "plakar diff", restricted to comparing two
@@ -323,6 +325,7 @@ func searchFiles(ctx context.Context, repo *repository.Repository, in searchFile
 
 	out := searchFilesOutput{Matches: make([]searchMatch, 0)}
 
+	skipped := 0
 	for _, snapshotID := range snapshotIDs {
 		snap, err := snapshot.Load(repo, snapshotID)
 		if err != nil {
@@ -348,8 +351,14 @@ func searchFiles(ctx context.Context, repo *repository.Repository, in searchFile
 				return searchFilesOutput{}, err
 			}
 
+			if skipped < in.Offset {
+				skipped++
+				continue
+			}
+
 			if len(out.Matches) == limit {
 				out.Truncated = true
+				out.NextOffset = in.Offset + limit
 				break
 			}
 

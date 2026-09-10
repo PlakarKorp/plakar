@@ -9,6 +9,8 @@ PLAKAR-MCP(1) - General Commands Manual
 **plakar&nbsp;mcp**
 \[**-allow-backup**]
 \[**-allow-delete**]
+\[**-allow-restore**&nbsp;**-restore-root**&nbsp;*directory*]
+\[**-allow-sync**]
 \[**-max-file-size**&nbsp;*size*]
 
 # DESCRIPTION
@@ -25,12 +27,20 @@ stream, so everything normally printed to standard output, including progress
 reports, is redirected to standard error for the lifetime of the server.
 
 By default the exposed tools are read-only, and no tool can create, modify or
-delete a snapshot; the write tools described under
-**-allow-backup**
+delete a snapshot or write to the local filesystem; the write tools described
+under
+**-allow-backup**,
+**-allow-delete**,
+**-allow-restore**
 and
-**-allow-delete**
+**-allow-sync**
 are not merely hidden but absent, and calling one is answered with an unknown
 tool error.
+
+The server also exposes the files stored in snapshots as MCP resources, under
+URIs of the form
+**plakar://SNAPSHOT/PATH**,
+so a client can attach a backed-up file directly.
 
 The read-only tools are:
 
@@ -38,6 +48,17 @@ The read-only tools are:
 
 > List the snapshots stored in the Kloset store, with their ID, creation time,
 > source directory, size and tags.
+> The listing can be filtered by tag and paged with an offset and a limit.
+
+**list\_tags**
+
+> List the tags carried by the snapshots, with how many snapshots carry each.
+
+**repository\_health**
+
+> Summarize the state of the backups: how fresh the latest snapshot is, a
+> per-source breakdown to spot a source whose backups stopped, sizes and held
+> locks.
 
 **snapshot\_details**
 
@@ -73,7 +94,18 @@ The read-only tools are:
 
 > Read the contents of a regular file stored in a snapshot.
 > Files that are not valid UTF-8 text are reported as binary rather than
-> returned.
+> returned, and a file larger than
+> **-max-file-size**
+> can be paged through with a byte offset.
+
+**file\_history**
+
+> Report every version of a file across all snapshots, newest first, flagging
+> the snapshots where the content changed.
+
+**compare\_snapshots**
+
+> List the entries added, removed or modified between two snapshots.
 
 **diff\_snapshots**
 
@@ -122,6 +154,36 @@ The options are as follows:
 > **-allow-backup**
 > so that backups can be enabled without arming deletion.
 
+**-allow-restore**
+
+> Register the
+> **restore\_files**
+> tool, which writes snapshot contents to the local filesystem.
+> Restores are confined to the directory given with
+> **-restore-root**,
+> which must exist; a destination that resolves outside it is refused.
+> Disabled by default.
+
+**-restore-root** *directory*
+
+> The one directory
+> **restore\_files**
+> may write under.
+> Required by, and only meaningful with,
+> **-allow-restore**.
+
+**-allow-sync**
+
+> Register the
+> **sync\_snapshots**
+> tool, which pushes snapshots to a peer repository named in the
+> **plakar**
+> configuration.
+> Only peers from the configuration are accepted, only the push direction is
+> offered, and an encrypted peer must have its passphrase configured: the server
+> never prompts.
+> Disabled by default.
+
 **-max-file-size** *size*
 
 > Maximum number of bytes returned by the
@@ -150,6 +212,18 @@ The write tools are:
 > Requires
 > **-allow-delete**.
 
+**restore\_files**
+
+> Restore a file or directory from a snapshot under the restore root.
+> Requires
+> **-allow-restore**.
+
+**sync\_snapshots**
+
+> Push snapshots to a peer repository from the configuration.
+> Requires
+> **-allow-sync**.
+
 # EXAMPLES
 
 Serve the default Kloset store, as an MCP client would:
@@ -163,6 +237,10 @@ Serve a specific Kloset store, allowing larger files to be read:
 Allow a client to create snapshots, but not to remove any:
 
 	$ plakar mcp -allow-backup
+
+Allow restores, confined to a scratch directory:
+
+	$ plakar mcp -allow-restore -restore-root /var/tmp/restores
 
 # DIAGNOSTICS
 
@@ -179,4 +257,4 @@ plakar-info(1),
 plakar-locate(1),
 plakar-ls(1)
 
-Plakar - August 13, 2026 - PLAKAR-MCP(1)
+Plakar - September 11, 2026
