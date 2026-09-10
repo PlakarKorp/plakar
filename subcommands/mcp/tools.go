@@ -37,7 +37,11 @@ import (
 // The tools below are deliberately read-only: an MCP client drives them on
 // behalf of a model, and a model has no business mutating backups.
 
-type listSnapshotsInput struct{}
+type listSnapshotsInput struct {
+	Tag    string `json:"tag,omitempty" jsonschema:"only list snapshots carrying this tag"`
+	Offset int    `json:"offset,omitempty" jsonschema:"number of snapshots to skip, for paging through a long list"`
+	Limit  int    `json:"limit,omitempty" jsonschema:"maximum number of snapshots to return, all of them by default"`
+}
 
 type snapshotInfo struct {
 	ID        string   `json:"id" jsonschema:"short ID of the snapshot, usable wherever a snapshot is expected"`
@@ -48,7 +52,9 @@ type snapshotInfo struct {
 }
 
 type listSnapshotsOutput struct {
-	Snapshots []snapshotInfo `json:"snapshots"`
+	Snapshots  []snapshotInfo `json:"snapshots"`
+	Truncated  bool           `json:"truncated,omitempty" jsonschema:"true when limit cut the listing short"`
+	NextOffset int            `json:"next_offset,omitempty" jsonschema:"offset to pass to fetch the next page, present when truncated"`
 }
 
 type repositoryInfoInput struct{}
@@ -67,6 +73,7 @@ type listFilesInput struct {
 	Snapshot  string `json:"snapshot" jsonschema:"snapshot ID as returned by list_snapshots"`
 	Path      string `json:"path,omitempty" jsonschema:"directory inside the snapshot to list, defaults to the snapshot root"`
 	Recursive bool   `json:"recursive,omitempty" jsonschema:"list every entry below path instead of just its direct children"`
+	Offset    int    `json:"offset,omitempty" jsonschema:"number of entries to skip, for paging through a truncated listing"`
 }
 
 type fileEntry struct {
@@ -79,21 +86,24 @@ type fileEntry struct {
 }
 
 type listFilesOutput struct {
-	Entries   []fileEntry `json:"entries"`
-	Truncated bool        `json:"truncated" jsonschema:"true when the listing was cut short because it was too large"`
+	Entries    []fileEntry `json:"entries"`
+	Truncated  bool        `json:"truncated" jsonschema:"true when the listing was cut short because it was too large"`
+	NextOffset int         `json:"next_offset,omitempty" jsonschema:"offset to pass to fetch the next page, present when truncated"`
 }
 
 type readFileInput struct {
 	Snapshot string `json:"snapshot" jsonschema:"snapshot ID as returned by list_snapshots"`
 	Path     string `json:"path" jsonschema:"path of the file to read inside the snapshot"`
+	Offset   int64  `json:"offset,omitempty" jsonschema:"byte offset to start reading from, to page through a file larger than max-file-size"`
 }
 
 type readFileOutput struct {
 	Path      string `json:"path" jsonschema:"path of the file that was read"`
 	Size      int64  `json:"size" jsonschema:"full size of the file in bytes"`
+	Offset    int64  `json:"offset,omitempty" jsonschema:"byte offset the content starts at"`
 	Content   string `json:"content" jsonschema:"content of the file, empty when the file is not valid UTF-8 text"`
 	Binary    bool   `json:"binary" jsonschema:"true when the file is not valid UTF-8 text, in which case content is empty"`
-	Truncated bool   `json:"truncated" jsonschema:"true when only the first max-file-size bytes were returned"`
+	Truncated bool   `json:"truncated" jsonschema:"true when at most max-file-size bytes were returned and more remain past them"`
 }
 
 // maxListEntries bounds a listing so that a recursive walk of a large snapshot
@@ -104,8 +114,8 @@ func (cmd *Mcp) registerTools(ctx *appcontext.AppContext, repo *repository.Repos
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "list_snapshots",
 		Description: "List the snapshots stored in the Plakar repository, most useful as a first step to discover snapshot IDs.",
-	}, func(_ context.Context, _ *mcp.CallToolRequest, _ listSnapshotsInput) (*mcp.CallToolResult, listSnapshotsOutput, error) {
-		out, err := listSnapshots(repo)
+	}, func(_ context.Context, _ *mcp.CallToolRequest, in listSnapshotsInput) (*mcp.CallToolResult, listSnapshotsOutput, error) {
+		out, err := listSnapshots(repo, in)
 		if err != nil {
 			return nil, listSnapshotsOutput{}, err
 		}
@@ -233,6 +243,50 @@ func (cmd *Mcp) registerTools(ctx *appcontext.AppContext, repo *repository.Repos
 		return nil, out, nil
 	})
 
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "compare_snapshots",
+		Description: "List the entries added, removed or modified between two snapshots. The way to answer what changed between two backups; diff_snapshots then shows how one file changed.",
+	}, func(_ context.Context, _ *mcp.CallToolRequest, in compareSnapshotsInput) (*mcp.CallToolResult, compareSnapshotsOutput, error) {
+		out, err := compareSnapshots(repo, in)
+		if err != nil {
+			return nil, compareSnapshotsOutput{}, err
+		}
+		return nil, out, nil
+	})
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "file_history",
+		Description: "Report every version of a file across all snapshots, newest first, flagging where the content changed. The way to answer when a file changed and which snapshot holds which version.",
+	}, func(_ context.Context, _ *mcp.CallToolRequest, in fileHistoryInput) (*mcp.CallToolResult, fileHistoryOutput, error) {
+		out, err := fileHistory(repo, in)
+		if err != nil {
+			return nil, fileHistoryOutput{}, err
+		}
+		return nil, out, nil
+	})
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "list_tags",
+		Description: "List the tags carried by the snapshots in the repository, with how many snapshots carry each.",
+	}, func(_ context.Context, _ *mcp.CallToolRequest, _ listTagsInput) (*mcp.CallToolResult, listTagsOutput, error) {
+		out, err := listTags(repo)
+		if err != nil {
+			return nil, listTagsOutput{}, err
+		}
+		return nil, out, nil
+	})
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "repository_health",
+		Description: "Summarize the state of the backups: how fresh the latest snapshot is, per-source freshness to spot a source whose backups stopped, sizes and held locks.",
+	}, func(callCtx context.Context, _ *mcp.CallToolRequest, _ repositoryHealthInput) (*mcp.CallToolResult, repositoryHealthOutput, error) {
+		out, err := repositoryHealth(callCtx, repo)
+		if err != nil {
+			return nil, repositoryHealthOutput{}, err
+		}
+		return nil, out, nil
+	})
+
 	// The write tools only exist when they have been explicitly enabled: a
 	// client cannot discover, let alone call, what was not registered.
 	if cmd.AllowBackup {
@@ -248,6 +302,42 @@ func (cmd *Mcp) registerTools(ctx *appcontext.AppContext, repo *repository.Repos
 			out, err := createBackup(ctx, repo, in)
 			if err != nil {
 				return nil, createBackupOutput{}, err
+			}
+			return nil, out, nil
+		})
+	}
+
+	if cmd.AllowRestore {
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "restore_files",
+			Description: "Restore a file or directory from a snapshot into the directory the server was started with; destinations outside it are refused.",
+			Annotations: &mcp.ToolAnnotations{
+				Title:           "Restore files",
+				ReadOnlyHint:    false,
+				DestructiveHint: ptr(true),
+			},
+		}, func(_ context.Context, _ *mcp.CallToolRequest, in restoreFilesInput) (*mcp.CallToolResult, restoreFilesOutput, error) {
+			out, err := restoreFiles(ctx, repo, in, cmd.RestoreRoot)
+			if err != nil {
+				return nil, restoreFilesOutput{}, err
+			}
+			return nil, out, nil
+		})
+	}
+
+	if cmd.AllowSync {
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "sync_snapshots",
+			Description: "Push snapshots to a peer repository named in the Plakar configuration. Only pushes: the served repository is never written to.",
+			Annotations: &mcp.ToolAnnotations{
+				Title:           "Sync snapshots to a peer",
+				ReadOnlyHint:    false,
+				DestructiveHint: ptr(false),
+			},
+		}, func(_ context.Context, _ *mcp.CallToolRequest, in syncSnapshotsInput) (*mcp.CallToolResult, syncSnapshotsOutput, error) {
+			out, err := syncSnapshots(ctx, repo, in)
+			if err != nil {
+				return nil, syncSnapshotsOutput{}, err
 			}
 			return nil, out, nil
 		})
@@ -292,13 +382,31 @@ func ptr[T any](v T) *T {
 	return &v
 }
 
-func listSnapshots(repo *repository.Repository) (listSnapshotsOutput, error) {
-	snapshotIDs, err := locate.LocateSnapshotIDs(repo, locate.NewDefaultLocateOptions())
+func listSnapshots(repo *repository.Repository, in listSnapshotsInput) (listSnapshotsOutput, error) {
+	options := locate.NewDefaultLocateOptions()
+	if in.Tag != "" {
+		options.Filters.Tags = []string{in.Tag}
+	}
+
+	snapshotIDs, err := locate.LocateSnapshotIDs(repo, options)
 	if err != nil {
 		return listSnapshotsOutput{}, fmt.Errorf("could not fetch snapshots list: %w", err)
 	}
 
+	if in.Offset > 0 {
+		if in.Offset > len(snapshotIDs) {
+			snapshotIDs = nil
+		} else {
+			snapshotIDs = snapshotIDs[in.Offset:]
+		}
+	}
 	out := listSnapshotsOutput{Snapshots: make([]snapshotInfo, 0, len(snapshotIDs))}
+	if in.Limit > 0 && len(snapshotIDs) > in.Limit {
+		snapshotIDs = snapshotIDs[:in.Limit]
+		out.Truncated = true
+		out.NextOffset = in.Offset + in.Limit
+	}
+
 	for _, snapshotID := range snapshotIDs {
 		snap, err := snapshot.Load(repo, snapshotID)
 		if err != nil {
@@ -366,6 +474,7 @@ func listFiles(repo *repository.Repository, in listFilesInput) (listFilesOutput,
 
 	out := listFilesOutput{Entries: make([]fileEntry, 0)}
 
+	skipped := 0
 	resolved := false
 	err = pvfs.WalkDir(pathname, func(entryPath string, d *vfs.Entry, err error) error {
 		if err != nil {
@@ -381,24 +490,29 @@ func listFiles(repo *repository.Repository, in listFilesInput) (listFilesOutput,
 			return nil
 		}
 
-		sb, err := d.Info()
-		if err != nil {
-			return err
-		}
+		if skipped < in.Offset {
+			skipped++
+		} else {
+			if len(out.Entries) == maxListEntries {
+				out.Truncated = true
+				out.NextOffset = in.Offset + maxListEntries
+				return fs.SkipAll
+			}
 
-		if len(out.Entries) == maxListEntries {
-			out.Truncated = true
-			return fs.SkipAll
-		}
+			sb, err := d.Info()
+			if err != nil {
+				return err
+			}
 
-		out.Entries = append(out.Entries, fileEntry{
-			Path:    entryPath,
-			Name:    d.Name(),
-			Size:    sb.Size(),
-			Mode:    sb.Mode().String(),
-			ModTime: sb.ModTime().UTC().Format(time.RFC3339),
-			IsDir:   d.IsDir(),
-		})
+			out.Entries = append(out.Entries, fileEntry{
+				Path:    entryPath,
+				Name:    d.Name(),
+				Size:    sb.Size(),
+				Mode:    sb.Mode().String(),
+				ModTime: sb.ModTime().UTC().Format(time.RFC3339),
+				IsDir:   d.IsDir(),
+			})
+		}
 
 		if d.IsDir() && !in.Recursive && entryPath != pathname {
 			return fs.SkipDir
@@ -441,6 +555,10 @@ func readFile(repo *repository.Repository, in readFileInput, maxFileSize int64) 
 		return readFileOutput{}, fmt.Errorf("%s: not a regular file", in.Path)
 	}
 
+	if in.Offset < 0 {
+		return readFileOutput{}, fmt.Errorf("offset must not be negative")
+	}
+
 	file, err := entry.Open(pvfs)
 	if err != nil {
 		return readFileOutput{}, err
@@ -448,7 +566,17 @@ func readFile(repo *repository.Repository, in readFileInput, maxFileSize int64) 
 	defer file.Close()
 
 	size := entry.Stat().Size()
-	out := readFileOutput{Path: pathname, Size: size}
+	out := readFileOutput{Path: pathname, Size: size, Offset: in.Offset}
+
+	if in.Offset > 0 {
+		seeker, ok := file.(io.Seeker)
+		if !ok {
+			return readFileOutput{}, fmt.Errorf("%s: does not support offset reads", in.Path)
+		}
+		if _, err := seeker.Seek(in.Offset, io.SeekStart); err != nil {
+			return readFileOutput{}, err
+		}
+	}
 
 	// Read one byte past the limit so a file sitting exactly on it is not
 	// reported as truncated.

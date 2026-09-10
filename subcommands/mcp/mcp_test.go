@@ -53,7 +53,7 @@ func TestListSnapshots(t *testing.T) {
 	})
 	snap.Close()
 
-	out, err := listSnapshots(repo)
+	out, err := listSnapshots(repo, listSnapshotsInput{})
 	require.NoError(t, err)
 	require.Len(t, out.Snapshots, 1)
 	require.Equal(t, hex.EncodeToString(snap.Header.GetIndexShortID()), out.Snapshots[0].ID)

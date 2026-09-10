@@ -1,4 +1,4 @@
-.Dd August 13, 2026
+.Dd September 11, 2026
 .Dt PLAKAR-MCP 1
 .Os
 .Sh NAME
@@ -8,6 +8,8 @@
 .Nm plakar mcp
 .Op Fl allow-backup
 .Op Fl allow-delete
+.Op Fl allow-restore Fl restore-root Ar directory
+.Op Fl allow-sync
 .Op Fl max-file-size Ar size
 .Sh DESCRIPTION
 The
@@ -22,18 +24,33 @@ stream, so everything normally printed to standard output, including progress
 reports, is redirected to standard error for the lifetime of the server.
 .Pp
 By default the exposed tools are read-only, and no tool can create, modify or
-delete a snapshot; the write tools described under
-.Fl allow-backup
+delete a snapshot or write to the local filesystem; the write tools described
+under
+.Fl allow-backup ,
+.Fl allow-delete ,
+.Fl allow-restore
 and
-.Fl allow-delete
+.Fl allow-sync
 are not merely hidden but absent, and calling one is answered with an unknown
 tool error.
 .Pp
+The server also exposes the files stored in snapshots as MCP resources, under
+URIs of the form
+.Cm plakar://SNAPSHOT/PATH ,
+so a client can attach a backed-up file directly.
+.Pp
 The read-only tools are:
-.Bl -tag -width repository_locks
+.Bl -tag -width repository_health
 .It Cm list_snapshots
 List the snapshots stored in the Kloset store, with their ID, creation time,
 source directory, size and tags.
+The listing can be filtered by tag and paged with an offset and a limit.
+.It Cm list_tags
+List the tags carried by the snapshots, with how many snapshots carry each.
+.It Cm repository_health
+Summarize the state of the backups: how fresh the latest snapshot is, a
+per-source breakdown to spot a source whose backups stopped, sizes and held
+locks.
 .It Cm snapshot_details
 Report the full metadata of a snapshot: when and where it was taken, by whom,
 and a summary of what it contains.
@@ -55,7 +72,14 @@ entropy, extended attributes and classifications.
 .It Cm read_file
 Read the contents of a regular file stored in a snapshot.
 Files that are not valid UTF-8 text are reported as binary rather than
-returned.
+returned, and a file larger than
+.Fl max-file-size
+can be paged through with a byte offset.
+.It Cm file_history
+Report every version of a file across all snapshots, newest first, flagging
+the snapshots where the content changed.
+.It Cm compare_snapshots
+List the entries added, removed or modified between two snapshots.
 .It Cm diff_snapshots
 Compare the same file in two snapshots and return a unified diff.
 Unlike
@@ -93,6 +117,30 @@ Both report what they would remove and only act when passed
 Disabled by default, and independent of
 .Fl allow-backup
 so that backups can be enabled without arming deletion.
+.It Fl allow-restore
+Register the
+.Cm restore_files
+tool, which writes snapshot contents to the local filesystem.
+Restores are confined to the directory given with
+.Fl restore-root ,
+which must exist; a destination that resolves outside it is refused.
+Disabled by default.
+.It Fl restore-root Ar directory
+The one directory
+.Cm restore_files
+may write under.
+Required by, and only meaningful with,
+.Fl allow-restore .
+.It Fl allow-sync
+Register the
+.Cm sync_snapshots
+tool, which pushes snapshots to a peer repository named in the
+.Nm plakar
+configuration.
+Only peers from the configuration are accepted, only the push direction is
+offered, and an encrypted peer must have its passphrase configured: the server
+never prompts.
+Disabled by default.
 .It Fl max-file-size Ar size
 Maximum number of bytes returned by the
 .Cm read_file
@@ -115,6 +163,14 @@ Requires
 Permanently remove the snapshots the retention policy selects.
 Requires
 .Fl allow-delete .
+.It Cm restore_files
+Restore a file or directory from a snapshot under the restore root.
+Requires
+.Fl allow-restore .
+.It Cm sync_snapshots
+Push snapshots to a peer repository from the configuration.
+Requires
+.Fl allow-sync .
 .El
 .Sh EXAMPLES
 Serve the default Kloset store, as an MCP client would:
@@ -130,6 +186,11 @@ $ plakar at /var/backups mcp -max-file-size 4194304
 Allow a client to create snapshots, but not to remove any:
 .Bd -literal -offset indent
 $ plakar mcp -allow-backup
+.Ed
+.Pp
+Allow restores, confined to a scratch directory:
+.Bd -literal -offset indent
+$ plakar mcp -allow-restore -restore-root /var/tmp/restores
 .Ed
 .Sh DIAGNOSTICS
 .Ex -std
