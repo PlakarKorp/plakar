@@ -46,7 +46,10 @@ type restoreFilesOutput struct {
 }
 
 // resolveRestoreDestination joins a client-supplied relative directory with the
-// operator's restore root and guarantees the result cannot escape it.
+// operator's restore root and guarantees the result cannot escape it, creating
+// it in the process. The check cannot be lexical: snapshots contain symlinks
+// and restores recreate them, so a name under the root may point anywhere.
+// os.Root refuses to traverse a symlink that leaves the root.
 func resolveRestoreDestination(root, destination string) (string, error) {
 	if destination == "" {
 		return root, nil
@@ -55,19 +58,25 @@ func resolveRestoreDestination(root, destination string) (string, error) {
 		return "", fmt.Errorf("destination must be relative to the restore root")
 	}
 
-	target := filepath.Join(root, filepath.Clean(destination))
-	relative, err := filepath.Rel(root, target)
-	if err != nil {
-		return "", err
-	}
-	if relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+	clean := filepath.Clean(destination)
+	if clean == ".." || strings.HasPrefix(clean, ".."+string(filepath.Separator)) {
 		return "", fmt.Errorf("destination escapes the restore root")
 	}
 
-	return target, nil
+	anchored, err := os.OpenRoot(root)
+	if err != nil {
+		return "", fmt.Errorf("restore root: %w", err)
+	}
+	defer anchored.Close()
+
+	if err := anchored.MkdirAll(clean, 0o755); err != nil {
+		return "", fmt.Errorf("destination: %w", err)
+	}
+
+	return filepath.Join(root, clean), nil
 }
 
-func restoreFiles(ctx *appcontext.AppContext, repo *repository.Repository, in restoreFilesInput, restoreRoot string) (restoreFilesOutput, error) {
+func restoreFiles(ctx *appcontext.AppContext, repo *repository.Repository, in restoreFilesInput, restoreRoot string) (out restoreFilesOutput, err error) {
 	if in.Snapshot == "" {
 		return restoreFilesOutput{}, fmt.Errorf("snapshot is required")
 	}
@@ -83,17 +92,19 @@ func restoreFiles(ctx *appcontext.AppContext, repo *repository.Repository, in re
 	}
 	defer snap.Close()
 
-	if err := os.MkdirAll(target, 0o755); err != nil {
-		return restoreFilesOutput{}, err
-	}
-
 	exporterInstance, err := exporter.NewExporter(ctx.GetInner(), ctx.ExporterOpts(), map[string]string{
 		"location": target,
 	})
 	if err != nil {
 		return restoreFilesOutput{}, err
 	}
-	defer exporterInstance.Close(ctx)
+	// The exporter is what writes the restored bytes, so a failed close means a
+	// possibly incomplete restore and must not be reported as success.
+	defer func() {
+		if closeErr := exporterInstance.Close(ctx); closeErr != nil && err == nil {
+			out, err = restoreFilesOutput{}, fmt.Errorf("closing exporter: %w", closeErr)
+		}
+	}()
 
 	// Export strips the restored entry's own prefix: a restored file lands
 	// directly in the destination, a restored directory spills its contents

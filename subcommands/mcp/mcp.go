@@ -82,7 +82,7 @@ func (cmd *Mcp) Parse(ctx *appcontext.AppContext, args []string) error {
 		}
 		root, err := filepath.Abs(cmd.RestoreRoot)
 		if err != nil {
-			return err
+			return fmt.Errorf("restore-root: %w", err)
 		}
 		st, err := os.Stat(root)
 		if err != nil {

@@ -116,6 +116,35 @@ func TestRestoreFilesRejectsBadInput(t *testing.T) {
 	require.Empty(t, entries, "a refused restore must write nothing")
 }
 
+// TestRestoreFilesSymlinkCannotEscape guards the security boundary of
+// -restore-root: a symlink under the root pointing outside it, exactly what a
+// previous restore can plant, must not let a destination escape.
+func TestRestoreFilesSymlinkCannotEscape(t *testing.T) {
+	repo, ctx := ptesting.GenerateRepository(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil), nil)
+	defer ctx.Close()
+
+	snap := ptesting.GenerateSnapshot(t, repo, mockFiles("hello dummy"))
+	snap.Close()
+	snapID := hex.EncodeToString(snap.Header.GetIndexShortID())
+
+	root := t.TempDir()
+	outside := t.TempDir()
+	require.NoError(t, os.Symlink(outside, filepath.Join(root, "s")))
+
+	for _, destination := range []string{"s", "s/sub"} {
+		_, err := restoreFiles(ctx, repo, restoreFilesInput{
+			Snapshot:    snapID,
+			Path:        "/subdir/dummy.txt",
+			Destination: destination,
+		}, root)
+		require.Error(t, err, "destination %q escapes through the symlink", destination)
+	}
+
+	entries, err := os.ReadDir(outside)
+	require.NoError(t, err)
+	require.Empty(t, entries, "nothing may be written outside the restore root")
+}
+
 func TestSyncSnapshotsRejectsBadPeer(t *testing.T) {
 	repo, ctx := ptesting.GenerateRepository(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil), nil)
 	defer ctx.Close()

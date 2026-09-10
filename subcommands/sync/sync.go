@@ -21,7 +21,6 @@ import (
 	"os"
 
 	"github.com/PlakarKorp/kloset/connectors/storage"
-	"github.com/PlakarKorp/kloset/encryption"
 	"github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
@@ -30,7 +29,6 @@ import (
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/cached"
 	"github.com/PlakarKorp/plakar/subcommands"
-	"github.com/PlakarKorp/plakar/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -97,73 +95,9 @@ func (cmd *Sync) Parse(ctx *appcontext.AppContext, args []string) error {
 		return fmt.Errorf("invalid direction, must be to, from or with")
 	}
 
-	storeConfig, err := ctx.Config.GetRepository(peerRepositoryPath)
-	if err != nil {
-		return fmt.Errorf("peer store: %w", err)
-	}
-
-	pass, hasPass := storeConfig["passphrase"]
-	delete(storeConfig, "passphrase")
-	passCmd, hasPassCmd := storeConfig["passphrase_cmd"]
-	delete(storeConfig, "passphrase_cmd")
-
-	peerStore, peerStoreSerializedConfig, err := storage.Open(ctx.GetInner(), storeConfig)
+	peerStore, peerStoreSerializedConfig, peerSecret, err := OpenPeer(ctx, peerRepositoryPath, true)
 	if err != nil {
 		return err
-	}
-
-	peerStoreConfig, err := storage.NewConfigurationFromWrappedBytes(peerStoreSerializedConfig)
-	if err != nil {
-		return err
-	}
-
-	if err := utils.CheckPlaintext(storeConfig["location"], peerStoreConfig.Encryption != nil); err != nil {
-		return err
-	}
-
-	var peerSecret []byte
-	if peerStoreConfig.Encryption != nil {
-		if hasPass {
-			key, err := encryption.DeriveKey(peerStoreConfig.Encryption.KDFParams, []byte(pass))
-			if err != nil {
-				return err
-			}
-			if !encryption.VerifyCanary(peerStoreConfig.Encryption, key) {
-				return fmt.Errorf("invalid passphrase")
-			}
-			peerSecret = key
-		} else if hasPassCmd {
-			passphrase, err := utils.GetPassphraseFromCommand(passCmd)
-			if err != nil {
-				return fmt.Errorf("failed to read passphrase from command: %w", err)
-			}
-			key, err := encryption.DeriveKey(peerStoreConfig.Encryption.KDFParams, []byte(passphrase))
-			if err != nil {
-				return err
-			}
-			if !encryption.VerifyCanary(peerStoreConfig.Encryption, key) {
-				return fmt.Errorf("invalid passphrase")
-			}
-			peerSecret = key
-		} else {
-			for {
-				passphrase, err := utils.GetPassphrase("destination store")
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "%s\n", err)
-					continue
-				}
-
-				key, err := encryption.DeriveKey(peerStoreConfig.Encryption.KDFParams, passphrase)
-				if err != nil {
-					return err
-				}
-				if !encryption.VerifyCanary(peerStoreConfig.Encryption, key) {
-					return fmt.Errorf("invalid passphrase")
-				}
-				peerSecret = key
-				break
-			}
-		}
 	}
 
 	peerCtx := appcontext.NewAppContextFrom(ctx)
