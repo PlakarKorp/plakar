@@ -127,8 +127,12 @@ func (flow *loginFlow) poll(pollID string, iterations int, delay time.Duration, 
 	return "", fmt.Errorf("could not obtain token after %d iterations", iterations)
 }
 
+// maxErrorBodySize bounds how much of an error response body is read;
+// the expected content is a small JSON error envelope.
+const maxErrorBodySize = 4096
+
 func isCompletionCodeRequired(body io.Reader) bool {
-	data, _ := io.ReadAll(io.LimitReader(body, 4096))
+	data, _ := io.ReadAll(io.LimitReader(body, maxErrorBodySize))
 	var env struct{ Code string }
 	if json.Unmarshal(data, &env) == nil && env.Code != "" {
 		return env.Code == "completion_code_required"
