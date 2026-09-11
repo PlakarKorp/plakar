@@ -7,10 +7,14 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/PlakarKorp/kloset/connectors"
+	"github.com/PlakarKorp/kloset/connectors/importer"
 	"github.com/PlakarKorp/plakar/appcontext"
+	ptesting "github.com/PlakarKorp/plakar/testing"
 	"github.com/PlakarKorp/plakar/ui/stdio"
 	"github.com/stretchr/testify/require"
 )
@@ -82,6 +86,46 @@ func TestBackupNoXattrPropagates(t *testing.T) {
 	status, err, _, _ := runBackup(t, []string{"-no-xattr"}, nil)
 	require.NoError(t, err)
 	require.Equal(t, 0, status)
+}
+
+var xattrProbeNoXattr atomic.Bool
+
+func init() {
+	importer.Register("xattrprobe", 0, func(ctx context.Context, opts *connectors.Options, name string, config map[string]string) (importer.Importer, error) {
+		xattrProbeNoXattr.Store(opts.NoXattr)
+
+		imp, err := ptesting.NewMockImporter(ctx, opts, name, config)
+		if err != nil {
+			return nil, err
+		}
+		imp.(*ptesting.MockImporter).SetFiles([]ptesting.MockFile{
+			ptesting.NewMockFile("/hello.txt", 0644, "hello"),
+		})
+		return imp, nil
+	})
+}
+
+func TestBackupNoXattrReachesImporter(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		args []string
+		want bool
+	}{
+		{name: "flag set", args: []string{"-no-xattr"}, want: true},
+		{name: "flag unset", args: nil, want: false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			xattrProbeNoXattr.Store(!tc.want)
+
+			status, err, _, _ := runBackup(t, tc.args, func(cmd *Backup) {
+				cmd.Sources = []string{"xattrprobe://probe"}
+			})
+			require.NoError(t, err)
+			require.Equal(t, 0, status)
+			require.Equal(t, tc.want, xattrProbeNoXattr.Load(),
+				"-no-xattr must reach the importer so it does not read extended attributes")
+		})
+	}
 }
 
 func TestBackupNameAndMetadataParseFlags(t *testing.T) {
