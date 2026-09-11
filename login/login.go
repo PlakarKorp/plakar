@@ -128,7 +128,7 @@ func (flow *loginFlow) poll(pollID string, iterations int, delay time.Duration, 
 }
 
 func isCompletionCodeRequired(body io.Reader) bool {
-	data, _ := io.ReadAll(body)
+	data, _ := io.ReadAll(io.LimitReader(body, 4096))
 	var env struct{ Code string }
 	if json.Unmarshal(data, &env) == nil && env.Code != "" {
 		return env.Code == "completion_code_required"
