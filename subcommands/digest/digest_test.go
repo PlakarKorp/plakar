@@ -3,7 +3,6 @@ package digest
 import (
 	"bytes"
 	"encoding/hex"
-	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -41,7 +40,7 @@ func TestExecuteCmdDigestDefault(t *testing.T) {
 	defer snap.Close()
 
 	indexId := snap.Header.GetIndexID()
-	args := []string{fmt.Sprintf("%s", hex.EncodeToString(indexId[:]))}
+	args := []string{hex.EncodeToString(indexId[:])}
 
 	subcommand := &Digest{}
 	err := subcommand.Parse(ctx, args)
@@ -143,7 +142,7 @@ func TestExecuteCmdDigestWrongHashing(t *testing.T) {
 	defer snap.Close()
 
 	indexId := snap.Header.GetIndexID()
-	args := []string{"-hashing", "md5", fmt.Sprintf("%s", hex.EncodeToString(indexId[:]))}
+	args := []string{"-hashing", "md5", hex.EncodeToString(indexId[:])}
 
 	subcommand := &Digest{}
 	err := subcommand.Parse(ctx, args)

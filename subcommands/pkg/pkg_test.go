@@ -2,9 +2,15 @@ package pkg
 
 import (
 	"bytes"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"path"
+	"path/filepath"
+	"sync"
 	"testing"
 
+	ppkg "github.com/PlakarKorp/pkg"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/stretchr/testify/require"
@@ -88,4 +94,48 @@ func TestPkgAddParse(t *testing.T) {
 	ctx := newCtx(t)
 	// add with no package name should error.
 	require.Error(t, (&PkgAdd{}).Parse(ctx, []string{}))
+}
+
+// TestPkgAddLatestResolvesThroughRecipe checks that the "@latest" suffix is the
+// explicit spelling of the default version: it must let the package manager
+// resolve the version from the recipe, not be forwarded as a literal version.
+func TestPkgAddLatestResolvesThroughRecipe(t *testing.T) {
+	var mu sync.Mutex
+	var requested []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		requested = append(requested, r.URL.Path)
+		mu.Unlock()
+		if r.URL.Path == path.Join("/community/", ppkg.PLUGIN_API_VERSION, "s3", "recipe.yaml") {
+			w.Write([]byte("name: s3\nversion: v2.0.0\nrepository: https://example.com/s3\n"))
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer srv.Close()
+
+	ctx := newCtx(t)
+	backend, err := ppkg.NewFlatBackend(ctx.GetInner(),
+		filepath.Join(ctx.CWD, "plugins"), filepath.Join(ctx.CWD, "cache"),
+		&ppkg.FlatBackendOptions{})
+	require.NoError(t, err)
+
+	manager, err := ppkg.New(backend, &ppkg.Options{DistURL: srv.URL})
+	require.NoError(t, err)
+	ctx.SetPkgManager(manager)
+
+	cmd := &PkgAdd{}
+	require.NoError(t, cmd.Parse(ctx, []string{"s3@latest"}))
+	// The download itself cannot succeed against this stub server; what matters
+	// is which artifact the manager was asked for.
+	_, _ = cmd.Execute(ctx, nil)
+
+	mu.Lock()
+	defer mu.Unlock()
+	require.NotEmpty(t, requested)
+	require.Equal(t, path.Join("/community/", ppkg.PLUGIN_API_VERSION, "s3", "recipe.yaml"), requested[0])
+	for _, p := range requested {
+		require.NotContains(t, p, "latest",
+			"@latest must not be forwarded as a literal version")
+	}
 }

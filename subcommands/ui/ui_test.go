@@ -7,8 +7,8 @@ import (
 	"time"
 
 	_ "github.com/PlakarKorp/integrations/fs/exporter"
-	ptesting "github.com/PlakarKorp/plakar/testing"
 	"github.com/PlakarKorp/plakar/subcommands"
+	ptesting "github.com/PlakarKorp/plakar/testing"
 	"github.com/stretchr/testify/require"
 )
 
@@ -45,7 +45,7 @@ func TestUiParseTooManyArgs(t *testing.T) {
 	cmd := &Ui{}
 	err := cmd.Parse(ctx, []string{"extra"})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "Too many arguments")
+	require.Contains(t, err.Error(), "too many arguments")
 }
 
 func TestUiExecuteStartsAndShutsDown(t *testing.T) {

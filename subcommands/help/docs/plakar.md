@@ -299,6 +299,12 @@ The following options are available:
 
 # ENVIRONMENT
 
+`PLAKAR_INSECURE_PLAINTEXT`
+
+> Must be set to work with a Kloset store that is not encrypted.
+> Without it, every command that would read from or write to an unencrypted
+> store refuses to run.
+
 `PLAKAR_PASSPHRASE`
 
 > Passphrase to unlock the Kloset store; overrides the one from the configuration.
@@ -367,7 +373,9 @@ where applicable:
 
 77 (EX\_NOPERM)
 
-> Authentication or decryption failure (wrong passphrase, missing keyfile).
+> Authentication or decryption failure (wrong passphrase, missing keyfile), or
+> an unencrypted store used without
+> `PLAKAR_INSECURE_PLAINTEXT`.
 
 78 (EX\_CONFIG)
 

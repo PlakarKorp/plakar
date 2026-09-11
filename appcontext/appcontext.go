@@ -1,20 +1,24 @@
 package appcontext
 
 import (
+	"context"
+	"errors"
+
 	"github.com/PlakarKorp/kloset/connectors"
 	"github.com/PlakarKorp/kloset/kcontext"
 	"github.com/PlakarKorp/pkg"
 	"github.com/PlakarKorp/plakar/config"
 	"github.com/PlakarKorp/plakar/cookies"
-	"github.com/PlakarKorp/plakar/utils"
+	"github.com/PlakarKorp/plakar/signify"
 )
 
 type AppContext struct {
 	*kcontext.KContext
 
-	cookies *cookies.Manager `msgpack:"-"`
-	pkgmgr  *pkg.Manager     `msgpack:"-"`
-	Config  *config.Config   `msgpack:"-"`
+	cookies     *cookies.Manager  `msgpack:"-"`
+	pkgmgr      *pkg.Manager      `msgpack:"-"`
+	pkgverifier *signify.Verifier `msgpack:"-"`
+	Config      *config.Config    `msgpack:"-"`
 
 	ConfigDir string
 	secret    []byte
@@ -23,6 +27,10 @@ type AppContext struct {
 
 	Quiet  bool
 	Silent bool
+
+	// ProgressSummary is set when the selected renderer consumes fs.summary,
+	// which costs backup an extra scan of the source.
+	ProgressSummary bool
 }
 
 func NewAppContext() *AppContext {
@@ -35,15 +43,25 @@ func NewAppContextFrom(ctx *AppContext) *AppContext {
 	return &AppContext{
 		KContext: kcontext.NewKContextFrom(ctx.GetInner()),
 
-		cookies:   ctx.cookies,
-		pkgmgr:    ctx.pkgmgr,
-		ConfigDir: ctx.ConfigDir,
+		cookies:     ctx.cookies,
+		pkgmgr:      ctx.pkgmgr,
+		pkgverifier: ctx.pkgverifier,
+		ConfigDir:   ctx.ConfigDir,
 	}
 }
 
 // XXX: This needs to go away progressively by migrating to AppContext.
 func (c *AppContext) GetInner() *kcontext.KContext {
 	return c.KContext
+}
+
+func (c *AppContext) ErrorCause(err error) error {
+	if errors.Is(err, context.Canceled) {
+		if cause := context.Cause(c.Context); cause != nil {
+			return cause
+		}
+	}
+	return err
 }
 
 func (c *AppContext) SetSecret(secret []byte) {
@@ -96,8 +114,16 @@ func (c *AppContext) GetPkgManager() *pkg.Manager {
 	return c.pkgmgr
 }
 
+func (c *AppContext) SetPkgVerifier(verifier *signify.Verifier) {
+	c.pkgverifier = verifier
+}
+
+func (c *AppContext) GetPkgVerifier() *signify.Verifier {
+	return c.pkgverifier
+}
+
 func (c *AppContext) ReloadConfig() error {
-	cfg, err := utils.LoadConfig(c.ConfigDir)
+	cfg, err := config.Load(c.ConfigDir)
 	if err != nil {
 		return err
 	}

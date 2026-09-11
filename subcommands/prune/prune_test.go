@@ -237,6 +237,39 @@ func TestMergePolicyOptions_CLIOverridesPolicy(t *testing.T) {
 	require.Equal(t, 9, policy.Periods.Minute.Keep)
 }
 
+// TestMergePolicyOptions_CarriesGroupBy is the regression test for the bug
+// where `prune -group-by perimeter` silently applied retention globally.
+//
+// prune parses its locate flags into a temporary override struct and merges
+// them onto the active options via mergePolicyOptions. Before the fix, that
+// merge copied Filters and every Period but never copied GroupBy, so GroupBy
+// stayed GroupByNone and `-per-day`/`-per-minute` caps were applied across all
+// snapshots instead of independently within each group.
+func TestMergePolicyOptions_CarriesGroupBy(t *testing.T) {
+	// CLI sets group-by; policy has none.
+	policy := locate.NewDefaultLocateOptions()
+	cli := locate.NewDefaultLocateOptions()
+	cli.GroupBy = locate.GroupByPerimeter
+
+	mergePolicyOptions(policy, cli)
+
+	require.Equal(t, locate.GroupByPerimeter, policy.GroupBy,
+		"CLI -group-by must be carried into the active options")
+}
+
+// TestMergePolicyOptions_GroupByEmptyCLIKeepsPolicy pins that a group-by set in
+// a policy survives an empty CLI override (mirrors the filters/periods rule).
+func TestMergePolicyOptions_GroupByEmptyCLIKeepsPolicy(t *testing.T) {
+	policy := locate.NewDefaultLocateOptions()
+	policy.GroupBy = locate.GroupByPerimeter
+	cli := locate.NewDefaultLocateOptions() // user passed no -group-by
+
+	mergePolicyOptions(policy, cli)
+
+	require.Equal(t, locate.GroupByPerimeter, policy.GroupBy,
+		"policy group-by must survive an empty CLI override")
+}
+
 // TestMergeFilters exhaustively covers each field of LocateFilters to make
 // sure mergeFilters keeps `a` when `b` is zero, and adopts `b` when it isn't.
 func TestMergeFilters(t *testing.T) {

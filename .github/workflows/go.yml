@@ -22,7 +22,9 @@ jobs:
         go-version-file: 'go.mod'
 
     - name: Build
-      run: go build -v ./...
+      run: |
+        go build -v ./...
+        go build tool
 
     # Produce a coverage profile (Codecov coverage) and a JUnit XML (Codecov
     # Test Analytics) in one run. The `timeout -s QUIT 5m` wrapper is kept so a
@@ -33,11 +35,21 @@ jobs:
       id: gotest
       continue-on-error: true
       run: |
-        go install github.com/jstemmer/go-junit-report/v2@latest
         set -o pipefail
-        timeout -s QUIT 5m go test -v -coverprofile=coverage.out -covermode=atomic -timeout 1m -json ./... \
-          | "$(go env GOPATH)/bin/go-junit-report" -parser gojson -set-exit-code > junit.xml
+        set +e # disable errexit
+        # -p 4 caps how many package test binaries run at once. Several
+        # packages (api, diag, maintenance) each spin up pebble caches and do
+        # real encryption/snapshot work; with the default parallelism they
+        # over-subscribe the runner's cores, starve each other, and blow the
+        # per-test timeout -- which kills the whole package and reports every
+        # test in it as failed-to-return to Codecov. Capping concurrency keeps
+        # the run both fast and reliable.
+        timeout -s QUIT 5m go test -v -p 4 -coverprofile=coverage.out -covermode=atomic -timeout 2m -json ./... > out.json
         status=$?
+        if [ $status -ne 0 ]; then
+          jq -j 'select(.Output != null) | .Output' out.json
+        fi
+        go tool go-junit-report -parser gojson -set-exit-code < out.json > junit.xml
         echo "test_exit=$status" >> "$GITHUB_OUTPUT"
         exit $status
 

@@ -6,18 +6,18 @@ import (
 )
 
 var (
-	ErrNumberOutOfRange = errors.New("Number out of range")
-	ErrMissingField     = errors.New("Missing field")
-	ErrInvalidID        = errors.New("Invalid ID")
-	ErrInvalidSortKey   = errors.New("Invalid sort key")
+	ErrNumberOutOfRange = errors.New("number out of range")
+	ErrMissingField     = errors.New("missing field")
+	ErrInvalidID        = errors.New("invalid ID")
+	ErrInvalidSortKey   = errors.New("invalid sort key")
 )
 
 type ParamErrorType string
 
 const (
 	InvalidArgument ParamErrorType = "invalid_argument"
-	BadNumber                      = "bad_number"
-	MissingArgument                = "missing_argument"
+	BadNumber       ParamErrorType = "bad_number"
+	MissingArgument ParamErrorType = "missing_argument"
 )
 
 type ParameterError struct {

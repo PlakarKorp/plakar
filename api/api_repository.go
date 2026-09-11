@@ -175,7 +175,7 @@ func (ui *uiserver) repositorySnapshots(w http.ResponseWriter, r *http.Request) 
 			return err
 		}
 
-		if importerType != "" && strings.ToLower(snap.Header.GetSource(0).Importer.Type) != strings.ToLower(importerType) {
+		if importerType != "" && !strings.EqualFold(snap.Header.GetSource(0).Importer.Type, importerType) {
 			snap.Close()
 			continue
 		}
@@ -207,9 +207,7 @@ func (ui *uiserver) repositorySnapshots(w http.ResponseWriter, r *http.Request) 
 		Total: totalSnapshots,
 		Items: make([]header.Header, len(headers)),
 	}
-	for i, header := range headers {
-		items.Items[i] = header
-	}
+	copy(items.Items, headers)
 
 	return json.NewEncoder(w).Encode(items)
 }

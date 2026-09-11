@@ -7,7 +7,7 @@ PLAKAR-DIAG(1) - General Commands Manual
 # SYNOPSIS
 
 **plakar&nbsp;diag**
-\[**contenttype**&nbsp;|&nbsp;**locks**&nbsp;|&nbsp;**object**&nbsp;|&nbsp;**packfile**&nbsp;|&nbsp;**snapshot**&nbsp;|&nbsp;**state**&nbsp;|&nbsp;**vfs**&nbsp;|&nbsp;**xattr**]
+\[**chunks**&nbsp;|&nbsp;**contenttype**&nbsp;|&nbsp;**locks**&nbsp;|&nbsp;**object**&nbsp;|&nbsp;**packfile**&nbsp;|&nbsp;**snapshot**&nbsp;|&nbsp;**state**&nbsp;|&nbsp;**vfs**&nbsp;|&nbsp;**xattr**]
 
 # DESCRIPTION
 
@@ -18,6 +18,11 @@ The type of information displayed depends on the specified argument.
 Without any arguments, display information about the repository.
 
 The sub-commands are as follows:
+
+**chunks** *snapshotID*:*path*
+
+> Display the list of chunks for a file within a snapshot, including
+> the index, byte offset, length, MAC, and entropy of each chunk.
 
 **contenttype** *snapshotID*:*path*
 

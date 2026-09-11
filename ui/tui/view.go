@@ -74,7 +74,7 @@ func fmtNewReuse(okCount, total uint64, progress bool) string {
 	totalS := dimStyle.Render(fmt.Sprintf("%d", total))
 
 	if !progress {
-		return fmt.Sprintf("%s", okS)
+		return okS
 	}
 	return fmt.Sprintf("%s/%s", okS, totalS)
 }

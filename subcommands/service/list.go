@@ -17,27 +17,32 @@
 package services
 
 import (
-	"flag"
 	"fmt"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/spf13/cobra"
 )
 
 type ServiceList struct {
 	subcommands.SubcommandBase
 }
 
-func (cmd *ServiceList) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("service list", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s\n", flags.Name())
+func (cmd *ServiceList) CobraCommand() *cobra.Command {
+	return &cobra.Command{
+		Use: "service list",
 	}
-	flags.Parse(args)
+}
 
-	if flags.NArg() > 0 {
-		return fmt.Errorf("invalid argument: %s", flags.Arg(0))
+func (cmd *ServiceList) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
+	}
+
+	if len(rest) > 0 {
+		return fmt.Errorf("invalid argument: %s", rest[0])
 	}
 
 	return nil

@@ -8,7 +8,7 @@ import (
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/utils"
+	"github.com/PlakarKorp/plakar/config"
 	"github.com/stretchr/testify/require"
 )
 
@@ -26,6 +26,26 @@ func configure(ctx *appcontext.AppContext, cmd string, args []string) error {
 	return nil
 }
 
+func TestValidAliasName(t *testing.T) {
+	suite := map[string]bool{
+		"":         false,
+		"foo":      true,
+		"Fo0_B47":  true,
+		"b@r":      false,
+		"/foo/":    false,
+		"-bar":     false,
+		"b-ar":     true,
+		"s3://foo": false,
+	}
+
+	for name, expect := range suite {
+		got := validAliasName(name)
+		if got != expect {
+			t.Errorf("%s: got %v but expected %v", name, got, expect)
+		}
+	}
+}
+
 func TestConfigEmpty(t *testing.T) {
 	bufOut := bytes.NewBuffer(nil)
 	bufErr := bytes.NewBuffer(nil)
@@ -37,7 +57,7 @@ func TestConfigEmpty(t *testing.T) {
 	})
 
 	configPath := filepath.Join(tmpDir, "config.yaml")
-	cfg, err := utils.LoadOldConfigIfExists(configPath)
+	cfg, err := config.LoadOldConfigIfExists(configPath)
 
 	require.NoError(t, err)
 	ctx := appcontext.NewAppContext()
@@ -105,7 +125,7 @@ func TestCmdRemote(t *testing.T) {
 	})
 
 	configPath := filepath.Join(tmpDir, "config.yaml")
-	cfg, err := utils.LoadOldConfigIfExists(configPath)
+	cfg, err := config.LoadOldConfigIfExists(configPath)
 	require.NoError(t, err)
 	ctx := appcontext.NewAppContext()
 	ctx.Config = cfg
@@ -157,7 +177,7 @@ func TestCmdRepository(t *testing.T) {
 	})
 
 	configPath := filepath.Join(tmpDir, "config.yaml")
-	cfg, err := utils.LoadOldConfigIfExists(configPath)
+	cfg, err := config.LoadOldConfigIfExists(configPath)
 	require.NoError(t, err)
 	ctx := appcontext.NewAppContext()
 	ctx.Config = cfg

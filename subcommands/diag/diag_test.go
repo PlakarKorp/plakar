@@ -42,7 +42,7 @@ func TestExecuteCmdDiagSnapshot(t *testing.T) {
 	defer snap.Close()
 
 	indexId := snap.Header.GetIndexID()
-	args := []string{"diag", "snapshot", fmt.Sprintf("%s", hex.EncodeToString(indexId[:]))}
+	args := []string{"diag", "snapshot", hex.EncodeToString(indexId[:])}
 
 	subcommand, _, args := subcommands.Lookup(args)
 	err := subcommand.Parse(ctx, args)
@@ -170,7 +170,7 @@ func TestExecuteCmdDiagState(t *testing.T) {
 	output = bufOut.String()
 	require.Contains(t, output, "Version:")
 	require.Contains(t, output, "State serial:")
-	require.Contains(t, output, fmt.Sprintf("snapshot %s", fmt.Sprintf("%s", hex.EncodeToString(indexId[:]))))
+	require.Contains(t, output, fmt.Sprintf("snapshot %s", hex.EncodeToString(indexId[:])))
 	require.Contains(t, output, "chunk ")
 	require.Contains(t, output, "object ")
 	require.Contains(t, output, "file ")
@@ -231,7 +231,7 @@ func TestExecuteCmdDiagPackfile(t *testing.T) {
 	output = bufOut.String()
 	require.Contains(t, output, "Version:")
 	require.Contains(t, output, "State serial:")
-	require.Contains(t, output, fmt.Sprintf("snapshot %s", fmt.Sprintf("%s", hex.EncodeToString(indexId[:]))))
+	require.Contains(t, output, fmt.Sprintf("snapshot %s", hex.EncodeToString(indexId[:])))
 	require.Contains(t, output, "chunk ")
 	require.Contains(t, output, "object ")
 	require.Contains(t, output, "vfs-btree ")
@@ -330,7 +330,7 @@ func TestExecuteCmdDiagObject(t *testing.T) {
 	output = bufOut.String()
 	require.Contains(t, output, "Version:")
 	require.Contains(t, output, "State serial:")
-	require.Contains(t, output, fmt.Sprintf("snapshot %s", fmt.Sprintf("%s", hex.EncodeToString(indexId[:]))))
+	require.Contains(t, output, fmt.Sprintf("snapshot %s", hex.EncodeToString(indexId[:])))
 	require.Contains(t, output, "chunk ")
 	require.Contains(t, output, "object ")
 	require.Contains(t, output, "file ")

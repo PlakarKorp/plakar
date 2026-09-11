@@ -51,6 +51,8 @@ func freshRepo(t *testing.T) (*repository.Repository, *appcontext.AppContext, *b
 // runs can race: run N+1's Lock() calls GetLocks() and sees run N's
 // not-yet-deleted lock, then races GetLock(N's MAC) against the background
 // DeleteLock and fails with "no such file or directory".
+//
+//nolint:staticcheck // ST1008: test helper, error kept in fixed position alongside other outputs
 func runMaintenance(t *testing.T, ctx *appcontext.AppContext, repo *repository.Repository,
 	bufOut, bufErr *bytes.Buffer) (int, error, string, string) {
 	t.Helper()
@@ -692,7 +694,7 @@ func TestExecuteConflictingLockAborts(t *testing.T) {
 
 	status, err, _, _ := runMaintenance(t, ctx, repo, bufOut, bufErr)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "Can't take exclusive lock")
+	require.Contains(t, err.Error(), "can't take exclusive lock")
 	require.Equal(t, 1, status)
 
 	// The stranger's lock must remain.

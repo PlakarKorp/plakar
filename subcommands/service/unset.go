@@ -1,12 +1,12 @@
 package services
 
 import (
-	"flag"
 	"fmt"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/spf13/cobra"
 )
 
 type ServiceUnset struct {
@@ -16,19 +16,24 @@ type ServiceUnset struct {
 	Keys    []string
 }
 
-func (cmd *ServiceUnset) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("service unset", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s <name> <key>...\n", flags.Name())
+func (cmd *ServiceUnset) CobraCommand() *cobra.Command {
+	return &cobra.Command{
+		Use: "service unset",
 	}
-	flags.Parse(args)
+}
 
-	if flags.NArg() == 0 {
+func (cmd *ServiceUnset) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
+	}
+
+	if len(rest) == 0 {
 		return fmt.Errorf("no service specified")
 	}
 
-	cmd.Service = flags.Arg(0)
-	cmd.Keys = flags.Args()[1:]
+	cmd.Service = rest[0]
+	cmd.Keys = rest[1:]
 
 	return nil
 }

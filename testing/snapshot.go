@@ -114,6 +114,7 @@ func GenerateFiles(t *testing.T, files []MockFile) string {
 		} else {
 			err = os.WriteFile(dest, file.Content, file.Mode)
 		}
+		require.NoError(t, err)
 	}
 
 	return tmpBackupDir

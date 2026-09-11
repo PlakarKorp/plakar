@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -37,6 +36,7 @@ import (
 	"github.com/PlakarKorp/plakar/utils"
 	"github.com/denisbrodbeck/machineid"
 	"github.com/google/uuid"
+	"github.com/spf13/pflag"
 
 	_ "github.com/PlakarKorp/plakar/subcommands/archive"
 	_ "github.com/PlakarKorp/plakar/subcommands/backup"
@@ -80,6 +80,14 @@ import (
 
 var ErrCantUnlock = errors.New("failed to unlock repository")
 
+// progName replaces the old flag.CommandLine.Name() in diagnostics.
+func progName() string {
+	if len(os.Args) == 0 {
+		return "plakar"
+	}
+	return filepath.Base(os.Args[0])
+}
+
 func entryPoint() int {
 	// default values
 	cwd, err := os.Getwd()
@@ -95,7 +103,7 @@ func entryPoint() int {
 
 	userDefault, err := user.Current()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: go away casper !\n", flag.CommandLine.Name())
+		fmt.Fprintf(os.Stderr, "%s: go away casper !\n", progName())
 		return 1
 	}
 
@@ -112,76 +120,86 @@ func entryPoint() int {
 
 	opt_configDefault, err := utils.GetConfigDir("plakar")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: could not get default config directory: %s\n", flag.CommandLine.Name(), err)
+		fmt.Fprintf(os.Stderr, "%s: could not get default config directory: %s\n", progName(), err)
 		return 1
 	}
 	opt_cacheDefault, err := utils.GetCacheDir("plakar")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: could not get default cache directory: %s\n", flag.CommandLine.Name(), err)
+		fmt.Fprintf(os.Stderr, "%s: could not get default cache directory: %s\n", progName(), err)
 		return 1
 	}
 	opt_dataDefault, err := utils.GetDataDir("plakar")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: could not get default data directory: %s\n", flag.CommandLine.Name(), err)
+		fmt.Fprintf(os.Stderr, "%s: could not get default data directory: %s\n", progName(), err)
 		return 1
 	}
 
-	// command line overrides
-	var opt_cpuCount int
-	var opt_config string // deprecated, to be removed soon
-	var opt_configdir string
-	var opt_cachedir string
-	var opt_datadir string
-	var opt_cpuProfile string
-	var opt_memProfile string
-	var opt_time bool
-	var opt_trace string
-	var opt_json bool
-	var opt_stdio bool
-	var opt_quiet bool
-	var opt_silent bool
-	var opt_keyfile string
-	var opt_enableSecurityCheck bool
-	var opt_disableSecurityCheck bool
-	var opt_maxConcurrency int
+	// command line overrides, parsed by the cobra root command
+	var opts globalOpts
+	root := newRootCmd(&opts, defaults{
+		configDir: opt_configDefault,
+		cacheDir:  opt_cacheDefault,
+		dataDir:   opt_dataDefault,
+		cpuCount:  opt_cpuDefault,
+	})
 
-	flag.StringVar(&opt_config, "config", opt_configDefault, "configuration directory (deprecated, use -configdir instead)")
-	flag.StringVar(&opt_configdir, "configdir", opt_configDefault, "configuration directory")
-	flag.StringVar(&opt_cachedir, "cachedir", opt_cacheDefault, "cache directory")
-	flag.StringVar(&opt_datadir, "datadir", opt_dataDefault, "data directory")
-	flag.IntVar(&opt_cpuCount, "cpu", opt_cpuDefault, "limit the number of usable cores")
-	flag.IntVar(&opt_maxConcurrency, "concurrency", -1, "limit the number of concurrent operations")
-	flag.StringVar(&opt_cpuProfile, "profile-cpu", "", "profile CPU usage")
-	flag.StringVar(&opt_memProfile, "profile-mem", "", "profile MEM usage")
-	flag.BoolVar(&opt_time, "time", false, "display command execution time")
-	flag.StringVar(&opt_trace, "trace", "", "display trace logs, comma-separated (all, trace, repository, snapshot, server)")
-	flag.BoolVar(&opt_json, "json", false, "output events as JSON lines")
-	flag.BoolVar(&opt_stdio, "stdio", false, "use stdio user interface")
-	flag.BoolVar(&opt_quiet, "quiet", false, "no output except errors")
-	flag.BoolVar(&opt_silent, "silent", false, "no output at all")
-	flag.StringVar(&opt_keyfile, "keyfile", "", "use passphrase from key file when prompted")
-	flag.BoolVar(&opt_enableSecurityCheck, "enable-security-check", false, "enable update check")
-	flag.BoolVar(&opt_disableSecurityCheck, "disable-security-check", false, "disable update check")
-
-	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), "Usage: %s [OPTIONS] [at REPOSITORY] COMMAND [COMMAND_OPTIONS]...\n", flag.CommandLine.Name())
-		fmt.Fprintf(flag.CommandLine.Output(), "\nBy default, the repository is $PLAKAR_REPOSITORY or $HOME/.plakar.\n")
-		fmt.Fprintf(flag.CommandLine.Output(), "\nOPTIONS:\n")
-		flag.PrintDefaults()
-
-		fmt.Fprintf(flag.CommandLine.Output(), "\nCOMMANDS:\n")
-		listCmds(flag.CommandLine.Output(), "  ")
-		fmt.Fprintf(flag.CommandLine.Output(), "\nFor more information on a command, use '%s help COMMAND'.\n", flag.CommandLine.Name())
+	// Completion is cobra's own business: it must not go through the
+	// rewriting below, nor open a repository to answer.
+	if args := os.Args[1:]; isCompletionRequest(args) {
+		root.SetArgs(completionArgs(args))
+		if err := root.Execute(); err != nil {
+			return 1
+		}
+		return 0
 	}
-	flag.Parse()
+
+	// cmdArgs is what is left for the subcommand.
+	normalized, cmdArgs, atRepository, hadAt, err := normalizeArgs(root, os.Args[1:])
+	if err == nil {
+		err = root.PersistentFlags().Parse(normalized)
+	}
+	if err != nil {
+		// -h is a request, not a mistake.
+		if errors.Is(err, pflag.ErrHelp) {
+			root.SetOut(os.Stdout)
+			root.Usage()
+			return 0
+		}
+		fmt.Fprintf(os.Stderr, "%s: %s\n", progName(), err)
+		root.Usage()
+		return 2
+	}
+
+	// Locals, because a few of them are adjusted further down and the flag
+	// struct should keep saying what the user typed.
+	opt_config := opts.config
+	opt_configdir := opts.configDir
+	opt_cachedir := opts.cacheDir
+	opt_datadir := opts.dataDir
+	opt_cpuCount := opts.cpuCount
+	opt_maxConcurrency := opts.maxConc
+	opt_cpuProfile := opts.cpuProfile
+	opt_memProfile := opts.memProfile
+	opt_time := opts.time
+	opt_trace := opts.trace
+	opt_json := opts.json
+	opt_stdio := opts.stdio
+	opt_quiet := opts.quiet
+	opt_silent := opts.silent
+	opt_keyfile := opts.keyfile
+	opt_enableSecurityCheck := opts.enableSecurityCheck
+	opt_disableSecurityCheck := opts.disableSecurityCheck
 
 	var interrupted bool
 
 	ctx := appcontext.NewAppContext()
 	defer ctx.Close()
 
+	plainOutput := opt_silent || opt_stdio || opt_quiet || opt_trace != "" || !isTerminal()
+	ctx.ProgressSummary = !plainOutput
+
 	var renderer ui.UI
-	if opt_silent || opt_stdio || opt_quiet || opt_trace != "" || !isTerminal() {
+	if plainOutput {
 		renderer = stdio.New(ctx)
 	} else if opt_json {
 		renderer = jsonui.New(ctx)
@@ -215,7 +233,7 @@ func entryPoint() int {
 	ctx.ConfigDir = opt_configdir
 	err = ctx.ReloadConfig()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: could not load configuration: %s\n", flag.CommandLine.Name(), err)
+		fmt.Fprintf(os.Stderr, "%s: could not load configuration: %s\n", progName(), err)
 		return 1
 	}
 
@@ -225,7 +243,7 @@ func entryPoint() int {
 	cookiesDir := opt_cachedir
 	err = os.MkdirAll(cookiesDir, 0700)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: could not get cookies directory: %s\n", flag.CommandLine.Name(), err)
+		fmt.Fprintf(os.Stderr, "%s: could not get cookies directory: %s\n", progName(), err)
 		return 1
 	}
 
@@ -234,7 +252,7 @@ func entryPoint() int {
 
 	err = os.MkdirAll(opt_cachedir, 0700)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: could not get cache directory: %s\n", flag.CommandLine.Name(), err)
+		fmt.Fprintf(os.Stderr, "%s: could not get cache directory: %s\n", progName(), err)
 		return 1
 	}
 	ctx.CacheDir = opt_cachedir
@@ -243,7 +261,7 @@ func entryPoint() int {
 
 	err = os.MkdirAll(opt_datadir, 0700)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: could not get data directory: %s\n", flag.CommandLine.Name(), err)
+		fmt.Fprintf(os.Stderr, "%s: could not get data directory: %s\n", progName(), err)
 		return 1
 	}
 
@@ -271,17 +289,17 @@ func entryPoint() int {
 
 	// setup from default + override
 	if opt_cpuCount <= 0 {
-		fmt.Fprintf(os.Stderr, "%s: invalid -cpu value %d\n", flag.CommandLine.Name(), opt_cpuCount)
+		fmt.Fprintf(os.Stderr, "%s: invalid -cpu value %d\n", progName(), opt_cpuCount)
 		return 1
 	}
 	if opt_cpuCount > runtime.NumCPU() {
-		fmt.Fprintf(os.Stderr, "%s: can't use more cores than available: %d\n", flag.CommandLine.Name(), runtime.NumCPU())
+		fmt.Fprintf(os.Stderr, "%s: can't use more cores than available: %d\n", progName(), runtime.NumCPU())
 		return 1
 	}
 	runtime.GOMAXPROCS(opt_cpuCount)
 
 	if opt_maxConcurrency == 0 {
-		fmt.Fprintf(os.Stderr, "%s: invalid -concurrency value %d\n", flag.CommandLine.Name(), opt_maxConcurrency)
+		fmt.Fprintf(os.Stderr, "%s: invalid -concurrency value %d\n", progName(), opt_maxConcurrency)
 		return 1
 	}
 	if opt_maxConcurrency == -1 {
@@ -291,12 +309,12 @@ func entryPoint() int {
 	if opt_cpuProfile != "" {
 		f, err := os.Create(opt_cpuProfile)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s: could not create CPU profile: %s\n", flag.CommandLine.Name(), err)
+			fmt.Fprintf(os.Stderr, "%s: could not create CPU profile: %s\n", progName(), err)
 			return 1
 		}
 		defer f.Close() // error handling omitted for example
 		if err := pprof.StartCPUProfile(f); err != nil {
-			fmt.Fprintf(os.Stderr, "%s: could not start CPU profile: %s\n", flag.CommandLine.Name(), err)
+			fmt.Fprintf(os.Stderr, "%s: could not start CPU profile: %s\n", progName(), err)
 			return 1
 		}
 		defer pprof.StopCPUProfile()
@@ -306,7 +324,7 @@ func entryPoint() int {
 	if opt_keyfile != "" {
 		data, err := os.ReadFile(opt_keyfile)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s: could not read key file: %s\n", flag.CommandLine.Name(), err)
+			fmt.Fprintf(os.Stderr, "%s: could not read key file: %s\n", progName(), err)
 			return 1
 		}
 		secretFromKeyfile = strings.TrimSuffix(string(data), "\n")
@@ -322,8 +340,15 @@ func entryPoint() int {
 	ctx.ProcessID = os.Getpid()
 	ctx.MaxConcurrency = opt_maxConcurrency
 
-	if flag.NArg() == 0 {
-		fmt.Fprintf(os.Stderr, "%s: a subcommand must be provided\n", filepath.Base(flag.CommandLine.Name()))
+	if hadAt {
+		if atRepository == "" {
+			fmt.Fprintf(os.Stderr, "%s: missing plakar repository\n", progName())
+			return 1
+		}
+	}
+
+	if len(cmdArgs) == 0 {
+		fmt.Fprintf(os.Stderr, "%s: a subcommand must be provided\n", progName())
 		listCmds(os.Stderr, "  ")
 		return 1
 	}
@@ -340,22 +365,16 @@ func entryPoint() int {
 
 	ctx.SetLogger(logger)
 
-	if err := setupPkgManager(ctx, opt_datadir, opt_cachedir); err != nil {
+	if err := setupPkgManager(ctx, opt_configdir, opt_datadir, opt_cachedir); err != nil {
 		log.Fatalln(err.Error())
 	}
 
 	var repositoryPath string
 
 	var args []string
-	if flag.Arg(0) == "at" {
-		if len(flag.Args()) < 2 {
-			log.Fatalf("%s: missing plakar repository", flag.CommandLine.Name())
-		}
-		if len(flag.Args()) < 3 {
-			log.Fatalf("%s: missing command", flag.CommandLine.Name())
-		}
-		repositoryPath = flag.Arg(1)
-		args = flag.Args()[2:]
+	if hadAt {
+		repositoryPath = atRepository
+		args = cmdArgs
 	} else {
 		repositoryPath = os.Getenv("PLAKAR_REPOSITORY")
 		if repositoryPath == "" {
@@ -367,16 +386,16 @@ func entryPoint() int {
 			}
 		}
 
-		args = flag.Args()
+		args = cmdArgs
 	}
 
 	storeConfig, err := ctx.Config.GetRepository(repositoryPath)
 	if err != nil {
-		logger.Stderr("%s: %s\n", flag.CommandLine.Name(), err)
+		logger.Stderr("%s: %s\n", progName(), err)
 		return 1
 	}
 
-	cmd, _, args := subcommands.Lookup(args)
+	cmd, _, args := subcommands.Resolve(root, args)
 	if cmd == nil {
 		logger.Stderr("command not found: %s\n", args[0])
 		return 1
@@ -386,7 +405,7 @@ func entryPoint() int {
 	// available to subcommands like create.
 	passphrase, err := getPassphraseFromEnv(ctx, storeConfig)
 	if err != nil {
-		logger.Stderr("%s: %s\n", flag.CommandLine.Name(), err)
+		logger.Stderr("%s: %s\n", progName(), err)
 		return 1
 	}
 	if passphrase != "" {
@@ -401,39 +420,44 @@ func entryPoint() int {
 	} else if cmd.GetFlags()&subcommands.BeforeRepositoryWithStorage != 0 {
 		repo, err = repository.Inexistent(ctx.GetInner(), storeConfig)
 		if err != nil {
-			logger.Stderr("%s: %s\n", flag.CommandLine.Name(), err)
+			logger.Stderr("%s: %s\n", progName(), err)
 			return 1
 		}
 	} else {
 		var serializedConfig []byte
 		store, serializedConfig, err = storage.Open(ctx.GetInner(), storeConfig)
 		if err != nil {
-			logger.Stderr("%s: failed to open the repository at %s: %s\n", flag.CommandLine.Name(), storeConfig["location"], err)
+			logger.Stderr("%s: failed to open the repository at %s: %s\n", progName(), storeConfig["location"], err)
 			logger.Stderr("To specify an alternative repository, please use \"plakar at <location> <command>\".")
 			return exitcodes.RepoNotFound
 		}
 
 		repoConfig, err := storage.NewConfigurationFromWrappedBytes(serializedConfig)
 		if err != nil {
-			logger.Stderr("%s: %s\n", flag.CommandLine.Name(), err)
+			logger.Stderr("%s: %s\n", progName(), err)
 			return 1
 		}
 
 		if repoConfig.Version != versioning.FromString(storage.VERSION) {
 			logger.Stderr("%s: incompatible repository version: %s != %s\n",
-				flag.CommandLine.Name(), repoConfig.Version, storage.VERSION)
+				progName(), repoConfig.Version, storage.VERSION)
 			return exitcodes.RepoIncompatible
 		}
 
+		if err := utils.CheckPlaintext(storeConfig["location"], repoConfig.Encryption != nil); err != nil {
+			logger.Stderr("%s: %s\n", progName(), err)
+			return exitcodes.AuthFailure
+		}
+
 		if err := setupEncryption(ctx, repoConfig); err != nil {
-			logger.Stderr("%s: %s\n", flag.CommandLine.Name(), err)
+			logger.Stderr("%s: %s\n", progName(), err)
 			return exitcodes.AuthFailure
 		}
 
 		// Actual rebuild is always done by cached
 		repo, err = repository.NewNoRebuild(ctx.GetInner(), ctx.GetSecret(), store, serializedConfig, true)
 		if err != nil {
-			logger.Stderr("%s: %s\n", flag.CommandLine.Name(), err)
+			logger.Stderr("%s: %s\n", progName(), err)
 			return 1
 		}
 	}
@@ -443,7 +467,11 @@ func entryPoint() int {
 
 	t0 := time.Now()
 	if err := cmd.Parse(ctx, args); err != nil {
-		logger.Stderr("%s: %s\n", flag.CommandLine.Name(), err)
+		logger.Stderr("%s: %s\n", progName(), err)
+		var usage subcommands.ErrUsage
+		if errors.As(err, &usage) {
+			return 2
+		}
 		return 1
 	}
 
@@ -458,7 +486,7 @@ func entryPoint() int {
 	go func() {
 		<-ctx.Done()
 		if interrupted {
-			logger.Stderr("%s: received interrupt signal, stopping gracefully...\n", flag.CommandLine.Name())
+			logger.Stderr("%s: received interrupt signal, stopping gracefully...\n", progName())
 		}
 	}()
 
@@ -481,7 +509,7 @@ func entryPoint() int {
 			err = context.Cause(ctx)
 		}
 
-		logger.Printf("%s: %s\n", flag.CommandLine.Name(), utils.SanitizeText(err.Error()))
+		logger.Printf("%s: %s\n", progName(), utils.SanitizeText(err.Error()))
 		if errors.Is(err, cached.ErrWrongVersion) {
 			logger.Stderr("To stop the current cached, run:")
 			logger.Stderr("\t$ plakar cached stop")
@@ -514,7 +542,7 @@ func entryPoint() int {
 		defer f.Close() // error handling omitted for example
 		runtime.GC()    // get up-to-date statistics
 		if err := pprof.WriteHeapProfile(f); err != nil {
-			logger.Stderr("%s: could not write MEM profile: %d\n", flag.CommandLine.Name(), err)
+			logger.Stderr("%s: could not write MEM profile: %d\n", progName(), err)
 			return 1
 		}
 	}

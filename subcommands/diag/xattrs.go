@@ -1,7 +1,6 @@
 package diag
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"strings"
@@ -14,6 +13,7 @@ import (
 	"github.com/PlakarKorp/kloset/snapshot/vfs"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/spf13/cobra"
 )
 
 type DiagXattr struct {
@@ -22,16 +22,24 @@ type DiagXattr struct {
 	SnapshotPath string
 }
 
-func (cmd *DiagXattr) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("diag xattr", flag.ExitOnError)
-	flags.Parse(args)
+func (cmd *DiagXattr) CobraCommand() *cobra.Command {
+	return &cobra.Command{
+		Use: "diag xattr",
+	}
+}
 
-	if len(flags.Args()) < 1 {
-		return fmt.Errorf("usage: %s xattr SNAPSHOT[:PATH]", flags.Name())
+func (cmd *DiagXattr) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
+	}
+
+	if len(rest) < 1 {
+		return fmt.Errorf("usage: %s xattr SNAPSHOT[:PATH]", "diag xattr")
 	}
 
 	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.SnapshotPath = flags.Args()[0]
+	cmd.SnapshotPath = rest[0]
 	return nil
 }
 

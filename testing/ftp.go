@@ -119,7 +119,7 @@ func (s *MockFTPServer) handleConnection(conn net.Conn) {
 			port, _ := strconv.Atoi(portStr)
 
 			// Send the passive mode response with the port number
-			conn.Write([]byte(fmt.Sprintf("227 Entering Passive Mode (127,0,0,1,%d,%d)\r\n", port>>8, port&0xFF)))
+			fmt.Fprintf(conn, "227 Entering Passive Mode (127,0,0,1,%d,%d)\r\n", port>>8, port&0xFF)
 
 			// Accept the data connection
 			dataConn, err = dataListener.Accept()

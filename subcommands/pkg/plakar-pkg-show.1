@@ -1,4 +1,4 @@
-.Dd July 11, 2025
+.Dd August 26, 2026
 .Dt PLAKAR-PKG-SHOW 1
 .Os
 .Sh NAME
@@ -7,6 +7,7 @@
 .Sh SYNOPSIS
 .Nm plakar pkg show
 .Op Fl available
+.Op Fl devel
 .Op Fl long
 .Sh DESCRIPTION
 The
@@ -18,6 +19,8 @@ The options are as follows:
 .It Fl available
 Instead of installed packages,
 show the set of prebuilt packages available for this system.
+.It Fl devel
+Use the integration devel tree.
 .It Fl long
 Show the full package name.
 .El

@@ -1,22 +1,29 @@
 package diag
 
 import (
-	"flag"
 	"fmt"
 	"time"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/spf13/cobra"
 )
 
 type DiagLocks struct {
 	subcommands.SubcommandBase
 }
 
+func (cmd *DiagLocks) CobraCommand() *cobra.Command {
+	return &cobra.Command{
+		Use: "diag locks",
+	}
+}
+
 func (cmd *DiagLocks) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("diag locks", flag.ExitOnError)
-	flags.Parse(args)
+	if _, err := subcommands.ParseCobra(cmd, args); err != nil {
+		return err
+	}
 
 	cmd.RepositorySecret = ctx.GetSecret()
 

@@ -3,7 +3,6 @@ package check
 import (
 	"bytes"
 	"encoding/hex"
-	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -143,7 +142,7 @@ func TestExecuteCmdCheckSpecificSnapshot(t *testing.T) {
 	defer ctx.Close()
 
 	indexId := snap.Header.GetIndexID()
-	args := []string{fmt.Sprintf("%s", hex.EncodeToString(indexId[:]))}
+	args := []string{hex.EncodeToString(indexId[:])}
 
 	subcommand := &Check{}
 	err := subcommand.Parse(ctx, args)

@@ -81,7 +81,8 @@ func startFakeServer(t *testing.T, ctx *appcontext.AppContext, b serverBehavior)
 	}
 
 	var wg sync.WaitGroup
-	done := make(chan struct{})
+	var mu sync.Mutex
+	var conns []net.Conn
 
 	go func() {
 		for {
@@ -89,6 +90,9 @@ func startFakeServer(t *testing.T, ctx *appcontext.AppContext, b serverBehavior)
 			if err != nil {
 				return
 			}
+			mu.Lock()
+			conns = append(conns, conn)
+			mu.Unlock()
 			wg.Add(1)
 			go func(conn net.Conn) {
 				defer wg.Done()
@@ -100,7 +104,15 @@ func startFakeServer(t *testing.T, ctx *appcontext.AppContext, b serverBehavior)
 
 	t.Cleanup(func() {
 		ln.Close()
-		close(done)
+		// Close any accepted connections so a serveConn goroutine blocked in
+		// Read (e.g. waiting for a request the client never sends after a
+		// failed handshake) unblocks instead of hanging until the test
+		// timeout.
+		mu.Lock()
+		for _, c := range conns {
+			c.Close()
+		}
+		mu.Unlock()
 		wg.Wait()
 	})
 }

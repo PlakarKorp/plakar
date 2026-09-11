@@ -18,7 +18,6 @@ package ptar
 
 import (
 	"bytes"
-	"flag"
 	"fmt"
 	"hash"
 	"io"
@@ -42,6 +41,7 @@ import (
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
 	"github.com/google/uuid"
+	"github.com/spf13/cobra"
 )
 
 type Ptar struct {
@@ -59,6 +59,12 @@ type Ptar struct {
 	SyncTargets   listFlag
 	SyncSecrets   [][]byte
 	BackupTargets listFlag
+	Excludes      []string
+
+	LocateOptions *locate.LocateOptions
+
+	optIgnoreFiles listFlag
+	optIgnore      listFlag
 }
 
 func init() {
@@ -79,37 +85,57 @@ func (l *listFlag) Set(value string) error {
 	return nil
 }
 
-func (cmd *Ptar) Parse(ctx *appcontext.AppContext, args []string) error {
+func (cmd *Ptar) CobraCommand() *cobra.Command {
 	cmd.KlosetUUID = uuid.Must(uuid.NewRandom())
+	cmd.LocateOptions = locate.NewDefaultLocateOptions()
 
-	flags := flag.NewFlagSet("ptar", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: plakar %s [OPTIONS] -o out.ptar [@location | path]...\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
-		flags.PrintDefaults()
+	c := &cobra.Command{
+		Use: "ptar [OPTIONS] -o out.ptar [@location | path]...",
+	}
+	c.Flags().StringVar(&cmd.Hashing, "hashing", hashing.DEFAULT_HASHING_ALGORITHM, "hashing algorithm to use for digests")
+	c.Flags().BoolVar(&cmd.NoEncryption, "plaintext", false, "disable transparent encryption")
+	c.Flags().BoolVar(&cmd.NoCompression, "no-compression", false, "disable transparent compression")
+	c.Flags().BoolVar(&cmd.Overwrite, "overwrite", false, "overwrite the ptar archive if it already exists")
+	c.Flags().Var(subcommands.GoValue(&cmd.SyncTargets), "k", "add a kloset location to include in the ptar archive (can be specified multiple times)")
+	c.Flags().Var(subcommands.GoValue(&cmd.SyncTargets), "kloset", "add a kloset location to include in the ptar archive (can be specified multiple times)")
+	c.Flags().Var(subcommands.GoValue(&cmd.optIgnoreFiles), "ignore-file", "path to a file containing newline-separated gitignore patterns, treated as -ignore; can be specified multiple times")
+	c.Flags().Var(subcommands.GoValue(&cmd.optIgnore), "ignore", "gitignore pattern to exclude files, can be specified multiple times to add several exclusion patterns")
+	c.Flags().StringVar(&cmd.KlosetPath, "o", "", "name of the ptar archive to create")
+	subcommands.InstallGoFlags(c.Flags(), cmd.LocateOptions.InstallLocateFlags)
+	return c
+}
+
+func (cmd *Ptar) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
 	}
 
-	flags.StringVar(&cmd.Hashing, "hashing", hashing.DEFAULT_HASHING_ALGORITHM, "hashing algorithm to use for digests")
-	flags.BoolVar(&cmd.NoEncryption, "plaintext", false, "disable transparent encryption")
-	flags.BoolVar(&cmd.NoCompression, "no-compression", false, "disable transparent compression")
-	flags.BoolVar(&cmd.Overwrite, "overwrite", false, "overwrite the ptar archive if it already exists")
-	flags.Var(&cmd.SyncTargets, "k", "add a kloset location to include in the ptar archive (can be specified multiple times)")
-	flags.Var(&cmd.SyncTargets, "kloset", "add a kloset location to include in the ptar archive (can be specified multiple times)")
-	flags.StringVar(&cmd.KlosetPath, "o", "", "name of the ptar archive to create")
-	flags.Parse(args)
+	excludes := []string{}
 
 	if cmd.KlosetPath == "" {
-		return fmt.Errorf("%s: -o option must be specified", flag.CommandLine.Name())
+		return fmt.Errorf("-o option must be specified")
 	}
 
-	if len(cmd.SyncTargets) == 0 && flags.NArg() == 0 {
+	if len(cmd.SyncTargets) == 0 && len(rest) == 0 {
 		cmd.BackupTargets = []string{ctx.CWD}
 	}
 
-	if len(flags.Args()) > 0 {
-		cmd.BackupTargets = make([]string, len(flags.Args()))
-		copy(cmd.BackupTargets, flags.Args())
+	if len(rest) > 0 {
+		cmd.BackupTargets = make([]string, len(rest))
+		copy(cmd.BackupTargets, rest)
 	}
+
+	for _, ignoreFile := range cmd.optIgnoreFiles {
+		lines, err := utils.LoadIgnoreFile(ignoreFile)
+		if err != nil {
+			return err
+		}
+		excludes = append(excludes, lines...)
+	}
+
+	excludes = append(excludes, cmd.optIgnore...)
+	cmd.Excludes = excludes
 
 	for _, syncTarget := range cmd.SyncTargets {
 		var peerSecret []byte
@@ -126,6 +152,10 @@ func (cmd *Ptar) Parse(ctx *appcontext.AppContext, args []string) error {
 
 		peerStoreConfig, err := storage.NewConfigurationFromWrappedBytes(peerStoreSerializedConfig)
 		if err != nil {
+			return err
+		}
+
+		if err := utils.CheckPlaintext(storeConfig["location"], peerStoreConfig.Encryption != nil); err != nil {
 			return err
 		}
 
@@ -169,7 +199,7 @@ func (cmd *Ptar) Parse(ctx *appcontext.AppContext, args []string) error {
 	}
 
 	if hashing.GetHasher(strings.ToUpper(cmd.Hashing)) == nil {
-		return fmt.Errorf("%s: unknown hashing algorithm", flag.CommandLine.Name())
+		return fmt.Errorf("unknown hashing algorithm")
 	}
 
 	if !cmd.NoEncryption {
@@ -200,7 +230,9 @@ func (cmd *Ptar) Parse(ctx *appcontext.AppContext, args []string) error {
 	return nil
 }
 
-func (cmd *Ptar) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+// Execute builds a brand-new ptar archive from scratch, so the repository
+// passed in by the caller is intentionally unused.
+func (cmd *Ptar) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (int, error) {
 	storageConfiguration := storage.NewConfiguration()
 	storageConfiguration.RepositoryID = cmd.KlosetUUID
 
@@ -276,7 +308,7 @@ func (cmd *Ptar) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 		return 1, err
 	}
 
-	repo, err = repository.New(ctx.GetInner(), key, st, wrappedConfig)
+	repo, err := repository.New(ctx.GetInner(), key, st, wrappedConfig)
 	if err != nil {
 		return 1, err
 	}
@@ -345,7 +377,9 @@ func (cmd *Ptar) backup(ctx *appcontext.AppContext, repo *repository.RepositoryW
 			opts = remote
 		}
 
-		imp, err := importer.NewImporter(ctx.GetInner(), ctx.ImporterOpts(), opts)
+		importerOpts := ctx.ImporterOpts()
+		importerOpts.Excludes = cmd.Excludes
+		imp, err := importer.NewImporter(ctx.GetInner(), importerOpts, opts)
 		if err != nil {
 			return err
 		}
@@ -357,6 +391,10 @@ func (cmd *Ptar) backup(ctx *appcontext.AppContext, repo *repository.RepositoryW
 
 		source, err := snapshot.NewSource(ctx, imp)
 		if err != nil {
+			return err
+		}
+
+		if err := source.SetExcludes(cmd.Excludes); err != nil {
 			return err
 		}
 
@@ -385,8 +423,7 @@ func (cmd *Ptar) backup(ctx *appcontext.AppContext, repo *repository.RepositoryW
 }
 
 func (cmd *Ptar) synchronize(ctx *appcontext.AppContext, srcRepository *repository.Repository, dstRepository *repository.RepositoryWriter) error {
-	srcLocateOptions := locate.NewDefaultLocateOptions()
-	srcSnapshotIDs, err := locate.LocateSnapshotIDs(srcRepository, srcLocateOptions)
+	srcSnapshotIDs, err := locate.LocateSnapshotIDs(srcRepository, cmd.LocateOptions)
 	if err != nil {
 		return err
 	}

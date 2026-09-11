@@ -40,8 +40,7 @@ type appModel struct {
 	height int
 
 	// UI
-	barPrefix string
-	progress  progress.Model
+	progress progress.Model
 
 	// ETA calculation
 	lastETAAt time.Time
@@ -58,8 +57,6 @@ func newGenericModel(ctx *appcontext.AppContext, application *Application, repo 
 }
 
 func (m appModel) Init() tea.Cmd {
-	const batchMax = 1024 // tune: 128/256/512/1024 depending on workload
-
 	return tea.Batch(
 		tick(),
 		waitForCancel(m.application.ctx),

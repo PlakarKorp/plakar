@@ -11,6 +11,7 @@ PLAKAR-SERVER(1) - General Commands Manual
 \[**-listen**&nbsp;\[*host*]:*port*]
 \[**-cert**&nbsp;*path*]
 \[**-key**&nbsp;*path*]
+\[**-token**&nbsp;*string*]
 
 # DESCRIPTION
 
@@ -54,6 +55,12 @@ The options are as follows:
 
 > Path to a certificate private key file in PEM format.
 
+**-token** *string*
+
+> Require clients to provide the given Authorization Bearer token in order
+> to interact with
+> **plakar server**.
+
 # EXIT STATUS
 
 The **plakar-server** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
@@ -87,4 +94,4 @@ When a host name is provided,
 uses only one of the IP addresses it resolves to,
 preferably IPv4 .
 
-Plakar - May 5, 2026 - PLAKAR-SERVER(1)
+Plakar - August 25, 2026 - PLAKAR-SERVER(1)

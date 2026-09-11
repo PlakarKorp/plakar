@@ -104,7 +104,7 @@ func TestExecuteCmdArchiveDefault(t *testing.T) {
 
 	indexId := snap.Header.GetIndexID()
 	outputDir := fmt.Sprintf("%s/archive_test", tmpDestinationDir)
-	args := []string{"-output", outputDir, fmt.Sprintf("%s", hex.EncodeToString(indexId[:]))}
+	args := []string{"-output", outputDir, hex.EncodeToString(indexId[:])}
 
 	subcommand := &Archive{}
 	err = subcommand.Parse(ctx, args)

@@ -18,7 +18,6 @@ package cached
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"net"
@@ -38,6 +37,7 @@ import (
 	"github.com/PlakarKorp/plakar/utils"
 	"github.com/google/uuid"
 
+	"github.com/spf13/cobra"
 	"github.com/vmihailenco/msgpack/v5"
 )
 
@@ -53,6 +53,9 @@ type Cached struct {
 	listener   net.Listener
 
 	teardown time.Duration
+
+	foreground bool
+	logfile    string
 
 	jobMtx   sync.Mutex
 	jobQueue map[uuid.UUID](chan jobReq)
@@ -70,37 +73,38 @@ const (
 	jobDone = -1
 )
 
-func (cmd *Cached) Parse(ctx *appcontext.AppContext, args []string) error {
-	var opt_foreground bool
-	var opt_logfile string
+func (cmd *Cached) CobraCommand() *cobra.Command {
+	c := &cobra.Command{
+		Use: "cached [OPTIONS]",
+	}
+	c.Flags().StringVar(&cmd.logfile, "log", "", "log file")
+	c.Flags().BoolVar(&cmd.foreground, "foreground", false, "run in foreground")
+	c.Flags().DurationVar(&cmd.teardown, "teardown", 5*time.Second, "delay before tearing down cached")
+	return c
+}
 
-	flags := flag.NewFlagSet("cached", flag.ExitOnError)
-	flags.StringVar(&opt_logfile, "log", "", "log file")
-	flags.BoolVar(&opt_foreground, "foreground", false, "run in foreground")
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS]\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
-		flags.PrintDefaults()
+func (cmd *Cached) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
 	}
 
-	flags.DurationVar(&cmd.teardown, "teardown", 5*time.Second, "delay before tearing down cached")
-	flags.Parse(args)
-	if flags.NArg() != 0 {
+	if len(rest) != 0 {
 		return fmt.Errorf("too many arguments")
 	}
 
-	if !opt_foreground && os.Getenv("REEXEC") == "" {
+	if !cmd.foreground && os.Getenv("REEXEC") == "" {
 		err := daemonize(os.Args)
 		return err
 	}
 
-	if opt_logfile != "" {
-		f, err := os.OpenFile(opt_logfile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	if cmd.logfile != "" {
+		f, err := os.OpenFile(cmd.logfile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 		if err != nil {
 			return err
 		}
 		ctx.GetLogger().SetOutput(f)
-	} else if !opt_foreground {
+	} else if !cmd.foreground {
 		if err := setupSyslog(ctx); err != nil {
 			ctx.GetLogger().Error("failed to setup syslog: %s", err)
 			ctx.GetLogger().Error("will discard all future logs")

@@ -17,12 +17,12 @@
 package services
 
 import (
-	"flag"
 	"fmt"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/spf13/cobra"
 )
 
 type ServiceDisable struct {
@@ -31,18 +31,23 @@ type ServiceDisable struct {
 	Service string
 }
 
+func (cmd *ServiceDisable) CobraCommand() *cobra.Command {
+	return &cobra.Command{
+		Use: "service disable",
+	}
+}
+
 func (cmd *ServiceDisable) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("service disable", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s <name>\n", flags.Name())
-	}
-	flags.Parse(args)
-
-	if flags.NArg() != 1 {
-		return fmt.Errorf("invalid number of arguments, expected 1 but got %d", flags.NArg())
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
 	}
 
-	cmd.Service = flags.Arg(0)
+	if len(rest) != 1 {
+		return fmt.Errorf("invalid number of arguments, expected 1 but got %d", len(rest))
+	}
+
+	cmd.Service = rest[0]
 	cmd.RepositorySecret = ctx.GetSecret()
 
 	return nil

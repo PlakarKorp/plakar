@@ -18,26 +18,31 @@ package login
 
 import (
 	_ "embed"
-	"flag"
 	"fmt"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/spf13/cobra"
 )
 
 func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &Logout{} }, subcommands.BeforeRepositoryOpen, "logout")
 }
 
-func (cmd *Logout) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("logout", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s\n", flags.Name())
+func (cmd *Logout) CobraCommand() *cobra.Command {
+	return &cobra.Command{
+		Use: "logout",
 	}
-	flags.Parse(args)
+}
 
-	if flags.NArg() > 0 {
+func (cmd *Logout) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
+	}
+
+	if len(rest) > 0 {
 		return fmt.Errorf("too many arguments")
 	}
 

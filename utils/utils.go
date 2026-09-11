@@ -405,3 +405,12 @@ func ValidateEmail(email string) (string, error) {
 	}
 	return mail.Address, nil
 }
+
+func CheckPlaintext(location string, encrypted bool) error {
+	_, ok := os.LookupEnv("PLAKAR_INSECURE_PLAINTEXT")
+	if !encrypted && !ok {
+		return fmt.Errorf("refusing to open a plaintext repository without explicit consent")
+	}
+
+	return nil
+}

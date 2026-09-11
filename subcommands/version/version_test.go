@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/repository"
+	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
 	"github.com/stretchr/testify/require"
@@ -38,7 +38,7 @@ func TestParseCmdVersionTooManyArgs(t *testing.T) {
 	subcommand := &Version{}
 	err := subcommand.Parse(ctx, []string{"extra"})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "Too many arguments")
+	require.Contains(t, err.Error(), "too many arguments")
 }
 
 func TestExecuteCmdVersion(t *testing.T) {

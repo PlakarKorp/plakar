@@ -74,10 +74,9 @@ type State struct {
 	countSymlinkError  uint64
 	countSymlinkCached uint64
 
-	countFileSize      int64
-	countDirectorySize int64
-	countXattrSize     int64
-	countCachedSize    uint64
+	countFileSize   int64
+	countXattrSize  int64
+	countCachedSize uint64
 
 	lastItem string
 	errors   []string

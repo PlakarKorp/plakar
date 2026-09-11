@@ -19,9 +19,11 @@ package login
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"runtime"
 	"time"
 
@@ -33,15 +35,26 @@ type TokenResponse struct {
 	Token string `json:"token"`
 }
 
+// defaultBaseURL is the plakar.io auth API root. It is overridable per-flow
+// (via the baseURL field) so tests can point the login flow at a local server.
+const defaultBaseURL = "https://api.plakar.io"
+
+// ErrRateLimited marks a login failure caused by the auth API rate limiting the
+// caller. It is wrapped into the returned error so callers can react to it with
+// errors.Is without depending on a concrete error type or HTTP status code.
+var ErrRateLimited = errors.New("rate limited")
+
 type loginFlow struct {
 	appCtx  *appcontext.AppContext
 	noSpawn bool
+	baseURL string
 }
 
 func NewLoginFlow(appCtx *appcontext.AppContext, noSpawn bool) (*loginFlow, error) {
 	flow := &loginFlow{
 		appCtx:  appCtx,
 		noSpawn: noSpawn,
+		baseURL: defaultBaseURL,
 	}
 	return flow, nil
 }
@@ -53,7 +66,7 @@ func (flow *loginFlow) Poll(pollID string, iterations int, delay time.Duration, 
 		case <-flow.appCtx.Done():
 			return "", flow.appCtx.Err()
 		case <-tick:
-			reqUrl := "https://api.plakar.io/v1/auth/poll/" + pollID
+			reqUrl := flow.baseURL + "/v1/auth/poll/" + pollID
 			req, err := http.NewRequestWithContext(flow.appCtx, "POST", reqUrl, nil)
 			if err != nil {
 				return "", fmt.Errorf("the /auth/login/github/poll API endpoint failed: %w", err)
@@ -64,18 +77,25 @@ func (flow *loginFlow) Poll(pollID string, iterations int, delay time.Duration, 
 			if err != nil {
 				return "", fmt.Errorf("the /auth/login/github/poll API endpoint failed: %w", err)
 			}
-			// leaking resp for now
-			if resp.StatusCode == http.StatusOK {
+			switch resp.StatusCode {
+			case http.StatusOK:
 				var tokenResponse TokenResponse
-				if err := json.NewDecoder(resp.Body).Decode(&tokenResponse); err != nil {
-					return "", fmt.Errorf("failed to decode response JSON: %v", err)
+				decodeErr := json.NewDecoder(resp.Body).Decode(&tokenResponse)
+				resp.Body.Close()
+				if decodeErr != nil {
+					return "", fmt.Errorf("failed to decode response JSON: %v", decodeErr)
 				}
 				return tokenResponse.Token, nil
-			} else if resp.StatusCode == http.StatusNotFound {
+			case http.StatusNotFound:
+				resp.Body.Close()
 				return "", fmt.Errorf("unknown ID")
-			} else if resp.StatusCode == http.StatusAccepted {
+			case http.StatusAccepted:
+				resp.Body.Close()
 				progressCb()
-			} else {
+			case http.StatusTooManyRequests:
+				return "", ErrRateLimited
+			default:
+				resp.Body.Close()
 				return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 			}
 		}
@@ -90,9 +110,9 @@ func (flow *loginFlow) Run(provider string, parameters map[string]string) (strin
 
 	switch provider {
 	case "github":
-		url = "https://api.plakar.io/v1/auth/login/github"
+		url = flow.baseURL + "/v1/auth/login/github"
 	case "email":
-		url = "https://api.plakar.io/v1/auth/login/email"
+		url = flow.baseURL + "/v1/auth/login/email"
 	default:
 		return "", fmt.Errorf("unsupported provider: %s", provider)
 	}
@@ -110,8 +130,10 @@ func (flow *loginFlow) Run(provider string, parameters map[string]string) (strin
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		data, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("unexpected status code: %d : %s", resp.StatusCode, data)
+		if resp.StatusCode == http.StatusTooManyRequests {
+			return "", ErrRateLimited
+		}
+		return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
 	switch provider {
@@ -167,9 +189,9 @@ func (flow *loginFlow) RunUI(provider string, parameters map[string]string) (str
 
 	switch provider {
 	case "github":
-		url = "https://api.plakar.io/v1/auth/login/github"
+		url = flow.baseURL + "/v1/auth/login/github"
 	case "email":
-		url = "https://api.plakar.io/v1/auth/login/email"
+		url = flow.baseURL + "/v1/auth/login/email"
 	default:
 		return "", fmt.Errorf("unsupported provider: %s", provider)
 	}
@@ -187,8 +209,10 @@ func (flow *loginFlow) RunUI(provider string, parameters map[string]string) (str
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		data, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("unexpected status code: %d : %s", resp.StatusCode, data)
+		if resp.StatusCode == http.StatusTooManyRequests {
+			return "", ErrRateLimited
+		}
+		return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
 	switch provider {
@@ -214,6 +238,7 @@ func (flow *loginFlow) handleGithubResponseUI(resp *http.Response) (string, erro
 		token, _ := flow.Poll(respData.PollID, 10, time.Second*5, func() {})
 		if token != "" {
 			if err := flow.appCtx.GetCookies().PutAuthToken(token); err != nil {
+				flow.appCtx.GetLogger().Error("failed to store auth token: %v", err)
 			}
 		}
 
@@ -234,6 +259,7 @@ func (flow *loginFlow) handleEmailResponseUI(resp *http.Response) (string, error
 		token, _ := flow.Poll(respData.PollID, 10, time.Second*5, func() {})
 		if token != "" {
 			if err := flow.appCtx.GetCookies().PutAuthToken(token); err != nil {
+				flow.appCtx.GetLogger().Error("failed to store auth token: %v", err)
 			}
 		}
 	}()
@@ -251,7 +277,11 @@ func DeriveToken(ctx *appcontext.AppContext) (string, error) {
 		return "", err
 	}
 
-	url := "https://api.plakar.io/v1/account/derive-token"
+	base := os.Getenv("PLAKAR_API_URL")
+	if base == "" {
+		base = defaultBaseURL
+	}
+	url := base + "/v1/account/derive-token"
 	req, err := http.NewRequest("POST", url, nil)
 	if err != nil {
 		return "", err

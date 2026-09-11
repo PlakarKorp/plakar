@@ -18,7 +18,6 @@ package maintenance
 
 import (
 	"bytes"
-	"flag"
 	"fmt"
 	"os"
 	"strconv"
@@ -31,6 +30,7 @@ import (
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -40,12 +40,16 @@ func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &Maintenance{} }, 0, "maintenance")
 }
 
-func (cmd *Maintenance) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("maintenance", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s\n", flags.Name())
+func (cmd *Maintenance) CobraCommand() *cobra.Command {
+	return &cobra.Command{
+		Use: "maintenance",
 	}
-	flags.Parse(args)
+}
+
+func (cmd *Maintenance) Parse(ctx *appcontext.AppContext, args []string) error {
+	if _, err := subcommands.ParseCobra(cmd, args); err != nil {
+		return err
+	}
 
 	cmd.RepositorySecret = ctx.GetSecret()
 
@@ -133,7 +137,7 @@ func (cmd *Maintenance) updateCache(ctx *appcontext.AppContext, cache *caching.M
 }
 
 func (cmd *Maintenance) colourPass(ctx *appcontext.AppContext, cache *caching.MaintenanceCache) error {
-	var packfiles map[objects.MAC]struct{} = make(map[objects.MAC]struct{})
+	var packfiles = make(map[objects.MAC]struct{})
 	for packfileMAC := range cmd.repository.ListPackfiles() {
 		packfiles[packfileMAC] = struct{}{}
 	}
@@ -435,7 +439,7 @@ func (cmd *Maintenance) Lock() (chan bool, error) {
 			return nil, err
 		}
 
-		return nil, fmt.Errorf("Can't take exclusive lock, repository is already locked")
+		return nil, fmt.Errorf("can't take exclusive lock, repository is already locked")
 	}
 
 	// The following bit is a "ping" mechanism, Lock() is a bit badly named at this point,

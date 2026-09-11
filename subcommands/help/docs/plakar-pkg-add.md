@@ -7,6 +7,8 @@ PLAKAR-PKG-ADD(1) - General Commands Manual
 # SYNOPSIS
 
 **plakar&nbsp;pkg&nbsp;add**
+\[**-allow-unsigned**]
+\[**-devel**]
 \[**-u**]
 *plugin&nbsp;...*
 
@@ -33,8 +35,21 @@ it locally
 To install a specific version of a plugin, use the
 *name*@*version*
 syntax.
+*version*
+may be
+**latest**,
+which is also what is used when no version is given.
 
 The options are as follows:
+
+**-allow-unsigned**
+
+> Install packages that carry no signature.
+> By default, package are expected to be signed.
+
+**-devel**
+
+> Use the integration devel tree.
 
 **-u**
 
@@ -65,4 +80,4 @@ plakar-pkg-create(1),
 plakar-pkg-rm(1),
 plakar-pkg-show(1)
 
-Plakar - March 23, 2026 - PLAKAR-PKG-ADD(1)
+Plakar - August 26, 2026 - PLAKAR-PKG-ADD(1)

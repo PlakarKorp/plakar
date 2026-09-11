@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,29 +12,46 @@ import (
 	"github.com/PlakarKorp/pkg"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/plugins"
+	"github.com/PlakarKorp/plakar/signify"
 	"github.com/PlakarKorp/plakar/utils"
 )
 
-func setupPkgManager(ctx *appcontext.AppContext, dataDir, cacheDir string) error {
+func setupPkgManager(ctx *appcontext.AppContext, configDir, dataDir, cacheDir string) error {
 	plugdir := filepath.Join(dataDir, "plugins", pkg.PLUGIN_API_VERSION)
 	cachedir := filepath.Join(cacheDir, "plugins", pkg.PLUGIN_API_VERSION)
 
 	backend, err := pkg.NewFlatBackend(ctx.GetInner(), plugdir, cachedir, &pkg.FlatBackendOptions{
 		PreLoadHook: pkgpreloadhook,
-		LoadHook:    pkgloadhook,
-		UnloadHook:  pkgunloadhook,
+		InstallHook: func(m *pkg.Manifest) error {
+			return plugins.EnsureImages(ctx, m, ctx.Stdout, ctx.Stderr)
+		},
+		LoadHook:   pkgloadhook,
+		UnloadHook: pkgunloadhook,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to init the package manager: %w", err)
 	}
 
+	// The trust store is built once per run from the keys compiled into
+	// this binary plus any the user added. A failure to read it is fatal
+	// rather than degraded: continuing with fewer keys than the user
+	// configured would silently install packages they never trusted.
+	trust, err := signify.LoadTrustStore(configDir)
+	if err != nil {
+		return fmt.Errorf("failed to load the package trust store: %w", err)
+	}
+
+	verifier := signify.NewVerifier(trust)
+
 	token, _ := ctx.GetCookies().GetAuthToken()
 	manager, err := pkg.New(backend, &pkg.Options{
-		InstallURL:      "https://plakar.io/dist/plugins/kloset/community/",
+		DistURL:         "https://plakar.io/dist/plugins/kloset/",
+		Edition:         "community",
 		ApiURL:          "https://api.plakar.io/",
 		BinaryNeedsAuth: true,
 		UserAgent:       "plakar/" + utils.VERSION,
 		RequestHook:     pkg.WithBearer(func() (string, error) { return token, nil }),
+		Verifier:        verifier,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to init the package manager: %w", err)
@@ -46,6 +62,7 @@ func setupPkgManager(ctx *appcontext.AppContext, dataDir, cacheDir string) error
 	}
 
 	ctx.SetPkgManager(manager)
+	ctx.SetPkgVerifier(verifier)
 
 	return nil
 }
@@ -83,13 +100,13 @@ func pkgpreloadhook(m *pkg.Manifest) error {
 func pkgloadhook(m *pkg.Manifest, p *pkg.Package, pkgdir string) {
 	if err := plugins.Load(m, pkgdir); err != nil {
 		fmt.Fprintf(os.Stderr, "%s: failed to load %s@%s: %s\n",
-			flag.CommandLine.Name(), m.Name, p.Version, err)
+			progName(), m.Name, p.Version, err)
 	}
 }
 
 func pkgunloadhook(m *pkg.Manifest, p *pkg.Package) {
 	if err := plugins.Unload(m); err != nil {
 		fmt.Fprintf(os.Stderr, "%s: failed to unload %s@%s: %s\n",
-			flag.CommandLine.Name(), m.Name, p.Version, err)
+			progName(), m.Name, p.Version, err)
 	}
 }

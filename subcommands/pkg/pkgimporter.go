@@ -18,6 +18,7 @@
 package pkg
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -38,7 +39,7 @@ import (
 type pkgerImporter struct {
 	cwd          string
 	manifest     *pkg.Manifest
-	manifestPath string
+	manifestData []byte
 }
 
 type itemtype int
@@ -61,18 +62,6 @@ func absolutify(cwd, path string) string {
 	return filepath.Join(cwd, path)
 }
 
-func mkstruct(p string, ch chan<- *connectors.Record) {
-	dir := path.Dir(p)
-	for dir != "/" {
-		fi := objects.FileInfo{
-			Lname: path.Base(dir),
-			Lmode: 0700 | os.ModeDir,
-		}
-		ch <- connectors.NewRecord(dir, "", fi, nil, nil)
-		dir = path.Dir(dir)
-	}
-}
-
 func (imp *pkgerImporter) dofile(p string, ch chan<- *connectors.Record, it itemtype) error {
 	absolute := absolutify(imp.cwd, p)
 
@@ -88,14 +77,12 @@ func (imp *pkgerImporter) dofile(p string, ch chan<- *connectors.Record, it item
 
 	fp, err := os.Open(absolute)
 	if err != nil {
-		ch <- connectors.NewError(name, fmt.Errorf("Failed to open file: %w", err))
-		return nil
+		return fmt.Errorf("Failed to open file: %w", err)
 	}
 
 	fi, err := fp.Stat()
 	if err != nil {
-		ch <- connectors.NewError(name, fmt.Errorf("Failed to stat file: %w", err))
-		return nil
+		return fmt.Errorf("Failed to stat file: %w", err)
 	}
 
 	switch it {
@@ -108,23 +95,19 @@ func (imp *pkgerImporter) dofile(p string, ch chan<- *connectors.Record, it item
 		}
 
 		if !isexe {
-			ch <- connectors.NewError(name, fmt.Errorf("Not executable: %s", absolute))
-			return nil
+			return fmt.Errorf("Not executable: %s", absolute)
 		}
 
 	case itjson:
 		content := make(map[string]any)
 		if err := json.NewDecoder(fp).Decode(&content); err != nil {
-			ch <- connectors.NewError(name, fmt.Errorf("invalid json: %s: %w", absolute, err))
-			return nil
+			return fmt.Errorf("invalid json: %s: %w", absolute, err)
 		}
 		if _, err := fp.Seek(0, io.SeekStart); err != nil {
-			ch <- connectors.NewError(name, fmt.Errorf("seek failed: %w", err))
-			return nil
+			return fmt.Errorf("seek failed: %w", err)
 		}
 	}
 
-	mkstruct(name, ch)
 	ch <- &connectors.Record{
 		Pathname: name,
 		FileInfo: objects.FileInfoFromStat(fi),
@@ -134,37 +117,33 @@ func (imp *pkgerImporter) dofile(p string, ch chan<- *connectors.Record, it item
 	return nil
 }
 
-func (imp *pkgerImporter) scan(ch chan<- *connectors.Record) error {
-	info := objects.NewFileInfo("/", 0, 0700|os.ModeDir, time.Unix(0, 0), 0, 0, 0, 0, 1)
-	ch <- &connectors.Record{
-		Pathname: "/",
-		FileInfo: info,
-	}
+func (imp *pkgerImporter) Import(ctx context.Context, records chan<- *connectors.Record, results <-chan *connectors.Result) error {
+	defer close(records)
 
-	if err := imp.dofile(imp.manifestPath, ch, itextra); err != nil {
-		return err
+	records <- &connectors.Record{
+		Pathname: "/manifest.yaml",
+		FileInfo: objects.NewFileInfo("manifest.yaml", int64(len(imp.manifestData)), 0644, time.Now(), 0, 0, 0, 0, 1),
+		Reader:   io.NopCloser(bytes.NewReader(imp.manifestData)),
 	}
 	for _, conn := range imp.manifest.Connectors {
-		if err := imp.dofile(conn.Executable, ch, itexe); err != nil {
-			return err
+		// Image connectors carry no executable; the binary lives in the image.
+		if conn.Executable != "" {
+			if err := imp.dofile(conn.Executable, records, itexe); err != nil {
+				return err
+			}
 		}
 		if conn.Validator != "" {
-			if err := imp.dofile(conn.Validator, ch, itjson); err != nil {
+			if err := imp.dofile(conn.Validator, records, itjson); err != nil {
 				return err
 			}
 		}
 		for _, file := range conn.ExtraFiles {
-			if err := imp.dofile(file, ch, itextra); err != nil {
+			if err := imp.dofile(file, records, itextra); err != nil {
 				return err
 			}
 		}
 	}
 	return nil
-}
-
-func (imp *pkgerImporter) Import(ctx context.Context, records chan<- *connectors.Record, results <-chan *connectors.Result) error {
-	defer close(records)
-	return imp.scan(records)
 }
 
 func (imp *pkgerImporter) Ping(ctx context.Context) error {

@@ -57,26 +57,22 @@ func rebuildStateRequest(ctx *appcontext.AppContext, req *RequestPkt) (int, erro
 	}
 
 	response := &ResponsePkt{}
-	for {
-		if err := client.dec.Decode(response); err != nil {
-			if err == io.EOF {
-				break
-			}
-			if err := ctx.Err(); err != nil {
-				return 1, err
-			}
-			return 1, fmt.Errorf("failed to decode response: %w", err)
+	if err := client.dec.Decode(response); err != nil {
+		// The server closed the connection without a response packet.
+		if err == io.EOF {
+			return 0, nil
 		}
-
-		var err error
-		if response.Err != "" {
-			err = fmt.Errorf("%s", response.Err)
+		if err := ctx.Err(); err != nil {
+			return 1, err
 		}
-
-		return response.ExitCode, err
+		return 1, fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	return 0, nil
+	if response.Err != "" {
+		return response.ExitCode, fmt.Errorf("%s", response.Err)
+	}
+
+	return response.ExitCode, nil
 }
 
 func newClient(ctx *appcontext.AppContext, socketPath string, ignoreVersion bool) (*Client, error) {

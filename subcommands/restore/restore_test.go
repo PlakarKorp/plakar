@@ -2,7 +2,6 @@ package restore
 
 import (
 	"encoding/hex"
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -95,7 +94,7 @@ func TestExecuteCmdRestoreSpecificSnapshot(t *testing.T) {
 	})
 
 	indexId := snap.Header.GetIndexID()
-	args := []string{"-to", tmpToRestoreDir, fmt.Sprintf("%s", hex.EncodeToString(indexId[:]))}
+	args := []string{"-to", tmpToRestoreDir, hex.EncodeToString(indexId[:])}
 	subcommand := &Restore{}
 	err = subcommand.Parse(ctx, args)
 	require.NoError(t, err)

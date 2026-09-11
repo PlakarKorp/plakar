@@ -10,6 +10,7 @@ import (
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
+	"github.com/spf13/cobra"
 )
 
 type ConfigPolicyCmd struct {
@@ -18,23 +19,21 @@ type ConfigPolicyCmd struct {
 	args []string
 }
 
-func (cmd *ConfigPolicyCmd) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("policy", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s add <name> [<key>=<value>]...\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s rm <name>\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s set <name> [<option>=<value>...]\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s show [<name>...]\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s unset <name> <option>...\n", flags.Name())
-		flags.PrintDefaults()
+func (cmd *ConfigPolicyCmd) CobraCommand() *cobra.Command {
+	return &cobra.Command{
+		Use: "policy",
 	}
+}
 
-	flags.Parse(args)
-	if flags.NArg() == 0 {
+func (cmd *ConfigPolicyCmd) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
+	}
+	if len(rest) == 0 {
 		return fmt.Errorf("no action specified")
 	}
-	cmd.args = flags.Args()
+	cmd.args = rest
 	return nil
 }
 
@@ -63,6 +62,7 @@ func dispatchPolicy(ctx *appcontext.AppContext, cmd, subcmd string, args []strin
 		p.Parse(args)
 
 		if len(args) < 1 {
+			//nolint:staticcheck // ST1005: user-facing usage string, kept verbatim
 			return fmt.Errorf("Usage: plakar %s %s <name> [<key>=<value>...]", cmd, p.Name())
 		}
 
@@ -74,6 +74,7 @@ func dispatchPolicy(ctx *appcontext.AppContext, cmd, subcmd string, args []strin
 		for _, kv := range args[1:] {
 			key, val, found := strings.Cut(kv, "=")
 			if !found || key == "" {
+				//nolint:staticcheck // ST1005: user-facing usage string, kept verbatim
 				return fmt.Errorf("Usage: plakar %s %s <name> [<key>=<value>...]", cmd, p.Name())
 			}
 			if err := config.Set(name, key, val); err != nil {
@@ -91,6 +92,7 @@ func dispatchPolicy(ctx *appcontext.AppContext, cmd, subcmd string, args []strin
 		p.Parse(args)
 
 		if len(args) != 1 {
+			//nolint:staticcheck // ST1005: user-facing usage string, kept verbatim
 			return fmt.Errorf("Usage: plakar %s %s <name>", cmd, p.Name())
 		}
 
@@ -110,6 +112,7 @@ func dispatchPolicy(ctx *appcontext.AppContext, cmd, subcmd string, args []strin
 		p.Parse(args)
 
 		if len(args) < 2 {
+			//nolint:staticcheck // ST1005: user-facing usage string, kept verbatim
 			return fmt.Errorf("Usage: plakar %s %s <name> <key>=<value>...", cmd, p.Name())
 		}
 		name := normalizeName(args[0])
@@ -161,6 +164,7 @@ func dispatchPolicy(ctx *appcontext.AppContext, cmd, subcmd string, args []strin
 		p.Parse(args)
 
 		if len(args) < 2 {
+			//nolint:staticcheck // ST1005: user-facing usage string, kept verbatim
 			return fmt.Errorf("Usage: plakar %s %s <name> <key>...", cmd, p.Name())
 		}
 		name := normalizeName(args[0])

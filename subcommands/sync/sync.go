@@ -17,7 +17,6 @@
 package sync
 
 import (
-	"flag"
 	"fmt"
 	"os"
 
@@ -32,6 +31,7 @@ import (
 	"github.com/PlakarKorp/plakar/cached"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
+	"github.com/spf13/cobra"
 )
 
 type Sync struct {
@@ -51,31 +51,32 @@ func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &Sync{} }, 0, "sync")
 }
 
-func (cmd *Sync) Parse(ctx *appcontext.AppContext, args []string) error {
+func (cmd *Sync) CobraCommand() *cobra.Command {
 	cmd.SrcLocateOptions = locate.NewDefaultLocateOptions()
 
-	flags := flag.NewFlagSet("sync", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s [SNAPSHOT] to REPOSITORY\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s [SNAPSHOT] from REPOSITORY\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       %s [SNAPSHOT] with REPOSITORY\n", flags.Name())
-		flags.PrintDefaults()
+	c := &cobra.Command{
+		Use: "sync",
+	}
+	c.Flags().StringVar(&cmd.PackfileTempStorage, "packfiles", "", "memory or a path to a directory to store temporary packfiles")
+	c.Flags().StringVar(&cmd.Cache, "cache", "vfs", "path to store vfs cache, 'no' for uncached and 'vfs' for the default in memory cache")
+	subcommands.InstallGoFlags(c.Flags(), cmd.SrcLocateOptions.InstallLocateFlags)
+	return c
+}
+
+func (cmd *Sync) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
 	}
 
-	cmd.SrcLocateOptions.InstallLocateFlags(flags)
-	flags.StringVar(&cmd.PackfileTempStorage, "packfiles", "", "memory or a path to a directory to store temporary packfiles")
-	flags.StringVar(&cmd.Cache, "cache", "vfs", "path to store vfs cache, 'no' for uncached and 'vfs' for the default in memory cache")
-
-	flags.Parse(args)
-
-	if flags.NArg() > 3 {
-		return fmt.Errorf("Too many arguments")
+	if len(rest) > 3 {
+		return fmt.Errorf("too many arguments")
 	}
 
 	direction := ""
 	peerRepositoryPath := ""
 
-	args = flags.Args()
+	args = rest
 	switch len(args) {
 	case 2:
 		direction = args[0]
@@ -101,6 +102,11 @@ func (cmd *Sync) Parse(ctx *appcontext.AppContext, args []string) error {
 		return fmt.Errorf("peer store: %w", err)
 	}
 
+	pass, hasPass := storeConfig["passphrase"]
+	delete(storeConfig, "passphrase")
+	passCmd, hasPassCmd := storeConfig["passphrase_cmd"]
+	delete(storeConfig, "passphrase_cmd")
+
 	peerStore, peerStoreSerializedConfig, err := storage.Open(ctx.GetInner(), storeConfig)
 	if err != nil {
 		return err
@@ -111,9 +117,13 @@ func (cmd *Sync) Parse(ctx *appcontext.AppContext, args []string) error {
 		return err
 	}
 
+	if err := utils.CheckPlaintext(storeConfig["location"], peerStoreConfig.Encryption != nil); err != nil {
+		return err
+	}
+
 	var peerSecret []byte
 	if peerStoreConfig.Encryption != nil {
-		if pass, ok := storeConfig["passphrase"]; ok {
+		if hasPass {
 			key, err := encryption.DeriveKey(peerStoreConfig.Encryption.KDFParams, []byte(pass))
 			if err != nil {
 				return err
@@ -122,8 +132,8 @@ func (cmd *Sync) Parse(ctx *appcontext.AppContext, args []string) error {
 				return fmt.Errorf("invalid passphrase")
 			}
 			peerSecret = key
-		} else if cmd, ok := storeConfig["passphrase_cmd"]; ok {
-			passphrase, err := utils.GetPassphraseFromCommand(cmd)
+		} else if hasPassCmd {
+			passphrase, err := utils.GetPassphraseFromCommand(passCmd)
 			if err != nil {
 				return fmt.Errorf("failed to read passphrase from command: %w", err)
 			}
@@ -176,6 +186,9 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 	if err != nil {
 		return 1, fmt.Errorf("peer store: %w", err)
 	}
+
+	delete(storeConfig, "passphrase")
+	delete(storeConfig, "passphrase_cmd")
 
 	peerStore, peerStoreSerializedConfig, err := storage.Open(ctx.GetInner(), storeConfig)
 	if err != nil {
@@ -230,20 +243,21 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 	var dstRepository *repository.Repository
 
 	srcStoreConfig := ctx.StoreConfig
-	if cmd.Direction == "to" {
+	switch cmd.Direction {
+	case "to":
 		srcRepository = repo
 		dstRepository = peerRepository
-	} else if cmd.Direction == "from" {
+	case "from":
 		srcRepository = peerRepository
 		dstRepository = repo
 		srcStoreConfig = storeConfig
 		tmp := ctx
 		ctx = peerCtx
 		peerCtx = tmp
-	} else if cmd.Direction == "with" {
+	case "with":
 		srcRepository = repo
 		dstRepository = peerRepository
-	} else {
+	default:
 		return 1, fmt.Errorf("could not synchronize %s: invalid direction, must be to, from or with", cmd.PeerRepositoryLocation)
 	}
 
@@ -301,7 +315,8 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 		}
 	}
 
-	if cmd.Direction == "with" {
+	switch cmd.Direction {
+	case "with":
 
 		dstSnapshotIDs, err := locate.LocateSnapshotIDs(dstRepository, cmd.SrcLocateOptions)
 		if err != nil {
@@ -340,12 +355,12 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 			srcLocation,
 			dstLocation,
 			srcSynced+dstSynced)
-	} else if cmd.Direction == "to" {
+	case "to":
 		ctx.GetLogger().Info("sync: synchronization from %s to %s completed: %d snapshots synchronized",
 			srcLocation,
 			dstLocation,
 			srcSynced)
-	} else {
+	default:
 		ctx.GetLogger().Info("sync: synchronization from %s to %s completed: %d snapshots synchronized",
 			dstLocation,
 			srcLocation,

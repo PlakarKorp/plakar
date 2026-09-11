@@ -2,7 +2,6 @@ package diag
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"strings"
 
@@ -11,6 +10,7 @@ import (
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/spf13/cobra"
 )
 
 type DiagSearch struct {
@@ -20,21 +20,29 @@ type DiagSearch struct {
 	Mimes        []string
 }
 
+func (cmd *DiagSearch) CobraCommand() *cobra.Command {
+	return &cobra.Command{
+		Use: "diag search",
+	}
+}
+
 func (cmd *DiagSearch) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("diag search", flag.ExitOnError)
-	flags.Parse(args)
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
+	}
 
 	var path string
 	var mimes []string
 
-	switch flags.NArg() {
+	switch len(rest) {
 	case 1:
-		path = flags.Arg(0)
+		path = rest[0]
 	case 2:
-		path, mimes = flags.Arg(0), strings.Split(flags.Arg(1), ",")
+		path, mimes = rest[0], strings.Split(rest[1], ",")
 	default:
 		return fmt.Errorf("usage: %s search snapshot[:path] mimes",
-			flags.Name())
+			"diag search")
 	}
 
 	cmd.RepositorySecret = ctx.GetSecret()

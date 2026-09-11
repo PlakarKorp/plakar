@@ -1,151 +1,119 @@
 package api
 
 import (
-	"bytes"
-	"io"
+	"encoding/json"
+	"errors"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
-	"github.com/PlakarKorp/kloset/caching"
-	"github.com/PlakarKorp/kloset/caching/pebble"
-	"github.com/PlakarKorp/kloset/connectors/storage"
-	"github.com/PlakarKorp/kloset/hashing"
-	"github.com/PlakarKorp/kloset/logging"
+	_ "github.com/PlakarKorp/integrations/fs/exporter"
 	"github.com/PlakarKorp/kloset/repository"
-	"github.com/PlakarKorp/kloset/resources"
-	"github.com/PlakarKorp/kloset/versioning"
-	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/PlakarKorp/plakar/cookies"
-	ptesting "github.com/PlakarKorp/plakar/testing"
+	"github.com/PlakarKorp/kloset/snapshot"
+	"github.com/PlakarKorp/plakar/login"
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewRouter(t *testing.T) {
-	repo := &repository.Repository{}
-	ctx := appcontext.NewAppContext()
-	token := "test-token"
-	mux := http.NewServeMux()
-	// Make sure SetupRoutes doesn't panic, which happens when invalid routes
-	// are registered
-	SetupRoutes(mux, repo, ctx, token, false)
-}
+// TestAPI covers routing, error mapping and the /api/info handler. Most cases
+// share one fixture; the two that need routes wired differently (a token, and
+// demo mode, both of which SetupRoutes reads at construction time) build their
+// own inside their subtest.
+func TestAPI(t *testing.T) {
+	mux, _, snap, ctx := server(t, "")
+	defer snap.Close()
 
-func TestAuthMiddleware(t *testing.T) {
-	tmpCacheDir, err := os.MkdirTemp("", "tmp_cache")
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		os.RemoveAll(tmpCacheDir)
+	t.Run("handle error mapping", func(t *testing.T) {
+		for _, c := range []struct {
+			name string
+			err  error
+			want int
+		}{
+			{"not-readable -> 400", repository.ErrNotReadable, http.StatusBadRequest},
+			{"blob-not-found -> 404", repository.ErrBlobNotFound, http.StatusNotFound},
+			{"packfile-not-found -> 500", repository.ErrPackfileNotFound, http.StatusInternalServerError},
+			{"fs-not-exist -> 404", fs.ErrNotExist, http.StatusNotFound},
+			{"snapshot-not-found -> 404", snapshot.ErrNotFound, http.StatusNotFound},
+			{"non-wrapped fs-not-exist -> 500", errors.New("boom: " + fs.ErrNotExist.Error()), http.StatusInternalServerError},
+			{"unknown -> 500", errors.New("some random failure"), http.StatusInternalServerError},
+			{"rate-limited -> 429", login.ErrRateLimited, http.StatusTooManyRequests},
+		} {
+			t.Run(c.name, func(t *testing.T) {
+				req, _ := http.NewRequest("GET", "/whatever", nil)
+				w := httptest.NewRecorder()
+				handleError(w, req, c.err)
+				require.Equal(t, c.want, w.Code)
+
+				var body ApiErrorRes
+				require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+				require.NotNil(t, body.Error)
+			})
+		}
 	})
 
-	config := ptesting.NewConfiguration()
-
-	serializedConfig, err := config.ToBytes()
-	require.NoError(t, err)
-
-	hasher := hashing.GetHasher(hashing.DEFAULT_HASHING_ALGORITHM)
-	wrappedConfigRd, err := storage.Serialize(hasher, resources.RT_CONFIG, versioning.GetCurrentVersion(resources.RT_CONFIG), bytes.NewReader(serializedConfig))
-	require.NoError(t, err)
-
-	wrappedConfig, err := io.ReadAll(wrappedConfigRd)
-	require.NoError(t, err)
-
-	ctx := appcontext.NewAppContext()
-	cache := caching.NewManager(pebble.Constructor(tmpCacheDir))
-	defer cache.Close()
-	ctx.SetCache(cache)
-	ctx.CacheDir = tmpCacheDir
-	ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
-
-	cookies := cookies.NewManager("/tmp/test_plakar")
-	ctx.SetCookies(cookies)
-	ctx.Client = "plakar-test/1.0.0"
-
-	lstore, err := storage.Create(ctx.GetInner(), map[string]string{"location": "mock:///test/location"}, wrappedConfig)
-	require.NoError(t, err)
-	repo, err := repository.New(ctx.GetInner(), nil, lstore, wrappedConfig)
-	if err != nil {
-		t.Fatal(err)
-	}
-	token := "test-token"
-	mux := http.NewServeMux()
-	SetupRoutes(mux, repo, ctx, token, false)
-
-	req, err := http.NewRequest("GET", "/api/info", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	req.Header.Set("Authorization", "Invalid Token")
-	w := httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
-	if w.Code != http.StatusUnauthorized {
-		t.Errorf("Expected status code 401, got %d", w.Code)
-	}
-
-	req.Header.Set("Authorization", "")
-	w2 := httptest.NewRecorder()
-	mux.ServeHTTP(w2, req)
-	if w2.Code != http.StatusUnauthorized {
-		t.Errorf("Expected status code 401, got %d", w2.Code)
-	}
-
-	req.Header.Set("Authorization", "Bearer "+token)
-	w3 := httptest.NewRecorder()
-	mux.ServeHTTP(w3, req)
-
-	if w3.Code != http.StatusOK {
-		t.Errorf("Expected status code 200, got %d", w3.Code)
-	}
-}
-
-func Test_UnknownEndpoint(t *testing.T) {
-	tmpCacheDir, err := os.MkdirTemp("", "tmp_cache")
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		os.RemoveAll(tmpCacheDir)
+	t.Run("unknown endpoint", func(t *testing.T) {
+		w := get(t, mux, "/api/does-not-exist")
+		require.Equal(t, http.StatusNotFound, w.Code)
 	})
 
-	config := ptesting.NewConfiguration()
+	t.Run("info authenticated", func(t *testing.T) {
+		// Drop an auth token into the cookie jar so apiInfo reports authenticated,
+		// and take it back out so the shared fixture stays unauthenticated.
+		require.NoError(t, ctx.GetCookies().PutAuthToken("some-auth-token"))
+		t.Cleanup(func() { _ = ctx.GetCookies().DeleteAuthToken() })
 
-	serializedConfig, err := config.ToBytes()
-	require.NoError(t, err)
+		w := get(t, mux, "/api/info")
+		require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
 
-	hasher := hashing.GetHasher(hashing.DEFAULT_HASHING_ALGORITHM)
-	wrappedConfigRd, err := storage.Serialize(hasher, resources.RT_CONFIG, versioning.GetCurrentVersion(resources.RT_CONFIG), bytes.NewReader(serializedConfig))
-	require.NoError(t, err)
+		var resp struct {
+			Authenticated bool   `json:"authenticated"`
+			RepositoryId  string `json:"repository_id"`
+			Version       string `json:"version"`
+		}
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+		require.True(t, resp.Authenticated)
+		require.NotEmpty(t, resp.RepositoryId)
+	})
+}
 
-	wrappedConfig, err := io.ReadAll(wrappedConfigRd)
-	require.NoError(t, err)
+func TestAuthTokenRequired(t *testing.T) {
+	mux, _, snap, _ := server(t, "secret-token")
+	defer snap.Close()
 
-	ctx := appcontext.NewAppContext()
-	cache := caching.NewManager(pebble.Constructor(tmpCacheDir))
-	defer cache.Close()
-	ctx.SetCache(cache)
-	ctx.CacheDir = tmpCacheDir
-	ctx.SetLogger(logging.NewLogger(os.Stdout, os.Stderr))
+	// Missing Authorization header -> 401.
+	w := get(t, mux, "/api/info")
+	require.Equal(t, http.StatusUnauthorized, w.Code)
 
-	cookies := cookies.NewManager("/tmp/test_plakar")
-	ctx.SetCookies(cookies)
-	ctx.Client = "plakar-test/1.0.0"
-
-	lstore, err := storage.Create(ctx.GetInner(), map[string]string{"location": "mock:///test/location"}, wrappedConfig)
-	require.NoError(t, err)
-	repo, err := repository.New(ctx.GetInner(), nil, lstore, wrappedConfig)
-	if err != nil {
-		t.Fatal(err)
-	}
-	token := ""
-	mux := http.NewServeMux()
-	SetupRoutes(mux, repo, ctx, token, false)
-
-	req, err := http.NewRequest("GET", "/api/unknown_endpoint", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	w := httptest.NewRecorder()
+	// Wrong token -> 401.
+	req, _ := http.NewRequest("GET", "/api/info", nil)
+	req.Header.Set("Authorization", "Bearer nope")
+	w = httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
-	if w.Code != http.StatusNotFound {
-		t.Errorf("Expected status code 200, got %d", w.Code)
+	require.Equal(t, http.StatusUnauthorized, w.Code)
+
+	// Correct token -> 200.
+	req, _ = http.NewRequest("GET", "/api/info", nil)
+	req.Header.Set("Authorization", "Bearer secret-token")
+	w = httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
+
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	require.Contains(t, resp, "repository_id")
+	require.Contains(t, resp, "version")
+}
+
+func TestInfoDemoMode(t *testing.T) {
+	t.Setenv("PLAKAR_DEMO_MODE", "true")
+	mux, _, snap, _ := server(t, "")
+	defer snap.Close()
+
+	w := get(t, mux, "/api/info")
+	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
+	var resp struct {
+		DemoMode bool `json:"demo_mode"`
 	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	require.True(t, resp.DemoMode)
 }

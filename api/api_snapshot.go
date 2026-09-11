@@ -10,7 +10,6 @@ import (
 	"io"
 	"net/http"
 	"path"
-	"path/filepath"
 	"strconv"
 	"time"
 
@@ -72,7 +71,7 @@ func (ui *uiserver) snapshotHeader(w http.ResponseWriter, r *http.Request) error
 }
 
 func (ui *uiserver) snapshotReader(w http.ResponseWriter, r *http.Request) error {
-	snapshotID32, path, err := SnapshotPathParam(r, ui.repository, "snapshot_path")
+	snapshotID32, entrypath, err := SnapshotPathParam(r, ui.repository, "snapshot_path")
 	if err != nil {
 		return err
 	}
@@ -103,7 +102,7 @@ func (ui *uiserver) snapshotReader(w http.ResponseWriter, r *http.Request) error
 		return err
 	}
 
-	entry, err := fs.GetEntry(path)
+	entry, err := fs.GetEntry(entrypath)
 	if err != nil {
 		return err
 	}
@@ -120,24 +119,24 @@ func (ui *uiserver) snapshotReader(w http.ResponseWriter, r *http.Request) error
 	}
 
 	if do_download {
-		w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(filepath.Base(path)))
+		w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(path.Base(entrypath)))
 	}
 
 	switch render {
 	case "text":
-		return renderText(w, r, path, entry, file)
+		return renderText(w, r, entrypath, entry, file)
 	case "text_styled":
 		return renderTextStyled(w, file)
 	case "auto":
-		return renderAuto(w, r, path, entry, file)
+		return renderAuto(w, r, entrypath, entry, file)
 	default: // "code"
-		return renderCode(w, path, entry, file)
+		return renderCode(w, entrypath, entry, file)
 	}
 }
 
 func renderText(w http.ResponseWriter, r *http.Request, entryPath string, entry *vfs.Entry, file io.ReadCloser) error {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	http.ServeContent(w, r, filepath.Base(entryPath), entry.Stat().ModTime(), file.(io.ReadSeeker))
+	http.ServeContent(w, r, path.Base(entryPath), entry.Stat().ModTime(), file.(io.ReadSeeker))
 	return nil
 }
 
@@ -186,7 +185,7 @@ func renderTextStyled(w http.ResponseWriter, file io.Reader) error {
 }
 
 func renderAuto(w http.ResponseWriter, r *http.Request, entryPath string, entry *vfs.Entry, file io.ReadCloser) error {
-	http.ServeContent(w, r, filepath.Base(entryPath), entry.Stat().ModTime(), file.(io.ReadSeeker))
+	http.ServeContent(w, r, path.Base(entryPath), entry.Stat().ModTime(), file.(io.ReadSeeker))
 	return nil
 }
 
@@ -824,7 +823,7 @@ func (ui *uiserver) snapshotVFSDownloaderSigned(w http.ResponseWriter, r *http.R
 		}
 	}
 
-	if filepath.Ext(name) == "" {
+	if path.Ext(name) == "" {
 		name += ext
 	}
 

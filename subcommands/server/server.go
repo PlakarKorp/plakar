@@ -17,42 +17,38 @@
 package server
 
 import (
-	"flag"
-	"fmt"
+	"net/http"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/server/httpd"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/spf13/cobra"
 )
 
 func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &Server{} }, subcommands.BeforeRepositoryWithStorage, "server")
 }
 
-func (cmd *Server) Parse(ctx *appcontext.AppContext, args []string) error {
-	var opt_allowdelete bool
-	flags := flag.NewFlagSet("server", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS]\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
-		flags.PrintDefaults()
+func (cmd *Server) CobraCommand() *cobra.Command {
+	c := &cobra.Command{
+		Use: "server [OPTIONS]",
 	}
+	c.Flags().StringVar(&cmd.ListenAddr, "listen", "localhost:9876", "address to listen on")
+	c.Flags().StringVar(&cmd.Token, "token", "", "Bearer token")
+	c.Flags().BoolVar(&cmd.allowDelete, "allow-delete", false, "enable delete operations")
+	c.Flags().StringVar(&cmd.Cert, "cert", "", "Full certificate chain")
+	c.Flags().StringVar(&cmd.Key, "key", "", "Certificate private key")
+	return c
+}
 
-	flags.StringVar(&cmd.ListenAddr, "listen", "localhost:9876", "address to listen on")
-	flags.BoolVar(&opt_allowdelete, "allow-delete", false, "enable delete operations")
-	flags.StringVar(&cmd.Cert, "cert", "", "Full certificate chain")
-	flags.StringVar(&cmd.Key, "key", "", "Certificate private key")
-
-	flags.Parse(args)
-
-	noDelete := true
-	if opt_allowdelete {
-		noDelete = false
+func (cmd *Server) Parse(ctx *appcontext.AppContext, args []string) error {
+	if _, err := subcommands.ParseCobra(cmd, args); err != nil {
+		return err
 	}
 
 	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.NoDelete = noDelete
+	cmd.NoDelete = !cmd.allowDelete
 
 	return nil
 }
@@ -62,8 +58,11 @@ type Server struct {
 
 	ListenAddr string
 	NoDelete   bool
+	Token      string
 	Cert       string
 	Key        string
+
+	allowDelete bool
 }
 
 func (cmd *Server) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
@@ -74,7 +73,24 @@ func (cmd *Server) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 		protocol = "http"
 	}
 	ctx.GetLogger().Info("listening on %s://%s", protocol, cmd.ListenAddr)
-	err := httpd.Server(ctx, repo, cmd.ListenAddr, cmd.NoDelete, cmd.Cert, cmd.Key)
+	mux := httpd.Mux(repo.Store(), cmd.NoDelete)
+
+	server := &http.Server{
+		Addr:    cmd.ListenAddr,
+		Handler: httpd.Logging(httpd.Auth(cmd.Token, mux)),
+	}
+	go func() {
+		<-ctx.Done()
+		server.Shutdown(ctx)
+	}()
+
+	var err error
+	if cmd.Cert != "" && cmd.Key != "" {
+		err = server.ListenAndServeTLS(cmd.Cert, cmd.Key)
+	} else {
+		err = server.ListenAndServe()
+	}
+
 	if err != nil {
 		return 1, err
 	}

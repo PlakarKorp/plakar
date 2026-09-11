@@ -6,37 +6,6 @@ import (
 	"io"
 )
 
-type logLineMsg struct {
-	Stream string // "stdout" or "stderr"
-	Line   string
-}
-
-type asyncTeaLogWriter struct {
-	tui    *tui
-	ch     chan logLineMsg
-	stream string
-	buf    []byte
-}
-
-func (w *asyncTeaLogWriter) Write(p []byte) (int, error) {
-	w.buf = append(w.buf, p...)
-	for {
-		i := bytes.IndexByte(w.buf, '\n')
-		if i < 0 {
-			break
-		}
-		line := string(w.buf[:i])
-		w.buf = w.buf[i+1:]
-
-		select {
-		case w.ch <- logLineMsg{Stream: w.stream, Line: line}:
-		default:
-			// drop
-		}
-	}
-	return len(p), nil
-}
-
 type switchWriter struct {
 	tui      *tui
 	stream   string // stdout / stderr

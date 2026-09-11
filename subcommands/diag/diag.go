@@ -34,5 +34,6 @@ func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &DiagDirPack{} }, 0, "diag", "dirpack")
 	subcommands.Register(func() subcommands.Subcommand { return &DiagBlob{} }, 0, "diag", "blob")
 	subcommands.Register(func() subcommands.Subcommand { return &DiagChunks{} }, 0, "diag", "chunks")
+	subcommands.Register(func() subcommands.Subcommand { return &DiagChunkmap{} }, 0, "diag", "chunkmap")
 	subcommands.Register(func() subcommands.Subcommand { return &DiagRepository{} }, 0, "diag")
 }
