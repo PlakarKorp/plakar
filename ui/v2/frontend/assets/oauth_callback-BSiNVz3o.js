@@ -1,0 +1,1 @@
+import{ht as e,rd as t}from"./queryOptions-Dy10_Nr4.js";import{o as n}from"./index-BD6oTp6H.js";import{n as r}from"./use-api-DP4qf3Pm.js";var i=t();function a(){let{returnUrl:t}=n.useSearch();return r({status:`logged_in`,returnUrl:t}),(0,i.jsx)(e,{})}export{a as component};
