@@ -219,6 +219,7 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 	}
 
 	sourcesPerOrig := make(map[string][]importer.Importer)
+	ratePerOrig := make(map[string]int64)
 	// If we are doing a fake run for statistics instantiate separate importers,
 	// otherwise it makes plugin development harder than needed.
 	sourcesPerOrigForStats := make(map[string][]importer.Importer)
@@ -262,6 +263,11 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 			return 1, fmt.Errorf("failed to setup exclude rules: %w", err), objects.MAC{}, nil
 		}
 
+		readRate, _, err := utils.ParseThrottlerConfig(cmdOptsCopy)
+		if err != nil {
+			return 1, fmt.Errorf("%s: %w", scanDir, err), objects.MAC{}, nil
+		}
+
 		importerOpts := ctx.ImporterOpts()
 		importerOpts.Excludes = cmd.Excludes
 
@@ -278,6 +284,18 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 
 		importerKey := typ + ":" + orig
 		sourcesPerOrig[importerKey] = append(sourcesPerOrig[importerKey], imp)
+
+		// This is a best-effort optimization, for now if you have multi
+		// importers for the same source with different rates we take the lowest
+		// one.
+		// In a ideal world the rate limiting should happen at the Importer
+		// level with a shim wrapper around it, but that needs a bit more rework
+		// kloset side.
+		if readRate > 0 {
+			if r, ok := ratePerOrig[importerKey]; !ok || readRate < r {
+				ratePerOrig[importerKey] = readRate
+			}
+		}
 
 		if cmd.wantsFilesystemSummary(ctx, imp.Flags()) {
 			imp, err := importer.NewImporter(ctx.GetInner(), importerOpts, cmdOptsCopy)
@@ -327,6 +345,9 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		if err != nil {
 			return 1, err, objects.NilMac, nil
 		}
+
+		readRate := ratePerOrig[key]
+		source.SetMaxReadRate(readRate)
 
 		if err := source.SetExcludes(cmd.Excludes); err != nil {
 			return 1, err, objects.MAC{}, nil
