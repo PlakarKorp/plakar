@@ -76,6 +76,57 @@ func TestDynamicHandlerServesSnapshotFile(t *testing.T) {
 	require.Contains(t, w.Body.String(), "world")
 }
 
+func driveLetterHandler(t *testing.T) func(target string) *httptest.ResponseRecorder {
+	t.Helper()
+
+	memFS := fstest.MapFS{
+		"C:/tmp/hello.txt": &fstest.MapFile{Data: []byte("world")},
+		"plain/x.txt":      &fstest.MapFile{Data: []byte("x")},
+	}
+	h := NewDynamicSnapshotHandler(
+		func(ctx context.Context, w http.ResponseWriter, r *http.Request) {},
+		func(ctx context.Context, id string) (fs.FS, error) { return memFS, nil },
+	)
+
+	return func(target string) *httptest.ResponseRecorder {
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, httptest.NewRequest(http.MethodGet, target, nil))
+		return w
+	}
+}
+
+func TestDynamicHandlerRedirectsDriveLetterDirectoryToAbsolutePath(t *testing.T) {
+	serve := driveLetterHandler(t)
+
+	w := serve("/abc123/C:")
+	require.Equal(t, http.StatusMovedPermanently, w.Code)
+	require.Equal(t, "/abc123/C:/", w.Header().Get("Location"))
+
+	w = serve("/abc123/C:?k=v")
+	require.Equal(t, http.StatusMovedPermanently, w.Code)
+	require.Equal(t, "/abc123/C:/?k=v", w.Header().Get("Location"))
+}
+
+func TestDynamicHandlerKeepsRelativeRedirectForColonlessDirectory(t *testing.T) {
+	serve := driveLetterHandler(t)
+
+	w := serve("/abc123/plain")
+	require.Equal(t, http.StatusMovedPermanently, w.Code)
+	require.Equal(t, "plain/", w.Header().Get("Location"))
+}
+
+func TestDynamicHandlerServesDriveLetterSubtree(t *testing.T) {
+	serve := driveLetterHandler(t)
+
+	w := serve("/abc123/C:/")
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Contains(t, w.Body.String(), "tmp/")
+
+	w = serve("/abc123/C:/tmp/hello.txt")
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Contains(t, w.Body.String(), "world")
+}
+
 func TestDynamicHandlerNotFound(t *testing.T) {
 	h := NewDynamicSnapshotHandler(
 		func(ctx context.Context, w http.ResponseWriter, r *http.Request) {},
