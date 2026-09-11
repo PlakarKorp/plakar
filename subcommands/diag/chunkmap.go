@@ -11,6 +11,7 @@ import (
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/chunkmap"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/spf13/cobra"
 )
@@ -46,14 +47,8 @@ func (cmd *DiagChunkmap) Parse(ctx *appcontext.AppContext, args []string) error 
 	return nil
 }
 
-type chunkmapFile struct {
-	label  string
-	chunks []objects.Chunk
-}
-
 func (cmd *DiagChunkmap) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	chunksCount := make(map[objects.MAC]int)
-	files := make([]chunkmapFile, 0, len(cmd.SnapshotPaths))
+	files := make([]chunkmap.File, 0, len(cmd.SnapshotPaths))
 
 	for _, snapshotPath := range cmd.SnapshotPaths {
 		err := func() error {
@@ -77,17 +72,9 @@ func (cmd *DiagChunkmap) Execute(ctx *appcontext.AppContext, repo *repository.Re
 				return fmt.Errorf("no object found for entry %s in snapshot %s", pathname, snapshotPath)
 			}
 
-			seen := make(map[objects.MAC]struct{})
-			for _, chunk := range entry.ResolvedObject.Chunks {
-				if _, ok := seen[chunk.ContentMAC]; !ok {
-					seen[chunk.ContentMAC] = struct{}{}
-					chunksCount[chunk.ContentMAC]++
-				}
-			}
-
-			files = append(files, chunkmapFile{
-				label:  snapshotPath,
-				chunks: entry.ResolvedObject.Chunks,
+			files = append(files, chunkmap.File{
+				Label:  snapshotPath,
+				Chunks: entry.ResolvedObject.Chunks,
 			})
 			return nil
 		}()
@@ -96,20 +83,13 @@ func (cmd *DiagChunkmap) Execute(ctx *appcontext.AppContext, repo *repository.Re
 		}
 	}
 
+	res := chunkmap.Compute(files)
+
 	if cmd.HTMLOutput != "" {
-		return writeChunkmapHTML(cmd.HTMLOutput, files, chunksCount)
+		return writeChunkmapHTML(cmd.HTMLOutput, res)
 	}
 
-	return writeChunkmapText(ctx, files, chunksCount)
-}
-
-// shareRatio returns 0.0 (unique) to 1.0 (present in all files).
-// shareCount includes the file itself; total is the number of files provided.
-func shareRatio(shareCount, total int) float64 {
-	if total <= 1 {
-		return 1.0
-	}
-	return float64(shareCount-1) / float64(total-1)
+	return writeChunkmapText(ctx, res)
 }
 
 // ansiColorForRatio returns an ANSI 256-color escape for a red→green gradient.
@@ -135,63 +115,26 @@ const (
 	blockChar = "█"
 )
 
-func writeChunkmapText(ctx *appcontext.AppContext, files []chunkmapFile, chunksCount map[objects.MAC]int) (int, error) {
-	total := len(files)
-	for _, f := range files {
-		fullyShared, partiallyShared, unique := 0, 0, 0
+func writeChunkmapText(ctx *appcontext.AppContext, res chunkmap.Result) (int, error) {
+	for _, f := range res.Files {
 		var sb strings.Builder
-
-		for _, chunk := range f.chunks {
-			sc := chunksCount[chunk.ContentMAC]
-
-			switch sc {
-			case total:
-				fullyShared++
-			case 1:
-				unique++
-			default:
-				partiallyShared++
-			}
-			sb.WriteString(ansiColorForRatio(shareRatio(sc, total)))
+		for _, c := range f.Chunks {
+			sb.WriteString(ansiColorForRatio(chunkmap.ShareRatio(c.ShareCount, res.Total)))
 			sb.WriteString(blockChar)
 		}
 		sb.WriteString(ansiReset)
 
 		fmt.Fprintf(ctx.Stdout, "%s: %d chunks, %d in all (%d partial, %d unique)\n",
-			f.label, len(f.chunks), fullyShared, partiallyShared, unique)
+			f.Label, f.Stats.NChunks, f.Stats.FullyShared, f.Stats.PartiallyShared, f.Stats.Unique)
 		fmt.Fprintln(ctx.Stdout, sb.String())
 		fmt.Fprintln(ctx.Stdout)
 	}
 	return 0, nil
 }
 
-type chunkmapChunkData struct {
-	Index      int
-	ShareCount int
-	Total      int
-	MAC        objects.MAC
-}
-
-type chunkmapStats struct {
-	NChunks         int
-	FullyShared     int
-	PartiallyShared int
-	Unique          int
-}
-
-type chunkmapFileData struct {
-	Label  string
-	Stats  chunkmapStats
-	Chunks []chunkmapChunkData
-}
-
-type chunkmapTemplateData struct {
-	Files []chunkmapFileData
-}
-
 var chunkmapTemplate = template.Must(template.New("chunkmap").Funcs(template.FuncMap{
 	"hslColor": func(shareCount, total int) template.CSS {
-		return htmlColorForRatio(shareRatio(shareCount, total))
+		return htmlColorForRatio(chunkmap.ShareRatio(shareCount, total))
 	},
 	"macHex": func(mac objects.MAC) string {
 		return fmt.Sprintf("%x", mac)
@@ -230,7 +173,7 @@ h1 { color: #fff; }
   <div class="summary">{{.Stats.NChunks}} chunks &mdash; {{.Stats.FullyShared}} in all files, {{.Stats.PartiallyShared}} partial, {{.Stats.Unique}} unique</div>
   <div class="chunks">
     {{range .Chunks -}}
-    <div class="chunk" style="background:{{hslColor .ShareCount .Total}}" title="chunk {{.Index}}: {{.ShareCount}}/{{.Total}} files, {{macHex .MAC}}"></div>
+    <div class="chunk" style="background:{{hslColor .ShareCount $.Total}}" title="chunk {{.Index}}: {{.ShareCount}}/{{$.Total}} files, {{macHex .ContentMAC}}"></div>
     {{end -}}
   </div>
 </div>
@@ -239,46 +182,15 @@ h1 { color: #fff; }
 </html>
 `))
 
-func writeChunkmapHTML(outputPath string, files []chunkmapFile, chunksCount map[objects.MAC]int) (int, error) {
+func writeChunkmapHTML(outputPath string, res chunkmap.Result) (int, error) {
 	f, err := os.Create(outputPath)
 	if err != nil {
 		return 1, fmt.Errorf("cannot create HTML file: %w", err)
 	}
 	defer f.Close()
 
-	total := len(files)
-	data := chunkmapTemplateData{Files: make([]chunkmapFileData, 0, len(files))}
-
-	for _, file := range files {
-		chunks := make([]chunkmapChunkData, len(file.chunks))
-		var s chunkmapStats
-		s.NChunks = len(file.chunks)
-		for i, chunk := range file.chunks {
-			sc := chunksCount[chunk.ContentMAC]
-			switch sc {
-			case total:
-				s.FullyShared++
-			case 1:
-				s.Unique++
-			default:
-				s.PartiallyShared++
-			}
-			chunks[i] = chunkmapChunkData{
-				Index:      i,
-				ShareCount: sc,
-				Total:      total,
-				MAC:        chunk.ContentMAC,
-			}
-		}
-		data.Files = append(data.Files, chunkmapFileData{
-			Label:  file.label,
-			Stats:  s,
-			Chunks: chunks,
-		})
-	}
-
 	bw := bufio.NewWriter(f)
-	if err := chunkmapTemplate.Execute(bw, data); err != nil {
+	if err := chunkmapTemplate.Execute(bw, res); err != nil {
 		return 1, fmt.Errorf("failed to render HTML: %w", err)
 	}
 	if err := bw.Flush(); err != nil {
