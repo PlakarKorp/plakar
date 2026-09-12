@@ -190,6 +190,50 @@ func TestBackupMultipleIgnoreFileFlags(t *testing.T) {
 	require.NotContains(t, bufOut.String(), "/another_subdir/")
 }
 
+func TestBackupIgnoreNegationReincludesYAMLFiles(t *testing.T) {
+	const (
+		includePattern = "!**/*.yml"
+		ignorePattern  = "*"
+		yamlFilename   = "settings.yml"
+		textFilename   = "notes.txt"
+		yamlContent    = "enabled: true\n"
+		textContent    = "plain text\n"
+		dirMode        = 0o755
+		fileMode       = 0o600
+		successStatus  = 0
+	)
+
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	repo, tmpBackupDir, ctx := generateFixtures(t, bufOut, bufErr)
+
+	renderer := stdio.New(ctx)
+	renderer.Run()
+	t.Cleanup(func() { renderer.Wait() })
+	t.Cleanup(ctx.Close)
+	ctx.MaxConcurrency = 1
+
+	configDir := filepath.Join(tmpBackupDir, "plakar")
+	require.NoError(t, os.MkdirAll(configDir, dirMode))
+	require.NoError(t, os.WriteFile(filepath.Join(configDir, yamlFilename), []byte(yamlContent), fileMode))
+	require.NoError(t, os.WriteFile(filepath.Join(configDir, textFilename), []byte(textContent), fileMode))
+
+	cmd := &Backup{}
+	require.NoError(t, cmd.Parse(ctx, []string{
+		"-ignore", ignorePattern,
+		"-ignore", includePattern,
+		tmpBackupDir,
+	}))
+
+	status, err := cmd.Execute(ctx, repo)
+	require.NoError(t, err)
+	require.Equal(t, successStatus, status)
+
+	output := bufOut.String()
+	require.Contains(t, output, yamlFilename)
+	require.NotContains(t, output, textFilename)
+}
+
 func TestBackupIgnoreFileMissing(t *testing.T) {
 	bufOut := bytes.NewBuffer(nil)
 	bufErr := bytes.NewBuffer(nil)
