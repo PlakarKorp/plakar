@@ -67,6 +67,10 @@ type serverBehavior struct {
 
 	// onRequest, if set, receives every decoded request packet.
 	onRequest func(*RequestPkt)
+
+	// waitForClientClose leaves the request unanswered until the client closes
+	// the connection.
+	waitForClientClose bool
 }
 
 // startFakeServer listens on <cacheDir>/cached.sock and serves connections
@@ -151,6 +155,11 @@ func serveConn(conn net.Conn, b serverBehavior) {
 	}
 	if b.onRequest != nil {
 		b.onRequest(pkt)
+	}
+	if b.waitForClientClose {
+		var buf [1]byte
+		_, _ = conn.Read(buf[:])
+		return
 	}
 
 	if b.closeAfterRequest {
@@ -340,6 +349,35 @@ func TestRebuildStateContextCancelled(t *testing.T) {
 	}
 	if code != 1 {
 		t.Errorf("exit code = %d, want 1", code)
+	}
+}
+
+func TestRebuildStateCancellationInterruptsResponseWait(t *testing.T) {
+	const cancellationTimeout = time.Second
+
+	ctx := newTestContext(t)
+	requestReceived := make(chan struct{})
+	startFakeServer(t, ctx, serverBehavior{
+		onRequest:          func(*RequestPkt) { close(requestReceived) },
+		waitForClientClose: true,
+	})
+
+	errCh := make(chan error, 1)
+	go func() {
+		_, err := RebuildStateFromStore(ctx, uuid.New(), nil, false)
+		errCh <- err
+	}()
+
+	<-requestReceived
+	ctx.Cancel(nil)
+
+	select {
+	case err := <-errCh:
+		if err == nil {
+			t.Fatal("expected cancellation error")
+		}
+	case <-time.After(cancellationTimeout):
+		t.Fatal("state rebuild did not stop after context cancellation")
 	}
 }
 

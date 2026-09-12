@@ -1,6 +1,7 @@
 package cached
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -52,18 +53,24 @@ func rebuildStateRequest(ctx *appcontext.AppContext, req *RequestPkt) (int, erro
 	}
 	defer client.Close()
 
+	// Closing the connection is what makes the Decode below return: without
+	// it a cancelled context leaves us parked on a response that never comes.
+	// The returned func unregisters the hook once the request is done.
+	stopCloseOnCancel := context.AfterFunc(ctx, func() { _ = client.Close() })
+	defer stopCloseOnCancel()
+
 	if err := client.enc.Encode(req); err != nil {
 		return 1, err
 	}
 
 	response := &ResponsePkt{}
 	if err := client.dec.Decode(response); err != nil {
+		if err := ctx.Err(); err != nil {
+			return 1, err
+		}
 		// The server closed the connection without a response packet.
 		if err == io.EOF {
 			return 0, nil
-		}
-		if err := ctx.Err(); err != nil {
-			return 1, err
 		}
 		return 1, fmt.Errorf("failed to decode response: %w", err)
 	}
