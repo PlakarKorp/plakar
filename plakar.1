@@ -222,6 +222,17 @@ The option
 overrides this environment variable.
 .It Ev PLAKAR_REPOSITORY
 Reference to the Kloset store.
+.It Ev PLAKAR_REPOSITORIES_<NAME>_PASSPHRASE
+Passphrase for an existing repository configuration entry.
+The repository name is uppercased, with hyphens written as underscores.
+For example,
+.Ev PLAKAR_REPOSITORIES_REMOTE_STORE_PASSPHRASE
+supplies the passphrase for the
+.Cm remote-store
+repository.
+.It Ev PLAKAR_REPOSITORIES_<NAME>_PASSPHRASE_CMD
+Command that prints the passphrase for an existing repository configuration
+entry.
 .It Ev PLAKAR_TOKEN
 Token to authenticate for Plakar services.
 .El

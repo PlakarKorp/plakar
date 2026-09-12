@@ -57,6 +57,159 @@ func TestSaveAndLoadRoundTrip(t *testing.T) {
 	}
 }
 
+func TestLoadAppliesRepositoryEnvironmentOverride(t *testing.T) {
+	dir := t.TempDir()
+	cfg := NewConfig()
+	cfg.Repositories["remote-store"] = map[string]string{
+		"location": "sftp://backup.example/store",
+	}
+
+	if err := Save(dir, cfg); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+
+	t.Setenv("PLAKAR_REPOSITORIES_REMOTE_STORE_PASSPHRASE", "from-env")
+
+	loaded, err := Load(dir)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	repo, err := loaded.GetRepository("@remote-store")
+	if err != nil {
+		t.Fatalf("GetRepository: %v", err)
+	}
+	if repo["location"] != "sftp://backup.example/store" {
+		t.Fatalf("location = %q, want original location", repo["location"])
+	}
+	if _, ok := repo["passphrase"]; ok {
+		t.Fatal("environment passphrase was returned in repository storage config")
+	}
+	passphrase, ok, err := loaded.GetRepositoryPassphrase("@remote-store")
+	if err != nil {
+		t.Fatalf("GetRepositoryPassphrase: %v", err)
+	}
+	if !ok || passphrase != "from-env" {
+		t.Fatalf("passphrase = %q, %v; want from-env, true", passphrase, ok)
+	}
+	if _, ok := loaded.Repositories["remote-store"]["passphrase"]; ok {
+		t.Fatal("environment passphrase was stored in loaded config")
+	}
+
+	if err := Save(dir, loaded); err != nil {
+		t.Fatalf("Save after env override: %v", err)
+	}
+	stores, err := os.ReadFile(filepath.Join(dir, "stores.yml"))
+	if err != nil {
+		t.Fatalf("read stores.yml: %v", err)
+	}
+	if strings.Contains(string(stores), "from-env") {
+		t.Fatal("environment passphrase was persisted to stores.yml")
+	}
+}
+
+func TestGetRepositoryEnvironmentOverrideNilEntryDoesNotPanic(t *testing.T) {
+	dir := t.TempDir()
+	mustWrite := func(name, body string) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o600); err != nil {
+			t.Fatalf("write %s: %v", name, err)
+		}
+	}
+	mustWrite("sources.yml", "version: v1.0.0\nsources: {}\n")
+	mustWrite("destinations.yml", "version: v1.0.0\ndestinations: {}\n")
+	mustWrite("stores.yml", "version: v1.0.0\nstores:\n  peer:\n")
+
+	t.Setenv("PLAKAR_REPOSITORIES_PEER_PASSPHRASE", "from-env")
+
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	if _, err := cfg.GetRepository("@peer"); err == nil {
+		t.Fatal("expected missing location error")
+	}
+}
+
+func TestGetRepositoryEnvironmentOverrideRejectsAmbiguousAlias(t *testing.T) {
+	cfg := NewConfig()
+	cfg.Repositories["remote-store"] = map[string]string{"location": "/remote-store"}
+	cfg.Repositories["remote_store"] = map[string]string{"location": "/remote_store"}
+
+	t.Setenv("PLAKAR_REPOSITORIES_REMOTE_STORE_PASSPHRASE", "from-env")
+
+	if _, _, err := cfg.GetRepositoryPassphrase("@remote-store"); err == nil {
+		t.Fatal("expected ambiguous environment override error")
+	}
+	if _, _, err := cfg.GetRepositoryPassphrase("@remote_store"); err == nil {
+		t.Fatal("expected ambiguous environment override error")
+	}
+}
+
+func TestGetRepositoryEnvironmentOverrideUsesLongestAlias(t *testing.T) {
+	cfg := NewConfig()
+	cfg.Repositories["remote"] = map[string]string{"location": "/remote"}
+	cfg.Repositories["remote-store"] = map[string]string{"location": "/remote-store"}
+
+	t.Setenv("PLAKAR_REPOSITORIES_REMOTE_STORE_PASSPHRASE", "from-env")
+
+	shortRepo, err := cfg.GetRepository("@remote")
+	if err != nil {
+		t.Fatalf("GetRepository short alias: %v", err)
+	}
+	if _, ok := shortRepo["store_passphrase"]; ok {
+		t.Fatal("longer repository environment override leaked into shorter alias")
+	}
+
+	longRepo, err := cfg.GetRepository("@remote-store")
+	if err != nil {
+		t.Fatalf("GetRepository long alias: %v", err)
+	}
+	if _, ok := longRepo["passphrase"]; ok {
+		t.Fatal("environment passphrase was returned in repository storage config")
+	}
+	passphrase, ok, err := cfg.GetRepositoryPassphrase("@remote-store")
+	if err != nil {
+		t.Fatalf("GetRepositoryPassphrase long alias: %v", err)
+	}
+	if !ok || passphrase != "from-env" {
+		t.Fatalf("passphrase = %q, %v; want from-env, true", passphrase, ok)
+	}
+}
+
+func TestGetRepositoryEnvironmentOverrideLongestAliasWithAmbiguousPrefix(t *testing.T) {
+	cfg := NewConfig()
+	cfg.Repositories["remote-store"] = map[string]string{"location": "/remote-store"}
+	cfg.Repositories["remote_store"] = map[string]string{"location": "/remote_store"}
+	cfg.Repositories["remote-store-extra"] = map[string]string{"location": "/remote-store-extra"}
+
+	t.Setenv("PLAKAR_REPOSITORIES_REMOTE_STORE_EXTRA_PASSPHRASE", "from-env")
+
+	shortRepo, err := cfg.GetRepository("@remote-store")
+	if err != nil {
+		t.Fatalf("GetRepository short alias: %v", err)
+	}
+	if _, ok := shortRepo["extra_passphrase"]; ok {
+		t.Fatal("longer repository environment override leaked into shorter alias")
+	}
+
+	longRepo, err := cfg.GetRepository("@remote-store-extra")
+	if err != nil {
+		t.Fatalf("GetRepository long alias: %v", err)
+	}
+	if _, ok := longRepo["passphrase"]; ok {
+		t.Fatal("environment passphrase was returned in repository storage config")
+	}
+	passphrase, ok, err := cfg.GetRepositoryPassphrase("@remote-store-extra")
+	if err != nil {
+		t.Fatalf("GetRepositoryPassphrase long alias: %v", err)
+	}
+	if !ok || passphrase != "from-env" {
+		t.Fatalf("passphrase = %q, %v; want from-env, true", passphrase, ok)
+	}
+}
+
 func TestSaveConfigMkdirFails(t *testing.T) {
 	// Point ConfigDir at a path whose parent is a regular file -> MkdirAll fails.
 	f := filepath.Join(t.TempDir(), "afile")
@@ -85,6 +238,7 @@ default-repo: legacy
 repositories:
   legacy:
     location: /tmp/legacy
+    passphrase: from-file
 remotes:
   src:
     location: fs:///var/src
@@ -92,6 +246,7 @@ remotes:
 	if err := os.WriteFile(filepath.Join(dir, "plakar.yml"), []byte(old), 0o600); err != nil {
 		t.Fatalf("write old config: %v", err)
 	}
+	t.Setenv("PLAKAR_REPOSITORIES_LEGACY_PASSPHRASE", "from-env")
 
 	cfg, err := Load(dir)
 	if err != nil {
@@ -102,6 +257,23 @@ remotes:
 	}
 	if cfg.Repositories["legacy"]["location"] != "/tmp/legacy" {
 		t.Fatalf("legacy location = %q", cfg.Repositories["legacy"]["location"])
+	}
+	repo, err := cfg.GetRepository("@legacy")
+	if err != nil {
+		t.Fatalf("GetRepository: %v", err)
+	}
+	if repo["passphrase"] != "from-file" {
+		t.Fatalf("repository passphrase = %q, want from-file", repo["passphrase"])
+	}
+	passphrase, ok, err := cfg.GetRepositoryPassphrase("@legacy")
+	if err != nil {
+		t.Fatalf("GetRepositoryPassphrase: %v", err)
+	}
+	if !ok || passphrase != "from-env" {
+		t.Fatalf("legacy passphrase = %q, %v; want from-env, true", passphrase, ok)
+	}
+	if cfg.Repositories["legacy"]["passphrase"] != "from-file" {
+		t.Fatalf("stored legacy passphrase = %q, want from-file", cfg.Repositories["legacy"]["passphrase"])
 	}
 	// LoadFallback also rewrites the config in new format.
 	for _, name := range []string{"sources.yml", "destinations.yml", "stores.yml"} {

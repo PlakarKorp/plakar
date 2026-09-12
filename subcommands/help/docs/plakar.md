@@ -319,6 +319,20 @@ The following options are available:
 
 > Reference to the Kloset store.
 
+`PLAKAR_REPOSITORIES_<NAME>_PASSPHRASE`
+
+> Passphrase for an existing repository configuration entry.
+> The repository name is uppercased, with hyphens written as underscores.
+> For example,
+> `PLAKAR_REPOSITORIES_REMOTE_STORE_PASSPHRASE`
+> supplies the passphrase for the
+> **remote-store**
+> repository.
+
+`PLAKAR_REPOSITORIES_<NAME>_PASSPHRASE_CMD`
+
+> Command that prints the passphrase for an existing repository configuration entry.
+
 `PLAKAR_TOKEN`
 
 > Token to authenticate for Plakar services.

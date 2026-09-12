@@ -144,6 +144,10 @@ func (cmd *Ptar) Parse(ctx *appcontext.AppContext, args []string) error {
 		if err != nil {
 			return fmt.Errorf("peer repository: %w", err)
 		}
+		pass, hasPass, passCmd, hasPassCmd, err := cmd.repositorySecrets(ctx, syncTarget, storeConfig)
+		if err != nil {
+			return err
+		}
 
 		peerStore, peerStoreSerializedConfig, err := storage.Open(ctx.GetInner(), storeConfig)
 		if err != nil {
@@ -160,8 +164,21 @@ func (cmd *Ptar) Parse(ctx *appcontext.AppContext, args []string) error {
 		}
 
 		if peerStoreConfig.Encryption != nil {
-			if pass, ok := storeConfig["passphrase"]; ok {
+			if hasPass {
 				key, err := encryption.DeriveKey(peerStoreConfig.Encryption.KDFParams, []byte(pass))
+				if err != nil {
+					return err
+				}
+				if !encryption.VerifyCanary(peerStoreConfig.Encryption, key) {
+					return fmt.Errorf("invalid passphrase")
+				}
+				peerSecret = key
+			} else if hasPassCmd {
+				passphrase, err := utils.GetPassphraseFromCommand(passCmd)
+				if err != nil {
+					return fmt.Errorf("failed to read passphrase from command: %w", err)
+				}
+				key, err := encryption.DeriveKey(peerStoreConfig.Encryption.KDFParams, []byte(passphrase))
 				if err != nil {
 					return err
 				}
@@ -327,6 +344,7 @@ func (cmd *Ptar) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (
 		if err != nil {
 			return 1, fmt.Errorf("source repository: %w", err)
 		}
+		scrubRepositorySecrets(storeConfig)
 
 		peerStore, peerStoreSerializedConfig, err := storage.Open(ctx.GetInner(), storeConfig)
 		if err != nil {
@@ -359,6 +377,32 @@ func (cmd *Ptar) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (
 	}
 
 	return 0, nil
+}
+
+func (cmd *Ptar) repositorySecrets(ctx *appcontext.AppContext, syncTarget string, storeConfig map[string]string) (string, bool, string, bool, error) {
+	pass, hasPass := storeConfig["passphrase"]
+	delete(storeConfig, "passphrase")
+	passCmd, hasPassCmd := storeConfig["passphrase_cmd"]
+	delete(storeConfig, "passphrase_cmd")
+
+	if envPass, ok, err := ctx.Config.GetRepositoryPassphrase(syncTarget); err != nil {
+		return "", false, "", false, err
+	} else if ok {
+		pass = envPass
+		hasPass = true
+		hasPassCmd = false
+	} else if envPassCmd, ok, err := ctx.Config.GetRepositoryPassphraseCommand(syncTarget); err != nil {
+		return "", false, "", false, err
+	} else if ok {
+		passCmd = envPassCmd
+		hasPassCmd = true
+	}
+	return pass, hasPass, passCmd, hasPassCmd, nil
+}
+
+func scrubRepositorySecrets(storeConfig map[string]string) {
+	delete(storeConfig, "passphrase")
+	delete(storeConfig, "passphrase_cmd")
 }
 
 func (cmd *Ptar) backup(ctx *appcontext.AppContext, repo *repository.RepositoryWriter) error {
