@@ -159,7 +159,7 @@ func TestDiffCov80RecursiveRegularFileContentDiff(t *testing.T) {
 	require.Equal(t, 0, status)
 
 	out := bufOut.String()
-	require.Contains(t, out, "Common subdirectories")
+	require.Contains(t, out, "~ /r/nested/data.txt")
 	require.Contains(t, out, "BETA")
 }
 
