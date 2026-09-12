@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"slices"
 	"strings"
 	"time"
 
@@ -219,6 +220,7 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 	}
 
 	sourcesPerOrig := make(map[string][]importer.Importer)
+	excludesPerOrig := make(map[string][]string)
 	// If we are doing a fake run for statistics instantiate separate importers,
 	// otherwise it makes plugin development harder than needed.
 	sourcesPerOrigForStats := make(map[string][]importer.Importer)
@@ -233,6 +235,7 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		cmdOptsCopy := make(map[string]string)
 		maps.Copy(cmdOptsCopy, cmd.Opts)
 
+		sourceExcludes := cmd.Excludes
 		if strings.HasPrefix(scanDir, "@") {
 			remote, ok := ctx.Config.GetSource(scanDir[1:])
 			if !ok {
@@ -250,6 +253,14 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 					}
 				}
 			}
+
+			rules, err := utils.SourceIgnoreRules(remote)
+			if err != nil {
+				return 1, fmt.Errorf("source %s: %w", scanDir, err), objects.MAC{}, nil
+			}
+			// Command line last: gitignore is last-match-wins and
+			// it takes precedence, as for the options above.
+			sourceExcludes = append(rules, cmd.Excludes...)
 		}
 
 		// Now that we have resolved the possible @ syntax let's apply the scandir.
@@ -258,12 +269,12 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		}
 
 		excludes := exclude.NewRuleSet()
-		if err := excludes.AddRulesFromArray(cmd.Excludes); err != nil {
+		if err := excludes.AddRulesFromArray(sourceExcludes); err != nil {
 			return 1, fmt.Errorf("failed to setup exclude rules: %w", err), objects.MAC{}, nil
 		}
 
 		importerOpts := ctx.ImporterOpts()
-		importerOpts.Excludes = cmd.Excludes
+		importerOpts.Excludes = sourceExcludes
 
 		imp, err := importer.NewImporter(ctx.GetInner(), importerOpts, cmdOptsCopy)
 		if err != nil {
@@ -277,6 +288,12 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		)
 
 		importerKey := typ + ":" + orig
+		// Sources sharing an origin are imported through a single
+		// exclude set, so differing rules cannot be honoured.
+		if previous, seen := excludesPerOrig[importerKey]; seen && !slices.Equal(previous, sourceExcludes) {
+			return 1, fmt.Errorf("%s: ignore rules differ from another source of the same origin, back them up separately", scanDir), objects.MAC{}, nil
+		}
+		excludesPerOrig[importerKey] = sourceExcludes
 		sourcesPerOrig[importerKey] = append(sourcesPerOrig[importerKey], imp)
 
 		if cmd.wantsFilesystemSummary(ctx, imp.Flags()) {
@@ -328,7 +345,7 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 			return 1, err, objects.NilMac, nil
 		}
 
-		if err := source.SetExcludes(cmd.Excludes); err != nil {
+		if err := source.SetExcludes(excludesPerOrig[key]); err != nil {
 			return 1, err, objects.MAC{}, nil
 		}
 
@@ -382,7 +399,7 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 				return 1, err, objects.NilMac, nil
 			}
 
-			if err := source.SetExcludes(cmd.Excludes); err != nil {
+			if err := source.SetExcludes(excludesPerOrig[key]); err != nil {
 				return 1, err, objects.MAC{}, nil
 			}
 

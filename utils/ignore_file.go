@@ -33,3 +33,27 @@ func LoadIgnoreFile(filename string) ([]string, error) {
 	}
 	return lines, nil
 }
+
+// SourceIgnoreRules returns the exclude rules a configured source carries in
+// its "ignore" and "ignore-file" keys, each a comma-separated list.
+func SourceIgnoreRules(source map[string]string) ([]string, error) {
+	var rules []string
+	for _, filename := range splitCommaList(source["ignore-file"]) {
+		lines, err := LoadIgnoreFile(filename)
+		if err != nil {
+			return nil, err
+		}
+		rules = append(rules, lines...)
+	}
+	return append(rules, splitCommaList(source["ignore"])...), nil
+}
+
+func splitCommaList(value string) []string {
+	var items []string
+	for _, item := range strings.Split(value, ",") {
+		if item = strings.TrimSpace(item); item != "" {
+			items = append(items, item)
+		}
+	}
+	return items
+}

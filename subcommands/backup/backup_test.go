@@ -1,15 +1,19 @@
 package backup
 
 import (
+	"archive/tar"
 	"bytes"
 	"fmt"
 	"io"
+	"maps"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	_ "github.com/PlakarKorp/integrations/fs/importer"
 	bfs "github.com/PlakarKorp/integrations/fs/storage"
+	_ "github.com/PlakarKorp/integrations/tar/importer"
 	"github.com/PlakarKorp/kloset/caching"
 	"github.com/PlakarKorp/kloset/caching/pebble"
 	"github.com/PlakarKorp/kloset/connectors/storage"
@@ -20,6 +24,7 @@ import (
 	"github.com/PlakarKorp/kloset/resources"
 	"github.com/PlakarKorp/kloset/versioning"
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/config"
 	"github.com/PlakarKorp/plakar/ui/stdio"
 	"github.com/stretchr/testify/require"
 )
@@ -393,4 +398,171 @@ func TestExecuteCmdCreateDefaultWithIgnores(t *testing.T) {
 
 	output := bufOut.String()
 	require.NotContains(t, output, "/subdir")
+}
+
+func TestBackupSourceIgnoreRules(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		options func(t *testing.T) map[string]string
+		args    []string
+		absent  []string
+		present string
+	}{
+		{
+			name: "ignore pattern",
+			options: func(*testing.T) map[string]string {
+				return map[string]string{"ignore": "**/subdir"}
+			},
+			absent:  []string{"/subdir/"},
+			present: "/another_subdir/",
+		},
+		{
+			name: "ignore list",
+			options: func(*testing.T) map[string]string {
+				return map[string]string{"ignore": "**/nothing,**/subdir"}
+			},
+			absent:  []string{"/subdir/"},
+			present: "/another_subdir/",
+		},
+		{
+			name: "ignore file",
+			options: func(t *testing.T) map[string]string {
+				path := filepath.Join(t.TempDir(), "ignores")
+				require.NoError(t, os.WriteFile(path, []byte("# comment\n\n**/subdir\n"), 0o600))
+				return map[string]string{"ignore-file": path}
+			},
+			absent:  []string{"/subdir/"},
+			present: "/another_subdir/",
+		},
+		{
+			name: "command line rules apply on top",
+			options: func(*testing.T) map[string]string {
+				return map[string]string{"ignore": "**/another_subdir"}
+			},
+			args:    []string{"-ignore", "**/subdir"},
+			absent:  []string{"/subdir/", "/another_subdir/"},
+			present: "backup completed",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			bufOut := bytes.NewBuffer(nil)
+			bufErr := bytes.NewBuffer(nil)
+			repo, tmpBackupDir, ctx := generateFixtures(t, bufOut, bufErr)
+
+			renderer := stdio.New(ctx)
+			renderer.Run()
+			t.Cleanup(func() { renderer.Wait() })
+			t.Cleanup(ctx.Close)
+			ctx.MaxConcurrency = 1
+
+			ctx.Config = config.NewConfig()
+			source := map[string]string{"location": "fs:" + tmpBackupDir}
+			maps.Copy(source, tc.options(t))
+			ctx.Config.Sources["configured"] = source
+
+			cmd := &Backup{}
+			require.NoError(t, cmd.Parse(ctx, append(tc.args, "@configured")))
+
+			status, err := cmd.Execute(ctx, repo)
+			require.NoError(t, err)
+			require.Equal(t, 0, status)
+
+			out := bufOut.String()
+			for _, absent := range tc.absent {
+				require.NotContains(t, out, absent, "the configured ignore rules were not applied")
+			}
+			require.Contains(t, out, tc.present)
+		})
+	}
+}
+
+func TestBackupSourceIgnoreFileMissing(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	repo, tmpBackupDir, ctx := generateFixtures(t, bufOut, bufErr)
+	t.Cleanup(ctx.Close)
+	ctx.MaxConcurrency = 1
+
+	ctx.Config = config.NewConfig()
+	ctx.Config.Sources["configured"] = map[string]string{
+		"location":    "fs:" + tmpBackupDir,
+		"ignore-file": filepath.Join(t.TempDir(), "does-not-exist"),
+	}
+
+	cmd := &Backup{}
+	require.NoError(t, cmd.Parse(ctx, []string{"@configured"}))
+
+	status, err := cmd.Execute(ctx, repo)
+	require.Error(t, err)
+	require.Equal(t, 1, status)
+	require.Contains(t, err.Error(), "source @configured")
+}
+
+func TestBackupSourceIgnoreRulesReachNonFsImporter(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	repo, _, ctx := generateFixtures(t, bufOut, bufErr)
+
+	renderer := stdio.New(ctx)
+	renderer.Run()
+	t.Cleanup(func() { renderer.Wait() })
+	t.Cleanup(ctx.Close)
+	ctx.MaxConcurrency = 1
+
+	archive := filepath.Join(t.TempDir(), "src.tar")
+	fp, err := os.Create(archive)
+	require.NoError(t, err)
+	tw := tar.NewWriter(fp)
+	for _, name := range []string{"keepme.txt", "skipme.txt"} {
+		require.NoError(t, tw.WriteHeader(&tar.Header{
+			Name: name, Mode: 0o644, Size: int64(len(name)), Typeflag: tar.TypeReg,
+		}))
+		_, err = tw.Write([]byte(name))
+		require.NoError(t, err)
+	}
+	require.NoError(t, tw.Close())
+	require.NoError(t, fp.Close())
+
+	ctx.Config = config.NewConfig()
+	ctx.Config.Sources["archive"] = map[string]string{
+		"location": "tar:" + archive,
+		"ignore":   "**/skipme.txt",
+	}
+
+	cmd := &Backup{}
+	require.NoError(t, cmd.Parse(ctx, []string{"@archive"}))
+
+	status, err := cmd.Execute(ctx, repo)
+	require.NoError(t, err)
+	require.Equal(t, 0, status)
+
+	out := bufOut.String()
+	require.Contains(t, out, "keepme.txt")
+	require.NotContains(t, out, "skipme.txt")
+}
+
+func TestBackupSourceIgnoreRulesConflictInSameOrigin(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	repo, tmpBackupDir, ctx := generateFixtures(t, bufOut, bufErr)
+	t.Cleanup(ctx.Close)
+	ctx.MaxConcurrency = 1
+
+	ctx.Config = config.NewConfig()
+	ctx.Config.Sources["first"] = map[string]string{
+		"location": "fs:" + filepath.Join(tmpBackupDir, "subdir"),
+		"ignore":   "**/dummy.txt",
+	}
+	ctx.Config.Sources["second"] = map[string]string{
+		"location": "fs:" + filepath.Join(tmpBackupDir, "another_subdir"),
+		"ignore":   "**/bar",
+	}
+
+	cmd := &Backup{}
+	require.NoError(t, cmd.Parse(ctx, []string{"@first", "@second"}))
+
+	status, err := cmd.Execute(ctx, repo)
+	require.Error(t, err)
+	require.Equal(t, 1, status)
+	require.Contains(t, err.Error(), "ignore rules differ from another source of the same origin")
 }

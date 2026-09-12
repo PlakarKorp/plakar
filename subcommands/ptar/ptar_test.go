@@ -12,6 +12,7 @@ import (
 	"github.com/PlakarKorp/kloset/connectors/storage"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/config"
 	lscmd "github.com/PlakarKorp/plakar/subcommands/ls"
 	ptesting "github.com/PlakarKorp/plakar/testing"
 	"github.com/stretchr/testify/require"
@@ -253,4 +254,64 @@ func listPtarContents(t *testing.T, ctx *appcontext.AppContext, path string) str
 	require.Empty(t, strings.TrimSpace(stderr.String()))
 
 	return stdout.String()
+}
+
+func TestExecuteCmdPtarSourceIgnoreRules(t *testing.T) {
+	repo, ctx := ptesting.GenerateRepositoryWithoutConfig(t, nil, nil, nil)
+	tmpSourceDir := ptesting.GenerateFiles(t, []ptesting.MockFile{
+		ptesting.NewMockDir("project"),
+		ptesting.NewMockDir("project/.git"),
+		ptesting.NewMockDir("project/.venv"),
+		ptesting.NewMockFile("project/readme.md", 0644, "hello"),
+		ptesting.NewMockFile("project/.git/config", 0644, "hidden"),
+		ptesting.NewMockFile("project/.venv/site.py", 0644, "hidden"),
+	})
+	tmpDir := t.TempDir()
+	out := filepath.Join(tmpDir, "source-ignored.ptar")
+	ignoreFile := filepath.Join(tmpDir, "ptar-ignore")
+	require.NoError(t, os.WriteFile(ignoreFile, []byte(".venv\n"), 0600))
+
+	ctx.Config = config.NewConfig()
+	ctx.Config.Sources["project"] = map[string]string{
+		"location":    "fs:" + filepath.Join(tmpSourceDir, "project"),
+		"ignore":      ".git",
+		"ignore-file": ignoreFile,
+	}
+
+	cmd := &Ptar{}
+	require.NoError(t, cmd.Parse(ctx, []string{"-plaintext", "-o", out}))
+	cmd.BackupTargets = listFlag{"@project"}
+
+	status, err := cmd.Execute(ctx, repo)
+	require.NoError(t, err)
+	require.Equal(t, 0, status)
+
+	output := listPtarContents(t, ctx, out)
+	require.Contains(t, output, "/project/readme.md")
+	require.NotContains(t, output, ".git")
+	require.NotContains(t, output, ".venv")
+}
+
+func TestExecuteCmdPtarSourceIgnoreFileMissing(t *testing.T) {
+	repo, ctx := ptesting.GenerateRepositoryWithoutConfig(t, nil, nil, nil)
+	tmpSourceDir := ptesting.GenerateFiles(t, []ptesting.MockFile{
+		ptesting.NewMockDir("project"),
+		ptesting.NewMockFile("project/readme.md", 0644, "hello"),
+	})
+	tmpDir := t.TempDir()
+
+	ctx.Config = config.NewConfig()
+	ctx.Config.Sources["project"] = map[string]string{
+		"location":    "fs:" + filepath.Join(tmpSourceDir, "project"),
+		"ignore-file": filepath.Join(tmpDir, "does-not-exist"),
+	}
+
+	cmd := &Ptar{}
+	require.NoError(t, cmd.Parse(ctx, []string{"-plaintext", "-o", filepath.Join(tmpDir, "missing.ptar")}))
+	cmd.BackupTargets = listFlag{"@project"}
+
+	status, err := cmd.Execute(ctx, repo)
+	require.Error(t, err)
+	require.Equal(t, 1, status)
+	require.Contains(t, err.Error(), "source @project")
 }
