@@ -4,15 +4,27 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/PlakarKorp/kloset/caching"
+	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/ui/stdio"
 	"github.com/stretchr/testify/require"
+)
+
+const (
+	failingSnapshotWorkspaceMarkerFile = "partial"
+	failingSnapshotWorkspaceErrMessage = "snapshot workspace open failed"
+	unexpectedCacheErrMessage          = "unexpected cache constructor call"
+	testSnapshotWorkCacheName          = "scan"
+	testPackfileTempStorageMode        = "memory"
+	testCacheRootFile                  = "cache-root"
 )
 
 // runBackup is a small wrapper around the standard Parse + Execute flow that
@@ -119,6 +131,82 @@ func TestBackupForcedTimestampInFutureRejected(t *testing.T) {
 	_, err, _, _ := runBackup(t, []string{"-force-timestamp", future}, nil)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "future")
+}
+
+func TestCleanupPartialSnapshotWorkspaceRemovesSnapshotDir(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	_, _, ctx := generateFixtures(t, bufOut, bufErr)
+	t.Cleanup(ctx.Close)
+
+	identifier := objects.RandomMAC()
+	ctx.CacheDir = t.TempDir()
+	snapshotWorkDir := filepath.Join(ctx.CacheDir, caching.CACHE_VERSION, snapshotWorkCacheName, fmt.Sprintf("%x", identifier))
+	require.NoError(t, os.MkdirAll(snapshotWorkDir, 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(snapshotWorkDir, failingSnapshotWorkspaceMarkerFile), []byte(failingSnapshotWorkspaceMarkerFile), 0o600))
+
+	cleanupPartialSnapshotWorkspace(ctx, identifier)
+
+	_, statErr := os.Stat(snapshotWorkDir)
+	require.True(t, os.IsNotExist(statErr), "partial snapshot workspace %q should be removed", snapshotWorkDir)
+}
+
+func TestCleanupPartialSnapshotWorkspaceIgnoresUnsetInputs(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	_, _, ctx := generateFixtures(t, bufOut, bufErr)
+	t.Cleanup(ctx.Close)
+
+	cleanupPartialSnapshotWorkspace(ctx, objects.RandomMAC())
+
+	ctx.CacheDir = t.TempDir()
+	cleanupPartialSnapshotWorkspace(ctx, objects.NilMac)
+}
+
+func TestCleanupPartialSnapshotWorkspaceWarnsWhenRemovalFails(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	_, _, ctx := generateFixtures(t, bufOut, bufErr)
+	t.Cleanup(ctx.Close)
+
+	cacheRoot := filepath.Join(t.TempDir(), testCacheRootFile)
+	require.NoError(t, os.WriteFile(cacheRoot, []byte(testCacheRootFile), 0o600))
+	ctx.CacheDir = cacheRoot
+
+	cleanupPartialSnapshotWorkspace(ctx, objects.RandomMAC())
+}
+
+func TestBackupCleansPartialSnapshotWorkspaceOnCreateFailure(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	repo, tmpBackupDir, ctx := generateFixtures(t, bufOut, bufErr)
+	t.Cleanup(ctx.Close)
+
+	snapshotWorkspaceErr := errors.New(failingSnapshotWorkspaceErrMessage)
+	cacheRoot := t.TempDir()
+	var snapshotWorkDir string
+
+	ctx.CacheDir = cacheRoot
+	ctx.SetCache(caching.NewManager(func(version, name, repoid string, _ caching.Option) (caching.Cache, error) {
+		if name != testSnapshotWorkCacheName {
+			return nil, errors.New(unexpectedCacheErrMessage)
+		}
+
+		snapshotWorkDir = filepath.Join(cacheRoot, version, name, filepath.FromSlash(repoid))
+		require.NoError(t, os.MkdirAll(snapshotWorkDir, 0o700))
+		require.NoError(t, os.WriteFile(filepath.Join(snapshotWorkDir, failingSnapshotWorkspaceMarkerFile), []byte(failingSnapshotWorkspaceMarkerFile), 0o600))
+		return nil, snapshotWorkspaceErr
+	}))
+
+	cmd := &Backup{}
+	require.NoError(t, cmd.Parse(ctx, []string{"-packfiles", testPackfileTempStorageMode, "-no-progress", tmpBackupDir}))
+
+	status, err := cmd.Execute(ctx, repo)
+	require.Equal(t, 1, status)
+	require.ErrorIs(t, err, snapshotWorkspaceErr)
+
+	_, statErr := os.Stat(snapshotWorkDir)
+	require.True(t, os.IsNotExist(statErr), "partial snapshot workspace %q should be removed after create failure", snapshotWorkDir)
 }
 
 func TestBackupTagViaFlag(t *testing.T) {
