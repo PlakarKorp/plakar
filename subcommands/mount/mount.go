@@ -39,6 +39,8 @@ type Mount struct {
 	SnapshotPath string
 }
 
+const snapshotRootPath = "/"
+
 func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &Mount{} }, 0, "mount")
 }
@@ -86,7 +88,7 @@ func (cmd *Mount) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 			return 1, err
 		}
 
-		subFS, err := fs.Sub(pvfs, path[1:])
+		subFS, err := snapshotSubFS(pvfs, path)
 		if err != nil {
 			return 1, err
 		}
@@ -97,4 +99,11 @@ func (cmd *Mount) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 		return http.ExecuteHTTP(ctx, repo, cmd.Mountpoint, cmd.LocateOptions, chrootFS)
 	}
 	return fuse.ExecuteFUSE(ctx, repo, cmd.Mountpoint, cmd.LocateOptions, chrootFS, cmd.AllowOthers)
+}
+
+func snapshotSubFS(snapshotFS fs.FS, snapshotPath string) (fs.FS, error) {
+	if snapshotPath == snapshotRootPath {
+		return snapshotFS, nil
+	}
+	return fs.Sub(snapshotFS, strings.TrimPrefix(snapshotPath, snapshotRootPath))
 }
