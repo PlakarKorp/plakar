@@ -13,7 +13,6 @@
 .Op Fl perimeter Ar perimeter
 .Op Fl post-hook Ar command
 .Op Fl pre-hook Ar command
-.Op Fl skip-permissions
 .Op Fl tag Ar tag
 .Op Fl to Ar directory
 .Op Fl o Ar option Ns No = Ns Ar value
@@ -65,9 +64,6 @@ Run
 in a shell after a successful restore.
 If the command exits with a non-zero status, a warning is logged and
 the restore still succeeds.
-.It Fl skip-permissions
-Skip restoring file permissions and ownership during restore,
-defaulting to 0750 for directories and 0640 for files.
 .It Fl to Ar directory
 Specify the base directory to which the files will be restored.
 If omitted, files are restored to the current working directory.
