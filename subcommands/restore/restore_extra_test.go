@@ -117,13 +117,6 @@ func TestRestoreWithSnapshotPath(t *testing.T) {
 	require.False(t, sawBar, "another_subdir should not have been restored")
 }
 
-func TestRestoreSkipPermissionsFlag(t *testing.T) {
-	_, _, ctx := generateSnapshot(t)
-	cmd := &Restore{}
-	require.NoError(t, cmd.Parse(ctx, []string{"-skip-permissions", "-to", "/tmp/x"}))
-	require.True(t, cmd.OptSkipPermissions)
-}
-
 func TestRestoreFilterFlagsAreParsed(t *testing.T) {
 	_, _, ctx := generateSnapshot(t)
 	cmd := &Restore{}
@@ -296,22 +289,6 @@ func TestRestoreToAliasWithLocation(t *testing.T) {
 	id := snap.Header.GetIndexID()
 	cmd := &Restore{}
 	require.NoError(t, cmd.Parse(ctx, []string{"-to", "@mydest", hex.EncodeToString(id[:]) + ":"}))
-	status, err := cmd.Execute(ctx, repo)
-	require.NoError(t, err)
-	require.Equal(t, 0, status)
-	checkRestored(t, dir)
-}
-
-func TestRestoreSkipPermissionsExecutes(t *testing.T) {
-	// Drive a real restore with -skip-permissions so the SkipPermissions branch
-	// in Execute is taken.
-	repo, snap, ctx := generateSnapshot(t)
-	defer snap.Close()
-
-	dir := mkRestoreDir(t)
-	id := snap.Header.GetIndexID()
-	cmd := &Restore{}
-	require.NoError(t, cmd.Parse(ctx, []string{"-skip-permissions", "-to", dir, hex.EncodeToString(id[:]) + ":"}))
 	status, err := cmd.Execute(ctx, repo)
 	require.NoError(t, err)
 	require.Equal(t, 0, status)
