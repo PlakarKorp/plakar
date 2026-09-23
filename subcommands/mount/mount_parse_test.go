@@ -2,12 +2,19 @@ package mount
 
 import (
 	"bytes"
+	"io/fs"
 	"testing"
+	"testing/fstest"
 
 	_ "github.com/PlakarKorp/integrations/fs/exporter"
-	ptesting "github.com/PlakarKorp/plakar/testing"
 	"github.com/PlakarKorp/plakar/subcommands"
+	ptesting "github.com/PlakarKorp/plakar/testing"
 	"github.com/stretchr/testify/require"
+)
+
+const (
+	snapshotSubFSTestFile    = "a.txt"
+	snapshotSubFSTestContent = "x"
 )
 
 func TestMountRegisteredFactory(t *testing.T) {
@@ -44,6 +51,19 @@ func TestMountParseAllowOthers(t *testing.T) {
 	cmd := &Mount{}
 	require.NoError(t, cmd.Parse(ctx, []string{"-allow-others", "-to", "/mnt/x"}))
 	require.True(t, cmd.AllowOthers)
+}
+
+func TestSnapshotSubFSRootPathUsesSnapshotRoot(t *testing.T) {
+	snapshotFS := fstest.MapFS{
+		snapshotSubFSTestFile: &fstest.MapFile{Data: []byte(snapshotSubFSTestContent)},
+	}
+
+	subFS, err := snapshotSubFS(snapshotFS, snapshotRootPath)
+	require.NoError(t, err)
+
+	data, err := fs.ReadFile(subFS, snapshotSubFSTestFile)
+	require.NoError(t, err)
+	require.Equal(t, []byte(snapshotSubFSTestContent), data)
 }
 
 func TestMountExecuteBadSnapshot(t *testing.T) {
