@@ -403,7 +403,7 @@ func entryPoint() int {
 
 	// try to get the passphrase from env and store config so that it's
 	// available to subcommands like create.
-	passphrase, err := getPassphraseFromEnv(ctx, storeConfig)
+	passphrase, err := getPassphraseFromEnv(ctx, storeConfig, repositoryPath)
 	if err != nil {
 		logger.Stderr("%s: %s\n", progName(), err)
 		return 1
@@ -601,18 +601,35 @@ func checkUpdate(ctx *appcontext.AppContext, disableSecurityCheck bool) {
 		concerns, rus.Latest, rus.FoundCount)
 }
 
-func getPassphraseFromEnv(ctx *appcontext.AppContext, params map[string]string) (string, error) {
+func getPassphraseFromEnv(ctx *appcontext.AppContext, params map[string]string, repositoryPath ...string) (string, error) {
+	pass, hasPass := params["passphrase"]
+	delete(params, "passphrase")
+	cmd, hasCmd := params["passphrase_cmd"]
+	delete(params, "passphrase_cmd")
+
 	if ctx.KeyFromFile != "" {
 		return ctx.KeyFromFile, nil
 	}
 
-	if pass, ok := params["passphrase"]; ok {
-		delete(params, "passphrase")
+	if len(repositoryPath) > 0 && ctx.Config != nil {
+		if pass, ok, err := ctx.Config.GetRepositoryPassphrase(repositoryPath[0]); err != nil {
+			return "", err
+		} else if ok {
+			return pass, nil
+		}
+
+		if cmd, ok, err := ctx.Config.GetRepositoryPassphraseCommand(repositoryPath[0]); err != nil {
+			return "", err
+		} else if ok {
+			return utils.GetPassphraseFromCommand(cmd)
+		}
+	}
+
+	if hasPass {
 		return pass, nil
 	}
 
-	if cmd, ok := params["passphrase_cmd"]; ok {
-		delete(params, "passphrase_cmd")
+	if hasCmd {
 		return utils.GetPassphraseFromCommand(cmd)
 	}
 

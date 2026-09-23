@@ -3,11 +3,14 @@ package config
 import (
 	"fmt"
 	"net/url"
+	"os"
 	"path"
 	"strings"
 
 	"maps"
 )
+
+const repositoryEnvPrefix = "PLAKAR_REPOSITORIES_"
 
 type Config struct {
 	DefaultRepository string
@@ -40,23 +43,65 @@ func (c *Config) GetRepository(name string) (map[string]string, error) {
 
 	name, rootOverride := resolveRootOverride(name)
 
-	kv, ok := c.Repositories[name[1:]]
+	repositoryName := name[1:]
+	kv, ok := c.Repositories[repositoryName]
 	if !ok {
 		return nil, fmt.Errorf("could not resolve repository: %s", name)
 	}
-	if _, ok := kv["location"]; !ok {
-		return nil, fmt.Errorf("repository %s has no location", name)
-	} else {
-		res := make(map[string]string)
-		maps.Copy(res, kv)
 
-		location, err := applyRootOverride(res["location"], rootOverride)
-		if err != nil {
-			return nil, err
-		}
-		res["location"] = location
-		return res, nil
+	res := make(map[string]string)
+	maps.Copy(res, kv)
+
+	if _, ok := res["location"]; !ok {
+		return nil, fmt.Errorf("repository %s has no location", name)
 	}
+
+	location, err := applyRootOverride(res["location"], rootOverride)
+	if err != nil {
+		return nil, err
+	}
+	res["location"] = location
+	return res, nil
+}
+
+func (c *Config) GetRepositoryPassphrase(name string) (string, bool, error) {
+	return c.repositoryEnvironmentValue(name, "PASSPHRASE")
+}
+
+func (c *Config) GetRepositoryPassphraseCommand(name string) (string, bool, error) {
+	return c.repositoryEnvironmentValue(name, "PASSPHRASE_CMD")
+}
+
+func (c *Config) repositoryEnvironmentValue(name string, key string) (string, bool, error) {
+	if !strings.HasPrefix(name, "@") {
+		return "", false, nil
+	}
+
+	name, _ = resolveRootOverride(name)
+	repositoryName := name[1:]
+	envKey := repositoryEnvPrefix + encodeRepositoryEnvironmentName(repositoryName) + "_" + key
+	value, ok := os.LookupEnv(envKey)
+	if !ok {
+		return "", false, nil
+	}
+	if c.repositoryEnvironmentNameAmbiguous(repositoryName) {
+		return "", false, fmt.Errorf("ambiguous environment override for repository %q", repositoryName)
+	}
+	return value, ok, nil
+}
+
+func (c *Config) repositoryEnvironmentNameAmbiguous(name string) bool {
+	envName := encodeRepositoryEnvironmentName(name)
+	for other := range c.Repositories {
+		if other != name && encodeRepositoryEnvironmentName(other) == envName {
+			return true
+		}
+	}
+	return false
+}
+
+func encodeRepositoryEnvironmentName(name string) string {
+	return strings.ToUpper(strings.ReplaceAll(name, "-", "_"))
 }
 
 func (c *Config) HasSource(name string) bool {
