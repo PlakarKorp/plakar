@@ -1,0 +1,1 @@
+import{gt as e,id as t}from"./queryOptions-CGP1x1p2.js";import{o as n}from"./index-BubpWXx0.js";import{n as r}from"./use-api-DsAahIDA.js";var i=t();function a(){let{returnUrl:t}=n.useSearch();return r({status:`logged_in`,returnUrl:t}),(0,i.jsx)(e,{})}export{a as component};

@@ -1,0 +1,1 @@
+import{Yr as e}from"./queryOptions-CGP1x1p2.js";import{pt as t}from"./components-B4CtLUdE.js";var n=500;function r(r=50){return e({page:t().nonnegative().catch(0).default(0),per_page:t().nonnegative().catch(r).default(r).transform(e=>Math.min(e,n))})}export{r as t};
