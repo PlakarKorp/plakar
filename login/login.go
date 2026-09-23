@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"runtime"
 	"strings"
@@ -46,6 +47,10 @@ var ErrRateLimited = errors.New("rate limited")
 // defaultBaseURL is the plakar.io auth API root. It is overridable per-flow
 // (via the baseURL field) so tests can point the login flow at a local server.
 const defaultBaseURL = "https://api.plakar.io"
+
+// ErrUnknownPollID marks a poll for a sign-in the auth api does not know,
+// or no longer knows: it expired or its token was already released.
+var ErrUnknownPollID = errors.New("unknown ID")
 
 type loginFlow struct {
 	appCtx  *appcontext.AppContext
@@ -76,41 +81,17 @@ func (flow *loginFlow) poll(pollID string, iterations int, delay time.Duration, 
 		case <-flow.appCtx.Done():
 			return "", flow.appCtx.Err()
 		case <-tick:
-			reqUrl := flow.baseURL + "/v1/auth/poll/" + pollID
-			req, err := http.NewRequestWithContext(flow.appCtx, "POST", reqUrl, nil)
+			token, status, err := flow.PollOnce(pollID, completionCode)
 			if err != nil {
-				return "", fmt.Errorf("the /auth/login/github/poll API endpoint failed: %w", err)
+				return "", err
 			}
-			if completionCode != "" {
-				req.Header.Set("X-Completion-Code", completionCode)
-			}
-
-			client := http.DefaultClient
-			resp, err := client.Do(req)
-			if err != nil {
-				return "", fmt.Errorf("the /auth/login/github/poll API endpoint failed: %w", err)
-			}
-			switch resp.StatusCode {
-			case http.StatusOK:
-				var tokenResponse TokenResponse
-				decodeErr := json.NewDecoder(resp.Body).Decode(&tokenResponse)
-				resp.Body.Close()
-				if decodeErr != nil {
-					return "", fmt.Errorf("failed to decode response JSON: %v", decodeErr)
-				}
-				return tokenResponse.Token, nil
-			case http.StatusNotFound:
-				resp.Body.Close()
-				return "", fmt.Errorf("unknown ID")
-			case http.StatusAccepted:
-				resp.Body.Close()
+			switch status {
+			case PollDone:
+				return token, nil
+			case PollPending:
 				progressCb()
-			case http.StatusTooManyRequests:
-				return "", ErrRateLimited
-			case http.StatusUnauthorized:
-				recoverable := isCompletionCodeRequired(resp.Body)
-				resp.Body.Close()
-				if promptCode == nil || !recoverable {
+			case PollCodeRequired:
+				if promptCode == nil {
 					return "", fmt.Errorf("unexpected status code: %d", http.StatusUnauthorized)
 				}
 				completionCode, err = promptCode(prompted)
@@ -118,14 +99,66 @@ func (flow *loginFlow) poll(pollID string, iterations int, delay time.Duration, 
 					return "", err
 				}
 				prompted = true
-			default:
-				resp.Body.Close()
-				return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 			}
 		}
 		tick = time.After(delay)
 	}
 	return "", fmt.Errorf("could not obtain token after %d iterations", iterations)
+}
+
+// PollStatus is where a sign-in stands after one poll of the auth api.
+type PollStatus int
+
+const (
+	// PollPending: the user has not completed the sign-in yet.
+	PollPending PollStatus = iota
+	// PollCodeRequired: the sign-in is complete but the token is only
+	// released against the completion code, and none or a wrong one was sent.
+	PollCodeRequired
+	// PollDone: the token was released.
+	PollDone
+)
+
+// PollOnce asks the auth api once whether the sign-in identified by pollID
+// has completed, presenting completionCode when it is not empty. The token is
+// only returned with PollDone.
+func (flow *loginFlow) PollOnce(pollID, completionCode string) (string, PollStatus, error) {
+	reqUrl := flow.baseURL + "/v1/auth/poll/" + url.PathEscape(pollID)
+	req, err := http.NewRequestWithContext(flow.appCtx, "POST", reqUrl, nil)
+	if err != nil {
+		return "", PollPending, fmt.Errorf("the /auth/login/github/poll API endpoint failed: %w", err)
+	}
+	if completionCode != "" {
+		req.Header.Set("X-Completion-Code", completionCode)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", PollPending, fmt.Errorf("the /auth/login/github/poll API endpoint failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		var tokenResponse TokenResponse
+		if err := json.NewDecoder(resp.Body).Decode(&tokenResponse); err != nil {
+			return "", PollPending, fmt.Errorf("failed to decode response JSON: %v", err)
+		}
+		return tokenResponse.Token, PollDone, nil
+	case http.StatusAccepted:
+		return "", PollPending, nil
+	case http.StatusNotFound:
+		return "", PollPending, ErrUnknownPollID
+	case http.StatusTooManyRequests:
+		return "", PollPending, ErrRateLimited
+	case http.StatusUnauthorized:
+		if isCompletionCodeRequired(resp.Body) {
+			return "", PollCodeRequired, nil
+		}
+		return "", PollPending, fmt.Errorf("unexpected status code: %d", http.StatusUnauthorized)
+	default:
+		return "", PollPending, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
 }
 
 // maxErrorBodySize bounds how much of an error response body is read;
@@ -249,9 +282,21 @@ func (flow *loginFlow) completionCodePrompt(enabled bool) func(retry bool) (stri
 	}
 }
 
-func (flow *loginFlow) RunUI(provider string, parameters map[string]string) (string, error) {
+// UILogin is a sign-in started on behalf of the local ui. The ui opens URL
+// (github only; the email provider sends a link instead) and then drives
+// PollOnce with PollID, passing the completion code the user reads off the
+// sign-in page.
+type UILogin struct {
+	URL    string `json:"URL"`
+	PollID string `json:"poll_id"`
+}
+
+// RunUI starts a sign-in for the local ui. The auth api releases the token
+// only against the completion code shown to whoever completed the sign-in,
+// and refuses a redirect alongside it: the user comes back to the ui tab by
+// hand to type the code.
+func (flow *loginFlow) RunUI(provider string, parameters map[string]string) (*UILogin, error) {
 	var url string
-	var body io.Reader
 
 	switch provider {
 	case "github":
@@ -259,76 +304,40 @@ func (flow *loginFlow) RunUI(provider string, parameters map[string]string) (str
 	case "email":
 		url = flow.baseURL + "/v1/auth/login/email"
 	default:
-		return "", fmt.Errorf("unsupported provider: %s", provider)
+		return nil, fmt.Errorf("unsupported provider: %s", provider)
 	}
 
-	if bodyBytes, err := json.Marshal(parameters); err != nil {
-		return "", fmt.Errorf("failed to marshal JSON: %v", err)
-	} else {
-		body = bytes.NewBuffer(bodyBytes)
+	payload := map[string]any{"completion_code": true}
+	for k, v := range parameters {
+		payload[k] = v
 	}
-
-	resp, err := http.Post(url, "application/json", body)
+	bodyBytes, err := json.Marshal(payload)
 	if err != nil {
-		return "", fmt.Errorf("unable to get the login URL: %w", err)
+		return nil, fmt.Errorf("failed to marshal JSON: %v", err)
+	}
+
+	resp, err := http.Post(url, "application/json", bytes.NewReader(bodyBytes))
+	if err != nil {
+		return nil, fmt.Errorf("unable to get the login URL: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		if resp.StatusCode == http.StatusTooManyRequests {
-			return "", ErrRateLimited
+			return nil, ErrRateLimited
 		}
-		return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
-	switch provider {
-	case "github":
-		return flow.handleGithubResponseUI(resp)
-	case "email":
-		return flow.handleEmailResponseUI(resp)
-	default:
-		return "", fmt.Errorf("unsupported provider: %s", provider)
-	}
-}
-
-func (flow *loginFlow) handleGithubResponseUI(resp *http.Response) (string, error) {
-	var respData struct {
-		URL    string `json:"URL"`
-		PollID string `json:"poll_id"`
-	}
+	var respData UILogin
 	if err := json.NewDecoder(resp.Body).Decode(&respData); err != nil {
-		return "", fmt.Errorf("failed to decode response JSON: %v", err)
+		return nil, fmt.Errorf("failed to decode response JSON: %v", err)
 	}
 
-	go func() {
-		token, _ := flow.Poll(respData.PollID, 10, time.Second*5, func() {})
-		if token != "" {
-			if err := flow.appCtx.GetCookies().PutAuthToken(token); err != nil {
-			}
-		}
-
-	}()
-
-	return respData.URL, nil
-}
-
-func (flow *loginFlow) handleEmailResponseUI(resp *http.Response) (string, error) {
-	var respData struct {
-		PollID string `json:"poll_id"`
+	if respData.PollID == "" {
+		return nil, fmt.Errorf("the login API returned no poll ID")
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&respData); err != nil {
-		return "", fmt.Errorf("failed to decode response JSON: %v", err)
-	}
-
-	go func() {
-		token, _ := flow.Poll(respData.PollID, 10, time.Second*5, func() {})
-		if token != "" {
-			if err := flow.appCtx.GetCookies().PutAuthToken(token); err != nil {
-			}
-		}
-	}()
-
-	return "", nil
+	return &respData, nil
 }
 
 func (flow *loginFlow) Close() error {

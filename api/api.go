@@ -185,6 +185,7 @@ func SetupRoutes(server *http.ServeMux, repo *repository.Repository, ctx *appcon
 	if !isDemoMode {
 		server.Handle("POST /api/authentication/login/github", authToken(JSONAPIView(ui.servicesLoginGithub)))
 		server.Handle("POST /api/authentication/login/email", authToken(JSONAPIView(ui.servicesLoginEmail)))
+		server.Handle("POST /api/authentication/login/poll", authToken(JSONAPIView(ui.servicesLoginPoll)))
 		server.Handle("POST /api/authentication/logout", authToken(JSONAPIView(ui.servicesLogout)))
 
 		server.Handle("POST /api/proxy/v1/account/notifications/set-status", authToken(JSONAPIView(ui.servicesProxy)))
