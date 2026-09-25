@@ -1,0 +1,77 @@
+.Dd August 12, 2026
+.Dt PLAKAR-CP 1
+.Os
+.Sh NAME
+.Nm plakar-cp
+.Nd Copy files between two locations
+.Sh SYNOPSIS
+.Nm plakar cp
+.Op Fl quiet
+.Ar source
+.Ar destination
+.Sh DESCRIPTION
+The
+.Nm plakar cp
+command copies files from
+.Ar source
+to
+.Ar destination
+without going through a Kloset store.
+Both endpoints can be any location supported by the configured
+connectors, which makes it possible to copy between, say, a local
+directory and an S3 bucket.
+.Pp
+.Ar source
+and
+.Ar destination
+are locations, but a name prefixed with
+.Sq @
+refers to a source or a destination declared in the configuration, refer
+to
+.Xr plakar-source 1
+and
+.Xr plakar-destination 1 .
+.Pp
+The copy is rooted at the last component of the source, the way
+.Xr cp 1
+copies a directory: copying
+.Pa /var/www
+to
+.Pa /srv/backup
+fills
+.Pa /srv/backup/www
+and not
+.Pa /srv/backup/var/www .
+.Pp
+Every copied file is listed on the standard output as the destination
+acknowledges it.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl quiet
+Do not list the copied files.
+.El
+.Sh EXIT STATUS
+.Ex -std
+.Pp
+Failing to copy an entry is not fatal: the error is reported and the copy
+carries on with the remaining files, but
+.Nm plakar cp
+exits with a non-zero status.
+.Sh EXAMPLES
+Copy a local directory to another one:
+.Bd -literal -offset indent
+$ plakar cp /var/www /srv/backup
+.Ed
+.Pp
+Copy a local directory to a configured destination:
+.Bd -literal -offset indent
+$ plakar destination add mybucket location=s3://bucket/path
+$ plakar cp /var/www @mybucket
+.Ed
+.Sh SEE ALSO
+.Xr plakar 1 ,
+.Xr plakar-backup 1 ,
+.Xr plakar-destination 1 ,
+.Xr plakar-restore 1 ,
+.Xr plakar-source 1
