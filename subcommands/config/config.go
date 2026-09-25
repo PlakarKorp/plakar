@@ -31,6 +31,7 @@ import (
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/config"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/PlakarKorp/plakar/utils"
 	"go.yaml.in/yaml/v3"
 	"gopkg.in/ini.v1"
 )
@@ -152,6 +153,10 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 
 		switch cmd {
 		case "store":
+			if _, _, err := utils.ParseThrottlerConfig(cfgMap[name]); err != nil {
+				return fmt.Errorf("failed to parse throttling for %q: %w", name, err)
+			}
+
 			store, err := storage.New(ctx.GetInner(), cfgMap[name])
 			if err != nil {
 				return err
@@ -163,6 +168,11 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 			if !ok {
 				return fmt.Errorf("failed to retrieve configuration for source %q", name)
 			}
+
+			if _, _, err := utils.ParseThrottlerConfig(cfg); err != nil {
+				return fmt.Errorf("failed to parse throttling for %q: %w", name, err)
+			}
+
 			imp, err := importer.NewImporter(ctx.GetInner(), ctx.ImporterOpts(), cfg)
 			if err != nil {
 				return err
@@ -173,6 +183,9 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 			cfg, ok := ctx.Config.GetDestination(name)
 			if !ok {
 				return fmt.Errorf("failed to retrieve configuration for destination %q", name)
+			}
+			if _, _, err := utils.ParseThrottlerConfig(cfg); err != nil {
+				return fmt.Errorf("failed to parse throttling for %q: %w", name, err)
 			}
 			exp, err := exporter.NewExporter(ctx.GetInner(), ctx.ExporterOpts(), cfg)
 			if err != nil {

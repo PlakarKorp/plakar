@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"maps"
 	"os"
 	"os/signal"
 	"os/user"
@@ -412,6 +413,15 @@ func entryPoint() int {
 		ctx.KeyFromFile = passphrase
 	}
 
+	// Save a copy after stripping passphrases, but before stripping the
+	// throttling information.
+	fullStoreConfig := maps.Clone(storeConfig)
+	readRate, writeRate, err := utils.ParseThrottlerConfig(storeConfig)
+	if err != nil {
+		logger.Stderr("%s: %s\n", progName(), err)
+		return 1
+	}
+
 	var store storage.Store
 	var repo *repository.Repository
 
@@ -455,7 +465,13 @@ func entryPoint() int {
 		}
 
 		// Actual rebuild is always done by cached
-		repo, err = repository.NewNoRebuild(ctx.GetInner(), ctx.GetSecret(), store, serializedConfig, true)
+		opts := &repository.RepositoryOpts{
+			DoRebuild:    false,
+			RWStateCache: false,
+			MaxReadRate:  readRate,
+			MaxWriteRate: writeRate,
+		}
+		repo, err = repository.NewRepository(ctx.GetInner(), ctx.GetSecret(), store, serializedConfig, opts)
 		if err != nil {
 			logger.Stderr("%s: %s\n", progName(), err)
 			return 1
@@ -494,7 +510,7 @@ func entryPoint() int {
 
 	// If we are working on a repo, rebuild the state.
 	if cmd.GetFlags()&subcommands.BeforeRepositoryOpen == 0 && cmd.GetFlags()&subcommands.BeforeRepositoryWithStorage == 0 {
-		_, err = cached.RebuildStateFromStore(ctx, repo.Configuration().RepositoryID, storeConfig, false)
+		_, err = cached.RebuildStateFromStore(ctx, repo.Configuration().RepositoryID, fullStoreConfig, false)
 		if err == nil {
 			status, err = task.RunCommand(ctx, cmd, repo, "@agentless")
 		}

@@ -312,6 +312,11 @@ func (cmd *Cached) handleCachedClient(ctx *appcontext.AppContext, conn net.Conn)
 }
 
 func (cmd *Cached) rebuildJob(ctx *appcontext.AppContext, jobChan chan jobReq, repoID uuid.UUID, secret []byte, storeConfig map[string]string) error {
+	readRate, writeRate, err := utils.ParseThrottlerConfig(storeConfig)
+	if err != nil {
+		return fmt.Errorf("failed to open storage: %w", err)
+	}
+
 	var serializedConfig []byte
 	store, serializedConfig, err := storage.Open(ctx.GetInner(), storeConfig)
 	if err != nil {
@@ -323,7 +328,13 @@ func (cmd *Cached) rebuildJob(ctx *appcontext.AppContext, jobChan chan jobReq, r
 		return fmt.Errorf("failed to setup secret: %w", err)
 	}
 
-	repo, err := repository.NewNoRebuild(ctx.GetInner(), key, store, serializedConfig, false)
+	opts := &repository.RepositoryOpts{
+		DoRebuild:    false,
+		RWStateCache: true,
+		MaxReadRate:  readRate,
+		MaxWriteRate: writeRate,
+	}
+	repo, err := repository.NewRepository(ctx.GetInner(), key, store, serializedConfig, opts)
 	if err != nil {
 		return fmt.Errorf("failed to open repository: %w", err)
 	}
