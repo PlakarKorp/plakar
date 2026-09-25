@@ -44,7 +44,6 @@ type Restore struct {
 	OptPerimeter       string
 	OptJob             string
 	OptTag             string
-	OptSkipPermissions bool
 	Opts               map[string]string
 	OptPreHook         string
 	OptPostHook        string
@@ -74,7 +73,6 @@ func (cmd *Restore) CobraCommand() *cobra.Command {
 	c.Flags().StringVar(&cmd.OptTag, "tag", "", "filter by tag")
 	c.Flags().Var(subcommands.GoValue(utils.NewOptsFlag(cmd.Opts)), "o", "specify extra exporter options")
 	c.Flags().StringVar(&cmd.pullPath, "to", "", "base directory where pull will restore")
-	c.Flags().BoolVar(&cmd.OptSkipPermissions, "skip-permissions", false, "do not restore file permissions")
 	c.Flags().StringVar(&cmd.OptPreHook, "pre-hook", "", "shell command to run before restore")
 	c.Flags().StringVar(&cmd.OptPostHook, "post-hook", "", "shell command to run after restore")
 	return c
@@ -187,10 +185,6 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 	defer exporterInstance.Close(ctx)
 
 	opts := &snapshot.ExportOptions{}
-	if cmd.OptSkipPermissions {
-		opts.SkipPermissions = true
-	}
-
 	for _, snapPath := range snapshots {
 		snap, pathname, relative, err := locate.OpenSnapshotByPathRelative(repo, snapPath)
 		if err != nil {
