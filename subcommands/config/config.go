@@ -24,6 +24,7 @@ import (
 	"maps"
 	"net/http"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/PlakarKorp/kloset/connectors/exporter"
@@ -389,6 +390,7 @@ func dispatchSubcommand(ctx *appcontext.AppContext, cmd string, subcmd string, a
 			for name := range cfgMap {
 				names = append(names, name)
 			}
+			slices.Sort(names)
 		} else {
 			names = p.Args()
 		}
