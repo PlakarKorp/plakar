@@ -12,19 +12,26 @@ import (
 	"github.com/PlakarKorp/plakar/utils"
 )
 
-// Parse a URL parameter with the format "snapshotID:path".
-func SnapshotPathParam(r *http.Request, repo *repository.Repository, param string) (objects.MAC, string, error) {
-	idstr, path := utils.ParseSnapshotID(r.PathValue(param))
+// Resolve a "snapshotID:path" string into a snapshot MAC and its path. The
+// field name is used to attribute parameter errors. Shared by SnapshotPathParam
+// (URL path values) and handlers that read such strings from the query string.
+func resolveSnapshotPath(repo *repository.Repository, raw, field string) (objects.MAC, string, error) {
+	idstr, path := utils.ParseSnapshotID(raw)
 
 	if idstr == "" {
-		return objects.MAC{}, "", parameterError(param, MissingArgument, ErrMissingField)
+		return objects.MAC{}, "", parameterError(field, MissingArgument, ErrMissingField)
 	}
 
 	mac, err := locate.LocateSnapshotByPrefix(repo, idstr)
 	if err != nil {
-		return objects.MAC{}, "", parameterError(param, InvalidArgument, err)
+		return objects.MAC{}, "", parameterError(field, InvalidArgument, err)
 	}
 	return mac, path, nil
+}
+
+// Parse a URL parameter with the format "snapshotID:path".
+func SnapshotPathParam(r *http.Request, repo *repository.Repository, param string) (objects.MAC, string, error) {
+	return resolveSnapshotPath(repo, r.PathValue(param), param)
 }
 
 func PathParamToID(r *http.Request, param string) (id [32]byte, err error) {
