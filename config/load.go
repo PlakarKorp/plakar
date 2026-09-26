@@ -27,6 +27,11 @@ type (
 		Version      string                       `yaml:"version"`
 		Destinations map[string]map[string]string `yaml:"destinations"`
 	}
+
+	registriesConfig struct {
+		Version    string                    `yaml:"version"`
+		Registries map[string]RegistryConfig `yaml:"registries"`
+	}
 )
 
 func load(file string, dst any) error {
@@ -51,6 +56,15 @@ func load(file string, dst any) error {
 	err = yaml.NewDecoder(f).Decode(dst)
 	var version string
 	switch t := dst.(type) {
+	case *registriesConfig:
+		// No previous format to fall back to.
+		if err != nil {
+			return fmt.Errorf("failed to parse config file %s: %w", file, err)
+		}
+		if t.Version != CONFIG_VERSION {
+			return fmt.Errorf("config file %s: unsupported version %q", file, t.Version)
+		}
+		return nil
 	case *storesConfig:
 		version = t.Version
 	case *destinationsConfig:
@@ -96,12 +110,18 @@ func load(file string, dst any) error {
 	return nil
 }
 
-func loadFallback(dir string) (*Config, error) {
+func loadFallback(dir string, registries map[string]RegistryConfig) (*Config, error) {
 	// Load old config if found
 	oldpath := filepath.Join(dir, "plakar.yml")
 	cfg, err := LoadOldConfigIfExists(oldpath)
 	if err != nil {
 		return nil, fmt.Errorf("error reading file %s: %w", oldpath, err)
+	}
+
+	// The old format has no registries: keep those of registries.yml,
+	// which Save would otherwise remove.
+	if registries != nil {
+		cfg.Registries = registries
 	}
 
 	// Save the config in the new format right now
@@ -117,10 +137,18 @@ func Load(dir string) (*Config, error) {
 	destinations := destinationsConfig{}
 	stores := storesConfig{}
 
-	err := load(filepath.Join(dir, "sources.yml"), &sources)
+	// Optional: most configurations have no additional registries.  Read
+	// first, so that the fallback keeps them.
+	registries := registriesConfig{}
+	err := load(filepath.Join(dir, "registries.yml"), &registries)
+	if err != nil && !os.IsNotExist(err) {
+		return nil, err
+	}
+
+	err = load(filepath.Join(dir, "sources.yml"), &sources)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return loadFallback(dir)
+			return loadFallback(dir, registries.Registries)
 		}
 		return nil, err
 	}
@@ -128,7 +156,7 @@ func Load(dir string) (*Config, error) {
 	err = load(filepath.Join(dir, "destinations.yml"), &destinations)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return loadFallback(dir)
+			return loadFallback(dir, registries.Registries)
 		}
 		return nil, err
 	}
@@ -140,7 +168,7 @@ func Load(dir string) (*Config, error) {
 	}
 	if err != nil {
 		if os.IsNotExist(err) {
-			return loadFallback(dir)
+			return loadFallback(dir, registries.Registries)
 		}
 		return nil, err
 	}
@@ -150,6 +178,9 @@ func Load(dir string) (*Config, error) {
 	cfg.Destinations = destinations.Destinations
 	cfg.Repositories = stores.Stores
 	cfg.DefaultRepository = stores.Default
+	if registries.Registries != nil {
+		cfg.Registries = registries.Registries
+	}
 
 	return cfg, nil
 }
@@ -204,5 +235,18 @@ func Save(dir string, cfg *Config) error {
 	if err != nil {
 		return err
 	}
-	return nil
+
+	// Only written when there are additional registries, and removed
+	// with the last one.
+	regpath := filepath.Join(dir, "registries.yml")
+	if len(cfg.Registries) == 0 {
+		if err := os.Remove(regpath); err != nil && !os.IsNotExist(err) {
+			return err
+		}
+		return nil
+	}
+	return save(regpath, registriesConfig{
+		Version:    CONFIG_VERSION,
+		Registries: cfg.Registries,
+	})
 }
