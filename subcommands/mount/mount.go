@@ -81,12 +81,18 @@ func (cmd *Mount) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 			return 1, err
 		}
 
+		if path == "/" {
+			path = "."
+		} else if strings.HasPrefix(path, "/") {
+			path = path[1:]
+		}
+
 		pvfs, err := snap.Filesystem()
 		if err != nil {
 			return 1, err
 		}
 
-		subFS, err := fs.Sub(pvfs, path[1:])
+		subFS, err := fs.Sub(pvfs, path)
 		if err != nil {
 			return 1, err
 		}
