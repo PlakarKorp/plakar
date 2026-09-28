@@ -19,7 +19,9 @@ func newCtx(t *testing.T) *appcontext.AppContext {
 	t.Helper()
 	ctx := appcontext.NewAppContext()
 	ctx.SetLogger(logging.NewLogger(bytes.NewBuffer(nil), bytes.NewBuffer(nil)))
-	ctx.SetCookies(cookies.NewManager(t.TempDir()))
+	cookiesManager, err := cookies.NewManager(t.TempDir())
+	require.NoError(t, err)
+	ctx.SetCookies(cookiesManager)
 	return ctx
 }
 
@@ -129,7 +131,9 @@ func TestReportTaskStartWarnsOnDoubleStart(t *testing.T) {
 	ctx := appcontext.NewAppContext()
 	ctx.SetLogger(logging.NewLogger(bytes.NewBuffer(nil), &errBuf))
 	ctx.GetLogger().EnableInfo()
-	ctx.SetCookies(cookies.NewManager(t.TempDir()))
+	cookiesManager, err := cookies.NewManager(t.TempDir())
+	require.NoError(t, err)
+	ctx.SetCookies(cookiesManager)
 
 	r := NewReporter(ctx)
 	defer r.StopAndWait()
@@ -162,7 +166,9 @@ func TestReportWithRepositoryName(t *testing.T) {
 func TestReportWithRepositoryAndSnapshot(t *testing.T) {
 	bufOut := bytes.NewBuffer(nil)
 	repo, ctx := ptesting.GenerateRepository(t, bufOut, bytes.NewBuffer(nil), nil)
-	ctx.SetCookies(cookies.NewManager(t.TempDir()))
+	cookiesManager, err := cookies.NewManager(t.TempDir())
+	require.NoError(t, err)
+	ctx.SetCookies(cookiesManager)
 	snap := ptesting.GenerateSnapshot(t, repo, []ptesting.MockFile{
 		ptesting.NewMockFile("a.txt", 0644, "a"),
 	})
@@ -192,7 +198,9 @@ func TestReportWithRepositoryAndSnapshot(t *testing.T) {
 func TestReportWithSnapshotIDLoadError(t *testing.T) {
 	bufOut := bytes.NewBuffer(nil)
 	repo, ctx := ptesting.GenerateRepository(t, bufOut, bytes.NewBuffer(nil), nil)
-	ctx.SetCookies(cookies.NewManager(t.TempDir()))
+	cookiesManager, err := cookies.NewManager(t.TempDir())
+	require.NoError(t, err)
+	ctx.SetCookies(cookiesManager)
 	snap := ptesting.GenerateSnapshot(t, repo, []ptesting.MockFile{
 		ptesting.NewMockFile("a.txt", 0644, "a"),
 	})

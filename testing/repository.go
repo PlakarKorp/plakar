@@ -35,7 +35,8 @@ func GenerateRepository(t *testing.T, bufout *bytes.Buffer, buferr *bytes.Buffer
 		os.RemoveAll(tmpRepoDirRoot)
 	})
 
-	cookies := cookies.NewManager(tmpCacheDir)
+	cookies, err := cookies.NewManager(tmpCacheDir)
+	require.NoError(t, err)
 
 	ctx := appcontext.NewAppContext()
 	ctx.SetCookies(cookies)
@@ -123,7 +124,8 @@ func GenerateRepositoryWithoutConfig(t *testing.T, bufout *bytes.Buffer, buferr 
 		os.RemoveAll(tmpRepoDirRoot)
 	})
 
-	cookies := cookies.NewManager(tmpCacheDir)
+	cookies, err := cookies.NewManager(tmpCacheDir)
+	require.NoError(t, err)
 
 	ctx := appcontext.NewAppContext()
 	ctx.SetCookies(cookies)

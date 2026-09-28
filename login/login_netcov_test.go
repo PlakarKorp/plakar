@@ -17,7 +17,11 @@ import (
 func newTestFlow(t *testing.T) *loginFlow {
 	t.Helper()
 	ctx := appcontext.NewAppContext()
-	ctx.SetCookies(cookies.NewManager(t.TempDir()))
+	cookiesManager, err := cookies.NewManager(t.TempDir())
+	if err != nil {
+		t.Fatalf("cookies.NewManager err = %v", err)
+	}
+	ctx.SetCookies(cookiesManager)
 	flow, err := NewLoginFlow(ctx, true)
 	if err != nil {
 		t.Fatalf("NewLoginFlow err = %v", err)
@@ -305,7 +309,10 @@ func TestNetDeriveTokenSuccess(t *testing.T) {
 	defer srv.Close()
 
 	ctx := appcontext.NewAppContext()
-	mgr := cookies.NewManager(t.TempDir())
+	mgr, err := cookies.NewManager(t.TempDir())
+	if err != nil {
+		t.Fatalf("cookies.NewManager err = %v", err)
+	}
 	if err := mgr.PutAuthToken("auth-tok"); err != nil {
 		t.Fatalf("PutAuthToken err = %v", err)
 	}
@@ -330,7 +337,10 @@ func TestNetDeriveTokenNon200(t *testing.T) {
 	defer srv.Close()
 
 	ctx := appcontext.NewAppContext()
-	mgr := cookies.NewManager(t.TempDir())
+	mgr, err := cookies.NewManager(t.TempDir())
+	if err != nil {
+		t.Fatalf("cookies.NewManager err = %v", err)
+	}
 	if err := mgr.PutAuthToken("auth-tok"); err != nil {
 		t.Fatalf("PutAuthToken err = %v", err)
 	}
@@ -339,7 +349,7 @@ func TestNetDeriveTokenNon200(t *testing.T) {
 	t.Setenv("PLAKAR_TOKEN", "")
 	t.Setenv("PLAKAR_API_URL", srv.URL)
 
-	_, err := DeriveToken(ctx)
+	_, err = DeriveToken(ctx)
 	if err == nil || !strings.Contains(err.Error(), "request failed with status") {
 		t.Fatalf("err = %v, want request failed with status", err)
 	}
@@ -347,11 +357,15 @@ func TestNetDeriveTokenNon200(t *testing.T) {
 
 func TestNetDeriveTokenNoAuthToken(t *testing.T) {
 	ctx := appcontext.NewAppContext()
-	ctx.SetCookies(cookies.NewManager(t.TempDir()))
+	cookiesManager, err := cookies.NewManager(t.TempDir())
+	if err != nil {
+		t.Fatalf("cookies.NewManager err = %v", err)
+	}
+	ctx.SetCookies(cookiesManager)
 
 	t.Setenv("PLAKAR_TOKEN", "")
 
-	_, err := DeriveToken(ctx)
+	_, err = DeriveToken(ctx)
 	if err == nil {
 		t.Fatal("expected error when no auth token present, got nil")
 	}
