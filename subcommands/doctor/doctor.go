@@ -23,6 +23,7 @@ import (
 	"math"
 	"math/rand/v2"
 	"slices"
+	"sync"
 	"time"
 
 	"github.com/PlakarKorp/kloset/objects"
@@ -32,6 +33,7 @@ import (
 	"github.com/PlakarKorp/plakar/exitcodes"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
 )
 
 var errMACMismatch = errors.New("blob content does not match its MAC")
@@ -113,21 +115,38 @@ func (cmd *Doctor) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 		deadline = time.Now().Add(cmd.Duration)
 	}
 
+	// Probe with the configured concurrency: the failures this looks for
+	// show up under load, not on sequential reads.
+	var mu sync.Mutex
 	samples := make([]sample, 0, len(targets))
+	probing := time.Now()
+	wg := new(errgroup.Group)
+	wg.SetLimit(ctx.MaxConcurrency)
 	for _, t := range targets {
-		if err := ctx.Err(); err != nil {
-			return 1, err
-		}
-		if !deadline.IsZero() && time.Now().After(deadline) {
+		if ctx.Err() != nil || (!deadline.IsZero() && time.Now().After(deadline)) {
 			break
 		}
-		samples = append(samples, cmd.probe(repo, t))
+		wg.Go(func() error {
+			s := cmd.probe(repo, t)
+			mu.Lock()
+			samples = append(samples, s)
+			mu.Unlock()
+			return nil
+		})
+	}
+	if err := wg.Wait(); err != nil {
+		return 1, err
+	}
+	probed := time.Since(probing)
+
+	if err := ctx.Err(); err != nil {
+		return 1, err
 	}
 	if len(samples) == 0 {
 		return 1, fmt.Errorf("no blob was read within -duration %s", cmd.Duration)
 	}
 
-	failed, mismatched := report(ctx, samples, total, time.Since(start))
+	failed, mismatched := report(ctx, samples, total, time.Since(start), probed)
 
 	// -threshold tolerates transient read failures, never wrong content.
 	if mismatched > 0 {
@@ -180,6 +199,7 @@ func hasContentMAC(typ resources.Type) bool {
 	switch typ {
 	case resources.RT_CHUNK, resources.RT_OBJECT,
 		resources.RT_VFS_ENTRY, resources.RT_VFS_SUMMARY,
+		resources.RT_ERROR_ENTRY, resources.RT_XATTR_ENTRY,
 		resources.RT_VFS_BTREE, resources.RT_VFS_NODE,
 		resources.RT_ERROR_BTREE, resources.RT_ERROR_NODE,
 		resources.RT_XATTR_BTREE, resources.RT_XATTR_NODE,
@@ -208,10 +228,9 @@ func (cmd *Doctor) probe(repo *repository.Repository, t target) sample {
 	return s
 }
 
-func report(ctx *appcontext.AppContext, samples []sample, total int, elapsed time.Duration) (failed, mismatched int) {
+func report(ctx *appcontext.AppContext, samples []sample, total int, elapsed, probed time.Duration) (failed, mismatched int) {
 	var latencies []time.Duration
 	var bytesRead int
-	var readTime time.Duration
 	var unverified int
 
 	for _, s := range samples {
@@ -228,11 +247,10 @@ func report(ctx *appcontext.AppContext, samples []sample, total int, elapsed tim
 		}
 		latencies = append(latencies, s.elapsed)
 		bytesRead += s.size
-		readTime += s.elapsed
 	}
 
-	fmt.Fprintf(ctx.Stdout, "doctor: read %d blobs sampled from %d in %s\n",
-		len(samples), total, elapsed.Round(time.Millisecond))
+	fmt.Fprintf(ctx.Stdout, "doctor: read %d blobs sampled from %d in %s, concurrency %d\n",
+		len(samples), total, elapsed.Round(time.Millisecond), ctx.MaxConcurrency)
 	fmt.Fprintf(ctx.Stdout, "doctor: failures: %d (%.2f%%)\n",
 		failed, 100*float64(failed)/float64(len(samples)))
 	if unverified > 0 {
@@ -244,9 +262,9 @@ func report(ctx *appcontext.AppContext, samples []sample, total int, elapsed tim
 		fmt.Fprintf(ctx.Stdout, "doctor: latency: p50=%s p95=%s p99=%s max=%s\n",
 			percentile(latencies, 50), percentile(latencies, 95),
 			percentile(latencies, 99), latencies[len(latencies)-1])
-		if readTime > 0 {
+		if probed > 0 {
 			fmt.Fprintf(ctx.Stdout, "doctor: throughput: %.2f MiB/s (%d bytes read)\n",
-				float64(bytesRead)/readTime.Seconds()/(1<<20), bytesRead)
+				float64(bytesRead)/probed.Seconds()/(1<<20), bytesRead)
 		}
 	}
 	return failed, mismatched

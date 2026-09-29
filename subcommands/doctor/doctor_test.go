@@ -73,12 +73,13 @@ func breakStore(t *testing.T, repo *repository.Repository) {
 
 func TestExecute(t *testing.T) {
 	tests := []struct {
-		name       string
-		args       []string
-		broken     bool
-		wantStatus int
-		wantErr    bool
-		wantOutput []string
+		name        string
+		args        []string
+		concurrency int
+		broken      bool
+		wantStatus  int
+		wantErr     bool
+		wantOutput  []string
 	}{
 		{
 			name:       "healthy store",
@@ -113,10 +114,29 @@ func TestExecute(t *testing.T) {
 			wantStatus: exitcodes.Success,
 			wantOutput: []string{"failures: 10 (100.00%)"},
 		},
+		{
+			name:        "concurrent probes",
+			args:        []string{"-n", "100000", "-deep"},
+			concurrency: 8,
+			wantStatus:  exitcodes.Success,
+			wantOutput:  []string{"concurrency 8", "failures: 0 (0.00%)"},
+		},
+		{
+			name:        "concurrent probes on an unreadable store",
+			args:        []string{"-n", "10"},
+			concurrency: 8,
+			broken:      true,
+			wantStatus:  exitcodes.Failure,
+			wantErr:     true,
+			wantOutput:  []string{"concurrency 8", "failures: 10 (100.00%)"},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			repo, ctx, out := newRepo(t)
+			if tt.concurrency > 0 {
+				ctx.MaxConcurrency = tt.concurrency
+			}
 			if tt.broken {
 				breakStore(t, repo)
 			}
@@ -138,9 +158,9 @@ func TestExecute(t *testing.T) {
 	}
 }
 
-// putMismatchedBlob stores a chunk under a MAC that does not match its
+// putMismatchedBlob stores a blob under a MAC that does not match its
 // content, as a store returning the wrong bytes would.
-func putMismatchedBlob(t *testing.T, repo *repository.Repository) {
+func putMismatchedBlob(t *testing.T, repo *repository.Repository, typ resources.Type) {
 	t.Helper()
 	stateID := objects.RandomMAC()
 	scanCache, err := repo.AppContext().GetCache().Scan(stateID)
@@ -148,15 +168,35 @@ func putMismatchedBlob(t *testing.T, repo *repository.Repository) {
 	t.Cleanup(func() { scanCache.Close() })
 
 	writer := repo.NewRepositoryWriter(scanCache, stateID, repository.DefaultType, "")
-	require.NoError(t, writer.PutBlob(resources.RT_CHUNK, objects.RandomMAC(), []byte("not the content of this MAC"), false))
+	require.NoError(t, writer.PutBlob(typ, objects.RandomMAC(), []byte("not the content of this MAC"), false))
 	writer.PackerManager.Wait()
 	require.NoError(t, writer.CommitTransaction(stateID))
 	require.NoError(t, repo.RebuildState())
 }
 
+func TestExecuteDeepDetectsMismatch(t *testing.T) {
+	for _, typ := range []resources.Type{
+		resources.RT_CHUNK,
+		resources.RT_ERROR_ENTRY,
+		resources.RT_XATTR_ENTRY,
+	} {
+		t.Run(typ.String(), func(t *testing.T) {
+			repo, ctx, _ := newRepo(t)
+			putMismatchedBlob(t, repo, typ)
+
+			cmd := &Doctor{}
+			require.NoError(t, cmd.Parse(ctx, []string{"-n", "100000", "-deep"}))
+
+			status, err := cmd.Execute(ctx, repo)
+			require.Error(t, err)
+			require.Equal(t, exitcodes.IntegrityFailure, status)
+		})
+	}
+}
+
 func TestExecuteMismatchIgnoresThreshold(t *testing.T) {
 	repo, ctx, out := newRepo(t)
-	putMismatchedBlob(t, repo)
+	putMismatchedBlob(t, repo, resources.RT_CHUNK)
 
 	cmd := &Doctor{}
 	require.NoError(t, cmd.Parse(ctx, []string{"-n", "100000", "-deep", "-threshold", "100"}))

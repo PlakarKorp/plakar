@@ -26,6 +26,11 @@ The sample is drawn uniformly at random from the blobs recorded in the
 local repository state, whatever their type, so choosing it does not
 read anything from the store.
 Only the reads of the sampled blobs are measured.
+They run in parallel, as many at a time as the
+**-concurrency**
+option of
+plakar(1)
+allows.
 Every failure is printed with the type of the blob, its mac, the
 packfile holding it and the error returned by the store.
 
