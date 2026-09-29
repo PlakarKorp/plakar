@@ -21,7 +21,7 @@ require (
 	github.com/charmbracelet/lipgloss v1.1.1-0.20250404203927-76690c660834
 	github.com/charmbracelet/x/term v0.2.2
 	github.com/denisbrodbeck/machineid v1.0.1
-	github.com/dustin/go-humanize v1.0.1
+	github.com/dustin/go-humanize v1.1.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
 	github.com/muesli/termenv v0.16.0
@@ -69,7 +69,7 @@ require (
 	github.com/cockroachdb/crlib v0.0.0-20251122031428-fe658a2dbda1 // indirect
 	github.com/cockroachdb/errors v1.13.0 // indirect
 	github.com/cockroachdb/logtags v0.0.0-20241215232642-bb51bb14a506 // indirect
-	github.com/cockroachdb/pebble/v2 v2.1.6 // indirect
+	github.com/cockroachdb/pebble/v2 v2.1.7 // indirect
 	github.com/cockroachdb/redact v1.1.8 // indirect
 	github.com/cockroachdb/swiss v0.0.0-20260820225851-333444432258 // indirect
 	github.com/cockroachdb/tokenbucket v0.0.0-20250429170803-42689b6311bb // indirect
@@ -78,25 +78,25 @@ require (
 	github.com/ebfe/bcrypt_pbkdf v0.0.0-20140212075826-3c8d2dcb253a // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
 	github.com/felixge/fgprof v0.9.5 // indirect
-	github.com/gabriel-vasile/mimetype v1.4.13 // indirect
+	github.com/gabriel-vasile/mimetype v1.4.15 // indirect
 	github.com/getsentry/sentry-go v0.46.2 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.9.0 // indirect
 	github.com/go-git/go-git/v5 v5.19.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
-	github.com/google/pprof v0.0.0-20260604005048-7023385849c0 // indirect
+	github.com/google/pprof v0.0.0-20260802141513-ef3492d7dac3 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
 	github.com/huandu/xstrings v1.5.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/jstemmer/go-junit-report/v2 v2.1.0 // indirect
-	github.com/klauspost/compress v1.18.6 // indirect
+	github.com/klauspost/compress v1.20.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.4.0 // indirect
-	github.com/mattn/go-isatty v0.0.22 // indirect
+	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.24 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.27 // indirect
@@ -107,7 +107,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/ncruces/go-strftime v1.0.0 // indirect
 	github.com/nickball/go-aes-key-wrap v0.0.0-20170929221519-1c3aa3e4dfc5 // indirect
-	github.com/pierrec/lz4/v4 v4.1.27 // indirect
+	github.com/pierrec/lz4/v4 v4.1.29 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pkg/xattr v0.4.12 // indirect
 	github.com/prometheus/client_golang v1.23.2 // indirect
@@ -117,7 +117,7 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rogpeppe/go-internal v1.15.0 // indirect
-	github.com/tink-crypto/tink-go/v2 v2.6.0 // indirect
+	github.com/tink-crypto/tink-go/v2 v2.8.0 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	github.com/yuin/goldmark v1.8.2 // indirect
@@ -130,10 +130,12 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260610212136-7ab31c22f7ad // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
-	modernc.org/libc v1.73.4 // indirect
+	modernc.org/libc v1.75.7 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
-	modernc.org/memory v1.11.0 // indirect
-	modernc.org/sqlite v1.53.0 // indirect
+	modernc.org/memory v1.12.1 // indirect
+	modernc.org/sqlite v1.59.0 // indirect
 )
 
 tool github.com/jstemmer/go-junit-report/v2
+
+replace github.com/PlakarKorp/kloset => github.com/RoxasZohbi/kloset v0.0.0-20260928163831-088c8b6b2015
