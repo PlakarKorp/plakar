@@ -253,6 +253,17 @@ func report(ctx *appcontext.AppContext, samples []sample, total int, elapsed, pr
 		len(samples), total, elapsed.Round(time.Millisecond), ctx.MaxConcurrency)
 	fmt.Fprintf(ctx.Stdout, "doctor: failures: %d (%.2f%%)\n",
 		failed, 100*float64(failed)/float64(len(samples)))
+	if failed == 0 {
+		// A clean sample only bounds the failure rate: say how far, so that a
+		// small sample is not taken as proof of health.
+		bound := 1 - math.Pow(0.05, 1/float64(len(samples)))
+		msg := fmt.Sprintf("doctor: no failure in %d reads: the failure rate is below %.3g%% at 95%% confidence",
+			len(samples), 100*bound)
+		if oneIn := int(1 / bound); oneIn >= 2 {
+			msg += fmt.Sprintf(" (1 in %d)", oneIn)
+		}
+		fmt.Fprintln(ctx.Stdout, msg)
+	}
 	if unverified > 0 {
 		fmt.Fprintf(ctx.Stdout, "doctor: %d blobs of types without a content MAC were not verified\n", unverified)
 	}

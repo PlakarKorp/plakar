@@ -80,6 +80,7 @@ func TestExecute(t *testing.T) {
 		wantStatus  int
 		wantErr     bool
 		wantOutput  []string
+		wantAbsent  []string
 	}{
 		{
 			name:       "healthy store",
@@ -94,6 +95,12 @@ func TestExecute(t *testing.T) {
 			wantOutput: []string{"read 3 blobs sampled from"},
 		},
 		{
+			name:       "clean sample reports its resolution",
+			args:       []string{"-n", "3"},
+			wantStatus: exitcodes.Success,
+			wantOutput: []string{"no failure in 3 reads: the failure rate is below 63.2% at 95% confidence"},
+		},
+		{
 			name:       "deep verifies every blob",
 			args:       []string{"-n", "100000", "-deep"},
 			wantStatus: exitcodes.Success,
@@ -106,6 +113,7 @@ func TestExecute(t *testing.T) {
 			wantStatus: exitcodes.Failure,
 			wantErr:    true,
 			wantOutput: []string{"failures: 10 (100.00%)", "(packfile "},
+			wantAbsent: []string{"95% confidence"},
 		},
 		{
 			name:       "failures within threshold",
@@ -153,6 +161,9 @@ func TestExecute(t *testing.T) {
 			}
 			for _, want := range tt.wantOutput {
 				require.Contains(t, out.String(), want)
+			}
+			for _, absent := range tt.wantAbsent {
+				require.NotContains(t, out.String(), absent)
 			}
 		})
 	}
