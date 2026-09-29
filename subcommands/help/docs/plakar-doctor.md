@@ -33,6 +33,9 @@ plakar(1)
 allows.
 Every failure is printed with the type of the blob, its mac, the
 packfile holding it and the error returned by the store.
+When no read fails, the report gives the failure rate the sample rules
+out at 95% confidence: a clean run over few blobs cannot tell a healthy
+store from one that fails rarely.
 
 The options are as follows:
 
