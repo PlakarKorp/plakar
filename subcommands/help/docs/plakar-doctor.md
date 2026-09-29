@@ -43,6 +43,7 @@ The options are as follows:
 > Stop reading after
 > *time*
 > has elapsed.
+> Choosing the sample is not counted.
 > A value of 0 disables the limit.
 > The default is one minute.
 
@@ -62,7 +63,9 @@ The options are as follows:
 
 # EXIT STATUS
 
-The **plakar doctor** utility exits 0 if the failure rate is not above the threshold,
+The
+**plakar doctor**
+utility exits 0 if the failure rate is not above the threshold,
 65 if some blobs did not match their mac,
 and 1 if reads failed or another error occurred.
 
@@ -81,4 +84,4 @@ Verify 1000 blobs and tolerate up to one percent of failures:
 plakar(1),
 plakar-check(1)
 
-Plakar - September 28, 2026 - PLAKAR-DOCTOR(1)
+Plakar - September 28, 2026
