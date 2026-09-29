@@ -129,12 +129,14 @@ func (cmd *Doctor) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 
 	failed, mismatched := report(ctx, samples, total, time.Since(start))
 
+	// -threshold tolerates transient read failures, never wrong content.
+	if mismatched > 0 {
+		return exitcodes.IntegrityFailure, fmt.Errorf("%d of %d blobs do not match their MAC",
+			mismatched, len(samples))
+	}
+
 	rate := 100 * float64(failed) / float64(len(samples))
 	if failed > 0 && rate > cmd.Threshold {
-		if mismatched > 0 {
-			return exitcodes.IntegrityFailure, fmt.Errorf("%d of %d blobs failed (%.2f%%), %d with wrong content",
-				failed, len(samples), rate, mismatched)
-		}
 		return exitcodes.Failure, fmt.Errorf("%d of %d blobs failed to read (%.2f%%)",
 			failed, len(samples), rate)
 	}

@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
+	"github.com/PlakarKorp/kloset/resources"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/exitcodes"
 	"github.com/PlakarKorp/plakar/subcommands"
@@ -134,6 +136,35 @@ func TestExecute(t *testing.T) {
 			}
 		})
 	}
+}
+
+// putMismatchedBlob stores a chunk under a MAC that does not match its
+// content, as a store returning the wrong bytes would.
+func putMismatchedBlob(t *testing.T, repo *repository.Repository) {
+	t.Helper()
+	stateID := objects.RandomMAC()
+	scanCache, err := repo.AppContext().GetCache().Scan(stateID)
+	require.NoError(t, err)
+	t.Cleanup(func() { scanCache.Close() })
+
+	writer := repo.NewRepositoryWriter(scanCache, stateID, repository.DefaultType, "")
+	require.NoError(t, writer.PutBlob(resources.RT_CHUNK, objects.RandomMAC(), []byte("not the content of this MAC"), false))
+	writer.PackerManager.Wait()
+	require.NoError(t, writer.CommitTransaction(stateID))
+	require.NoError(t, repo.RebuildState())
+}
+
+func TestExecuteMismatchIgnoresThreshold(t *testing.T) {
+	repo, ctx, out := newRepo(t)
+	putMismatchedBlob(t, repo)
+
+	cmd := &Doctor{}
+	require.NoError(t, cmd.Parse(ctx, []string{"-n", "100000", "-deep", "-threshold", "100"}))
+
+	status, err := cmd.Execute(ctx, repo)
+	require.Error(t, err)
+	require.Equal(t, exitcodes.IntegrityFailure, status)
+	require.Contains(t, out.String(), "blob content does not match its MAC")
 }
 
 func TestExecuteNeverSucceedsWithoutReads(t *testing.T) {
