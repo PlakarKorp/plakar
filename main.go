@@ -47,6 +47,7 @@ import (
 	_ "github.com/PlakarKorp/plakar/subcommands/create"
 	_ "github.com/PlakarKorp/plakar/subcommands/diag"
 	_ "github.com/PlakarKorp/plakar/subcommands/diff"
+	_ "github.com/PlakarKorp/plakar/subcommands/doctor"
 	_ "github.com/PlakarKorp/plakar/subcommands/digest"
 	_ "github.com/PlakarKorp/plakar/subcommands/dup"
 	_ "github.com/PlakarKorp/plakar/subcommands/help"
