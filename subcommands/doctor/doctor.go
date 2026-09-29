@@ -55,7 +55,7 @@ func (cmd *Doctor) CobraCommand() *cobra.Command {
 	c := &cobra.Command{
 		Use: "doctor [OPTIONS]",
 	}
-	c.Flags().IntVar(&cmd.Samples, "n", 100, "number of blobs to read")
+	c.Flags().IntVar(&cmd.Samples, "n", 60000, "maximum number of blobs to read")
 	c.Flags().DurationVar(&cmd.Duration, "duration", time.Minute, "wall-clock budget, 0 for none")
 	c.Flags().Float64Var(&cmd.Threshold, "threshold", 0, "failure rate in percent above which to exit non-zero")
 	c.Flags().BoolVar(&cmd.Deep, "deep", false, "verify the content of each blob against its MAC")
