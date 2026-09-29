@@ -49,6 +49,7 @@ type Doctor struct {
 	Duration  time.Duration
 	Threshold float64
 	Deep      bool
+	Retries   int
 }
 
 func (cmd *Doctor) CobraCommand() *cobra.Command {
@@ -59,6 +60,7 @@ func (cmd *Doctor) CobraCommand() *cobra.Command {
 	c.Flags().DurationVar(&cmd.Duration, "duration", time.Minute, "wall-clock budget, 0 for none")
 	c.Flags().Float64Var(&cmd.Threshold, "threshold", 0, "failure rate in percent above which to exit non-zero")
 	c.Flags().BoolVar(&cmd.Deep, "deep", false, "verify the content of each blob against its MAC")
+	c.Flags().IntVar(&cmd.Retries, "retries", 2, "times to read a failed blob again to tell transient failures apart")
 	return c
 }
 
@@ -79,6 +81,9 @@ func (cmd *Doctor) Parse(ctx *appcontext.AppContext, args []string) error {
 	if cmd.Threshold < 0 || cmd.Threshold > 100 {
 		return fmt.Errorf("-threshold must be between 0 and 100")
 	}
+	if cmd.Retries < 0 {
+		return fmt.Errorf("-retries must not be negative")
+	}
 
 	cmd.RepositorySecret = ctx.GetSecret()
 	return nil
@@ -96,6 +101,10 @@ type sample struct {
 	size       int
 	unverified bool
 	err        error
+
+	// recoveredOn is the retry that read a failed blob correctly, 0 if
+	// every retry failed too.
+	recoveredOn int
 }
 
 func (cmd *Doctor) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
@@ -127,7 +136,7 @@ func (cmd *Doctor) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 			break
 		}
 		wg.Go(func() error {
-			s := cmd.probe(repo, t)
+			s := cmd.probe(ctx, repo, t)
 			mu.Lock()
 			samples = append(samples, s)
 			mu.Unlock()
@@ -146,7 +155,7 @@ func (cmd *Doctor) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 		return 1, fmt.Errorf("no blob was read within -duration %s", cmd.Duration)
 	}
 
-	failed, mismatched := report(ctx, samples, total, time.Since(start), probed)
+	failed, mismatched := report(ctx, samples, total, time.Since(start), probed, cmd.Retries)
 
 	// -threshold tolerates transient read failures, never wrong content.
 	if mismatched > 0 {
@@ -209,29 +218,47 @@ func hasContentMAC(typ resources.Type) bool {
 	return false
 }
 
-func (cmd *Doctor) probe(repo *repository.Repository, t target) sample {
+func (cmd *Doctor) probe(ctx context.Context, repo *repository.Repository, t target) sample {
 	s := sample{target: t}
 
 	begin := time.Now()
-	data, err := repo.GetBlobBytes(t.typ, t.mac)
+	s.size, s.unverified, s.err = cmd.read(repo, t)
 	s.elapsed = time.Since(begin)
-	s.size = len(data)
-	s.err = err
 
-	if err == nil && cmd.Deep {
-		if !hasContentMAC(t.typ) {
-			s.unverified = true
-		} else if repo.ComputeMAC(data) != t.mac {
-			s.err = errMACMismatch
+	// A failure is still reported when a retry succeeds: the retry only
+	// tells a transient failure from a persistent one.
+	if s.err != nil {
+		for i := 1; i <= cmd.Retries && ctx.Err() == nil; i++ {
+			if _, _, err := cmd.read(repo, t); err == nil {
+				s.recoveredOn = i
+				break
+			}
 		}
 	}
 	return s
 }
 
-func report(ctx *appcontext.AppContext, samples []sample, total int, elapsed, probed time.Duration) (failed, mismatched int) {
+func (cmd *Doctor) read(repo *repository.Repository, t target) (size int, unverified bool, err error) {
+	data, err := repo.GetBlobBytes(t.typ, t.mac)
+	if err != nil {
+		return 0, false, err
+	}
+	if cmd.Deep {
+		if !hasContentMAC(t.typ) {
+			return len(data), true, nil
+		}
+		if repo.ComputeMAC(data) != t.mac {
+			return len(data), false, errMACMismatch
+		}
+	}
+	return len(data), false, nil
+}
+
+func report(ctx *appcontext.AppContext, samples []sample, total int, elapsed, probed time.Duration, retries int) (failed, mismatched int) {
 	var latencies []time.Duration
 	var bytesRead int
 	var unverified int
+	var transient int
 
 	for _, s := range samples {
 		if s.unverified {
@@ -242,7 +269,14 @@ func report(ctx *appcontext.AppContext, samples []sample, total int, elapsed, pr
 			if errors.Is(s.err, errMACMismatch) {
 				mismatched++
 			}
-			fmt.Fprintf(ctx.Stdout, "doctor: %s %x (packfile %x): %v\n", s.typ, s.mac, s.packfile, s.err)
+			retried := ""
+			if s.recoveredOn > 0 {
+				transient++
+				retried = fmt.Sprintf(" (read on retry %d)", s.recoveredOn)
+			} else if retries > 0 {
+				retried = fmt.Sprintf(" (still failing after %d retries)", retries)
+			}
+			fmt.Fprintf(ctx.Stdout, "doctor: %s %x (packfile %x): %v%s\n", s.typ, s.mac, s.packfile, s.err, retried)
 			continue
 		}
 		latencies = append(latencies, s.elapsed)
@@ -253,6 +287,9 @@ func report(ctx *appcontext.AppContext, samples []sample, total int, elapsed, pr
 		len(samples), total, elapsed.Round(time.Millisecond), ctx.MaxConcurrency)
 	fmt.Fprintf(ctx.Stdout, "doctor: failures: %d (%.2f%%)\n",
 		failed, 100*float64(failed)/float64(len(samples)))
+	if failed > 0 && retries > 0 {
+		fmt.Fprintf(ctx.Stdout, "doctor: %d of %d failures were transient: a retry read the blob\n", transient, failed)
+	}
 	if failed == 0 {
 		// A clean sample only bounds the failure rate: say how far, so that a
 		// small sample is not taken as proof of health.
