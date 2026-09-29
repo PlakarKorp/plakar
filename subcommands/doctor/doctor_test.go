@@ -3,6 +3,7 @@ package doctor
 import (
 	"bytes"
 	"testing"
+	"time"
 
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
@@ -45,6 +46,15 @@ func TestParse(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestParseDefaults(t *testing.T) {
+	_, ctx := ptesting.GenerateRepository(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil), nil)
+
+	cmd := &Doctor{}
+	require.NoError(t, cmd.Parse(ctx, nil))
+	require.Equal(t, 60000, cmd.Samples)
+	require.Equal(t, time.Minute, cmd.Duration)
 }
 
 // newRepo returns a repository holding one snapshot, and the buffer the

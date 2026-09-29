@@ -52,7 +52,11 @@ The default is one minute.
 Read at most
 .Ar count
 blobs.
-The default is 100.
+The default is 60000, enough to catch a failure rate of one read in
+18000 with 95% probability.
+On a slow store,
+.Fl duration
+usually ends the run first.
 .It Fl threshold Ar percent
 Exit with a non-zero status only if the failure rate is above
 .Ar percent ,
@@ -68,7 +72,7 @@ utility exits 0 if the failure rate is not above the threshold,
 65 if some blobs did not match their mac,
 and 1 if reads failed or another error occurred.
 .Sh EXAMPLES
-Sample 100 blobs and print the results:
+Read blobs for up to a minute and print the results:
 .Bd -literal -offset indent
 $ plakar doctor
 .Ed

@@ -60,7 +60,11 @@ The options are as follows:
 > Read at most
 > *count*
 > blobs.
-> The default is 100.
+> The default is 60000, enough to catch a failure rate of one read in
+> 18000 with 95% probability.
+> On a slow store,
+> **-duration**
+> usually ends the run first.
 
 **-threshold** *percent*
 
@@ -81,7 +85,7 @@ and 1 if reads failed or another error occurred.
 
 # EXAMPLES
 
-Sample 100 blobs and print the results:
+Read blobs for up to a minute and print the results:
 
 	$ plakar doctor
 
