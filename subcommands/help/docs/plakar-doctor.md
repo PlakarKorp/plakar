@@ -10,6 +10,7 @@ PLAKAR-DOCTOR(1) - General Commands Manual
 \[**-deep**]
 \[**-duration**&nbsp;*time*]
 \[**-n**&nbsp;*count*]
+\[**-retries**&nbsp;*count*]
 \[**-threshold**&nbsp;*percent*]
 
 # DESCRIPTION
@@ -65,6 +66,17 @@ The options are as follows:
 > On a slow store,
 > **-duration**
 > usually ends the run first.
+
+**-retries** *count*
+
+> Read a failed blob again up to
+> *count*
+> times, and report whether a retry read it.
+> A failure that a retry recovers is transient; one that every retry
+> repeats is not.
+> The original failure is still counted in the failure rate and the exit
+> status.
+> The default is 2.
 
 **-threshold** *percent*
 

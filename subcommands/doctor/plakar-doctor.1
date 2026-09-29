@@ -9,6 +9,7 @@
 .Op Fl deep
 .Op Fl duration Ar time
 .Op Fl n Ar count
+.Op Fl retries Ar count
 .Op Fl threshold Ar percent
 .Sh DESCRIPTION
 The
@@ -57,6 +58,15 @@ The default is 60000, enough to catch a failure rate of one read in
 On a slow store,
 .Fl duration
 usually ends the run first.
+.It Fl retries Ar count
+Read a failed blob again up to
+.Ar count
+times, and report whether a retry read it.
+A failure that a retry recovers is transient; one that every retry
+repeats is not.
+The original failure is still counted in the failure rate and the exit
+status.
+The default is 2.
 .It Fl threshold Ar percent
 Exit with a non-zero status only if the failure rate is above
 .Ar percent ,
