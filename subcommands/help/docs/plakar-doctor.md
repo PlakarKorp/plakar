@@ -60,6 +60,8 @@ The options are as follows:
 > *percent*,
 > between 0 and 100.
 > The default is 0, any failure is reported as an error.
+> The threshold only applies to failed reads: a blob that does not match
+> its mac is always an error.
 
 # EXIT STATUS
 
