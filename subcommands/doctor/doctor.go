@@ -97,11 +97,6 @@ type sample struct {
 }
 
 func (cmd *Doctor) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	var deadline time.Time
-	if cmd.Duration > 0 {
-		deadline = time.Now().Add(cmd.Duration)
-	}
-
 	start := time.Now()
 	targets, total, err := sampleBlobs(ctx, repo, cmd.Samples)
 	if err != nil {
@@ -109,6 +104,13 @@ func (cmd *Doctor) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 	}
 	if len(targets) == 0 {
 		return 1, fmt.Errorf("the repository state has no blobs to sample")
+	}
+
+	// -duration bounds the store probes only, so that a large state cannot
+	// use up the budget before anything is read.
+	var deadline time.Time
+	if cmd.Duration > 0 {
+		deadline = time.Now().Add(cmd.Duration)
 	}
 
 	samples := make([]sample, 0, len(targets))
@@ -120,6 +122,9 @@ func (cmd *Doctor) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 			break
 		}
 		samples = append(samples, cmd.probe(repo, t))
+	}
+	if len(samples) == 0 {
+		return 1, fmt.Errorf("no blob was read within -duration %s", cmd.Duration)
 	}
 
 	failed, mismatched := report(ctx, samples, total, time.Since(start))

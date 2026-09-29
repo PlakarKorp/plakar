@@ -136,6 +136,22 @@ func TestExecute(t *testing.T) {
 	}
 }
 
+func TestExecuteNeverSucceedsWithoutReads(t *testing.T) {
+	repo, ctx, out := newRepo(t)
+
+	cmd := &Doctor{}
+	require.NoError(t, cmd.Parse(ctx, []string{"-duration", "1ns"}))
+
+	status, err := cmd.Execute(ctx, repo)
+	if err == nil {
+		require.Equal(t, exitcodes.Success, status)
+		require.NotContains(t, out.String(), "read 0 blobs")
+	} else {
+		require.Equal(t, exitcodes.Failure, status)
+	}
+	require.NotContains(t, out.String(), "NaN")
+}
+
 func TestExecuteEmptyRepository(t *testing.T) {
 	repo, ctx := ptesting.GenerateRepository(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil), nil)
 
