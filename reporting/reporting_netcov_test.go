@@ -20,7 +20,9 @@ func netcovReportingCtx(t *testing.T) *appcontext.AppContext {
 	t.Helper()
 	ctx := appcontext.NewAppContext()
 	ctx.SetLogger(logging.NewLogger(bytes.NewBuffer(nil), bytes.NewBuffer(nil)))
-	ctx.SetCookies(cookies.NewManager(t.TempDir()))
+	cookiesManager, err := cookies.NewManager(t.TempDir())
+	require.NoError(t, err)
+	ctx.SetCookies(cookiesManager)
 	return ctx
 }
 

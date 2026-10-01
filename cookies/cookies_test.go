@@ -16,7 +16,8 @@ func TestNewManager(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	// Test creating a new manager
-	manager := NewManager(tmpDir)
+	manager, err := NewManager(tmpDir)
+	require.NoError(t, err)
 	require.NotNil(t, manager)
 
 	// Verify the cookies directory was created with correct permissions
@@ -37,7 +38,8 @@ func TestAuthTokenOperations(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
-	manager := NewManager(tmpDir)
+	manager, err := NewManager(tmpDir)
+	require.NoError(t, err)
 
 	// Test initial state
 	hasToken := hasAuthTokenFile(manager)
@@ -73,7 +75,8 @@ func TestRepositoryCookieOperations(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
-	manager := NewManager(tmpDir)
+	manager, err := NewManager(tmpDir)
+	require.NoError(t, err)
 	repoID := uuid.New()
 	cookieName := "test/cookie"
 
@@ -100,7 +103,8 @@ func TestFirstRunOperations(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
-	manager := NewManager(tmpDir)
+	manager, err := NewManager(tmpDir)
+	require.NoError(t, err)
 
 	// Test initial state
 	isFirstRun := manager.IsFirstRun()
@@ -114,19 +118,20 @@ func TestFirstRunOperations(t *testing.T) {
 	require.False(t, isFirstRun)
 }
 
-func TestNewManagerMkdirPanics(t *testing.T) {
+func TestNewManagerMkdirFails(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "cookies_test")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
 	// Point the base dir at a path whose parent is a regular file, so MkdirAll
-	// fails with ENOTDIR and NewManager panics.
+	// fails with ENOTDIR and NewManager reports it.
 	blocker := filepath.Join(tmpDir, "blocker")
 	require.NoError(t, os.WriteFile(blocker, []byte{}, 0600))
 
-	require.Panics(t, func() {
-		NewManager(filepath.Join(blocker, "sub"))
-	})
+	manager, err := NewManager(filepath.Join(blocker, "sub"))
+	require.Error(t, err)
+	require.Nil(t, manager)
+	require.Contains(t, err.Error(), "cannot create cookies directory")
 }
 
 func TestCloseAndGetDir(t *testing.T) {
@@ -134,7 +139,8 @@ func TestCloseAndGetDir(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
-	manager := NewManager(tmpDir)
+	manager, err := NewManager(tmpDir)
+	require.NoError(t, err)
 
 	require.NoError(t, manager.Close())
 	require.Equal(t, filepath.Join(tmpDir, "cookies", COOKIES_VERSION), manager.GetDir())
@@ -145,7 +151,8 @@ func TestGetAuthTokenFromEnv(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
-	manager := NewManager(tmpDir)
+	manager, err := NewManager(tmpDir)
+	require.NoError(t, err)
 
 	t.Setenv("PLAKAR_TOKEN", "env-token")
 	token, err := manager.GetAuthToken()
@@ -158,7 +165,8 @@ func TestGetAuthTokenEmptyFile(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
-	manager := NewManager(tmpDir)
+	manager, err := NewManager(tmpDir)
+	require.NoError(t, err)
 
 	// An empty token file is treated as "no token".
 	require.NoError(t, manager.PutAuthToken(""))
@@ -171,7 +179,8 @@ func TestGetAuthTokenReadError(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
-	manager := NewManager(tmpDir)
+	manager, err := NewManager(tmpDir)
+	require.NoError(t, err)
 
 	// Make .auth-token a directory so ReadFile fails with a non-NotExist error.
 	require.NoError(t, os.Mkdir(filepath.Join(manager.cookiesDir, ".auth-token"), 0700))
@@ -185,7 +194,8 @@ func TestDeleteAuthTokenFromEnv(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
-	manager := NewManager(tmpDir)
+	manager, err := NewManager(tmpDir)
+	require.NoError(t, err)
 
 	t.Setenv("PLAKAR_TOKEN", "env-token")
 	err = manager.DeleteAuthToken()
@@ -197,7 +207,8 @@ func TestDeleteAuthTokenNotLoggedIn(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
-	manager := NewManager(tmpDir)
+	manager, err := NewManager(tmpDir)
+	require.NoError(t, err)
 
 	// No token file present: deleting reports ErrNotLoggedIn.
 	err = manager.DeleteAuthToken()
@@ -209,7 +220,8 @@ func TestPutRepositoryCookieMkdirError(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
-	manager := NewManager(tmpDir)
+	manager, err := NewManager(tmpDir)
+	require.NoError(t, err)
 	repoID := uuid.New()
 
 	// Create a regular file where the per-repository directory is expected, so
@@ -224,7 +236,8 @@ func TestIsFirstRunStatError(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
-	manager := NewManager(tmpDir)
+	manager, err := NewManager(tmpDir)
+	require.NoError(t, err)
 
 	// Make .first-run unstattable by placing it under a non-directory path
 	// component: create a file "blocker" and point cookiesDir's child through it.
@@ -243,7 +256,8 @@ func TestSecurityCheckOperations(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
-	manager := NewManager(tmpDir)
+	manager, err := NewManager(tmpDir)
+	require.NoError(t, err)
 
 	// Test initial state
 	isDisabled := manager.IsDisabledSecurityCheck()

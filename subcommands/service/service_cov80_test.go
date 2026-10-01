@@ -19,7 +19,9 @@ func cov80Ctx(t *testing.T, withToken bool) *appcontext.AppContext {
 	ctx := appcontext.NewAppContext()
 	ctx.Stdout = bytes.NewBuffer(nil)
 	ctx.Stderr = bytes.NewBuffer(nil)
-	ctx.SetCookies(cookies.NewManager(t.TempDir()))
+	cookiesManager, err := cookies.NewManager(t.TempDir())
+	require.NoError(t, err)
+	ctx.SetCookies(cookiesManager)
 	if withToken {
 		require.NoError(t, ctx.GetCookies().PutAuthToken("an-auth-token"))
 	}

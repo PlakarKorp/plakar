@@ -247,7 +247,12 @@ func entryPoint() int {
 		return 1
 	}
 
-	ctx.SetCookies(cookies.NewManager(cookiesDir))
+	cookiesManager, err := cookies.NewManager(cookiesDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s: %s\n", progName(), err)
+		return 1
+	}
+	ctx.SetCookies(cookiesManager)
 	defer ctx.GetCookies().Close()
 
 	err = os.MkdirAll(opt_cachedir, 0700)

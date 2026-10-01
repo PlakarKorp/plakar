@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/PlakarKorp/plakar/cookies"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewAppContext(t *testing.T) {
@@ -64,7 +65,8 @@ func TestCookiesAndPkgManagerAccessors(t *testing.T) {
 		t.Fatal("expected nil pkg manager on new context")
 	}
 
-	mgr := cookies.NewManager(t.TempDir())
+	mgr, err := cookies.NewManager(t.TempDir())
+	require.NoError(t, err)
 	ctx.SetCookies(mgr)
 	if ctx.GetCookies() != mgr {
 		t.Fatal("SetCookies/GetCookies mismatch")
@@ -81,7 +83,8 @@ func TestCookiesAndPkgManagerAccessors(t *testing.T) {
 func TestNewAppContextFromCopiesFields(t *testing.T) {
 	parent := NewAppContext()
 	parent.ConfigDir = "/tmp/cfg"
-	mgr := cookies.NewManager(t.TempDir())
+	mgr, err := cookies.NewManager(t.TempDir())
+	require.NoError(t, err)
 	parent.SetCookies(mgr)
 	parent.SetSecret([]byte("s"))
 
