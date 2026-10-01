@@ -1,4 +1,4 @@
-.Dd May 5, 2026
+.Dd July 23, 2026
 .Dt PLAKAR-BACKUP 1
 .Os
 .Sh NAME
@@ -22,7 +22,7 @@
 .Op Fl packfiles Ar path
 .Op Fl perimeter Ar perimeter
 .Op Fl tag Ar tag
-.Op Ar place
+.Op Ar place ...
 .Sh DESCRIPTION
 The
 .Nm plakar backup
@@ -37,6 +37,24 @@ can be either a path, an URI, or a label with the form
 .Dq @ Ns Ar name
 to reference a source connector configured with
 .Xr plakar-source 1 .
+.Pp
+The alias can also be in the form of
+.Dq @ Ns Ar name Ns Op : Ns path-override
+to override the alias path on the command line.
+If
+.Ar path-override
+starts with
+.Sq /
+the whole path is replaced with the override, otherwise it is
+appended to the existing path.
+.Pp
+Multiple
+.Ar places
+can be given, as long as they all refer to different paths
+on the same remote, e.g. different files or different prefixes
+on the same bucket.
+Not all importer connectors support this feature, refer to their
+documentation for more information.
 .Pp
 The options are as follows:
 .Bl -tag -width Ds
@@ -118,14 +136,16 @@ Create a snapshot of the current directory with two tags:
 $ plakar backup -tag daily-backup,production
 .Ed
 .Pp
-Ignore files using patterns in one or more files:
+Define an alias for an s3 bucket and backup multiple path prefixes
 .Bd -literal -offset indent
-$ plakar backup -ignore-file ~/common-ignore -ignore-file ~/project-ignore /var/www
+$ plakar source add bucket s3://example.com \e
+        access_key=... secret_access_key=...
+$ plakar backup @bucket:/assets @bucket:/uploads @bucket:/logs
 .Ed
 .Pp
-or by using patterns specified inline:
+Ignore files using patterns in one or more files or from the command line:
 .Bd -literal -offset indent
-$ plakar backup -ignore "*.tmp" -ignore "*.log" /var/www
+$ plakar backup -ignore-file ~/.plkignore -ignore "*.tmp" /var/www
 .Ed
 .Pp
 Pass an option to the importer, in this case to don't traverse mount

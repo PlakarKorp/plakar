@@ -17,12 +17,12 @@
 package pkg
 
 import (
-	"flag"
 	"fmt"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/spf13/cobra"
 )
 
 type PkgRm struct {
@@ -30,16 +30,19 @@ type PkgRm struct {
 	Args []string
 }
 
+func (cmd *PkgRm) CobraCommand() *cobra.Command {
+	return &cobra.Command{
+		Use: "pkg rm",
+	}
+}
+
 func (cmd *PkgRm) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("pkg rm", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s plugins...\n",
-			flags.Name())
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
 	}
 
-	flags.Parse(args)
-
-	cmd.Args = flags.Args()
+	cmd.Args = rest
 
 	return nil
 }

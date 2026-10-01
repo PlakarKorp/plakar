@@ -124,6 +124,20 @@ location, the following additional options are available:
 > "Authorization"
 > header for every request.
 
+**insecure**
+
+> Optional, set to
+> **true**
+> to opt-in the usage of the
+> **auth\_token**
+> on HTTP plaintext connections.
+
+**timeout**
+
+> Per-request timeout, default to
+> "5m"
+> i.e. five minutes .
+
 **tls\_no\_verify**
 
 > Set to

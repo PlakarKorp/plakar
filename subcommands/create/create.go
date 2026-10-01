@@ -18,7 +18,6 @@ package create
 
 import (
 	"bytes"
-	"flag"
 	"fmt"
 	"hash"
 	"io"
@@ -34,39 +33,40 @@ import (
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
+	"github.com/spf13/cobra"
 )
 
 func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &Create{} }, subcommands.BeforeRepositoryWithStorage, "create")
 }
 
-func (cmd *Create) Parse(ctx *appcontext.AppContext, args []string) error {
-	var allow_weak bool
+func (cmd *Create) CobraCommand() *cobra.Command {
+	c := &cobra.Command{
+		Use: "create [OPTIONS]",
+	}
+	c.Flags().BoolVar(&cmd.allowWeak, "weak-passphrase", false, "allow weak passphrase to protect the repository")
+	c.Flags().StringVar(&cmd.Hashing, "hashing", hashing.DEFAULT_HASHING_ALGORITHM, "hashing algorithm to use for digests")
+	c.Flags().BoolVar(&cmd.NoEncryption, "plaintext", false, "disable transparent encryption")
+	c.Flags().BoolVar(&cmd.NoCompression, "no-compression", false, "disable transparent compression")
+	return c
+}
 
-	flags := flag.NewFlagSet("create", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: plakar [at /path/to/repository] %s [OPTIONS]\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "       plakar [at @REPOSITORY] %s [OPTIONS]\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
-		flags.PrintDefaults()
+func (cmd *Create) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
 	}
 
-	flags.BoolVar(&allow_weak, "weak-passphrase", false, "allow weak passphrase to protect the repository")
-	flags.StringVar(&cmd.Hashing, "hashing", hashing.DEFAULT_HASHING_ALGORITHM, "hashing algorithm to use for digests")
-	flags.BoolVar(&cmd.NoEncryption, "plaintext", false, "disable transparent encryption")
-	flags.BoolVar(&cmd.NoCompression, "no-compression", false, "disable transparent compression")
-	flags.Parse(args)
-
-	if flags.NArg() != 0 {
-		return fmt.Errorf("%s: too many parameters", flag.CommandLine.Name())
+	if len(rest) != 0 {
+		return fmt.Errorf("too many parameters")
 	}
 
 	if hashing.GetHasher(strings.ToUpper(cmd.Hashing)) == nil {
-		return fmt.Errorf("%s: unknown hashing algorithm", flag.CommandLine.Name())
+		return fmt.Errorf("unknown hashing algorithm")
 	}
 
 	minEntropBits := 80.
-	if allow_weak {
+	if cmd.allowWeak {
 		minEntropBits = 0.
 	}
 
@@ -99,6 +99,8 @@ type Create struct {
 	Hashing       string
 	NoEncryption  bool
 	NoCompression bool
+
+	allowWeak bool
 }
 
 func (cmd *Create) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {

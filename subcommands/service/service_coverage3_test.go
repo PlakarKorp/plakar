@@ -17,7 +17,9 @@ func cov3Ctx(t *testing.T) *appcontext.AppContext {
 	ctx := appcontext.NewAppContext()
 	ctx.Stdout = bytes.NewBuffer(nil)
 	ctx.Stderr = bytes.NewBuffer(nil)
-	ctx.SetCookies(cookies.NewManager(t.TempDir()))
+	cookiesManager, err := cookies.NewManager(t.TempDir())
+	require.NoError(t, err)
+	ctx.SetCookies(cookiesManager)
 	return ctx
 }
 

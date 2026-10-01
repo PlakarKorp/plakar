@@ -2,15 +2,15 @@ package diag
 
 import (
 	"encoding/hex"
-	"flag"
 	"fmt"
 	"io"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/resources"
+	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/spf13/cobra"
 )
 
 type DiagObject struct {
@@ -19,16 +19,24 @@ type DiagObject struct {
 	ObjectID string
 }
 
-func (cmd *DiagObject) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("diag objects", flag.ExitOnError)
-	flags.Parse(args)
+func (cmd *DiagObject) CobraCommand() *cobra.Command {
+	return &cobra.Command{
+		Use: "diag objects",
+	}
+}
 
-	if len(flags.Args()) < 1 {
-		return fmt.Errorf("usage: %s object OBJECT", flags.Name())
+func (cmd *DiagObject) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
+	}
+
+	if len(rest) < 1 {
+		return fmt.Errorf("usage: %s object OBJECT", "diag objects")
 	}
 
 	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.ObjectID = flags.Args()[0]
+	cmd.ObjectID = rest[0]
 
 	return nil
 }

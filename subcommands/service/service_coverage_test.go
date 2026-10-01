@@ -22,7 +22,9 @@ func newCoverageCtx(t *testing.T) *appcontext.AppContext {
 	ctx := appcontext.NewAppContext()
 	ctx.Stdout = bytes.NewBuffer(nil)
 	ctx.Stderr = bytes.NewBuffer(nil)
-	ctx.SetCookies(cookies.NewManager(t.TempDir()))
+	cookiesManager, err := cookies.NewManager(t.TempDir())
+	require.NoError(t, err)
+	ctx.SetCookies(cookiesManager)
 	return ctx
 }
 
@@ -175,7 +177,9 @@ func TestCoverageServiceExecuteRequiresLogin(t *testing.T) {
 	var out, errb bytes.Buffer
 	repo, ctx := ptesting.GenerateRepository(t, &out, &errb, nil)
 	// Ensure a fresh empty cookies manager (no token on disk).
-	ctx.SetCookies(cookies.NewManager(t.TempDir()))
+	cookiesManager, err := cookies.NewManager(t.TempDir())
+	require.NoError(t, err)
+	ctx.SetCookies(cookiesManager)
 
 	cmds := []struct {
 		name string

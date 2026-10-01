@@ -1,1 +1,0 @@
-import{ah as e,j as n,G as o}from"./index-CHfgriyV.js";import{a as r}from"./use-api-DB20qjVm.js";function i(){const{returnUrl:t}=e.useSearch();return r({status:"logged_in",returnUrl:t}),n.jsx(o,{})}export{i as component};

@@ -1,0 +1,3 @@
+untrusted comment: verify with plakar-20260815.pub
+RWS8i34vaRIUYW8BSCLZv0iXNwH+tuXn2cd6LO6azMqWq0DteSTD3/oI1xte1eunMPdK2BJYxdMayd7HSjWXg+eB918PwkppTwE=
+SHA256 (s3_v1.1.2_linux_amd64.ptar) = f723469f502a9bc7ffe5c3c598aa9421633ed5b341e6cf2d65156546e48f8959

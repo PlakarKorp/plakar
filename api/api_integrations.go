@@ -64,6 +64,7 @@ func (ui *uiserver) integrationsInstall(w http.ResponseWriter, r *http.Request) 
 		goto done
 	}
 
+	ui.integrationsCache.Delete(integrationsCacheKey)
 	resp.Status = "ok"
 	resp.AddMessage(fmt.Sprintf("plugin %q installed successfully", req.Id))
 
@@ -83,6 +84,7 @@ func (ui *uiserver) integrationsUninstall(w http.ResponseWriter, r *http.Request
 		goto done
 	}
 
+	ui.integrationsCache.Delete(integrationsCacheKey)
 	resp.Status = "ok"
 	resp.AddMessage(fmt.Sprintf("plugin %q uninstalled successfully", id))
 

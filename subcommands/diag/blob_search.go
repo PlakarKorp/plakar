@@ -2,7 +2,6 @@ package diag
 
 import (
 	"encoding/hex"
-	"flag"
 	"fmt"
 	"io"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/PlakarKorp/kloset/resources"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/spf13/cobra"
 )
 
 type DiagBlobSearch struct {
@@ -20,16 +20,24 @@ type DiagBlobSearch struct {
 	ObjectID string
 }
 
-func (cmd *DiagBlobSearch) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("diag packfile", flag.ExitOnError)
-	flags.Parse(args)
+func (cmd *DiagBlobSearch) CobraCommand() *cobra.Command {
+	return &cobra.Command{
+		Use: "diag packfile",
+	}
+}
 
-	if len(flags.Args()) < 1 {
-		return fmt.Errorf("usage: %s blobsearch OBJECT", flags.Name())
+func (cmd *DiagBlobSearch) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
+	}
+
+	if len(rest) < 1 {
+		return fmt.Errorf("usage: %s blobsearch OBJECT", "diag packfile")
 	}
 
 	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.ObjectID = flags.Args()[0]
+	cmd.ObjectID = rest[0]
 
 	return nil
 }

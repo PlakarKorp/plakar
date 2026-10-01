@@ -2,7 +2,6 @@ package diag
 
 import (
 	"encoding/hex"
-	"flag"
 	"fmt"
 
 	"github.com/PlakarKorp/kloset/objects"
@@ -12,6 +11,7 @@ import (
 	"github.com/PlakarKorp/kloset/snapshot/vfs"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/spf13/cobra"
 )
 
 type DiagBlob struct {
@@ -21,17 +21,25 @@ type DiagBlob struct {
 	mac      string
 }
 
-func (cmd *DiagBlob) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("diag blob", flag.ExitOnError)
-	flags.Parse(args)
+func (cmd *DiagBlob) CobraCommand() *cobra.Command {
+	return &cobra.Command{
+		Use: "diag blob",
+	}
+}
 
-	if len(flags.Args()) != 2 {
-		return fmt.Errorf("usage: %s blob type mac", flags.Name())
+func (cmd *DiagBlob) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
+	}
+
+	if len(rest) != 2 {
+		return fmt.Errorf("usage: %s blob type mac", "diag blob")
 	}
 
 	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.blobtype = flags.Arg(0)
-	cmd.mac = flags.Arg(1)
+	cmd.blobtype = rest[0]
+	cmd.mac = rest[1]
 
 	return nil
 }

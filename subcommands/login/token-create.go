@@ -17,13 +17,13 @@
 package login
 
 import (
-	"flag"
 	"fmt"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/login"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/spf13/cobra"
 )
 
 type TokenCreate struct {
@@ -34,14 +34,19 @@ func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &TokenCreate{} }, subcommands.BeforeRepositoryOpen, "token", "create")
 }
 
-func (cmd *TokenCreate) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("token create", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: token create\n")
+func (cmd *TokenCreate) CobraCommand() *cobra.Command {
+	return &cobra.Command{
+		Use: "token create",
 	}
-	flags.Parse(args)
+}
 
-	if flags.NArg() > 0 {
+func (cmd *TokenCreate) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
+	}
+
+	if len(rest) > 0 {
 		return fmt.Errorf("too many arguments")
 	}
 	return nil

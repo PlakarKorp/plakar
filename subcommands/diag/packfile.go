@@ -2,13 +2,13 @@ package diag
 
 import (
 	"encoding/hex"
-	"flag"
 	"fmt"
 	"time"
 
-	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/kloset/repository"
+	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/spf13/cobra"
 )
 
 type DiagPackfile struct {
@@ -17,12 +17,20 @@ type DiagPackfile struct {
 	Args []string
 }
 
+func (cmd *DiagPackfile) CobraCommand() *cobra.Command {
+	return &cobra.Command{
+		Use: "diag packfile",
+	}
+}
+
 func (cmd *DiagPackfile) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("diag packfile", flag.ExitOnError)
-	flags.Parse(args)
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
+	}
 
 	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.Args = flags.Args()[0:]
+	cmd.Args = rest
 
 	return nil
 }

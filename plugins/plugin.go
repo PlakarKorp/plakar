@@ -16,9 +16,9 @@ import (
 	"github.com/PlakarKorp/pkg"
 )
 
-func RegisterStorage(proto string, flags location.Flags, exe string, args []string) error {
+func RegisterStorage(proto string, flags location.Flags, runner Runner) error {
 	err := storage.Register(proto, flags, func(ctx context.Context, s string, config map[string]string) (storage.Store, error) {
-		client, err := connectPlugin(ctx, exe, args)
+		client, err := connectPlugin(ctx, runner)
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to plugin: %w", err)
 		}
@@ -32,9 +32,9 @@ func RegisterStorage(proto string, flags location.Flags, exe string, args []stri
 	return nil
 }
 
-func RegisterImporter(proto string, flags location.Flags, exe string, args []string) error {
+func RegisterImporter(proto string, flags location.Flags, runner Runner) error {
 	err := importer.Register(proto, flags, func(ctx context.Context, o *connectors.Options, s string, config map[string]string) (importer.Importer, error) {
-		client, err := connectPlugin(ctx, exe, args)
+		client, err := connectPlugin(ctx, runner)
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to plugin: %w", err)
 		}
@@ -46,9 +46,9 @@ func RegisterImporter(proto string, flags location.Flags, exe string, args []str
 	return nil
 }
 
-func RegisterExporter(proto string, flags location.Flags, exe string, args []string) error {
+func RegisterExporter(proto string, flags location.Flags, runner Runner) error {
 	err := exporter.Register(proto, flags, func(ctx context.Context, o *connectors.Options, s string, config map[string]string) (exporter.Exporter, error) {
-		client, err := connectPlugin(ctx, exe, args)
+		client, err := connectPlugin(ctx, runner)
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to plugin: %w", err)
 		}
@@ -63,7 +63,22 @@ func RegisterExporter(proto string, flags location.Flags, exe string, args []str
 
 func Load(m *pkg.Manifest, pkgdir string) error {
 	for _, conn := range m.Connectors {
-		exe := filepath.Join(pkgdir, conn.Executable)
+		if err := conn.Validate(); err != nil {
+			return err
+		}
+
+		var runner Runner
+		if conn.ImageID != "" {
+			runner = &DockerRunner{
+				Image: conn.ImageID,
+				Args:  conn.Args,
+			}
+		} else {
+			runner = &NativeRunner{
+				Path: filepath.Join(pkgdir, conn.Executable),
+				Args: conn.Args,
+			}
+		}
 
 		flags, err := conn.Flags()
 		if err != nil {
@@ -73,11 +88,11 @@ func Load(m *pkg.Manifest, pkgdir string) error {
 		for _, proto := range conn.Protocols {
 			switch conn.Type {
 			case "importer":
-				err = RegisterImporter(proto, flags, exe, conn.Args)
+				err = RegisterImporter(proto, flags, runner)
 			case "exporter":
-				err = RegisterExporter(proto, flags, exe, conn.Args)
+				err = RegisterExporter(proto, flags, runner)
 			case "storage":
-				err = RegisterStorage(proto, flags, exe, conn.Args)
+				err = RegisterStorage(proto, flags, runner)
 			default:
 				/* Ignore silently. */
 			}

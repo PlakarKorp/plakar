@@ -18,7 +18,6 @@ package diff
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
 	"io"
 	"io/fs"
@@ -36,29 +35,34 @@ import (
 	"github.com/PlakarKorp/plakar/utils"
 	"github.com/alecthomas/chroma/quick"
 	"github.com/pmezard/go-difflib/difflib"
+	"github.com/spf13/cobra"
 )
 
 func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &Diff{} }, 0, "diff")
 }
 
-func (cmd *Diff) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("diff", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS] SNAPSHOT:PATH SNAPSHOT[:PATH]\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
-		flags.PrintDefaults()
+func (cmd *Diff) CobraCommand() *cobra.Command {
+	c := &cobra.Command{
+		Use: "diff [OPTIONS] SNAPSHOT:PATH SNAPSHOT[:PATH]",
 	}
-	flags.BoolVar(&cmd.Highlight, "highlight", false, "highlight output")
-	flags.BoolVar(&cmd.Recursive, "recursive", false, "recursive diff of directories")
-	flags.Parse(args)
+	c.Flags().BoolVar(&cmd.Highlight, "highlight", false, "highlight output")
+	c.Flags().BoolVar(&cmd.Recursive, "recursive", false, "recursive diff of directories")
+	return c
+}
 
-	if flags.NArg() == 1 {
-		cmd.Path1 = flags.Arg(0)
+func (cmd *Diff) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
+	}
+
+	if len(rest) == 1 {
+		cmd.Path1 = rest[0]
 		cmd.Path2 = ""
-	} else if flags.NArg() == 2 {
-		cmd.Path1 = flags.Arg(0)
-		cmd.Path2 = flags.Arg(1)
+	} else if len(rest) == 2 {
+		cmd.Path1 = rest[0]
+		cmd.Path2 = rest[1]
 	} else {
 		return fmt.Errorf("needs at least a snapshot ID and/or snapshot file to diff")
 	}

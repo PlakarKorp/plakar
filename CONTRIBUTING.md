@@ -63,6 +63,14 @@ Code cleanup, refactoring, and removing unused code are essential contributions 
 ### 8. Contributor Code of Conduct
 All contributors must follow the project's [Code of Conduct](CODE_OF_CONDUCT.md) to ensure a welcoming and respectful environment for everyone.
 
+### 9. Use of AI for contributions
+More and more contributions are coming in the form of AI generated submissions and taking a strict stand against these when they genuinely improve the project is not in the best interest of our users.
+
+However we face a situation where they come in different shape and forms, not necessarily aligned with our practices both in terms of coding style, PR and commit prose, as well as split in reviewable units.
+
+As such, while we do accept AI contributions, we will not merge big chunks of un-reviewable code and require that people use the claude plugin referenced in the repository or adapt whatever tool they use to this normalization of contributions. PRs that do not match will not be reviewed.
+
+
 ## Getting Help
 If you need help or have questions, feel free to reach out by:
 

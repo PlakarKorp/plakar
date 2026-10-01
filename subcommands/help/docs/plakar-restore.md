@@ -12,7 +12,8 @@ PLAKAR-RESTORE(1) - General Commands Manual
 \[**-job**&nbsp;*job*]
 \[**-name**&nbsp;*name*]
 \[**-perimeter**&nbsp;*perimeter*]
-\[**-skip-permissions**]
+\[**-post-hook**&nbsp;*command*]
+\[**-pre-hook**&nbsp;*command*]
 \[**-tag**&nbsp;*tag*]
 \[**-to**&nbsp;*directory*]
 \[**-o**&nbsp;*option*=*value*]
@@ -67,10 +68,20 @@ The options are as follows:
 > Only apply command to snapshots that match
 > *tag*.
 
-**-skip-permissions**
+**-pre-hook** *command*
 
-> Skip restoring file permissions and ownership during restore,
-> defaulting to 0750 for directories and 0640 for files.
+> Run
+> *command*
+> in a shell before starting the restore.
+> If the command exits with a non-zero status, restore is aborted.
+
+**-post-hook** *command*
+
+> Run
+> *command*
+> in a shell after a successful restore.
+> If the command exits with a non-zero status, a warning is logged and
+> the restore still succeeds.
 
 **-to** *directory*
 
@@ -115,4 +126,4 @@ Restore specific path to a specific destination :
 plakar(1),
 plakar-backup(1)
 
-Plakar - May 5, 2026 - PLAKAR-RESTORE(1)
+Plakar - May 5, 2026

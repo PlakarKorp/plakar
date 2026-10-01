@@ -17,7 +17,6 @@
 package dup
 
 import (
-	"flag"
 	"fmt"
 
 	"github.com/PlakarKorp/kloset/locate"
@@ -25,6 +24,7 @@ import (
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/spf13/cobra"
 )
 
 type Dup struct {
@@ -37,20 +37,23 @@ func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &Dup{} }, 0, "dup")
 }
 
-func (cmd *Dup) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("dup", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS] [SNAPSHOT[:PATH]]...\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
-		flags.PrintDefaults()
+func (cmd *Dup) CobraCommand() *cobra.Command {
+	return &cobra.Command{
+		Use: "dup [OPTIONS] [SNAPSHOT[:PATH]]...",
 	}
-	flags.Parse(args)
+}
 
-	if flags.NArg() == 0 {
+func (cmd *Dup) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
+	}
+
+	if len(rest) == 0 {
 		return fmt.Errorf("at least one parameter is required")
 	}
 
-	cmd.SnapshotIDS = flags.Args()
+	cmd.SnapshotIDS = rest
 
 	return nil
 }

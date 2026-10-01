@@ -17,7 +17,6 @@
 package locate
 
 import (
-	"flag"
 	"fmt"
 	"path"
 
@@ -28,32 +27,36 @@ import (
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
+	"github.com/spf13/cobra"
 )
 
 func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &Locate{} }, 0, "locate")
 }
 
-func (cmd *Locate) Parse(ctx *appcontext.AppContext, args []string) error {
+func (cmd *Locate) CobraCommand() *cobra.Command {
 	cmd.LocateOptions = plocate.NewDefaultLocateOptions()
 
-	flags := flag.NewFlagSet("locate", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS] PATTERN...\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
-		flags.PrintDefaults()
+	c := &cobra.Command{
+		Use: "locate [OPTIONS] PATTERN...",
 	}
+	c.Flags().StringVar(&cmd.Snapshot, "snapshot", "", "snapshot to locate in")
+	subcommands.InstallGoFlags(c.Flags(), cmd.LocateOptions.InstallLocateFlags)
+	return c
+}
 
-	flags.StringVar(&cmd.Snapshot, "snapshot", "", "snapshot to locate in")
-	cmd.LocateOptions.InstallLocateFlags(flags)
-	flags.Parse(args)
+func (cmd *Locate) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
+	}
 
 	if cmd.Snapshot != "" && !cmd.LocateOptions.Empty() {
 		ctx.GetLogger().Warn("snapshot specified, filters will be ignored")
 	}
 
 	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.Patterns = flags.Args()
+	cmd.Patterns = rest
 
 	return nil
 }

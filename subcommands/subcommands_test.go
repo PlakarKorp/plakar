@@ -5,13 +5,17 @@ import (
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 )
 
 // fakeCmd is a minimal Subcommand for exercising the registry.
 type fakeCmd struct {
 	SubcommandBase
+	use string
 }
+
+func (c *fakeCmd) CobraCommand() *cobra.Command { return &cobra.Command{Use: c.use} }
 
 func (c *fakeCmd) Parse(ctx *appcontext.AppContext, args []string) error { return nil }
 func (c *fakeCmd) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {

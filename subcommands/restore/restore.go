@@ -17,10 +17,11 @@
 package restore
 
 import (
-	"flag"
 	"fmt"
 	"maps"
+	"os/exec"
 	"path"
+	"runtime"
 	"strings"
 	"time"
 
@@ -31,6 +32,7 @@ import (
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
+	"github.com/spf13/cobra"
 )
 
 type Restore struct {
@@ -42,57 +44,61 @@ type Restore struct {
 	OptPerimeter       string
 	OptJob             string
 	OptTag             string
-	OptSkipPermissions bool
 	Opts               map[string]string
+	OptPreHook         string
+	OptPostHook        string
 
 	Target    string
 	Strip     string
 	Snapshots []string
+
+	pullPath string
 }
 
 func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &Restore{} }, 0, "restore")
 }
 
-func (cmd *Restore) Parse(ctx *appcontext.AppContext, args []string) error {
-	var pullPath string
-
+func (cmd *Restore) CobraCommand() *cobra.Command {
 	cmd.Opts = make(map[string]string)
 
-	flags := flag.NewFlagSet("restore", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS] [SNAPSHOT[:PATH]]...\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
-		flags.PrintDefaults()
+	c := &cobra.Command{
+		Use: "restore [OPTIONS] [SNAPSHOT[:PATH]]...",
+	}
+	c.Flags().StringVar(&cmd.OptName, "name", "", "filter by name")
+	c.Flags().StringVar(&cmd.OptCategory, "category", "", "filter by category")
+	c.Flags().StringVar(&cmd.OptEnvironment, "environment", "", "filter by environment")
+	c.Flags().StringVar(&cmd.OptPerimeter, "perimeter", "", "filter by perimeter")
+	c.Flags().StringVar(&cmd.OptJob, "job", "", "filter by job")
+	c.Flags().StringVar(&cmd.OptTag, "tag", "", "filter by tag")
+	c.Flags().Var(subcommands.GoValue(utils.NewOptsFlag(cmd.Opts)), "o", "specify extra exporter options")
+	c.Flags().StringVar(&cmd.pullPath, "to", "", "base directory where pull will restore")
+	c.Flags().StringVar(&cmd.OptPreHook, "pre-hook", "", "shell command to run before restore")
+	c.Flags().StringVar(&cmd.OptPostHook, "post-hook", "", "shell command to run after restore")
+	return c
+}
+
+func (cmd *Restore) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
 	}
 
-	flags.StringVar(&cmd.OptName, "name", "", "filter by name")
-	flags.StringVar(&cmd.OptCategory, "category", "", "filter by category")
-	flags.StringVar(&cmd.OptEnvironment, "environment", "", "filter by environment")
-	flags.StringVar(&cmd.OptPerimeter, "perimeter", "", "filter by perimeter")
-	flags.StringVar(&cmd.OptJob, "job", "", "filter by job")
-	flags.StringVar(&cmd.OptTag, "tag", "", "filter by tag")
-	flags.Var(utils.NewOptsFlag(cmd.Opts), "o", "specify extra exporter options")
-
-	flags.StringVar(&pullPath, "to", "", "base directory where pull will restore")
-	flags.BoolVar(&cmd.OptSkipPermissions, "skip-permissions", false, "do not restore file permissions")
-	flags.Parse(args)
-
-	if flags.NArg() != 0 {
+	if len(rest) != 0 {
 		if cmd.OptName != "" || cmd.OptCategory != "" || cmd.OptEnvironment != "" || cmd.OptPerimeter != "" || cmd.OptJob != "" || cmd.OptTag != "" {
 			ctx.GetLogger().Warn("snapshot specified, filters will be ignored")
 		}
-	} else if flags.NArg() > 1 {
+	} else if len(rest) > 1 {
 		return fmt.Errorf("multiple restore paths specified, please specify only one")
 	}
 
-	if pullPath == "" {
-		pullPath = fmt.Sprintf("%s/plakar-%s", ctx.CWD, time.Now().Format("20060102150405"))
+	if cmd.pullPath == "" {
+		cmd.pullPath = fmt.Sprintf("%s/plakar-%s", ctx.CWD, time.Now().Format("20060102150405"))
 	}
 
 	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.Target = pullPath
-	cmd.Snapshots = flags.Args()
+	cmd.Target = cmd.pullPath
+	cmd.Snapshots = rest
 
 	return nil
 }
@@ -147,6 +153,10 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 		return 1, fmt.Errorf("multiple snapshots found, please specify one")
 	}
 
+	if err := executeHook(ctx, cmd.OptPreHook); err != nil {
+		return 1, fmt.Errorf("pre-restore hook failed: %w", err)
+	}
+
 	exporterConfig := map[string]string{
 		"location": cmd.Target,
 	}
@@ -175,10 +185,6 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 	defer exporterInstance.Close(ctx)
 
 	opts := &snapshot.ExportOptions{}
-	if cmd.OptSkipPermissions {
-		opts.SkipPermissions = true
-	}
-
 	for _, snapPath := range snapshots {
 		snap, pathname, relative, err := locate.OpenSnapshotByPathRelative(repo, snapPath)
 		if err != nil {
@@ -200,5 +206,29 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 
 		snap.Close()
 	}
+
+	if err := executeHook(ctx, cmd.OptPostHook); err != nil {
+		ctx.GetLogger().Warn("post-restore hook failed: %s", err)
+	}
+
 	return 0, nil
+}
+
+func executeHook(ctx *appcontext.AppContext, hook string) error {
+	if hook == "" {
+		return nil
+	}
+	ctx.GetLogger().Info("executing hook: %s", hook)
+
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("cmd", "/C", hook)
+	default: // assume unix-esque
+		cmd = exec.Command("/bin/sh", "-c", hook)
+	}
+
+	cmd.Stdout = ctx.Stdout
+	cmd.Stderr = ctx.Stderr
+	return cmd.Run()
 }

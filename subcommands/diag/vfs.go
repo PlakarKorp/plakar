@@ -1,7 +1,6 @@
 package diag
 
 import (
-	"flag"
 	"fmt"
 	"path"
 	"time"
@@ -13,6 +12,7 @@ import (
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/dustin/go-humanize"
+	"github.com/spf13/cobra"
 )
 
 type DiagVFS struct {
@@ -21,16 +21,24 @@ type DiagVFS struct {
 	SnapshotPath string
 }
 
-func (cmd *DiagVFS) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("diag vfs", flag.ExitOnError)
-	flags.Parse(args)
+func (cmd *DiagVFS) CobraCommand() *cobra.Command {
+	return &cobra.Command{
+		Use: "diag vfs",
+	}
+}
 
-	if len(flags.Args()) < 1 {
-		return fmt.Errorf("usage: %s vfs SNAPSHOT[:PATH]", flags.Name())
+func (cmd *DiagVFS) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
+	}
+
+	if len(rest) < 1 {
+		return fmt.Errorf("usage: %s vfs SNAPSHOT[:PATH]", "diag vfs")
 	}
 
 	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.SnapshotPath = flags.Args()[0]
+	cmd.SnapshotPath = rest[0]
 
 	return nil
 }

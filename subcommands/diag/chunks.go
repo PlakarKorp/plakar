@@ -1,13 +1,13 @@
 package diag
 
 import (
-	"flag"
 	"fmt"
 
 	"github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/spf13/cobra"
 )
 
 type DiagChunks struct {
@@ -16,16 +16,24 @@ type DiagChunks struct {
 	SnapshotPath string
 }
 
-func (cmd *DiagChunks) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("diag chunks", flag.ExitOnError)
-	flags.Parse(args)
+func (cmd *DiagChunks) CobraCommand() *cobra.Command {
+	return &cobra.Command{
+		Use: "diag chunks",
+	}
+}
 
-	if len(flags.Args()) != 1 {
-		return fmt.Errorf("usage: %s chunks SNAPSHOT:PATH", flags.Name())
+func (cmd *DiagChunks) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
+	}
+
+	if len(rest) != 1 {
+		return fmt.Errorf("usage: %s chunks SNAPSHOT:PATH", "diag chunks")
 	}
 
 	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.SnapshotPath = flags.Args()[0]
+	cmd.SnapshotPath = rest[0]
 
 	return nil
 }

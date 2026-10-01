@@ -118,7 +118,7 @@ func TestPkgBuildParseErrors(t *testing.T) {
 func TestPkgCreateParseOk(t *testing.T) {
 	ctx := newCtx(t)
 	manifest := filepath.Join(ctx.CWD, "manifest.yaml")
-	require.NoError(t, os.WriteFile(manifest, []byte("name: myplugin\n"), 0644))
+	require.NoError(t, os.WriteFile(manifest, []byte("name: myplugin\nconnectors:\n  - type: importer\n    executable: myplugin\n"), 0644))
 
 	cmd := &PkgCreate{}
 	require.NoError(t, cmd.Parse(ctx, []string{"manifest.yaml", "v1.2.3"}))
@@ -205,7 +205,7 @@ func TestAbsolutify(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// pkgerImporter: metadata, Ping, Close, mkstruct, dofile, scan
+// pkgerImporter: metadata, Ping, Close, dofile, scan
 // ---------------------------------------------------------------------------
 
 func TestPkgerImporterMetadata(t *testing.T) {
@@ -224,20 +224,6 @@ func drain(ch <-chan *connectors.Record) []*connectors.Record {
 		recs = append(recs, r)
 	}
 	return recs
-}
-
-func TestMkstruct(t *testing.T) {
-	ch := make(chan *connectors.Record, 16)
-	mkstruct("/a/b/c/file.txt", ch)
-	close(ch)
-	recs := drain(ch)
-	// directories: /a/b/c, /a/b, /a (stops at /)
-	var paths []string
-	for _, r := range recs {
-		paths = append(paths, r.Pathname)
-		require.True(t, r.FileInfo.Lmode.IsDir())
-	}
-	require.Equal(t, []string{"/a/b/c", "/a/b", "/a"}, paths)
 }
 
 func TestDofileExecutableOk(t *testing.T) {
@@ -341,7 +327,7 @@ func TestPkgerImporterScan(t *testing.T) {
 			ExtraFiles: []string{"extra.dat"},
 		}},
 	}
-	imp := &pkgerImporter{cwd: dir, manifest: m, manifestPath: manifest}
+	imp := &pkgerImporter{cwd: dir, manifest: m}
 
 	ch := make(chan *connectors.Record, 128)
 	require.NoError(t, imp.Import(context.Background(), ch, nil))
@@ -352,7 +338,6 @@ func TestPkgerImporterScan(t *testing.T) {
 		require.Nil(t, r.Err, "scan record %q carries error", r.Pathname)
 		seen[r.Pathname] = true
 	}
-	require.True(t, seen["/"])
 	require.True(t, seen["/manifest.yaml"])
 	require.True(t, seen["/myplugin"])
 	require.True(t, seen["/validator.json"])

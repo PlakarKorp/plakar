@@ -111,6 +111,7 @@ func writeStoresYmlCov80(t *testing.T, configDir, name, location string) {
 // This drives the `def != ""` branch and a successful GetRepository lookup.
 func TestEntryPointDefaultRepositoryFromConfigCov80(t *testing.T) {
 	repoDir := filepath.Join(t.TempDir(), "repo")
+	t.Setenv(plaintextEnv, "1") // the repository below is plaintext
 
 	// First create the repository at an explicit location.
 	status, _, stderr := runEntryPointCov80(t, nil, "at", repoDir, "create", "-plaintext")
@@ -148,6 +149,7 @@ func TestEntryPointDefaultRepositoryUnknownAliasCov80(t *testing.T) {
 // plaintext repo the secret is simply ignored, so the command still succeeds.
 func TestEntryPointEnvPassphraseWithPlaintextRepoCov80(t *testing.T) {
 	repoDir := filepath.Join(t.TempDir(), "repo")
+	t.Setenv(plaintextEnv, "1") // the repository below is plaintext
 	status, _, stderr := runEntryPointCov80(t, nil, "at", repoDir, "create", "-plaintext")
 	require.Equalf(t, 0, status, "create stderr: %s", stderr)
 

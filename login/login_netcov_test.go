@@ -17,7 +17,11 @@ import (
 func newTestFlow(t *testing.T) *loginFlow {
 	t.Helper()
 	ctx := appcontext.NewAppContext()
-	ctx.SetCookies(cookies.NewManager(t.TempDir()))
+	cookiesManager, err := cookies.NewManager(t.TempDir())
+	if err != nil {
+		t.Fatalf("cookies.NewManager err = %v", err)
+	}
+	ctx.SetCookies(cookiesManager)
 	flow, err := NewLoginFlow(ctx, true)
 	if err != nil {
 		t.Fatalf("NewLoginFlow err = %v", err)
@@ -203,79 +207,6 @@ func TestNetRunUnsupportedProvider(t *testing.T) {
 	}
 }
 
-func TestNetRunUIGithubSuccess(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case r.URL.Path == "/v1/auth/login/github":
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"URL":"https://ui/login","poll_id":"ghui"}`))
-		case strings.HasPrefix(r.URL.Path, "/v1/auth/poll/"):
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"token":"ui-token"}`))
-		default:
-			t.Errorf("unexpected path %s", r.URL.Path)
-		}
-	}))
-	defer srv.Close()
-
-	flow := newTestFlow(t)
-	flow.baseURL = srv.URL
-
-	url, err := flow.RunUI("github", nil)
-	if err != nil {
-		t.Fatalf("RunUI github err = %v", err)
-	}
-	if url != "https://ui/login" {
-		t.Fatalf("url = %q, want https://ui/login", url)
-	}
-
-	// The goroutine polls and stores the token via cookies; give it a moment.
-	deadline := time.Now().Add(2 * time.Second)
-	for time.Now().Before(deadline) {
-		if tok, _ := flow.appCtx.GetCookies().GetAuthToken(); tok == "ui-token" {
-			return
-		}
-		time.Sleep(5 * time.Millisecond)
-	}
-	t.Fatal("auth token was not stored by RunUI goroutine")
-}
-
-func TestNetRunUIEmailSuccess(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case r.URL.Path == "/v1/auth/login/email":
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"poll_id":"emui"}`))
-		case strings.HasPrefix(r.URL.Path, "/v1/auth/poll/"):
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"token":"ui-email-token"}`))
-		default:
-			t.Errorf("unexpected path %s", r.URL.Path)
-		}
-	}))
-	defer srv.Close()
-
-	flow := newTestFlow(t)
-	flow.baseURL = srv.URL
-
-	url, err := flow.RunUI("email", nil)
-	if err != nil {
-		t.Fatalf("RunUI email err = %v", err)
-	}
-	if url != "" {
-		t.Fatalf("url = %q, want empty", url)
-	}
-
-	deadline := time.Now().Add(2 * time.Second)
-	for time.Now().Before(deadline) {
-		if tok, _ := flow.appCtx.GetCookies().GetAuthToken(); tok == "ui-email-token" {
-			return
-		}
-		time.Sleep(5 * time.Millisecond)
-	}
-	t.Fatal("auth token was not stored by RunUI email goroutine")
-}
-
 func TestNetRunUINon200(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusServiceUnavailable)
@@ -305,7 +236,10 @@ func TestNetDeriveTokenSuccess(t *testing.T) {
 	defer srv.Close()
 
 	ctx := appcontext.NewAppContext()
-	mgr := cookies.NewManager(t.TempDir())
+	mgr, err := cookies.NewManager(t.TempDir())
+	if err != nil {
+		t.Fatalf("cookies.NewManager err = %v", err)
+	}
 	if err := mgr.PutAuthToken("auth-tok"); err != nil {
 		t.Fatalf("PutAuthToken err = %v", err)
 	}
@@ -330,7 +264,10 @@ func TestNetDeriveTokenNon200(t *testing.T) {
 	defer srv.Close()
 
 	ctx := appcontext.NewAppContext()
-	mgr := cookies.NewManager(t.TempDir())
+	mgr, err := cookies.NewManager(t.TempDir())
+	if err != nil {
+		t.Fatalf("cookies.NewManager err = %v", err)
+	}
 	if err := mgr.PutAuthToken("auth-tok"); err != nil {
 		t.Fatalf("PutAuthToken err = %v", err)
 	}
@@ -339,7 +276,7 @@ func TestNetDeriveTokenNon200(t *testing.T) {
 	t.Setenv("PLAKAR_TOKEN", "")
 	t.Setenv("PLAKAR_API_URL", srv.URL)
 
-	_, err := DeriveToken(ctx)
+	_, err = DeriveToken(ctx)
 	if err == nil || !strings.Contains(err.Error(), "request failed with status") {
 		t.Fatalf("err = %v, want request failed with status", err)
 	}
@@ -347,11 +284,15 @@ func TestNetDeriveTokenNon200(t *testing.T) {
 
 func TestNetDeriveTokenNoAuthToken(t *testing.T) {
 	ctx := appcontext.NewAppContext()
-	ctx.SetCookies(cookies.NewManager(t.TempDir()))
+	cookiesManager, err := cookies.NewManager(t.TempDir())
+	if err != nil {
+		t.Fatalf("cookies.NewManager err = %v", err)
+	}
+	ctx.SetCookies(cookiesManager)
 
 	t.Setenv("PLAKAR_TOKEN", "")
 
-	_, err := DeriveToken(ctx)
+	_, err = DeriveToken(ctx)
 	if err == nil {
 		t.Fatal("expected error when no auth token present, got nil")
 	}

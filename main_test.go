@@ -21,7 +21,11 @@ func newTestCtx(t *testing.T) *appcontext.AppContext {
 	ctx := appcontext.NewAppContext()
 	dir := t.TempDir()
 	ctx.CacheDir = dir
-	ctx.SetCookies(cookies.NewManager(dir))
+	cookiesManager, err := cookies.NewManager(dir)
+	if err != nil {
+		t.Fatalf("cookies.NewManager err = %v", err)
+	}
+	ctx.SetCookies(cookiesManager)
 	ctx.Stdout = new(bytes.Buffer)
 	ctx.Stderr = new(bytes.Buffer)
 	return ctx

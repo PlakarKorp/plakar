@@ -18,7 +18,6 @@ package check
 
 import (
 	"encoding/hex"
-	"flag"
 	"fmt"
 
 	"github.com/PlakarKorp/kloset/locate"
@@ -28,6 +27,7 @@ import (
 	"github.com/PlakarKorp/plakar/exitcodes"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/google/uuid"
+	"github.com/spf13/cobra"
 )
 
 type Check struct {
@@ -43,28 +43,30 @@ func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &Check{} }, 0, "check")
 }
 
-func (cmd *Check) Parse(ctx *appcontext.AppContext, args []string) error {
+func (cmd *Check) CobraCommand() *cobra.Command {
 	cmd.LocateOptions = locate.NewDefaultLocateOptions()
 
-	flags := flag.NewFlagSet("check", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS] [SNAPSHOT[:PATH]]...\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
-		flags.PrintDefaults()
+	c := &cobra.Command{
+		Use: "check [OPTIONS] [SNAPSHOT[:PATH]]...",
+	}
+	c.Flags().BoolVar(&cmd.NoVerify, "no-verify", false, "disable signature verification")
+	c.Flags().BoolVar(&cmd.FastCheck, "fast", false, "enable fast checking (no digest verification)")
+	subcommands.InstallGoFlags(c.Flags(), cmd.LocateOptions.InstallLocateFlags)
+	return c
+}
+
+func (cmd *Check) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
 	}
 
-	flags.BoolVar(&cmd.NoVerify, "no-verify", false, "disable signature verification")
-	flags.BoolVar(&cmd.FastCheck, "fast", false, "enable fast checking (no digest verification)")
-	cmd.LocateOptions.InstallLocateFlags(flags)
-
-	flags.Parse(args)
-
-	if flags.NArg() != 0 && !cmd.LocateOptions.Empty() {
+	if len(rest) != 0 && !cmd.LocateOptions.Empty() {
 		ctx.GetLogger().Warn("snapshot specified, filters will be ignored")
 	}
 
 	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.Snapshots = flags.Args()
+	cmd.Snapshots = rest
 
 	return nil
 }

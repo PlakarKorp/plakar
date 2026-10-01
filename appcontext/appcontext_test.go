@@ -2,11 +2,14 @@ package appcontext
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/PlakarKorp/plakar/cookies"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewAppContext(t *testing.T) {
@@ -19,6 +22,25 @@ func TestNewAppContext(t *testing.T) {
 	}
 	if ctx.GetInner() != ctx.KContext {
 		t.Fatal("GetInner did not return the embedded KContext")
+	}
+}
+
+func TestErrorCauseReturnsCancelCause(t *testing.T) {
+	ctx := NewAppContext()
+	cause := errors.New("underlying failure")
+	ctx.Cancel(cause)
+
+	if got := ctx.ErrorCause(context.Canceled); !errors.Is(got, cause) {
+		t.Fatalf("ErrorCause() = %v, want %v", got, cause)
+	}
+}
+
+func TestErrorCauseReturnsOriginalError(t *testing.T) {
+	ctx := NewAppContext()
+	err := errors.New("regular failure")
+
+	if got := ctx.ErrorCause(err); !errors.Is(got, err) {
+		t.Fatalf("ErrorCause() = %v, want %v", got, err)
 	}
 }
 
@@ -43,7 +65,8 @@ func TestCookiesAndPkgManagerAccessors(t *testing.T) {
 		t.Fatal("expected nil pkg manager on new context")
 	}
 
-	mgr := cookies.NewManager(t.TempDir())
+	mgr, err := cookies.NewManager(t.TempDir())
+	require.NoError(t, err)
 	ctx.SetCookies(mgr)
 	if ctx.GetCookies() != mgr {
 		t.Fatal("SetCookies/GetCookies mismatch")
@@ -60,7 +83,8 @@ func TestCookiesAndPkgManagerAccessors(t *testing.T) {
 func TestNewAppContextFromCopiesFields(t *testing.T) {
 	parent := NewAppContext()
 	parent.ConfigDir = "/tmp/cfg"
-	mgr := cookies.NewManager(t.TempDir())
+	mgr, err := cookies.NewManager(t.TempDir())
+	require.NoError(t, err)
 	parent.SetCookies(mgr)
 	parent.SetSecret([]byte("s"))
 

@@ -1,7 +1,6 @@
 package diag
 
 import (
-	"flag"
 	"fmt"
 	"strings"
 
@@ -9,6 +8,7 @@ import (
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/spf13/cobra"
 )
 
 type DiagContentType struct {
@@ -17,16 +17,24 @@ type DiagContentType struct {
 	SnapshotPath string
 }
 
-func (cmd *DiagContentType) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("diag contenttype", flag.ExitOnError)
-	flags.Parse(args)
+func (cmd *DiagContentType) CobraCommand() *cobra.Command {
+	return &cobra.Command{
+		Use: "diag contenttype",
+	}
+}
 
-	if len(flags.Args()) < 1 {
-		return fmt.Errorf("usage: %s contenttype SNAPSHOT[:PATH]", flags.Name())
+func (cmd *DiagContentType) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
+	}
+
+	if len(rest) < 1 {
+		return fmt.Errorf("usage: %s contenttype SNAPSHOT[:PATH]", "diag contenttype")
 	}
 
 	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.SnapshotPath = flags.Args()[0]
+	cmd.SnapshotPath = rest[0]
 
 	return nil
 }

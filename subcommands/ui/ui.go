@@ -20,7 +20,6 @@
 package ui
 
 import (
-	"flag"
 	"fmt"
 	"os"
 
@@ -29,6 +28,7 @@ import (
 	"github.com/PlakarKorp/plakar/subcommands"
 	v2 "github.com/PlakarKorp/plakar/ui/v2"
 	"github.com/google/uuid"
+	"github.com/spf13/cobra"
 )
 
 type Ui struct {
@@ -47,24 +47,27 @@ func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &Ui{} }, 0, "ui")
 }
 
+func (cmd *Ui) CobraCommand() *cobra.Command {
+	c := &cobra.Command{
+		Use: "ui [OPTIONS]",
+	}
+	c.Flags().StringVar(&cmd.Addr, "addr", "", "address to listen on (default: random port on localhost)")
+	c.Flags().BoolVar(&cmd.Cors, "cors", false, "enable CORS")
+	c.Flags().BoolVar(&cmd.NoAuth, "no-auth", false, "don't use authentication")
+	c.Flags().BoolVar(&cmd.NoSpawn, "no-spawn", false, "don't spawn browser")
+	c.Flags().BoolVar(&cmd.NoRefresh, "no-refresh", false, "don't refresh the local state")
+	c.Flags().StringVar(&cmd.Cert, "cert", "", "Full certificate chain")
+	c.Flags().StringVar(&cmd.Key, "key", "", "Certificate private key")
+	return c
+}
+
 func (cmd *Ui) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("ui", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s [OPTIONS]\n", flags.Name())
-		fmt.Fprintf(flags.Output(), "\nOPTIONS:\n")
-		flags.PrintDefaults()
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
 	}
 
-	flags.StringVar(&cmd.Addr, "addr", "", "address to listen on (default: random port on localhost)")
-	flags.BoolVar(&cmd.Cors, "cors", false, "enable CORS")
-	flags.BoolVar(&cmd.NoAuth, "no-auth", false, "don't use authentication")
-	flags.BoolVar(&cmd.NoSpawn, "no-spawn", false, "don't spawn browser")
-	flags.BoolVar(&cmd.NoRefresh, "no-refresh", false, "don't refresh the local state")
-	flags.StringVar(&cmd.Cert, "cert", "", "Full certificate chain")
-	flags.StringVar(&cmd.Key, "key", "", "Certificate private key")
-	flags.Parse(args)
-
-	if flags.NArg() > 0 {
+	if len(rest) > 0 {
 		return fmt.Errorf("too many arguments")
 	}
 

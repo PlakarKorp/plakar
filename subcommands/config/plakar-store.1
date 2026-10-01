@@ -105,6 +105,16 @@ location, the following additional options are available:
 Bearer token sent in the
 .Dq Authorization
 header for every request.
+.It Cm insecure
+Optional, set to
+.Cm true
+to opt-in the usage of the
+.Cm auth_token
+on HTTP plaintext connections.
+.It Cm timeout
+Per-request timeout, default to
+.Dq 5m
+i.e. five minutes .
 .It Cm tls_no_verify
 Set to
 .Cm true

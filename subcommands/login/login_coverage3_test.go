@@ -18,7 +18,8 @@ func cov3Ctx(t *testing.T) (*appcontext.AppContext, *bytes.Buffer, *cookies.Mana
 	out := bytes.NewBuffer(nil)
 	ctx.Stdout = out
 	ctx.Stderr = bytes.NewBuffer(nil)
-	mgr := cookies.NewManager(t.TempDir())
+	mgr, err := cookies.NewManager(t.TempDir())
+	require.NoError(t, err)
 	ctx.SetCookies(mgr)
 	t.Cleanup(func() { mgr.Close() })
 	return ctx, out, mgr

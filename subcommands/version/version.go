@@ -17,29 +17,33 @@
 package version
 
 import (
-	"flag"
 	"fmt"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
+	"github.com/spf13/cobra"
 )
 
 func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &Version{} }, subcommands.BeforeRepositoryOpen, "version")
 }
 
-func (*Version) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("version", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s\n", flags.Name())
-		flags.PrintDefaults()
+func (cmd *Version) CobraCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "version",
+		Short: "show the plakar version",
+	}
+}
+
+func (cmd *Version) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
 	}
 
-	flags.Parse(args)
-
-	if flags.NArg() > 0 {
+	if len(rest) > 0 {
 		return fmt.Errorf("too many arguments")
 	}
 

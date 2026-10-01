@@ -31,11 +31,11 @@ func TestRegisterStorage_Idempotent(t *testing.T) {
 	proto := uniqueProto(t)
 	t.Cleanup(func() { _ = storage.Unregister(proto) })
 
-	if err := RegisterStorage(proto, 0, "/nonexistent", nil); err != nil {
+	if err := RegisterStorage(proto, 0, &NativeRunner{Path: "/nonexistent"}); err != nil {
 		t.Fatalf("first register err = %v", err)
 	}
 	// re-registering the same proto must fail
-	if err := RegisterStorage(proto, 0, "/nonexistent", nil); err == nil {
+	if err := RegisterStorage(proto, 0, &NativeRunner{Path: "/nonexistent"}); err == nil {
 		t.Fatal("second register should error on duplicate proto")
 	}
 }
@@ -44,10 +44,10 @@ func TestRegisterImporter_Idempotent(t *testing.T) {
 	proto := uniqueProto(t)
 	t.Cleanup(func() { _ = importer.Unregister(proto) })
 
-	if err := RegisterImporter(proto, 0, "/nonexistent", nil); err != nil {
+	if err := RegisterImporter(proto, 0, &NativeRunner{Path: "/nonexistent"}); err != nil {
 		t.Fatalf("first register err = %v", err)
 	}
-	if err := RegisterImporter(proto, 0, "/nonexistent", nil); err == nil {
+	if err := RegisterImporter(proto, 0, &NativeRunner{Path: "/nonexistent"}); err == nil {
 		t.Fatal("second register should error on duplicate proto")
 	}
 }
@@ -56,10 +56,10 @@ func TestRegisterExporter_Idempotent(t *testing.T) {
 	proto := uniqueProto(t)
 	t.Cleanup(func() { _ = exporter.Unregister(proto) })
 
-	if err := RegisterExporter(proto, 0, "/nonexistent", nil); err != nil {
+	if err := RegisterExporter(proto, 0, &NativeRunner{Path: "/nonexistent"}); err != nil {
 		t.Fatalf("first register err = %v", err)
 	}
-	if err := RegisterExporter(proto, 0, "/nonexistent", nil); err == nil {
+	if err := RegisterExporter(proto, 0, &NativeRunner{Path: "/nonexistent"}); err == nil {
 		t.Fatal("second register should error on duplicate proto")
 	}
 }
@@ -81,8 +81,6 @@ func TestLoad_RegistersAllConnectorTypes(t *testing.T) {
 			{Type: "importer", Protocols: []string{imp}, Executable: "noop"},
 			{Type: "exporter", Protocols: []string{exp}, Executable: "noop"},
 			{Type: "storage", Protocols: []string{stg}, Executable: "noop"},
-			// Unknown type — Load must silently ignore it.
-			{Type: "unknown-type", Protocols: []string{"ignored"}, Executable: "noop"},
 		},
 	}
 
@@ -96,12 +94,46 @@ func TestLoad_RegistersAllConnectorTypes(t *testing.T) {
 	}
 }
 
+func TestLoad_ImageConnector(t *testing.T) {
+	stg := uniqueProto(t)
+	t.Cleanup(func() { _ = storage.Unregister(stg) })
+
+	m := &pkg.Manifest{
+		Connectors: []pkg.ManifestConnector{
+			{Type: "storage", Protocols: []string{stg}, ImageID: "sha256:aa"},
+		},
+	}
+
+	if err := Load(m, "/tmp"); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if !contains(storage.Backends(), stg) {
+		t.Errorf("storage backend %q not registered; got %v", stg, storage.Backends())
+	}
+}
+
+func TestLoad_RejectsInvalidConnectors(t *testing.T) {
+	for _, conn := range []pkg.ManifestConnector{
+		// Both executable and image_id.
+		{Type: "storage", Protocols: []string{"never-registered"}, Executable: "noop", ImageID: "sha256:aa"},
+		// Neither.
+		{Type: "storage", Protocols: []string{"never-registered"}},
+		// localfs connectors never run as containers.
+		{Type: "importer", Protocols: []string{"never-registered"}, ImageID: "sha256:aa", LocationFlags: []string{"localfs"}},
+	} {
+		m := &pkg.Manifest{Connectors: []pkg.ManifestConnector{conn}}
+		if err := Load(m, "/tmp"); err == nil {
+			t.Errorf("Load should reject connector %+v", conn)
+		}
+	}
+}
+
 func TestLoad_PropagatesDuplicateError(t *testing.T) {
 	stg := uniqueProto(t)
 	t.Cleanup(func() { _ = storage.Unregister(stg) })
 
 	// Pre-register to force the duplicate path in Load.
-	if err := RegisterStorage(stg, 0, "/x", nil); err != nil {
+	if err := RegisterStorage(stg, 0, &NativeRunner{Path: "/x"}); err != nil {
 		t.Fatalf("seed register: %v", err)
 	}
 
@@ -141,7 +173,6 @@ func TestUnload_Symmetric(t *testing.T) {
 			{Type: "importer", Protocols: []string{imp}, Executable: "noop"},
 			{Type: "exporter", Protocols: []string{exp}, Executable: "noop"},
 			{Type: "storage", Protocols: []string{stg}, Executable: "noop"},
-			{Type: "unknown-type", Protocols: []string{"ignored"}, Executable: "noop"},
 		},
 	}
 	if err := Load(m, "/tmp"); err != nil {

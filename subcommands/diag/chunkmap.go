@@ -2,7 +2,6 @@ package diag
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
 	"html/template"
 	"os"
@@ -13,6 +12,7 @@ import (
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/spf13/cobra"
 )
 
 type DiagChunkmap struct {
@@ -22,18 +22,26 @@ type DiagChunkmap struct {
 	HTMLOutput    string
 }
 
-func (cmd *DiagChunkmap) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("diag chunkmap", flag.ExitOnError)
-	htmlOutput := flags.String("html", "", "write HTML visualization to file")
-	flags.Parse(args)
+func (cmd *DiagChunkmap) CobraCommand() *cobra.Command {
+	c := &cobra.Command{
+		Use: "diag chunkmap",
+	}
+	c.Flags().StringVar(&cmd.HTMLOutput, "html", "", "write HTML visualization to file")
+	return c
+}
 
-	if len(flags.Args()) < 2 {
-		return fmt.Errorf("usage: %s chunkmap [--html FILE] SNAPSHOT:PATH SNAPSHOT:PATH [...]", flags.Name())
+func (cmd *DiagChunkmap) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
+	}
+
+	if len(rest) < 2 {
+		return fmt.Errorf("usage: %s chunkmap [--html FILE] SNAPSHOT:PATH SNAPSHOT:PATH [...]", "diag chunkmap")
 	}
 
 	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.SnapshotPaths = flags.Args()
-	cmd.HTMLOutput = *htmlOutput
+	cmd.SnapshotPaths = rest
 
 	return nil
 }

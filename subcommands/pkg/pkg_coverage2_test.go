@@ -35,7 +35,7 @@ func TestPkgExecuteNoAction(t *testing.T) {
 func TestPkgCreateParseAbsoluteManifest(t *testing.T) {
 	ctx := newCtx(t)
 	manifest := filepath.Join(ctx.CWD, "manifest.yaml")
-	require.NoError(t, os.WriteFile(manifest, []byte("name: myplugin\n"), 0644))
+	require.NoError(t, os.WriteFile(manifest, []byte("name: myplugin\nconnectors:\n  - type: importer\n    executable: myplugin\n"), 0644))
 
 	// Pass an absolute, uncleaned path to take the filepath.Clean branch.
 	dirty := filepath.Join(ctx.CWD, ".", "manifest.yaml")
@@ -48,7 +48,7 @@ func TestPkgCreateParseAbsoluteManifest(t *testing.T) {
 func TestPkgCreateParseGOOSGOARCHEnv(t *testing.T) {
 	ctx := newCtx(t)
 	manifest := filepath.Join(ctx.CWD, "manifest.yaml")
-	require.NoError(t, os.WriteFile(manifest, []byte("name: myplugin\n"), 0644))
+	require.NoError(t, os.WriteFile(manifest, []byte("name: myplugin\nconnectors:\n  - type: importer\n    executable: myplugin\n"), 0644))
 
 	t.Setenv("GOOS", "plan9")
 	t.Setenv("GOARCH", "mips")
@@ -208,7 +208,7 @@ func TestScanEmitsErrorForMissingConnectorFiles(t *testing.T) {
 			ExtraFiles: []string{"ghost-extra.dat"}, // missing
 		}},
 	}
-	imp := &pkgerImporter{cwd: dir, manifest: m, manifestPath: manifest}
+	imp := &pkgerImporter{cwd: dir, manifest: m}
 
 	ch := make(chan *connectors.Record, 128)
 	err := imp.Import(context.Background(), ch, nil)
@@ -241,7 +241,7 @@ func TestScanPropagatesNotBelowManifestError(t *testing.T) {
 			Executable: outside,
 		}},
 	}
-	imp := &pkgerImporter{cwd: sub, manifest: m, manifestPath: manifest}
+	imp := &pkgerImporter{cwd: sub, manifest: m}
 
 	ch := make(chan *connectors.Record, 64)
 	err := imp.Import(context.Background(), ch, nil)

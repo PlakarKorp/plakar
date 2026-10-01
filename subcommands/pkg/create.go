@@ -19,13 +19,14 @@ package pkg
 
 import (
 	"bytes"
-	"flag"
 	"fmt"
 	"io"
 	"math"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/PlakarKorp/kloset/connectors/storage"
 	"github.com/PlakarKorp/kloset/hashing"
@@ -37,6 +38,8 @@ import (
 	"github.com/PlakarKorp/pkg"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/spf13/cobra"
+	"go.yaml.in/yaml/v3"
 	"golang.org/x/mod/semver"
 )
 
@@ -47,25 +50,35 @@ type PkgCreate struct {
 	Out          string
 	Manifest     pkg.Manifest
 	ManifestPath string
+	Version      string
+	Arch         string
+	Container    bool
+	ImageRef     string
+}
+
+func (cmd *PkgCreate) CobraCommand() *cobra.Command {
+	c := &cobra.Command{
+		Use: "pkg create",
+	}
+	c.Flags().StringVar(&cmd.Out, "out", "", "Plugin file to create")
+	c.Flags().BoolVar(&cmd.Container, "container", false, "Build a container image from the Dockerfile next to the manifest and package a reference to it instead of executables")
+	c.Flags().StringVar(&cmd.ImageRef, "image-ref", "", "Registry reference to record as the image pull source (container packages only)")
+	return c
 }
 
 func (cmd *PkgCreate) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("pkg create", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s [-out plugin] manifest.yaml version\n",
-			flags.Name())
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
 	}
 
-	flags.StringVar(&cmd.Out, "out", "", "Plugin file to create")
-	flags.Parse(args)
-
-	if flags.NArg() != 2 {
+	if len(rest) != 2 {
 		return fmt.Errorf("wrong usage")
 	}
 
 	var (
-		manifest = flags.Arg(0)
-		version  = flags.Arg(1)
+		manifest = rest[0]
+		version  = rest[1]
 	)
 
 	if !semver.IsValid(version) {
@@ -102,16 +115,103 @@ func (cmd *PkgCreate) Parse(ctx *appcontext.AppContext, args []string) error {
 	if goarchEnv := os.Getenv("GOARCH"); goarchEnv != "" {
 		GOARCH = goarchEnv
 	}
+	cmd.Version = version
+	cmd.Arch = GOARCH
+
+	if cmd.Container && GOOS != "linux" {
+		return fmt.Errorf("container packages are linux-only")
+	}
+	if cmd.ImageRef != "" && !cmd.Container {
+		return fmt.Errorf("-image-ref requires -container")
+	}
 
 	if cmd.Out == "" {
 		p := fmt.Sprintf("%s_%s_%s_%s.ptar", cmd.Manifest.Name, version, GOOS, GOARCH)
+		if cmd.Container {
+			p = fmt.Sprintf("%s_%s_%s_%s.ptar", cmd.Manifest.Name, version, pkg.OSContainer, GOARCH)
+		}
 		cmd.Out = filepath.Join(ctx.CWD, p)
 	}
 
 	return nil
 }
 
+// containerize builds the image from the Dockerfile next to the manifest and
+// rewrites the connectors to carry the resulting image ID instead of their
+// executable, which becomes the command run inside the container.
+func (cmd *PkgCreate) containerize(ctx *appcontext.AppContext) error {
+	if _, err := os.Stat(filepath.Join(cmd.Base, "Dockerfile")); err != nil {
+		return fmt.Errorf("container packages need a Dockerfile next to the manifest: %w", err)
+	}
+
+	// docker build writes the image id to a file
+	iid, err := os.CreateTemp("", "plakar-iidfile-")
+	if err != nil {
+		return err
+	}
+	iid.Close()
+	defer os.Remove(iid.Name())
+
+	// We only reference ImageIDs internally, but we still want to produce a
+	// human readable tag so that docker images stays nice.
+	tag := fmt.Sprintf("plakar/plugin-%s:%s", cmd.Manifest.Name, cmd.Version)
+	build := exec.CommandContext(ctx, "docker", "build",
+		"-t", tag,
+		"--platform", "linux/"+cmd.Arch,
+		"--iidfile", iid.Name(),
+		cmd.Base)
+	build.Stdout = ctx.Stdout
+	build.Stderr = ctx.Stderr
+	if err := build.Run(); err != nil {
+		return fmt.Errorf("docker build failed: %w", err)
+	}
+
+	rawID, err := os.ReadFile(iid.Name())
+	if err != nil {
+		return err
+	}
+	imageID := strings.TrimSpace(string(rawID))
+	if imageID == "" {
+		return fmt.Errorf("docker build produced no image ID")
+	}
+
+	for i := range cmd.Manifest.Connectors {
+		conn := &cmd.Manifest.Connectors[i]
+		conn.Args = append([]string{conn.Executable}, conn.Args...)
+		conn.Executable = ""
+		conn.ImageID = imageID
+		conn.Image = cmd.ImageRef
+	}
+	return nil
+}
+
 func (cmd *PkgCreate) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (int, error) {
+	if cmd.Container {
+		if err := cmd.containerize(ctx); err != nil {
+			return 1, err
+		}
+	}
+
+	for i := range cmd.Manifest.Connectors {
+		if err := cmd.Manifest.Connectors[i].Validate(); err != nil {
+			return 1, fmt.Errorf("invalid connector: %w", err)
+		}
+	}
+
+	// When in container mode the manifest is built from the Manifest struct in
+	// memory and contains ImageID and possibly Image.
+	// Otherwise when using native mode we just read the file from disk.
+	var manifestData []byte
+	var err error
+	if cmd.Container {
+		manifestData, err = yaml.Marshal(&cmd.Manifest)
+	} else {
+		manifestData, err = os.ReadFile(cmd.ManifestPath)
+	}
+	if err != nil {
+		return 1, fmt.Errorf("failed to load the manifest: %w", err)
+	}
+
 	storageConfiguration := storage.NewConfiguration()
 	storageConfiguration.Encryption = nil
 	storageConfiguration.Packfile.MaxSize = math.MaxUint64
@@ -143,19 +243,11 @@ func (cmd *PkgCreate) Execute(ctx *appcontext.AppContext, _ *repository.Reposito
 		return 1, fmt.Errorf("failed to create ptar: %w", err)
 	}
 
-	identifier := objects.RandomMAC()
-	scanCache, err := repo.AppContext().GetCache().Scan(identifier)
-	if err != nil {
-		return 1, fmt.Errorf("failed to get the scan cache: %w", err)
-	}
-
-	repoWriter := repo.NewRepositoryWriter(scanCache, identifier, repository.PtarType, "")
 	imp := &pkgerImporter{
-		manifestPath: cmd.ManifestPath,
+		manifestData: manifestData,
 		manifest:     &cmd.Manifest,
 		cwd:          cmd.Base,
 	}
-
 	source, err := snapshot.NewSource(ctx, imp)
 	if err != nil {
 		return 1, err
@@ -163,29 +255,20 @@ func (cmd *PkgCreate) Execute(ctx *appcontext.AppContext, _ *repository.Reposito
 
 	backupOptions := &snapshot.BuilderOptions{
 		NoCheckpoint: true,
-		NoCommit:     true,
 	}
 
-	snap, err := snapshot.CreateWithRepositoryWriter(repoWriter, backupOptions, objects.NilMac)
+	snap, err := snapshot.Create(repo, repository.PtarType, "", objects.NilMac, backupOptions)
 	if err != nil {
 		return 1, fmt.Errorf("failed to create snapshot: %w", err)
 	}
+	defer snap.Close()
 
-	err = snap.Backup(source)
-	if err != nil {
+	if err = snap.Backup(source); err != nil {
 		return 1, fmt.Errorf("failed to populate the snapshot: %w", err)
 	}
 
-	_, err = snap.PutSnapshot()
-	if err != nil {
+	if err = snap.Commit(); err != nil {
 		return 1, fmt.Errorf("failed to commit snapshot: %w", err)
-	}
-
-	// We are done with everything we can now stop the backup routines.
-	repoWriter.PackerManager.Wait()
-	err = repoWriter.CommitTransaction(identifier)
-	if err != nil {
-		return 1, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	if err := st.Close(ctx); err != nil {

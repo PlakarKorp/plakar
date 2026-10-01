@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/url"
 	"path"
-	"path/filepath"
 	"strings"
 
 	"maps"
@@ -125,7 +124,7 @@ func applyRootOverride(location string, rootOverride string) (string, error) {
 		if strings.HasPrefix(rootOverride, "/") {
 			location = rootOverride
 		} else {
-			location = filepath.Join(location, rootOverride)
+			location = path.Join(location, rootOverride)
 		}
 	} else {
 		u, err := url.Parse(location)

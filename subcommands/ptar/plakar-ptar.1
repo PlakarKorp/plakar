@@ -8,6 +8,8 @@
 .Nm plakar ptar
 .Op Fl plaintext
 .Op Fl overwrite
+.Op Fl ignore Ar pattern
+.Op Fl ignore-file Ar file
 .Op Fl k Ar location
 .Fl o Ar file.ptar
 .Op Ar path ...
@@ -38,6 +40,18 @@ flag is given,
 .Nm plakar ptar
 refuses to replace an existing archive.
 .Pp
+In addition to the flags described below,
+.Nm plakar ptar
+supports the location flags documented in
+.Xr plakar-query 7
+to precisely select which snapshots of the
+.Fl k
+klosets are bundled.
+Without any of them every snapshot is included.
+They do not affect the
+.Ar path
+arguments, which are always backed up in full.
+.Pp
 The options are as follows:
 .Bl -tag -width Ds
 .It Fl plaintext
@@ -52,9 +66,19 @@ or prompted interactively.
 Overwrite an existing
 .Pa .ptar
 file at the destination path.
+.It Fl ignore Ar pattern
+Exclude files matching a gitignore-style pattern while backing up filesystem
+paths into the archive.
+May be specified multiple times.
+.It Fl ignore-file Ar file
+Read newline-separated gitignore-style patterns from
+.Ar file .
+Blank lines and comments are ignored.
+May be specified multiple times.
 .It Fl k Ar location , Fl kloset Ar location
 Add a kloset repository to include in the archive.
 May be specified multiple times to bundle several repositories.
+The location flags apply to each of them.
 .It Fl o Ar file.ptar
 Path of the archive to create.
 This option is required.

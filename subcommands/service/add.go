@@ -1,13 +1,13 @@
 package services
 
 import (
-	"flag"
 	"fmt"
 	"strings"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/spf13/cobra"
 )
 
 type ServiceAdd struct {
@@ -17,21 +17,26 @@ type ServiceAdd struct {
 	Keys    map[string]string
 }
 
-func (cmd *ServiceAdd) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("service add", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s <name> <key>=<value>...\n", flags.Name())
+func (cmd *ServiceAdd) CobraCommand() *cobra.Command {
+	return &cobra.Command{
+		Use: "service add",
 	}
-	flags.Parse(args)
+}
 
-	if flags.NArg() == 0 {
+func (cmd *ServiceAdd) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
+	}
+
+	if len(rest) == 0 {
 		return fmt.Errorf("no service specified")
 	}
 
-	cmd.Service = flags.Arg(0)
+	cmd.Service = rest[0]
 	cmd.Keys = make(map[string]string)
 
-	for _, kv := range flags.Args()[1:] {
+	for _, kv := range rest[1:] {
 		key, val, found := strings.Cut(kv, "=")
 		if !found || key == "" {
 			return fmt.Errorf("invalid argument %q", kv)

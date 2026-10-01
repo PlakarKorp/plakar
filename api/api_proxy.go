@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/PlakarKorp/pkg"
@@ -14,6 +15,8 @@ import (
 )
 
 var SERVICES_ENDPOINT = "https://api.plakar.io"
+
+const integrationsCacheKey = "all"
 
 func (ui *uiserver) servicesProxy(w http.ResponseWriter, r *http.Request) error {
 	// Define target service base URL
@@ -149,6 +152,77 @@ func (ui *uiserver) servicesSetAlertingServiceConfiguration(w http.ResponseWrite
 	return json.NewEncoder(w).Encode(alertConfig)
 }
 
+func integrationMatchesSearch(it *pkg.Integration, needle string) bool {
+	if needle == "" {
+		return true
+	}
+	needle = strings.ToLower(needle)
+	return strings.Contains(strings.ToLower(it.Name), needle) ||
+		strings.Contains(strings.ToLower(it.DisplayName), needle)
+}
+
+func integrationMatchesInstallationStatus(it *pkg.Integration, filter string) bool {
+	switch filter {
+	case "":
+		return true
+	case "installed":
+		return it.Installation.Status == "installed"
+	case "not-installed":
+		return it.Installation.Status == "not-installed"
+	case "upgradable":
+		return it.Installation.Status == "installed" &&
+			it.Installation.Version != it.LatestVersion
+	default:
+		return false
+	}
+}
+
+func integrationMatchesTag(it *pkg.Integration, tag string) bool {
+	if tag == "" {
+		return true
+	}
+	return slices.Contains(it.Tags, tag)
+}
+
+func integrationMatchesTypes(it *pkg.Integration, filter []string) bool {
+	if len(filter) == 0 {
+		return true
+	}
+	for _, t := range filter {
+		switch t {
+		case "storage":
+			if it.Types.Storage {
+				return true
+			}
+		case "source":
+			if it.Types.Source {
+				return true
+			}
+		case "destination":
+			if it.Types.Destination {
+				return true
+			}
+		case "provider":
+			if it.Types.Provider {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (ui *uiserver) cachedIntegrations() ([]*pkg.Integration, error) {
+	if cached, ok := ui.integrationsCache.Get(integrationsCacheKey); ok {
+		return cached, nil
+	}
+	integrations, err := ui.ctx.GetPkgManager().Query(nil)
+	if err != nil {
+		return nil, err
+	}
+	ui.integrationsCache.Add(integrationsCacheKey, integrations)
+	return integrations, nil
+}
+
 func (ui *uiserver) servicesGetIntegration(w http.ResponseWriter, r *http.Request) error {
 	offset, err := QueryParamToInt64(r, "offset", 0, 0)
 	if err != nil {
@@ -160,17 +234,27 @@ func (ui *uiserver) servicesGetIntegration(w http.ResponseWriter, r *http.Reques
 		return err
 	}
 
-	filterType, _, err := QueryParamToString(r, "type")
-	if err != nil {
-		return err
-	}
+	filterTypes := QueryParamToStrings(r, "type")
 
 	filterTag, _, err := QueryParamToString(r, "tag")
 	if err != nil {
 		return err
 	}
 
-	filterStatus, _, err := QueryParamToString(r, "status")
+	// installation_status is the canonical param; `status` is kept as a
+	// legacy alias. If both are sent, installation_status wins.
+	filterInstallationStatus, _, err := QueryParamToString(r, "installation_status")
+	if err != nil {
+		return err
+	}
+	if filterInstallationStatus == "" {
+		filterInstallationStatus, _, err = QueryParamToString(r, "status")
+		if err != nil {
+			return err
+		}
+	}
+
+	search, _, err := QueryParamToString(r, "search")
 	if err != nil {
 		return err
 	}
@@ -178,22 +262,31 @@ func (ui *uiserver) servicesGetIntegration(w http.ResponseWriter, r *http.Reques
 	var res Items[pkg.Integration]
 	res.Items = make([]pkg.Integration, 0)
 
+	integrations, err := ui.cachedIntegrations()
+	if err != nil {
+		return err
+	}
+
 	var i int64
-	integrations, err := ui.ctx.GetPkgManager().Query(&pkg.QueryOptions{
-		Type:   filterType,
-		Tag:    filterTag,
-		Status: filterStatus,
-	})
-	for _, int := range integrations {
-		if err != nil {
-			return err
+	for _, integration := range integrations {
+		if !integrationMatchesSearch(integration, search) {
+			continue
+		}
+		if !integrationMatchesInstallationStatus(integration, filterInstallationStatus) {
+			continue
+		}
+		if !integrationMatchesTypes(integration, filterTypes) {
+			continue
+		}
+		if !integrationMatchesTag(integration, filterTag) {
+			continue
 		}
 
 		res.Total++
-		i++
-		if i > offset && i < offset+limit {
-			res.Items = append(res.Items, *int)
+		if i >= offset && i < offset+limit {
+			res.Items = append(res.Items, *integration)
 		}
+		i++
 	}
 
 	return json.NewEncoder(w).Encode(res)
@@ -202,7 +295,7 @@ func (ui *uiserver) servicesGetIntegration(w http.ResponseWriter, r *http.Reques
 func (ui *uiserver) servicesGetIntegrationId(w http.ResponseWriter, r *http.Request) error {
 	id := r.PathValue("id")
 
-	integrations, err := ui.ctx.GetPkgManager().Query(nil)
+	integrations, err := ui.cachedIntegrations()
 	if err != nil {
 		return err
 	}

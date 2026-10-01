@@ -17,7 +17,6 @@
 package pkg
 
 import (
-	"flag"
 	"fmt"
 	"net/url"
 	"os"
@@ -30,6 +29,7 @@ import (
 	"github.com/PlakarKorp/pkg"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/spf13/cobra"
 	"golang.org/x/mod/semver"
 )
 
@@ -41,22 +41,25 @@ type PkgBuild struct {
 	Recipe pkg.Recipe
 }
 
+func (cmd *PkgBuild) CobraCommand() *cobra.Command {
+	return &cobra.Command{
+		Use: "pkg build",
+	}
+}
+
 func (cmd *PkgBuild) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("pkg build", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s recipe.yaml\n",
-			flags.Name())
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
 	}
 
-	flags.Parse(args)
-
-	if flags.NArg() != 1 {
+	if len(rest) != 1 {
 		return fmt.Errorf("wrong usage")
 	}
 
-	recipe := flags.Arg(0)
+	recipe := rest[0]
 	if err := getRecipe(ctx, recipe, &cmd.Recipe); err != nil {
-		return fmt.Errorf("failed to parse the %q recipe: %w", flags.Arg(0), err)
+		return fmt.Errorf("failed to parse the %q recipe: %w", rest[0], err)
 	}
 
 	if !namere.Match([]byte(cmd.Recipe.Name)) {

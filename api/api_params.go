@@ -92,6 +92,20 @@ func QueryParamToString(r *http.Request, param string) (string, bool, error) {
 	return str, true, nil
 }
 
+func QueryParamToStrings(r *http.Request, param string) []string {
+	raw := r.URL.Query()[param]
+	if len(raw) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(raw))
+	for _, v := range raw {
+		if v != "" {
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
 func QueryParamToSortKeys(r *http.Request, param, def string) ([]string, error) {
 	str := r.URL.Query().Get(param)
 	if str == "" {

@@ -12,7 +12,6 @@ Back up anything, store anywhere, restore everywhere, with zero-trust encryption
 [![Subscribe on YouTube](https://img.shields.io/badge/YouTube-Subscribe-red?logo=youtube&logoColor=white&style=for-the-badge)](https://www.youtube.com/@PlakarKorp)
 [![Join our Subreddit](https://img.shields.io/badge/Reddit-Join%20r%2Fplakar-orange?logo=reddit&logoColor=white&style=for-the-badge)](https://www.reddit.com/r/plakar/)
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/PlakarKorp/plakar)](https://goreportcard.com/report/github.com/PlakarKorp/plakar)
 [![codecov](https://codecov.io/gh/PlakarKorp/plakar/branch/main/graph/badge.svg)](https://codecov.io/gh/PlakarKorp/plakar)
 
 [Deutsch](https://www.readme-i18n.com/PlakarKorp/plakar?lang=de) |
@@ -66,7 +65,7 @@ plakar at /var/backups restore -to /tmp/restore <snapshot-id>
 plakar at /var/backups ui
 ```
 
-Prebuilt binaries are available at https://www.plakar.io/download. For a full walkthrough, see the [quickstart guide](https://www.plakar.io/docs/v1.1.0/quickstart/first-backup).
+Prebuilt binaries are available at https://www.plakar.io/download. For a full walkthrough, see the [quickstart guide](https://www.plakar.io/docs/community/v1.1.0/quickstart/first-backup).
 
 ## Installation
 
@@ -98,14 +97,14 @@ plakar pkg add <integration>
 plakar at /var/backups sync to @s3
 ```
 
-See the [documentation](https://www.plakar.io/docs) for the full list of supported workflows.
+See the [documentation](https://www.plakar.io/docs/community) for the full list of supported workflows.
 
 ## Documentation
 
-https://www.plakar.io/docs
+https://www.plakar.io/docs/community
 
-- [Quickstart](https://www.plakar.io/docs/v1.1.0/quickstart/first-backup)
-- [Command reference](https://www.plakar.io/docs/v1.1.0/references/commands)
+- [Quickstart](https://www.plakar.io/docs/community/v1.1.0/quickstart/first-backup)
+- [Command reference](https://www.plakar.io/docs/community/v1.1.0/references/commands)
 - [Integrations](https://www.plakar.io/integrations)
 
 ## Contributing and reporting issues

@@ -3,7 +3,6 @@ package diag
 import (
 	"encoding/base64"
 	"encoding/hex"
-	"flag"
 	"fmt"
 	"strings"
 	"time"
@@ -14,6 +13,7 @@ import (
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/dustin/go-humanize"
 	"github.com/google/uuid"
+	"github.com/spf13/cobra"
 )
 
 type DiagSnapshot struct {
@@ -22,16 +22,24 @@ type DiagSnapshot struct {
 	SnapshotID string
 }
 
-func (cmd *DiagSnapshot) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("diag snapshot", flag.ExitOnError)
-	flags.Parse(args)
+func (cmd *DiagSnapshot) CobraCommand() *cobra.Command {
+	return &cobra.Command{
+		Use: "diag snapshot",
+	}
+}
 
-	if len(flags.Args()) < 1 {
-		return fmt.Errorf("usage: %s snapshot SNAPSHOT", flags.Name())
+func (cmd *DiagSnapshot) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
+	}
+
+	if len(rest) < 1 {
+		return fmt.Errorf("usage: %s snapshot SNAPSHOT", "diag snapshot")
 	}
 
 	cmd.RepositorySecret = ctx.GetSecret()
-	cmd.SnapshotID = flags.Args()[0]
+	cmd.SnapshotID = rest[0]
 
 	return nil
 }

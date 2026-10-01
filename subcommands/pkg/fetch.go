@@ -35,7 +35,7 @@ func getRecipe(ctx *appcontext.AppContext, name string, recipe *pkg.Recipe) erro
 		return recipe.Parse(fp)
 
 	default:
-		r, err := ctx.GetPkgManager().FetchRecipe(name)
+		r, err := ctx.GetPkgManager().FetchRecipe(name, nil)
 		if err != nil {
 			return err
 		}

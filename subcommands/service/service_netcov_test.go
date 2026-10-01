@@ -31,7 +31,9 @@ func netcovCtx(t *testing.T, srvURL string) *appcontext.AppContext {
 	ctx.Architecture = "testarch"
 	ctx.Stdout = bytes.NewBuffer(nil)
 	ctx.Stderr = bytes.NewBuffer(nil)
-	ctx.SetCookies(cookies.NewManager(t.TempDir()))
+	cookiesManager, err := cookies.NewManager(t.TempDir())
+	require.NoError(t, err)
+	ctx.SetCookies(cookiesManager)
 	require.NoError(t, ctx.GetCookies().PutAuthToken("netcov-token"))
 	return ctx
 }

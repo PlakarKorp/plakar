@@ -1,0 +1,20 @@
+{
+  "extraKnownMarketplaces": {
+    "plakar": {
+      "source": {
+        "source": "github",
+        "repo": "PlakarKorp/claude-standards"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "plakar-standards@plakar": true
+  },
+  "permissions": {
+    "deny": [
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Read(./.env*)"
+    ]
+  }
+}

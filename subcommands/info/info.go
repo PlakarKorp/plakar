@@ -17,12 +17,12 @@
 package info
 
 import (
-	"flag"
 	"fmt"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/spf13/cobra"
 )
 
 func init() {
@@ -35,22 +35,27 @@ type Info struct {
 	Errors     bool
 }
 
-func (cmd *Info) Parse(ctx *appcontext.AppContext, args []string) error {
-	// Since this is the default action, we plug the general USAGE here.
-	flags := flag.NewFlagSet("info", flag.ExitOnError)
-	flags.BoolVar(&cmd.Errors, "errors", false, "display errors in the repository or snapshot")
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s [-errors] [SNAPSHOT]\n", flags.Name())
+func (cmd *Info) CobraCommand() *cobra.Command {
+	c := &cobra.Command{
+		Use: "info [-errors] [SNAPSHOT]",
 	}
-	flags.Parse(args)
+	c.Flags().BoolVar(&cmd.Errors, "errors", false, "display errors in the repository or snapshot")
+	return c
+}
 
-	if flags.NArg() > 1 {
+func (cmd *Info) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
+	}
+
+	if len(rest) > 1 {
 		return fmt.Errorf("too many arguments")
 	}
 
 	cmd.RepositorySecret = ctx.GetSecret()
-	if flags.NArg() == 1 {
-		cmd.SnapshotID = flags.Arg(0)
+	if len(rest) == 1 {
+		cmd.SnapshotID = rest[0]
 	}
 
 	return nil

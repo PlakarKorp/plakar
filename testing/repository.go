@@ -10,12 +10,12 @@ import (
 	bfs "github.com/PlakarKorp/integrations/fs/storage"
 	"github.com/PlakarKorp/kloset/caching"
 	"github.com/PlakarKorp/kloset/caching/pebble"
+	"github.com/PlakarKorp/kloset/connectors/storage"
 	"github.com/PlakarKorp/kloset/encryption"
 	"github.com/PlakarKorp/kloset/hashing"
 	"github.com/PlakarKorp/kloset/logging"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/resources"
-	"github.com/PlakarKorp/kloset/connectors/storage"
 	"github.com/PlakarKorp/kloset/versioning"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/cookies"
@@ -35,7 +35,8 @@ func GenerateRepository(t *testing.T, bufout *bytes.Buffer, buferr *bytes.Buffer
 		os.RemoveAll(tmpRepoDirRoot)
 	})
 
-	cookies := cookies.NewManager(tmpCacheDir)
+	cookies, err := cookies.NewManager(tmpCacheDir)
+	require.NoError(t, err)
 
 	ctx := appcontext.NewAppContext()
 	ctx.SetCookies(cookies)
@@ -123,7 +124,8 @@ func GenerateRepositoryWithoutConfig(t *testing.T, bufout *bytes.Buffer, buferr 
 		os.RemoveAll(tmpRepoDirRoot)
 	})
 
-	cookies := cookies.NewManager(tmpCacheDir)
+	cookies, err := cookies.NewManager(tmpCacheDir)
+	require.NoError(t, err)
 
 	ctx := appcontext.NewAppContext()
 	ctx.SetCookies(cookies)

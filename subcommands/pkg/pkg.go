@@ -17,12 +17,12 @@
 package pkg
 
 import (
-	"flag"
 	"fmt"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/spf13/cobra"
 )
 
 func init() {
@@ -58,16 +58,20 @@ type Pkg struct {
 	subcommands.SubcommandBase
 }
 
-func (cmd *Pkg) Parse(ctx *appcontext.AppContext, args []string) error {
-	flags := flag.NewFlagSet("pkg", flag.ExitOnError)
-	flags.Usage = func() {
-		fmt.Fprintf(flags.Output(), "Usage: %s list | add | build | create | rm\n",
-			flags.Name())
+func (cmd *Pkg) CobraCommand() *cobra.Command {
+	return &cobra.Command{
+		Use: "pkg",
 	}
-	flags.Parse(args)
+}
 
-	if flags.NArg() > 0 {
-		return fmt.Errorf("invalid argument: %s", flags.Arg(0))
+func (cmd *Pkg) Parse(ctx *appcontext.AppContext, args []string) error {
+	rest, err := subcommands.ParseCobra(cmd, args)
+	if err != nil {
+		return err
+	}
+
+	if len(rest) > 0 {
+		return fmt.Errorf("invalid argument: %s", rest[0])
 	}
 	return fmt.Errorf("no action specified")
 }
