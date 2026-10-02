@@ -1,4 +1,4 @@
-.Dd August 26, 2026
+.Dd September 26, 2026
 .Dt PLAKAR-PKG-SHOW 1
 .Os
 .Sh NAME
@@ -19,6 +19,14 @@ The options are as follows:
 .It Fl available
 Instead of installed packages,
 show the set of prebuilt packages available for this system.
+Packages from an additional registry are followed by a tab and the name
+of that registry, see
+.Xr plakar-pkg-registry 1 .
+Registries that could not be queried, registry entries hidden by a
+package of the same name, and installed packages whose registry was
+removed are reported on the standard error, one per
+line prefixed by
+.Dq warning: .
 .It Fl devel
 Use the integration devel tree.
 .It Fl long
@@ -41,4 +49,5 @@ if set.
 .Xr plakar-pkg-add 1 ,
 .Xr plakar-pkg-build 1 ,
 .Xr plakar-pkg-create 1 ,
+.Xr plakar-pkg-registry 1 ,
 .Xr plakar-pkg-rm 1

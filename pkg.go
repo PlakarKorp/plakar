@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,6 +14,7 @@ import (
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/plugins"
 	"github.com/PlakarKorp/plakar/signify"
+	pkgcmd "github.com/PlakarKorp/plakar/subcommands/pkg"
 	"github.com/PlakarKorp/plakar/utils"
 )
 
@@ -44,15 +46,24 @@ func setupPkgManager(ctx *appcontext.AppContext, configDir, dataDir, cacheDir st
 	verifier := signify.NewVerifier(trust)
 
 	token, _ := ctx.GetCookies().GetAuthToken()
-	manager, err := pkg.New(backend, &pkg.Options{
-		DistURL:         "https://plakar.io/dist/plugins/kloset/",
-		Edition:         "community",
+	opts := &pkg.Options{
+		DistURL:         pkgcmd.OfficialDistURL,
+		Edition:         pkgcmd.DefaultEdition,
 		ApiURL:          "https://api.plakar.io/",
 		BinaryNeedsAuth: true,
 		UserAgent:       "plakar/" + utils.VERSION,
 		RequestHook:     pkg.WithBearer(func() (string, error) { return token, nil }),
 		Verifier:        verifier,
-	})
+		Registries:      ctx.Config.PkgRegistries(),
+	}
+	manager, err := pkg.New(backend, opts)
+	if errors.Is(err, pkg.ErrBadRegistry) {
+		// Not fatal, or "plakar pkg registry rm" could not fix it.
+		fmt.Fprintf(ctx.Stderr, "%s: %s: %s; ignoring additional registries\n",
+			progName(), filepath.Join(configDir, "registries.yml"), err)
+		opts.Registries = nil
+		manager, err = pkg.New(backend, opts)
+	}
 	if err != nil {
 		return fmt.Errorf("failed to init the package manager: %w", err)
 	}

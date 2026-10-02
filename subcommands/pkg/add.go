@@ -82,6 +82,18 @@ func (cmd *PkgAdd) Parse(ctx *appcontext.AppContext, args []string) error {
 	return nil
 }
 
+// installError explains the failures a user can act upon.
+func installError(what, name string, err error) error {
+	switch {
+	case errors.Is(err, pkg.ErrAuthorizationRequired):
+		return fmt.Errorf("failed to %s %s: authentication required. Run `plakar login` and try again", what, name)
+	case errors.Is(err, pkg.ErrUnknownRegistry):
+		// err already names the package.
+		return fmt.Errorf("failed to %s: %w. Run `plakar pkg registry add <name> <url>` to configure it again", what, err)
+	}
+	return fmt.Errorf("failed to %s %s: %w", what, name, err)
+}
+
 func (cmd *PkgAdd) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (int, error) {
 	pkgmgr := ctx.GetPkgManager()
 
@@ -123,11 +135,7 @@ func (cmd *PkgAdd) Execute(ctx *appcontext.AppContext, _ *repository.Repository)
 			if cmd.upgrade && errors.Is(err, pkg.ErrAlreadyInstalled) {
 				continue
 			}
-			if errors.Is(err, pkg.ErrAuthorizationRequired) {
-				return 1, fmt.Errorf("failed to install %s: authentication required. Run `plakar login` and try again", filepath.Base(plugin))
-			}
-			return 1, fmt.Errorf("failed to install %s: %w",
-				filepath.Base(plugin), err)
+			return 1, installError("install", filepath.Base(plugin), err)
 		}
 	}
 
@@ -150,8 +158,13 @@ func (cmd *PkgAdd) Execute(ctx *appcontext.AppContext, _ *repository.Repository)
 				if errors.Is(err, pkg.ErrAlreadyInstalled) {
 					continue
 				}
-				return 1, fmt.Errorf("failed to update %s: %w",
-					plugin.Name, err)
+				// One removed registry must not hold back the
+				// updates of the other packages.
+				if errors.Is(err, pkg.ErrUnknownRegistry) {
+					fmt.Fprintf(ctx.Stderr, "warning: %v\n", installError("update", plugin.Name, err))
+					continue
+				}
+				return 1, installError("update", plugin.Name, err)
 			}
 		}
 	}
