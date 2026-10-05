@@ -98,6 +98,19 @@ func (ctx *AppContext) ExporterOpts() *connectors.Options {
 	}
 }
 
+func (ctx *AppContext) VisualizerOpts() *connectors.Options {
+	return &connectors.Options{
+		Hostname:        ctx.Hostname,
+		OperatingSystem: ctx.OperatingSystem,
+		Architecture:    ctx.Architecture,
+		CWD:             ctx.CWD,
+		MaxConcurrency:  ctx.MaxConcurrency,
+		Stdin:           ctx.Stdin,
+		Stdout:          ctx.Stdout,
+		Stderr:          ctx.Stderr,
+	}
+}
+
 func (c *AppContext) SetCookies(cacheManager *cookies.Manager) {
 	c.cookies = cacheManager
 }

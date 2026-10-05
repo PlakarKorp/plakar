@@ -49,6 +49,7 @@ import (
 	_ "github.com/PlakarKorp/plakar/subcommands/diff"
 	_ "github.com/PlakarKorp/plakar/subcommands/digest"
 	_ "github.com/PlakarKorp/plakar/subcommands/dup"
+	_ "github.com/PlakarKorp/plakar/subcommands/expose"
 	_ "github.com/PlakarKorp/plakar/subcommands/help"
 	_ "github.com/PlakarKorp/plakar/subcommands/info"
 	_ "github.com/PlakarKorp/plakar/subcommands/locate"
