@@ -76,6 +76,7 @@ func (m *MockFile) ScanResult() *connectors.Record {
 
 type testingOptions struct {
 	name     string
+	tags     []string
 	excludes []string
 	gen      func(chan<- *connectors.Record)
 }
@@ -91,6 +92,12 @@ type TestingOptions func(o *testingOptions)
 func WithName(name string) TestingOptions {
 	return func(o *testingOptions) {
 		o.name = name
+	}
+}
+
+func WithTags(tags []string) TestingOptions {
+	return func(o *testingOptions) {
+		o.tags = tags
 	}
 }
 
@@ -135,6 +142,7 @@ func GenerateSnapshot(t *testing.T, repo *repository.Repository, files []MockFil
 	// create a snapshot
 	builder, err := snapshot.Create(repo, repository.DefaultType, "", objects.NilMac, &snapshot.BuilderOptions{
 		Name: o.name,
+		Tags: o.tags,
 	})
 	require.NoError(t, err)
 	require.NotNil(t, builder)
