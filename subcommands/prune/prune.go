@@ -208,7 +208,7 @@ func (cmd *Prune) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 		tags := ""
 		tagList := strings.Join(snap.Header.Tags, ",")
 		if tagList != "" {
-			tags = " tags=" + strings.Join(snap.Header.Tags, ",")
+			tags = " tags=" + utils.SanitizeText(tagList)
 		}
 		prefix := fmt.Sprintf("%s %10s%10s %s%s",
 			snap.Header.Timestamp.UTC().Format(time.RFC3339),

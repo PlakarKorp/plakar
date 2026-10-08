@@ -330,3 +330,23 @@ func TestMergeFilters(t *testing.T) {
 		}
 	})
 }
+
+func TestPrune_DryRun_SanitizesTags(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	repo, ctx := ptesting.GenerateRepository(t, bufOut, bufErr, nil)
+	snap := ptesting.GenerateSnapshot(t, repo, []ptesting.MockFile{
+		ptesting.NewMockFile("a.txt", 0644, "a"),
+	}, ptesting.WithTags([]string{"ok", "evil\x1b[2J\x07"}))
+	defer snap.Close()
+
+	cmd := &Prune{}
+	require.NoError(t, cmd.Parse(ctx, []string{"--per-minute=1"}))
+	_, err := cmd.Execute(ctx, repo)
+	require.NoError(t, err)
+
+	out := bufOut.String()
+	require.Contains(t, out, " tags=ok,evil?[2J?")
+	require.NotContains(t, out, "\x1b")
+	require.NotContains(t, out, "\x07")
+}

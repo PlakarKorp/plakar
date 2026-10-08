@@ -152,3 +152,23 @@ func TestRm_DryRun_ShowsPlan(t *testing.T) {
 	require.Contains(t, out, "rm: would remove these 1 snapshot(s), run with -apply to proceed")
 	require.NotContains(t, out, "rm: removal of") // no actual deletion
 }
+
+func TestRm_DryRun_SanitizesTags(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	repo, ctx := ptesting.GenerateRepository(t, bufOut, bufErr, nil)
+	snap := ptesting.GenerateSnapshot(t, repo, []ptesting.MockFile{
+		ptesting.NewMockFile("a.txt", 0644, "a"),
+	}, ptesting.WithTags([]string{"ok", "evil\x1b[2J\x07"}))
+	defer snap.Close()
+
+	cmd := &Rm{}
+	require.NoError(t, cmd.Parse(ctx, []string{"-latest"}))
+	_, err := cmd.Execute(ctx, repo)
+	require.NoError(t, err)
+
+	out := bufOut.String()
+	require.Contains(t, out, " tags=ok,evil?[2J?")
+	require.NotContains(t, out, "\x1b")
+	require.NotContains(t, out, "\x07")
+}
