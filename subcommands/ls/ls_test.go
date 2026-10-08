@@ -315,3 +315,26 @@ func TestLsListSnapshotNoErrors(t *testing.T) {
 	require.Contains(t, bufOut.String(), "dummy.txt")
 	require.Empty(t, bufErr.String())
 }
+
+func TestLsTagsSanitized(t *testing.T) {
+	for _, args := range [][]string{{"-tags"}, {"-tags", "-uuid"}} {
+		t.Run(strings.Join(args, " "), func(t *testing.T) {
+			bufOut := bytes.NewBuffer(nil)
+			repo, ctx := ptesting.GenerateRepository(t, bufOut, bytes.NewBuffer(nil), nil)
+			snap := ptesting.GenerateSnapshot(t, repo, []ptesting.MockFile{
+				ptesting.NewMockFile("a.txt", 0644, "a"),
+			}, ptesting.WithTags([]string{"ok", "evil\x1b[2J\x07"}))
+			defer snap.Close()
+
+			cmd := &Ls{}
+			require.NoError(t, cmd.Parse(ctx, args))
+			_, err := cmd.Execute(ctx, repo)
+			require.NoError(t, err)
+
+			out := bufOut.String()
+			require.Contains(t, out, " tags=ok,evil?[2J?")
+			require.NotContains(t, out, "\x1b")
+			require.NotContains(t, out, "\x07")
+		})
+	}
+}

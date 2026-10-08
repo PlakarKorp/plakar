@@ -113,7 +113,7 @@ func (cmd *Ls) list_snapshots(ctx *appcontext.AppContext, repo *repository.Repos
 		if cmd.ShowTags && len(snap.Header.Tags) > 0 {
 			tagList := strings.Join(snap.Header.Tags, ",")
 			if tagList != "" {
-				tags = " tags=" + strings.Join(snap.Header.Tags, ",")
+				tags = " tags=" + utils.SanitizeText(tagList)
 			}
 		}
 
