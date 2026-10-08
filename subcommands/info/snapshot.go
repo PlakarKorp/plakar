@@ -10,6 +10,7 @@ import (
 	"github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/utils"
 	"github.com/dustin/go-humanize"
 	"github.com/google/uuid"
 )
@@ -29,12 +30,12 @@ func (cmd *Info) executeSnapshot(ctx *appcontext.AppContext, repo *repository.Re
 	fmt.Fprintf(ctx.Stdout, "Timestamp: %s\n", header.Timestamp)
 	fmt.Fprintf(ctx.Stdout, "Duration: %s\n", header.Duration)
 
-	fmt.Fprintf(ctx.Stdout, "Name: %s\n", header.Name)
-	fmt.Fprintf(ctx.Stdout, "Environment: %s\n", header.Environment)
-	fmt.Fprintf(ctx.Stdout, "Perimeter: %s\n", header.Perimeter)
-	fmt.Fprintf(ctx.Stdout, "Category: %s\n", header.Category)
+	fmt.Fprintf(ctx.Stdout, "Name: %s\n", utils.SanitizeText(header.Name))
+	fmt.Fprintf(ctx.Stdout, "Environment: %s\n", utils.SanitizeText(header.Environment))
+	fmt.Fprintf(ctx.Stdout, "Perimeter: %s\n", utils.SanitizeText(header.Perimeter))
+	fmt.Fprintf(ctx.Stdout, "Category: %s\n", utils.SanitizeText(header.Category))
 	if len(header.Tags) > 0 {
-		fmt.Fprintf(ctx.Stdout, "Tags: %s\n", strings.Join(header.Tags, ", "))
+		fmt.Fprintf(ctx.Stdout, "Tags: %s\n", utils.SanitizeText(strings.Join(header.Tags, ", ")))
 	}
 
 	if header.Identity.Identifier != uuid.Nil {
@@ -49,21 +50,21 @@ func (cmd *Info) executeSnapshot(ctx *appcontext.AppContext, repo *repository.Re
 	fmt.Fprintf(ctx.Stdout, " - Errors: %x\n", header.GetSource(0).VFS.Errors)
 
 	fmt.Fprintln(ctx.Stdout, "Importer:")
-	fmt.Fprintf(ctx.Stdout, " - Type: %s\n", header.GetSource(0).Importer.Type)
-	fmt.Fprintf(ctx.Stdout, " - Origin: %s\n", header.GetSource(0).Importer.Origin)
-	fmt.Fprintf(ctx.Stdout, " - Directory: %s\n", header.GetSource(0).Importer.Directory)
+	fmt.Fprintf(ctx.Stdout, " - Type: %s\n", utils.SanitizeText(header.GetSource(0).Importer.Type))
+	fmt.Fprintf(ctx.Stdout, " - Origin: %s\n", utils.SanitizeText(header.GetSource(0).Importer.Origin))
+	fmt.Fprintf(ctx.Stdout, " - Directory: %s\n", utils.SanitizeText(header.GetSource(0).Importer.Directory))
 
 	fmt.Fprintln(ctx.Stdout, "Context:")
-	fmt.Fprintf(ctx.Stdout, " - MachineID: %s\n", header.GetContext("MachineID"))
-	fmt.Fprintf(ctx.Stdout, " - Hostname: %s\n", header.GetContext("Hostname"))
-	fmt.Fprintf(ctx.Stdout, " - Username: %s\n", header.GetContext("Username"))
-	fmt.Fprintf(ctx.Stdout, " - OperatingSystem: %s\n", header.GetContext("OperatingSystem"))
-	fmt.Fprintf(ctx.Stdout, " - Architecture: %s\n", header.GetContext("Architecture"))
-	fmt.Fprintf(ctx.Stdout, " - NumCPU: %s\n", header.GetContext("NumCPU"))
-	fmt.Fprintf(ctx.Stdout, " - GOMAXPROCS: %s\n", header.GetContext("GOMAXPROCS"))
-	fmt.Fprintf(ctx.Stdout, " - ProcessID: %s\n", header.GetContext("ProcessID"))
-	fmt.Fprintf(ctx.Stdout, " - Client: %s\n", header.GetContext("Client"))
-	fmt.Fprintf(ctx.Stdout, " - CommandLine: %s\n", header.GetContext("CommandLine"))
+	fmt.Fprintf(ctx.Stdout, " - MachineID: %s\n", utils.SanitizeText(header.GetContext("MachineID")))
+	fmt.Fprintf(ctx.Stdout, " - Hostname: %s\n", utils.SanitizeText(header.GetContext("Hostname")))
+	fmt.Fprintf(ctx.Stdout, " - Username: %s\n", utils.SanitizeText(header.GetContext("Username")))
+	fmt.Fprintf(ctx.Stdout, " - OperatingSystem: %s\n", utils.SanitizeText(header.GetContext("OperatingSystem")))
+	fmt.Fprintf(ctx.Stdout, " - Architecture: %s\n", utils.SanitizeText(header.GetContext("Architecture")))
+	fmt.Fprintf(ctx.Stdout, " - NumCPU: %s\n", utils.SanitizeText(header.GetContext("NumCPU")))
+	fmt.Fprintf(ctx.Stdout, " - GOMAXPROCS: %s\n", utils.SanitizeText(header.GetContext("GOMAXPROCS")))
+	fmt.Fprintf(ctx.Stdout, " - ProcessID: %s\n", utils.SanitizeText(header.GetContext("ProcessID")))
+	fmt.Fprintf(ctx.Stdout, " - Client: %s\n", utils.SanitizeText(header.GetContext("Client")))
+	fmt.Fprintf(ctx.Stdout, " - CommandLine: %s\n", utils.SanitizeText(header.GetContext("CommandLine")))
 
 	fmt.Fprintln(ctx.Stdout, "Summary:")
 	fmt.Fprintf(ctx.Stdout, " - Directories: %d\n", header.GetSource(0).Summary.Directory.Directories+header.GetSource(0).Summary.Below.Directories)
