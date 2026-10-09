@@ -11,6 +11,7 @@ import (
 	"github.com/PlakarKorp/kloset/snapshot/vfs"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/PlakarKorp/plakar/utils"
 	"github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
 )
@@ -68,8 +69,8 @@ func (cmd *DiagVFS) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 	}
 
 	fmt.Fprintf(ctx.Stdout, "Version: %d\n", entry.Version)
-	fmt.Fprintf(ctx.Stdout, "ParentPath: %s\n", entry.ParentPath)
-	fmt.Fprintf(ctx.Stdout, "Name: %s\n", entry.Stat().Name())
+	fmt.Fprintf(ctx.Stdout, "ParentPath: %s\n", utils.SanitizeText(entry.ParentPath))
+	fmt.Fprintf(ctx.Stdout, "Name: %s\n", utils.SanitizeText(entry.Stat().Name()))
 	fmt.Fprintf(ctx.Stdout, "Size: %s (%d bytes)\n", humanize.IBytes(uint64(entry.Stat().Size())), entry.Stat().Size())
 	fmt.Fprintf(ctx.Stdout, "Permissions: %s\n", entry.Stat().Mode())
 	fmt.Fprintf(ctx.Stdout, "ModTime: %s\n", entry.Stat().ModTime())
@@ -77,24 +78,24 @@ func (cmd *DiagVFS) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 	fmt.Fprintf(ctx.Stdout, "InodeID: %d\n", entry.Stat().Ino())
 	fmt.Fprintf(ctx.Stdout, "UserID: %d\n", entry.Stat().Uid())
 	fmt.Fprintf(ctx.Stdout, "GroupID: %d\n", entry.Stat().Gid())
-	fmt.Fprintf(ctx.Stdout, "Username: %s\n", entry.Stat().Username())
-	fmt.Fprintf(ctx.Stdout, "Groupname: %s\n", entry.Stat().Groupname())
+	fmt.Fprintf(ctx.Stdout, "Username: %s\n", utils.SanitizeText(entry.Stat().Username()))
+	fmt.Fprintf(ctx.Stdout, "Groupname: %s\n", utils.SanitizeText(entry.Stat().Groupname()))
 	fmt.Fprintf(ctx.Stdout, "NumLinks: %d\n", entry.Stat().Nlink())
-	fmt.Fprintf(ctx.Stdout, "ExtendedAttributes: %s\n", entry.ExtendedAttributes)
+	fmt.Fprintf(ctx.Stdout, "ExtendedAttributes: %s\n", utils.SanitizeText(fmt.Sprintf("%s", entry.ExtendedAttributes)))
 	fmt.Fprintf(ctx.Stdout, "FileAttributes: %v\n", entry.FileAttributes)
 	if entry.SymlinkTarget != "" {
-		fmt.Fprintf(ctx.Stdout, "SymlinkTarget: %s\n", entry.SymlinkTarget)
+		fmt.Fprintf(ctx.Stdout, "SymlinkTarget: %s\n", utils.SanitizeText(entry.SymlinkTarget))
 	}
 	fmt.Fprintf(ctx.Stdout, "Classification:\n")
 	for _, classification := range entry.Classifications {
-		fmt.Fprintf(ctx.Stdout, " - %s:\n", classification.Analyzer)
+		fmt.Fprintf(ctx.Stdout, " - %s:\n", utils.SanitizeText(classification.Analyzer))
 		for _, class := range classification.Classes {
-			fmt.Fprintf(ctx.Stdout, "   - %s\n", class)
+			fmt.Fprintf(ctx.Stdout, "   - %s\n", utils.SanitizeText(class))
 		}
 	}
-	fmt.Fprintf(ctx.Stdout, "CustomMetadata: %s\n", entry.CustomMetadata)
-	fmt.Fprintf(ctx.Stdout, "Tags: %s\n", entry.Tags)
-	fmt.Fprintf(ctx.Stdout, "ExtendedAttributes: %v\n", entry.ExtendedAttributes)
+	fmt.Fprintf(ctx.Stdout, "CustomMetadata: %s\n", utils.SanitizeText(fmt.Sprintf("%s", entry.CustomMetadata)))
+	fmt.Fprintf(ctx.Stdout, "Tags: %s\n", utils.SanitizeText(fmt.Sprint(entry.Tags)))
+	fmt.Fprintf(ctx.Stdout, "ExtendedAttributes: %v\n", utils.SanitizeText(fmt.Sprint(entry.ExtendedAttributes)))
 
 	summary := entry.Summary
 	if summary == nil && entry.IsDir() {
@@ -188,17 +189,17 @@ func (cmd *DiagVFS) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 		}
 		offset := 0
 		for child := range iter {
-			fmt.Fprintf(ctx.Stdout, "Child[%d].FileInfo.Name(): %s\n", offset, child.Stat().Name())
+			fmt.Fprintf(ctx.Stdout, "Child[%d].FileInfo.Name(): %s\n", offset, utils.SanitizeText(child.Stat().Name()))
 			fmt.Fprintf(ctx.Stdout, "Child[%d].FileInfo.Size(): %d\n", offset, child.Stat().Size())
 			fmt.Fprintf(ctx.Stdout, "Child[%d].FileInfo.Mode(): %s\n", offset, child.Stat().Mode())
 			fmt.Fprintf(ctx.Stdout, "Child[%d].FileInfo.Dev(): %d\n", offset, child.Stat().Dev())
 			fmt.Fprintf(ctx.Stdout, "Child[%d].FileInfo.Ino(): %d\n", offset, child.Stat().Ino())
 			fmt.Fprintf(ctx.Stdout, "Child[%d].FileInfo.Uid(): %d\n", offset, child.Stat().Uid())
 			fmt.Fprintf(ctx.Stdout, "Child[%d].FileInfo.Gid(): %d\n", offset, child.Stat().Gid())
-			fmt.Fprintf(ctx.Stdout, "Child[%d].FileInfo.Username(): %s\n", offset, child.Stat().Username())
-			fmt.Fprintf(ctx.Stdout, "Child[%d].FileInfo.Groupname(): %s\n", offset, child.Stat().Groupname())
+			fmt.Fprintf(ctx.Stdout, "Child[%d].FileInfo.Username(): %s\n", offset, utils.SanitizeText(child.Stat().Username()))
+			fmt.Fprintf(ctx.Stdout, "Child[%d].FileInfo.Groupname(): %s\n", offset, utils.SanitizeText(child.Stat().Groupname()))
 			fmt.Fprintf(ctx.Stdout, "Child[%d].FileInfo.Nlink(): %d\n", offset, child.Stat().Nlink())
-			fmt.Fprintf(ctx.Stdout, "Child[%d].ExtendedAttributes(): %v\n", offset, child.ExtendedAttributes)
+			fmt.Fprintf(ctx.Stdout, "Child[%d].ExtendedAttributes(): %v\n", offset, utils.SanitizeText(fmt.Sprint(child.ExtendedAttributes)))
 			offset++
 		}
 	}
@@ -208,7 +209,7 @@ func (cmd *DiagVFS) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 		if err != nil {
 			return 1, fmt.Errorf("failure in scanning errors: %w", err)
 		}
-		fmt.Fprintf(ctx.Stdout, "Error[%d]: %s: %s\n", offset, entry.Name, entry.Error)
+		fmt.Fprintf(ctx.Stdout, "Error[%d]: %s: %s\n", offset, utils.SanitizeText(entry.Name), utils.SanitizeText(entry.Error))
 		offset++
 	}
 	return 0, nil
