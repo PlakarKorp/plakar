@@ -42,6 +42,13 @@ func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &Diff{} }, 0, "diff")
 }
 
+const (
+	diffAddedMarker   = "+"
+	diffRemovedMarker = "-"
+	diffChangedMarker = "~"
+	diffRootPath      = "/"
+)
+
 func (cmd *Diff) CobraCommand() *cobra.Command {
 	c := &cobra.Command{
 		Use: "diff [OPTIONS] SNAPSHOT:PATH SNAPSHOT[:PATH]",
@@ -177,7 +184,7 @@ func (cmd *Diff) diff_pathnames(out io.Writer, id1 string, vfs1 fs.FS, pathname1
 
 	if st1.IsDir() && st2.IsDir() {
 		if cmd.Recursive {
-			return cmd.diff_directories_recursive(out, id1, vfs1, pathname1, id2, vfs2, pathname1)
+			return cmd.diff_directories_recursive(out, id1, vfs1, pathname1, id2, vfs2, pathname2)
 		}
 		return cmd.diff_directories_flat(out, pathname1, fsobj1, pathname2, fsobj2)
 	} else if st1.IsDir() || st2.IsDir() {
@@ -244,8 +251,11 @@ func (cmd *Diff) diff_directories_recursive(out io.Writer, id1 string, fs1 fs.FS
 	entries1, err1 := fs.ReadDir(fs1, path1)
 	entries2, err2 := fs.ReadDir(fs2, path2)
 
-	if err1 != nil && err2 != nil {
-		return fmt.Errorf("cannot read both directories: %w / %w", err1, err2)
+	if err1 != nil {
+		return fmt.Errorf("cannot read directory %s: %w", path1, err1)
+	}
+	if err2 != nil {
+		return fmt.Errorf("cannot read directory %s: %w", path2, err2)
 	}
 
 	map1 := make(map[string]fs.DirEntry)
@@ -279,21 +289,19 @@ func (cmd *Diff) diff_directories_recursive(out io.Writer, id1 string, fs1 fs.FS
 		full1 := path.Join(path1, name)
 		full2 := path.Join(path2, name)
 
-		// non VFS have their / stripped, reintroduce it
-		if !strings.HasPrefix(path2, "/") {
-			path2 = "/" + path2 // Ensure pathname starts with a slash
-		}
-
 		switch {
 		case ok1 && !ok2:
-			fmt.Fprintf(out, "Only in %s: %s\n", path1, name)
+			if err := writeRecursiveOnly(out, diffRemovedMarker, fs1, full1); err != nil {
+				return err
+			}
 
 		case !ok1 && ok2:
-			fmt.Fprintf(out, "Only in %s: %s\n", path2, name)
+			if err := writeRecursiveOnly(out, diffAddedMarker, fs2, full2); err != nil {
+				return err
+			}
 
 		case ok1 && ok2:
 			if e1.IsDir() && e2.IsDir() {
-				fmt.Fprintf(out, "Common subdirectories: %s and %s\n", full1, full2)
 				err := cmd.diff_directories_recursive(out, id1, fs1, full1, id2, fs2, full2)
 				if err != nil {
 					return err
@@ -311,19 +319,73 @@ func (cmd *Diff) diff_directories_recursive(out io.Writer, id1 string, fs1 fs.FS
 					return err
 				}
 
-				err = cmd.diff_readers(out, id1, full1, rd1, id2, full2, rd2)
+				diff := strings.Builder{}
+				err = cmd.diff_readers(&diff, id1, full1, rd1, id2, full2, rd2)
 				rd1.Close()
 				rd2.Close()
 				if err != nil {
 					return err
 				}
+				if diff.Len() > 0 {
+					fmt.Fprintf(out, "%s %s\n", diffChangedMarker, displayRecursivePath(full1))
+					if _, err := io.WriteString(out, diff.String()); err != nil {
+						return err
+					}
+				}
 			} else {
-				fmt.Fprintf(out, "File type mismatch: %s vs %s\n", full1, full2)
+				if err := writeRecursiveOnly(out, diffRemovedMarker, fs1, full1); err != nil {
+					return err
+				}
+				if err := writeRecursiveOnly(out, diffAddedMarker, fs2, full2); err != nil {
+					return err
+				}
 			}
 		}
 	}
 
 	return nil
+}
+
+func writeRecursiveOnly(out io.Writer, marker string, fsys fs.FS, pathname string) error {
+	info, err := fs.Stat(fsys, pathname)
+	if err != nil {
+		return fmt.Errorf("cannot stat recursive diff entry %s: %w", pathname, err)
+	}
+
+	if !info.IsDir() {
+		fmt.Fprintf(out, "%s %s\n", marker, displayRecursivePath(pathname))
+		return nil
+	}
+
+	hasChildren := false
+	err = fs.WalkDir(fsys, pathname, func(current string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if current == pathname || entry.IsDir() {
+			return nil
+		}
+		hasChildren = true
+		fmt.Fprintf(out, "%s %s\n", marker, displayRecursivePath(current))
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("cannot walk recursive diff entry %s: %w", pathname, err)
+	}
+	if !hasChildren {
+		fmt.Fprintf(out, "%s %s\n", marker, displayRecursivePath(pathname))
+	}
+	return nil
+}
+
+func displayRecursivePath(pathname string) string {
+	if pathname == "" {
+		return diffRootPath
+	}
+	if strings.HasPrefix(pathname, diffRootPath) {
+		return pathname
+	}
+	return diffRootPath + pathname
 }
 
 // best-effort, works only if the reader is actually a ReaderAt.  All
