@@ -2,25 +2,39 @@ package ptar
 
 import (
 	"bytes"
+	"context"
 	"encoding/hex"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	bfs "github.com/PlakarKorp/integrations/fs/storage"
 	_ "github.com/PlakarKorp/integrations/ptar/storage"
 	"github.com/PlakarKorp/kloset/connectors/storage"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/config"
 	lscmd "github.com/PlakarKorp/plakar/subcommands/ls"
 	ptesting "github.com/PlakarKorp/plakar/testing"
 	"github.com/stretchr/testify/require"
 )
 
+var capturedPtarSyncStoreConfigs []map[string]string
+
 func init() {
 	os.Setenv("TZ", "UTC")
 	// several fixtures below use a plaintext -k source on purpose
 	os.Setenv("PLAKAR_INSECURE_PLAINTEXT", "1")
+
+	storage.Register("ptartestfs", 0, func(ctx context.Context, proto string, storeConfig map[string]string) (storage.Store, error) {
+		capturedPtarSyncStoreConfigs = append(capturedPtarSyncStoreConfigs, maps.Clone(storeConfig))
+
+		fsConfig := maps.Clone(storeConfig)
+		fsConfig["location"] = "fs://" + storeConfig["location"][len("ptartestfs://"):]
+		return bfs.NewStore(ctx, "fs", fsConfig)
+	})
 }
 
 func TestExecuteCmdPtarDefault(t *testing.T) {
@@ -118,6 +132,41 @@ func TestExecuteCmdPtarWithSync(t *testing.T) {
 	status, err := subcommand.Execute(ctx, dstRepo)
 	require.NoError(t, err)
 	require.Equal(t, 0, status)
+}
+
+func TestPtarSyncPassphraseNeverReachesTheBackend(t *testing.T) {
+	capturedPtarSyncStoreConfigs = nil
+
+	passphrase := []byte("QsDfG654321&^%*%!")
+	srcRepo, _ := ptesting.GenerateRepository(t, nil, nil, &passphrase)
+	snap := ptesting.GenerateSnapshot(t, srcRepo, []ptesting.MockFile{
+		ptesting.NewMockFile("file.txt", 0644, "hello"),
+	})
+	defer snap.Close()
+
+	dstRepo, ctx := ptesting.GenerateRepositoryWithoutConfig(t, nil, nil, nil)
+	ctx.Config = config.NewConfig()
+	ctx.Config.Repositories["peer"] = map[string]string{
+		"location": "ptartestfs://" + srcRepo.Root(),
+	}
+	t.Setenv("PLAKAR_REPOSITORIES_PEER_PASSPHRASE", string(passphrase))
+
+	cmd := &Ptar{}
+	require.NoError(t, cmd.Parse(ctx, []string{
+		"-plaintext", "-o", filepath.Join(t.TempDir(), "test.ptar"), "-k", "@peer",
+	}))
+
+	status, err := cmd.Execute(ctx, dstRepo)
+	require.NoError(t, err)
+	require.Equal(t, 0, status)
+
+	require.NotEmpty(t, capturedPtarSyncStoreConfigs, "the sync source store was never opened")
+	for i, cfg := range capturedPtarSyncStoreConfigs {
+		_, hasPass := cfg["passphrase"]
+		_, hasPassCmd := cfg["passphrase_cmd"]
+		require.False(t, hasPass, "call #%d: backend received the peer passphrase in cleartext", i)
+		require.False(t, hasPassCmd, "call #%d: backend received passphrase_cmd", i)
+	}
 }
 
 func TestExecuteCmdPtarSyncFiltersSnapshots(t *testing.T) {

@@ -191,9 +191,17 @@ func completionRepository() (*appcontext.AppContext, *repository.Repository, fun
 	ctx.SetCache(caching.NewManager(pebble.Constructor(cacheDir)))
 	nop = func() { ctx.GetCache().Close(); ctx.Close() }
 
-	storeConfig, err := ctx.Config.GetRepository(completionRepositoryPath(ctx))
+	repositoryPath := completionRepositoryPath(ctx)
+	storeConfig, err := ctx.Config.GetRepository(repositoryPath)
 	if err != nil {
 		return nil, nil, nop, err
+	}
+	passphrase, err := getPassphraseFromEnv(ctx, storeConfig, repositoryPath)
+	if err != nil {
+		return nil, nil, nop, err
+	}
+	if passphrase != "" {
+		ctx.KeyFromFile = passphrase
 	}
 
 	store, serialized, err := storage.Open(ctx.GetInner(), storeConfig)
