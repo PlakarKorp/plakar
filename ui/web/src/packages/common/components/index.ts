@@ -16,6 +16,7 @@ export * from "./error/not-found-error";
 export * from "./error/unexpected-error";
 export * from "./file-icon/file-icon";
 export * from "./file-mode/file-mode";
+export * from "./filter-panel/filter-panel";
 export * from "./floating-overlay-button/floating-overlay-button";
 export * from "./github/github-repo";
 export * from "./kloset";

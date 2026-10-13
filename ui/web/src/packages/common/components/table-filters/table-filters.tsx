@@ -1,8 +1,9 @@
 import { FieldButton, TextInput } from "@plakar-ui/ui/components";
-import { useDebouncer } from "@tanstack/react-pacer/debouncer";
 import clsx from "clsx";
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode } from "react";
 import { Key } from "react-aria-components";
+
+import { useDebouncedSearch } from "../../hooks/use-debounced-search";
 
 type Props = {
   search: string;
@@ -19,29 +20,7 @@ export function TableFilters({
   isFullWidth = true,
   onSearch,
 }: Props) {
-  const [localSearch, setLocalSearch] = useState(search);
-
-  // Sync local state when the URL changes (eg. back/forward navigation).
-  useEffect(() => {
-    setLocalSearch(search);
-  }, [search]);
-
-  const searchDebouncer = useDebouncer((value: string) => onSearch(value), {
-    wait: 300,
-  });
-
-  const handleFilenameChange = (key: Key | null) => {
-    const newValue = key ? String(key) : "";
-    setLocalSearch(newValue);
-    searchDebouncer.maybeExecute(newValue);
-  };
-
-  const handleClear = () => {
-    setLocalSearch("");
-    // Instant clear of search without debounce
-    searchDebouncer.cancel();
-    onSearch("");
-  };
+  const localSearch = useDebouncedSearch(search, onSearch);
 
   return (
     <div className="flex w-full flex-wrap items-center gap-2">
@@ -52,15 +31,17 @@ export function TableFilters({
           icon="magnifying-glass"
           placeholder={searchPlaceholder}
           className="w-full sm:w-64"
-          value={localSearch}
-          onChange={handleFilenameChange}
+          value={localSearch.value}
+          onChange={(key: Key | null) =>
+            localSearch.change(key ? String(key) : "")
+          }
           aria-label="Search by name"
           suffix={
-            localSearch ? (
+            localSearch.value ? (
               <FieldButton
                 icon="close"
                 aria-label="Clear text"
-                onPress={handleClear}
+                onPress={localSearch.clear}
                 className="-mr-2"
               />
             ) : undefined
