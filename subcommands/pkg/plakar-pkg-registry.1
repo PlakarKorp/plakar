@@ -1,0 +1,105 @@
+.Dd September 26, 2026
+.Dt PLAKAR-PKG-REGISTRY 1
+.Os
+.Sh NAME
+.Nm plakar-pkg-registry
+.Nd Manage additional Plakar plugin registries
+.Sh SYNOPSIS
+.Nm plakar pkg registry
+.Cm add
+.Ar name
+.Ar url
+.Nm plakar pkg registry
+.Cm rm
+.Ar name
+.Nm plakar pkg registry
+.Cm list
+.Sh DESCRIPTION
+The
+.Nm plakar pkg registry
+command manages the plugin registries consulted in addition to the
+official Plakar plugin server.
+A registry is laid out like the official distribution tree: the
+integrations index at its root and one directory per edition below it.
+.Pp
+.Xr plakar-pkg-add 1
+looks a plugin up in the official catalog first, then in each registry.
+The official catalog always wins on a name clash: a registry entry named
+like an official plugin is ignored, and
+.Ic plakar pkg show Fl available
+reports it with a warning.
+That command also shows the registry each available plugin comes from.
+Registries are consulted in the order of their names.
+A plugin installed from a registry is later updated from that same
+registry.
+.Pp
+The subcommands are as follows:
+.Bl -tag -width Ds
+.It Cm add Ar name Ar url
+Add the registry
+.Ar name
+served at
+.Ar url .
+.Ar name
+may only contain letters, digits,
+.Sq - ,
+and
+.Sq _ ,
+and must not be
+.Cm official .
+.Ar url
+must use https and have no credentials, query or fragment.
+.Pp
+Packages from a registry are only installed if they are signed by a key
+trusted for it.
+If no trusted key covers
+.Ar url ,
+a reminder explains how to trust one: copy the registry's public key to
+.Pa ~/.config/plakar/trust/ Ns Ar key Ns Pa .pub
+and write
+.Ar url
+on a line of
+.Pa ~/.config/plakar/trust/ Ns Ar key Ns Pa .scope .
+.It Cm rm Ar name
+Remove the registry
+.Ar name .
+The plugins installed from it are left installed, but can no longer be
+updated until a registry with the same URL is added again.
+.It Cm list
+List the official plugin server, then each registry, one per line, as
+its name and URL separated by a tab.
+.El
+.Sh FILES
+.Bl -tag -width Ds
+.It Pa ~/.config/plakar/registries.yml
+The configured registries.
+Only the
+.Cm add
+subcommand enforces https: a hand-edited file may contain http URLs.
+Respects
+.Ev XDG_CONFIG_HOME
+if set.
+.It Pa ~/.config/plakar/trust/
+Trusted keys and their scopes.
+.El
+.Sh EXAMPLES
+Adding a registry and listing the configured ones:
+.Bd -literal -offset indent
+$ plakar pkg registry add lab https://plakar.example.org/
+$ plakar pkg registry list
+official	https://plakar.io/dist/plugins/kloset/
+lab	https://plakar.example.org/
+.Ed
+.Pp
+The corresponding
+.Pa registries.yml :
+.Bd -literal -offset indent
+version: v1.0.0
+registries:
+  lab:
+    url: https://plakar.example.org/
+.Ed
+.Sh SEE ALSO
+.Xr plakar-pkg-add 1 ,
+.Xr plakar-pkg-rm 1 ,
+.Xr plakar-pkg-show 1

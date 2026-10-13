@@ -49,6 +49,19 @@ func init() {
 		subcommands.BeforeRepositoryOpen,
 		"pkg", "show")
 
+	subcommands.Register(func() subcommands.Subcommand { return &PkgRegistryAdd{} },
+		subcommands.BeforeRepositoryOpen,
+		"pkg", "registry", "add")
+	subcommands.Register(func() subcommands.Subcommand { return &PkgRegistryRm{} },
+		subcommands.BeforeRepositoryOpen,
+		"pkg", "registry", "rm")
+	subcommands.Register(func() subcommands.Subcommand { return &PkgRegistryList{} },
+		subcommands.BeforeRepositoryOpen,
+		"pkg", "registry", "list")
+	subcommands.Register(func() subcommands.Subcommand { return &PkgRegistry{} },
+		subcommands.BeforeRepositoryOpen,
+		"pkg", "registry")
+
 	subcommands.Register(func() subcommands.Subcommand { return &Pkg{} },
 		subcommands.BeforeRepositoryOpen,
 		"pkg")

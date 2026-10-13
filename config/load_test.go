@@ -116,7 +116,7 @@ remotes:
 func TestLoadFallbackOldConfigParseErrorCov80(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "plakar.yml"), []byte("default-repo: [unterminated"), 0644))
-	_, err := loadFallback(dir)
+	_, err := loadFallback(dir, nil)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "error reading file")
 }
