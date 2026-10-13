@@ -62,3 +62,17 @@ export const TwoSegments: Story = {
     ariaLabel: "Layout",
   },
 };
+
+export const Accent: Story = {
+  args: {
+    variant: "accent",
+    selectedId: "all",
+    ariaLabel: "Policy",
+    items: [
+      { id: "all", label: "All", count: 11 },
+      { id: "covered", label: "Covered by a policy", count: 8, dot: "success" },
+      { id: "not_covered", label: "Not covered", count: 3, dot: "warning" },
+      { id: "excluded", label: "Excluded", count: 0 },
+    ],
+  },
+};
