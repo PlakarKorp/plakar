@@ -198,3 +198,36 @@ func TestExecuteCmdSyncSnapshotID(t *testing.T) {
 	peerIDs := snapshotIDs(t, fixture.peerRepo)
 	require.Contains(t, peerIDs, snap.Header.Identifier)
 }
+
+// A snapshot that cannot be synchronized must make the command fail, not just
+// log an error: scripts rely on the exit status.
+func TestExecuteCmdSyncFailure(t *testing.T) {
+	for _, direction := range []string{"to", "from"} {
+		t.Run(direction, func(t *testing.T) {
+			fixture := setupSync(t, nil, nil)
+
+			// the snapshot lives on the source, the lock on the destination
+			src, dst := fixture.localRepo, fixture.peerRepo
+			if direction == "from" {
+				src, dst = dst, src
+			}
+
+			snap := ptesting.GenerateSnapshot(t, src, mockFiles)
+			defer snap.Close()
+
+			// same exclusive lock as `plakar maintenance` takes
+			lock := repository.NewExclusiveLock(fixture.localCtx.Hostname)
+			buffer := &bytes.Buffer{}
+			require.NoError(t, lock.SerializeToStream(buffer))
+			_, err := dst.PutLock(objects.RandomMAC(), buffer)
+			require.NoError(t, err)
+
+			subcommand := &Sync{}
+			require.NoError(t, subcommand.Parse(fixture.localCtx, []string{direction, fixture.peerArg}))
+
+			status, err := subcommand.Execute(fixture.localCtx, fixture.localRepo)
+			require.Error(t, err)
+			require.Equal(t, 1, status)
+		})
+	}
+}

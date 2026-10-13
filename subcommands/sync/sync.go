@@ -301,6 +301,7 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 	}
 
 	srcSynced := 0
+	failed := 0
 	for _, snapshotID := range srcSyncList {
 		if err := ctx.Err(); err != nil {
 			return 1, err
@@ -310,6 +311,7 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 		if err != nil {
 			ctx.GetLogger().Error("failed to synchronize snapshot %x from store %s: %s",
 				snapshotID[:4], srcLocation, err)
+			failed++
 		} else {
 			srcSynced++
 		}
@@ -347,6 +349,7 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 			if err != nil {
 				ctx.GetLogger().Error("failed to synchronize snapshot %x from peer store %s: %s",
 					snapshotID[:4], dstLocation, err)
+				failed++
 			} else {
 				dstSynced++
 			}
@@ -365,6 +368,10 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 			dstLocation,
 			srcLocation,
 			srcSynced)
+	}
+
+	if failed > 0 {
+		return 1, fmt.Errorf("failed to synchronize %d snapshot(s)", failed)
 	}
 
 	return 0, nil
