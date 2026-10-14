@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/PlakarKorp/kloset/connectors"
+	"github.com/PlakarKorp/kloset/connectors/analyzer"
 	"github.com/PlakarKorp/kloset/connectors/importer"
 	"github.com/PlakarKorp/kloset/events"
 	"github.com/PlakarKorp/kloset/exclude"
@@ -58,6 +59,7 @@ type Backup struct {
 	PostHook            string
 	FailHook            string
 	NoXattr             bool
+	Analyzers           []string
 	Cache               string
 	NoProgress          bool
 	Name                string
@@ -128,6 +130,7 @@ func (cmd *Backup) CobraCommand() *cobra.Command {
 	c.Flags().Var(subcommands.GoValue(utils.NewOptsFlag(cmd.Opts)), "o", "specify extra importer options")
 	c.Flags().BoolVar(&cmd.DryRun, "dry-run", false, "do not actually perform a backup")
 	c.Flags().BoolVar(&cmd.NoXattr, "no-xattr", false, "do not back up extended attributes")
+	c.Flags().StringSliceVar(&cmd.Analyzers, "analyzer", nil, "classify files with this analyzer, can be specified multiple times")
 	c.Flags().StringVar(&cmd.Cache, "cache", "vfs", "path to store vfs cache, 'no' for uncached and 'vfs' for the default in memory cache")
 	c.Flags().BoolVar(&cmd.NoProgress, "no-progress", false, "do not display progress")
 	c.Flags().Var(subcommands.GoValue(locate.NewTimeFlag(&cmd.ForcedTimestamp)), "force-timestamp", "force a timestamp")
@@ -192,6 +195,14 @@ func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
 // so only do it when something will display it.
 func (cmd *Backup) wantsFilesystemSummary(ctx *appcontext.AppContext, flags location.Flags) bool {
 	return !cmd.NoProgress && ctx.ProgressSummary && (flags&location.FLAG_STREAM) == 0
+}
+
+func closeAnalyzers(ctx *appcontext.AppContext, analyzers []analyzer.Analyzer) {
+	for _, a := range analyzers {
+		if err := a.Close(ctx); err != nil {
+			ctx.GetLogger().Warn("failed to close analyzer %s: %s", a.Name(), err)
+		}
+	}
 }
 
 func (cmd *Backup) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
@@ -311,8 +322,19 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		return 1, fmt.Errorf("pre-backup hook failed: %w", err), objects.MAC{}, nil
 	}
 
+	for _, name := range cmd.Analyzers {
+		a, err := analyzer.NewAnalyzer(ctx.GetInner(), ctx.ImporterOpts(), name, map[string]string{})
+		if err != nil {
+			closeAnalyzers(ctx, opts.Analyzers)
+			return 1, err, objects.MAC{}, nil
+		}
+		opts.Analyzers = append(opts.Analyzers, a)
+	}
+
 	snap, err := snapshot.Create(repo, repository.DefaultType, cmd.PackfileTempStorage, objects.NilMac, opts)
 	if err != nil {
+		// the builder only owns the analyzers once created
+		closeAnalyzers(ctx, opts.Analyzers)
 		ctx.GetLogger().Error("%s", err)
 		return 1, err, objects.MAC{}, nil
 	}
