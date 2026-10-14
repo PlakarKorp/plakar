@@ -81,7 +81,7 @@ func TestPkgCreateExecuteStorageCreateFails_cov80(t *testing.T) {
 	work := t.TempDir()
 	ctx.CWD = work
 	manifest := filepath.Join(work, "manifest.yaml")
-	require.NoError(t, os.WriteFile(manifest, []byte("name: myplugin\nconnectors:\n  - type: importer\n    executable: myplugin\n"), 0644))
+	require.NoError(t, os.WriteFile(manifest, []byte("name: myplugin\nconnectors:\n  - type: importer\n    protocols:\n      - myproto\n    executable: myplugin\n"), 0644))
 
 	cmd := &PkgCreate{}
 	require.NoError(t, cmd.Parse(ctx, []string{"manifest.yaml", "v1.0.0"}))
@@ -101,7 +101,7 @@ func TestPkgCreateExecuteStorageCreateFails_cov80(t *testing.T) {
 func TestPkgCreateParseGOARCHOnly_cov80(t *testing.T) {
 	ctx := newCtx(t)
 	manifest := filepath.Join(ctx.CWD, "manifest.yaml")
-	require.NoError(t, os.WriteFile(manifest, []byte("name: arch\nconnectors:\n  - type: importer\n    executable: arch\n"), 0644))
+	require.NoError(t, os.WriteFile(manifest, []byte("name: arch\nconnectors:\n  - type: importer\n    protocols:\n      - myproto\n    executable: arch\n"), 0644))
 
 	t.Setenv("GOOS", "")
 	t.Setenv("GOARCH", "riscv64")
