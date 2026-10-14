@@ -96,5 +96,15 @@ func (cmd *Info) executeSnapshot(ctx *appcontext.AppContext, repo *repository.Re
 	fmt.Fprintf(ctx.Stdout, " - MIMEOther: %d\n", header.GetSource(0).Summary.Directory.MIMEOther+header.GetSource(0).Summary.Below.MIMEOther)
 
 	fmt.Fprintf(ctx.Stdout, " - Errors: %d\n", header.GetSource(0).Summary.Directory.Errors+header.GetSource(0).Summary.Below.Errors)
+
+	if len(header.Classifications) > 0 {
+		fmt.Fprintf(ctx.Stdout, "Classifications:\n")
+		for _, c := range header.Classifications {
+			fmt.Fprintf(ctx.Stdout, " - %s:\n", utils.SanitizeText(c.Analyzer))
+			for _, class := range c.Classes {
+				fmt.Fprintf(ctx.Stdout, "   - %s: count=%d probability=%.2f\n", utils.SanitizeText(class.Name), class.Count, class.Probability)
+			}
+		}
+	}
 	return 0, nil
 }

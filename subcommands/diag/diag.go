@@ -31,6 +31,7 @@ func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &DiagContentType{} }, 0, "diag", "contenttype")
 	subcommands.Register(func() subcommands.Subcommand { return &DiagLocks{} }, 0, "diag", "locks")
 	subcommands.Register(func() subcommands.Subcommand { return &DiagSearch{} }, 0, "diag", "search")
+	subcommands.Register(func() subcommands.Subcommand { return &DiagClassified{} }, 0, "diag", "classified")
 	subcommands.Register(func() subcommands.Subcommand { return &DiagDirPack{} }, 0, "diag", "dirpack")
 	subcommands.Register(func() subcommands.Subcommand { return &DiagBlob{} }, 0, "diag", "blob")
 	subcommands.Register(func() subcommands.Subcommand { return &DiagChunks{} }, 0, "diag", "chunks")
