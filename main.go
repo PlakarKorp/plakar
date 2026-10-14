@@ -38,6 +38,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/spf13/pflag"
 
+	_ "github.com/PlakarKorp/plakar/analyzers/archive"
+	_ "github.com/PlakarKorp/plakar/analyzers/secrets"
+
 	_ "github.com/PlakarKorp/plakar/subcommands/archive"
 	_ "github.com/PlakarKorp/plakar/subcommands/backup"
 	_ "github.com/PlakarKorp/plakar/subcommands/cached"
