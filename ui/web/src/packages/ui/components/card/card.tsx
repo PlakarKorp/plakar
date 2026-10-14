@@ -54,9 +54,9 @@ function CardRoot({
 
 type CardHeaderProps = {
   prefix?: React.ReactNode;
-  title: string;
+  title: React.ReactNode;
   titleSuffix?: React.ReactNode;
-  description?: string;
+  description?: React.ReactNode;
   suffix?: React.ReactNode;
   buttonProps?: ComponentProps<typeof Button>;
   className?: string;
