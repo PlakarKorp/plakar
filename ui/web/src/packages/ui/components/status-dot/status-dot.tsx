@@ -16,6 +16,7 @@ export function StatusDot({ variant, pending = false }: StatusDotProps) {
           success: "bg-success",
           error: "bg-error",
           warning: "bg-warning",
+          neutral: "text-disable border-[1.5px] border-current",
         }[variant],
         pending && "animate-pulse"
       )}

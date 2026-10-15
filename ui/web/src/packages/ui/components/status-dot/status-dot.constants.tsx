@@ -1,1 +1,6 @@
-export const StatusDotVariant = ["success", "error", "warning"] as const;
+export const StatusDotVariant = [
+  "success",
+  "error",
+  "warning",
+  "neutral",
+] as const;

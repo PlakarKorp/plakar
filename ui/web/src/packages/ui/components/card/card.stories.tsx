@@ -4,6 +4,8 @@ import { ComponentProps } from "react";
 import { Card } from "./card";
 import { Button } from "../button/button";
 import { IllustrationType } from "../illustration/illustration.constants";
+import { StatusDot } from "../status-dot/status-dot";
+import { Typography } from "../typography/typography";
 
 type CardStoryArgs = ComponentProps<typeof Card> & {
   title?: string;
@@ -152,6 +154,32 @@ export const Collapsible: Story = {
       isError={isError}
     >
       <Card.Header title={title} />
+      <Card.Content>
+        <p className="text-primary">{content}</p>
+      </Card.Content>
+    </Card>
+  ),
+};
+
+export const WithTitleSuffix: Story = {
+  args: {
+    title: "Enrollment",
+    content: "A status sits next to the title it qualifies.",
+  },
+  render: ({ title = "", content = "" }) => (
+    <Card>
+      <Card.Header
+        title={title}
+        titleSuffix={
+          <span className="inline-flex items-center gap-2">
+            <StatusDot variant="success" />
+            <Typography as="span" size="sm" className="text-secondary">
+              Open
+            </Typography>
+          </span>
+        }
+        description="Shown inline with the title, before the description."
+      />
       <Card.Content>
         <p className="text-primary">{content}</p>
       </Card.Content>
