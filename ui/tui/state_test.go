@@ -82,8 +82,25 @@ func TestStateUpdate_FileCountersAndSizes(t *testing.T) {
 	}
 
 	s.Update(Event{Type: "file.cached", Data: map[string]any{"fileinfo": objects.FileInfo{Lsize: 2048}}})
-	if s.countFileCached != 1 || s.countCachedSize != 2048 {
-		t.Fatalf("file.cached: countFileCached=%d countCachedSize=%d", s.countFileCached, s.countCachedSize)
+	if s.countFileCached != 1 {
+		t.Fatalf("file.cached: countFileCached=%d", s.countFileCached)
+	}
+}
+
+func TestStateUpdate_CachedRebackupNoDoubleCount(t *testing.T) {
+	// Regression: a re-backup of an unchanged file emits file.cached AND
+	// file.ok for it. processedBytes() must report the file's size once, not
+	// twice (the bug reported a 10 GiB file as 20 GiB).
+	s := newApplicationState()
+	const size = int64(10 << 30) // 10 GiB
+	fi := objects.FileInfo{Lsize: size}
+
+	s.Update(Event{Type: "file"})
+	s.Update(Event{Type: "file.cached", Data: map[string]any{"fileinfo": fi}})
+	s.Update(Event{Type: "file.ok", Data: map[string]any{"fileinfo": fi}})
+
+	if got := s.processedBytes(); got != uint64(size) {
+		t.Fatalf("processedBytes = %d, want %d (10 GiB counted once)", got, size)
 	}
 }
 
@@ -99,9 +116,6 @@ func TestStateUpdate_XattrCounters(t *testing.T) {
 	}
 	if s.countXattrSize != 64 {
 		t.Fatalf("countXattrSize = %d, want 64", s.countXattrSize)
-	}
-	if s.countCachedSize != 128 {
-		t.Fatalf("countCachedSize = %d, want 128", s.countCachedSize)
 	}
 }
 
@@ -221,7 +235,7 @@ func TestStateUpdate_UnknownTypeIsNoOp(t *testing.T) {
 // (that spawns a bubbletea program) — we set application to nil and only
 // invoke branches that don't dereference it.
 func newAppModelForTest() appModel {
-	return appModel{progress: progressBar()}
+	return appModel{}
 }
 
 func TestAppModelUpdate_WindowSizeStoresGeometry(t *testing.T) {

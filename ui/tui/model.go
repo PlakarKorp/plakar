@@ -6,7 +6,6 @@ import (
 	"github.com/PlakarKorp/kloset/events"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
-	"github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -24,7 +23,7 @@ type cancelledMsg struct{ err error }
 
 func waitForCancel(ctx *appcontext.AppContext) tea.Cmd {
 	return func() tea.Msg {
-		<-ctx.Done() // adapt if your AppContext exposes Done() differently
+		<-ctx.Done()
 		return cancelledMsg{err: ctx.Err()}
 	}
 }
@@ -34,25 +33,17 @@ type appModel struct {
 	repo        *repository.Repository
 
 	forceQuit bool
+	finished  bool // render nothing so bubbletea tears down cleanly
+	debug     bool // 'd' toggles the iostat detail panel
 
-	// geometry
 	width  int
 	height int
-
-	// UI
-	progress progress.Model
-
-	// ETA calculation
-	lastETAAt time.Time
-	lastDone  uint64
-	rateEMA   float64 // items/secec
 }
 
 func newGenericModel(ctx *appcontext.AppContext, application *Application, repo *repository.Repository) tea.Model {
 	return appModel{
 		repo:        repo,
 		application: application,
-		progress:    progressBar(),
 	}
 }
 
