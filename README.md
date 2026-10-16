@@ -117,6 +117,21 @@ If you find a bug or want to request a change, open an issue:
 
 https://github.com/PlakarKorp/plakar/issues
 
+## Releasing
+
+Release tags carry the built web UI, `main` does not. Releases are cut from a `release/vX.Y` branch: create it from `main` for a new minor version, and reuse it for its patch releases. To release `vX.Y.Z`:
+
+```sh
+git switch release/vX.Y        # for vX.Y.0: git switch -c release/vX.Y main
+# set version to "vX.Y.Z" in utils/utils.go
+make release-ui
+git commit -am "release vX.Y.Z"
+git tag vX.Y.Z
+git push origin release/vX.Y vX.Y.Z
+```
+
+Run `make release-ui` for every release, patch releases included: the branch already carries the previous release's UI, and the release workflow refuses a tag whose UI was not built from its own `ui/web/src`.
+
 ## Community
 
 - [Discord](https://discord.gg/A2yvjS6r2C)
