@@ -1,0 +1,30 @@
+<svg width="264" height="160" viewBox="0 0 264 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g clip-path="url(#clip0_1419_3947)">
+    <path d="M0 12C0 5.37258 5.37258 0 12 0H252C258.627 0 264 5.37258 264 12V160H0V12Z" fill="#09090B"/>
+  </g>
+
+  <!-- Card 1: Pie Chart -->
+  <g transform="translate(34,34)">
+    <rect width="100" height="100" rx="8" fill="#27272a" />
+    <circle cx="50" cy="50" r="35" fill="oklch(0.37 0.013 285.805)" />
+    <path d="M50 50 L50 15 A35 35 0 0 1 85 55 Z" fill="#524CFF" />
+  </g>
+
+  <!-- Card 2: Line Chart -->
+  <g transform="translate(144,34)">
+    <rect width="100" height="100" rx="8" fill="#27272a" />
+    <rect x="8" y="8" width="40" height="40" fill="#524CFF"/>
+    <rect x="50" y="8" width="42" height="20" fill="#524CFF"/>
+    <rect x="50" y="30" width="42" height="18" fill="#412ad8"/>
+    <rect x="8" y="50" width="30" height="42" fill="#2e2689"/>
+    <rect x="40" y="50" width="52" height="42" fill="#412ad8"/>
+  </g>
+
+  <!-- Placeholder card to suggest more -->
+  <rect x="254" y="34" width="100" height="100" rx="8" fill="#27272a"  />
+
+  <!-- Second row of placeholder cards -->
+  <rect x="34" y="144" width="100" height="100" rx="8" fill="#27272a" />
+  <rect x="144" y="144" width="100" height="100" rx="8" fill="#27272a" />
+  <rect x="254" y="144" width="100" height="100" rx="8" fill="#27272a" />
+</svg>

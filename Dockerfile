@@ -33,7 +33,7 @@ WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy full source (ui/v2/frontend/ and subcommands/help/docs/ are embedded via go:embed)
+# Copy full source (ui/web/build/ and subcommands/help/docs/ are embedded via go:embed)
 COPY . .
 
 # Build static binary matching goreleaser configuration

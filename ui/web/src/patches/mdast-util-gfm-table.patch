@@ -1,0 +1,16 @@
+diff --git a/lib/index.js b/lib/index.js
+index 11e51158c5cece45ab736893d257fa98aef6cede..69aa2b4d0565c1209064bc056fa45bb860fa86d5 100644
+--- a/lib/index.js
++++ b/lib/index.js
+@@ -292,7 +292,10 @@ export function gfmTableToMarkdown(options) {
+     let value = defaultHandlers.inlineCode(node, parent, state)
+ 
+     if (state.stack.includes('tableCell')) {
+-      value = value.replace(/\|/g, '\\$&')
++      throw new Error(
++        'This codepath has been manually removed by Plakar to avoid a CodeQL warning because the original code escapes backslashes incorrectly. This should never be an issue because this function is never called in Plakar.'
++      )
++      // value = value.replace(/\|/g, '\\$&')
+     }
+ 
+     return value

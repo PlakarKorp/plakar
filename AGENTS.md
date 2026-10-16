@@ -17,6 +17,10 @@ make coverage   # statement coverage, testing/ helpers excluded
 
 Run `gofmt -w` on what you touch and `go vet ./...` before submitting.
 
+The web UI served by `plakar ui` lives in [ui/web/src/](ui/web/src/), see
+[ui/web/src/README.md](ui/web/src/README.md). Its build is committed in `ui/web/build`;
+do not edit it by hand.
+
 ## Conventions
 
 Our engineering conventions are a Claude Code plugin, not a document:

@@ -3,12 +3,8 @@ name: Update Plakar UI
 on:
   workflow_dispatch:
     inputs:
-      plakar-ui-ref:
-        description: "Git ref for plakar-ui (branch, tag, or commit SHA)"
-        required: true
-        default: "main"
       plakar-branch:
-        description: "Target branch for plakar PR"
+        description: "Branch to build the UI from and to open the PR against"
         required: true
         default: "main"
 
@@ -20,53 +16,44 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Checkout plakar-ui
+      - name: Checkout plakar
         uses: actions/checkout@v4
         with:
-          repository: PlakarKorp/plakar-ui
-          ssh-key: ${{ secrets.PLAKAR_UI_SSH_KEY }}
-          path: ./plakar-ui
-          ref: ${{ github.event.inputs.plakar-ui-ref }}
+          ref: ${{ github.event.inputs.plakar-branch }}
 
       # 41ff72655975bd51cab0327fa583b6e92b6d3061 == v4.2.0
       - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061
         with:
-          version: 10.17.1
+          package_json_file: ui/web/src/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
 
-      - name: Build plakar-ui
+      - name: Build the UI
+        working-directory: ui/web/src
         run: |
-          cd ./plakar-ui
-          pnpm install
+          pnpm install --frozen-lockfile
           pnpm run build
 
-      - name: Checkout plakar
-        uses: actions/checkout@v4
-        with:
-          repository: PlakarKorp/plakar
-          ref: ${{ github.event.inputs.plakar-branch }}
-          path: ./plakar
-
-      - name: Copy dist to plakar
+      - name: Copy dist to ui/web/build
         run: |
-          rm -rf -- ./plakar/ui/v2/frontend
-          mkdir -p ./plakar/ui/v2/frontend
-          cp -r ./plakar-ui/apps/oss/dist/* ./plakar/ui/v2/frontend/
+          rm -rf -- ./ui/web/build
+          mkdir -p ./ui/web/build
+          cp -r ./ui/web/src/apps/oss/dist/* ./ui/web/build/
 
-      - name: Get plakar-ui commit SHA
-        id: plakar_ui
-        run: |
-          cd plakar-ui
-          echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+      - name: Get the commit SHA
+        id: plakar
+        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
         with:
-          path: ./plakar
           base: ${{ github.event.inputs.plakar-branch }}
-          branch: update-plakar-ui/from-${{ github.event.inputs.plakar-ui-ref }}
+          branch: update-plakar-ui/${{ github.event.inputs.plakar-branch }}
+          add-paths: ui/web/build
           delete-branch: true
           author: "Plakup <noreply@plakar.io>"
           committer: "Plakup <noreply@plakar.io>"
-          title: Update Plakar UI to ${{ github.event.inputs.plakar-ui-ref }}@${{ steps.plakar_ui.outputs.sha }}
-          body: Update Plakar UI to ${{ github.event.inputs.plakar-ui-ref }}@${{ steps.plakar_ui.outputs.sha }}
-          commit-message: Update Plakar UI to ${{ github.event.inputs.plakar-ui-ref }}@${{ steps.plakar_ui.outputs.sha }}
+          title: Update Plakar UI to ${{ github.event.inputs.plakar-branch }}@${{ steps.plakar.outputs.sha }}
+          body: Update Plakar UI to ${{ github.event.inputs.plakar-branch }}@${{ steps.plakar.outputs.sha }}
+          commit-message: Update Plakar UI to ${{ github.event.inputs.plakar-branch }}@${{ steps.plakar.outputs.sha }}
