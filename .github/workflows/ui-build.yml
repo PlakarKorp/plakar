@@ -1,0 +1,29 @@
+name: UI build
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  # Only release branches commit ui/web/build (see "Releasing" in README.md).
+  # On main it holds nothing but .gitkeep: a build there would go stale with
+  # the next UI change, and .gitignore does not stop files already tracked,
+  # for instance after merging a release branch.
+  not-on-main:
+    name: No UI build on main
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check ui/web/build holds only .gitkeep
+        run: |
+          extra=$(git ls-files ui/web/build | grep -v '^ui/web/build/\.gitkeep$' || true)
+          if [ -n "$extra" ]; then
+            echo "::error::ui/web/build is only committed on release branches, but this commit tracks $(echo "$extra" | wc -l) of its files. Untrack them: git rm -r --cached ui/web/build && git add -f ui/web/build/.gitkeep"
+            exit 1
+          fi
