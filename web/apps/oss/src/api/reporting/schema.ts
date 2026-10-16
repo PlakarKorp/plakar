@@ -44,7 +44,7 @@ const RepositorySchema = z.object({
   name: z.string(),
 });
 
-export const ReportSchema = z.object({
+const ReportSchema = z.object({
   id: z.string(),
   timestamp: z.string().transform(Date),
   report_task: TaskSchema,

@@ -10,7 +10,7 @@ export const IntegrationTypeSchema = z.enum([
 
 export type IntegrationType = z.infer<typeof IntegrationTypeSchema>;
 
-export const IntegrationInstallationStatusSchema = z.enum([
+const IntegrationInstallationStatusSchema = z.enum([
   "installed",
   "not-installed",
   "built-in",
@@ -62,7 +62,7 @@ export type ListIntegrationsParams = PaginationParams & {
   installationStatus?: IntegrationInstallationStatusFilter;
 };
 
-export const IntegrationMessageSchema = z.object({
+const IntegrationMessageSchema = z.object({
   date: z.string().transform(Date),
   message: z.string(),
 });

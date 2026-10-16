@@ -8,5 +8,3 @@ export const ApiInfoSchema = z.object({
   repository_id: z.string(),
   demo_mode: z.boolean().optional(),
 });
-
-export type ApiInfo = z.infer<typeof ApiInfoSchema>;

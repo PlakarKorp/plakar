@@ -9,8 +9,6 @@ export const AccountMeSchema = z.object({
   avatar_url: z.string(),
 });
 
-export type AccountMe = z.infer<typeof AccountMeSchema>;
-
 const notificationLevels = ["info", "warning", "error", "critical"] as const;
 
 type NotificationKnownLevel = (typeof notificationLevels)[number];
@@ -21,7 +19,7 @@ const notificationStatuses = ["unread", "read", "pinned", "discarded"] as const;
 export type NotificationKnownStatus = (typeof notificationStatuses)[number];
 type NotificationStatus = NotificationKnownStatus | "unknown";
 
-export const NotificationSchema = z.object({
+const NotificationSchema = z.object({
   id: z.string(),
   user_id: z.string(),
   level: z.string().transform((value): NotificationLevel => {
@@ -49,8 +47,6 @@ export const NotificationsListSchema = z.object({
   total: z.number(),
   items: z.array(NotificationSchema),
 });
-
-export type Notification = z.infer<typeof NotificationSchema>;
 
 export const AccountServicesAlertingSchema = z.object({
   enabled: z.boolean(),

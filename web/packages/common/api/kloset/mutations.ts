@@ -29,24 +29,3 @@ export const useCreateMount = ({ api, repository }: useCreateMountParams) => {
     },
   });
 };
-
-export const useDeleteMount = ({ api, repository }: useCreateMountParams) => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (mountId: string) => {
-      if (!api.mount) {
-        throw new Error("Mount API is not available");
-      }
-      return api.mount.delete({
-        repository,
-        mountId,
-      });
-    },
-    onSuccess: () => {
-      // XXX: better invalidation strategy would be to invalidate only this specific snapshot's mount state.
-      queryClient.invalidateQueries({
-        queryKey: klosetKeys.mounts(),
-      });
-    },
-  });
-};
