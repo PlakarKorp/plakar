@@ -172,7 +172,6 @@ import { OpenStackLogoIcon } from "./custom/openstack-logo";
 import { OpenWrtLogoIcon } from "./custom/openwrt-logo";
 import { OracleLogoIcon } from "./custom/oracle-logo";
 import { OVHcloudLogoIcon } from "./custom/ovh-logo";
-import { PCPLogoIcon } from "./custom/pcp-logo";
 import { PlakarLogoIcon } from "./custom/plakar-logo";
 import { PostgreSQLLogoIcon } from "./custom/postgresql-logo";
 import { ProxmoxLogoIcon } from "./custom/proxmox-logo";
@@ -392,7 +391,6 @@ const ICONS: Record<IconType, ComponentType<IconGlyphProps>> = {
   openstack: OpenStackLogoIcon,
   openwrt: OpenWrtLogoIcon,
   oracle: OracleLogoIcon,
-  pcp: PCPLogoIcon,
   postgresql: PostgreSQLLogoIcon,
   proxmox: ProxmoxLogoIcon,
   routeros: RouterOSLogoIcon,

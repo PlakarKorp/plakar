@@ -130,7 +130,6 @@ export const IconTypes = [
   "palette",
   "paper-plane",
   "pause",
-  "pcp",
   "pen",
   "pen-to-square",
   "plakar",
