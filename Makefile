@@ -29,6 +29,12 @@ ui:
 release-ui: ui
 	git add -f ui/web/build
 
+# Put ui/web/build back to what is checked out: drop what make ui wrote, and
+# on a release branch restore the committed build.
+ui-clean:
+	git restore --staged --worktree ui/web/build
+	git clean -fdX ui/web/build
+
 install:
 	mkdir -p ${DESTDIR}${BINDIR}
 	mkdir -p ${DESTDIR}${MANDIR}/man1
@@ -58,4 +64,4 @@ coverage:
 	@grep -v '/plakar/testing/' ${COVERPROFILE} > ${COVERPROFILE}.tmp && mv ${COVERPROFILE}.tmp ${COVERPROFILE}
 	@${GO} tool cover -func=${COVERPROFILE} | tail -1
 
-.PHONY: all plakar ui release-ui install check test coverage junit
+.PHONY: all plakar ui release-ui ui-clean install check test coverage junit
