@@ -344,6 +344,7 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 			}
 		}
 
+		dstSynced := 0
 		for _, snapshotID := range dstSyncList {
 			if err := ctx.Err(); err != nil {
 				return 1, err
