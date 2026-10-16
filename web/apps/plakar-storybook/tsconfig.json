@@ -1,0 +1,4 @@
+{
+  "extends": "@plakar-ui/config/typescript/react.json",
+  "include": ["**/*.ts", "**/*.tsx", ".storybook/**.ts", ".storybook/**.tsx"]
+}

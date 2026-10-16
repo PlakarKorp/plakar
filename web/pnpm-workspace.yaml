@@ -1,0 +1,12 @@
+# https://github.com/lirantal/npm-security-best-practices/blob/ed262315354a932d6a46d0832c72706876f5619b/README.md#14-pnpm-trust-policy
+trustPolicy: no-downgrade
+trustPolicyIgnoreAfter: 43200  # minutes (30 days)
+# https://github.com/lirantal/npm-security-best-practices/blob/ed262315354a932d6a46d0832c72706876f5619b/README.md#21-pnpm-block-exotic-subdependencies
+blockExoticSubdeps: true
+# https://github.com/lirantal/npm-security-best-practices/blob/ed262315354a932d6a46d0832c72706876f5619b/README.md#31-npm--pnpm--bun--yarn-minimumreleaseage-cooldown
+minimumReleaseAge: 10080 # 7 days
+
+
+packages:
+  - "apps/*"
+  - "packages/*"

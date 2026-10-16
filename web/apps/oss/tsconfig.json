@@ -1,0 +1,9 @@
+{
+  "extends": "@plakar-ui/config/typescript/react.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "~/*": ["./src/*"]
+    }
+  }
+}

@@ -1,0 +1,13 @@
+diff --git a/lang/mongodb.js b/lang/mongodb.js
+index 232708b2e4f0e56f8a405631610f7f88d15a2152..31db477efcff606e1fd54a6c60991aa347fd5ba7 100644
+--- a/lang/mongodb.js
++++ b/lang/mongodb.js
+@@ -260,7 +260,7 @@ function mongodb(Prism) {
+       'UUID'
+     ]
+     operators = operators.map(function (operator) {
+-      return operator.replace('$', '\\$')
++      return operator.replace(/([\\$])/g, '\\$1')
+     })
+     var operatorsSource = '(?:' + operators.join('|') + ')\\b'
+     Prism.languages.mongodb = Prism.languages.extend('javascript', {})
