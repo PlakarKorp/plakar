@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-package v2
+package web
 
 import (
 	"embed"
@@ -41,28 +41,28 @@ type UiOptions struct {
 	NoRefresh      bool
 }
 
-//go:embed all:frontend/*
+//go:embed all:build/*
 var content embed.FS
 
 func Ui(repo *repository.Repository, ctx *appcontext.AppContext, addr string, opts *UiOptions) error {
 	server := http.NewServeMux()
 	api.SetupRoutes(server, repo, ctx, opts.Token, opts.NoRefresh)
 
-	statics, err := fs.Sub(content, "frontend")
+	statics, err := fs.Sub(content, "build")
 	if err != nil {
 		return err
 	}
 	staticsFS := http.FS(statics)
 
-	// Serve files from the ./frontend directory
+	// Serve files from the ./build directory
 	server.HandleFunc("/{path...}", func(w http.ResponseWriter, r *http.Request) {
-		p := path.Join("frontend", r.PathValue("path"))
+		p := path.Join("build", r.PathValue("path"))
 
 		// If the asset does not exist, serve index.html.
 		// All other errors are handled by the file server below.
 		_, err := fs.Stat(content, p)
 		if err != nil && os.IsNotExist(err) {
-			http.ServeFileFS(w, r, content, "frontend/index.html")
+			http.ServeFileFS(w, r, content, "build/index.html")
 			return
 		}
 

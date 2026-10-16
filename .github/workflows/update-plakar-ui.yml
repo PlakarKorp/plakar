@@ -35,11 +35,11 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm run build
 
-      - name: Copy dist to ui/v2/frontend
+      - name: Copy dist to ui/web/build
         run: |
-          rm -rf -- ./ui/v2/frontend
-          mkdir -p ./ui/v2/frontend
-          cp -r ./web/apps/oss/dist/* ./ui/v2/frontend/
+          rm -rf -- ./ui/web/build
+          mkdir -p ./ui/web/build
+          cp -r ./web/apps/oss/dist/* ./ui/web/build/
 
       - name: Get the commit SHA
         id: plakar
@@ -50,7 +50,7 @@ jobs:
         with:
           base: ${{ github.event.inputs.plakar-branch }}
           branch: update-plakar-ui/${{ github.event.inputs.plakar-branch }}
-          add-paths: ui/v2/frontend
+          add-paths: ui/web/build
           delete-branch: true
           author: "Plakup <noreply@plakar.io>"
           committer: "Plakup <noreply@plakar.io>"
