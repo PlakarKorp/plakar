@@ -1,1 +1,0 @@
-import{gi as e,ki as t,wi as n}from"./enrich-CkOMd76X.js";function r(n){return t(e,n)}var i=500;function a(e=50){return n({page:r().nonnegative().catch(0).default(0),per_page:r().nonnegative().catch(e).default(e).transform(e=>Math.min(e,i))})}export{r as n,a as t};
