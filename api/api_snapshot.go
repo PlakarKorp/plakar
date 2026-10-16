@@ -8,9 +8,11 @@ import (
 	"fmt"
 	"html"
 	"io"
+	"mime"
 	"net/http"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/PlakarKorp/kloset/caching/lru"
@@ -617,18 +619,32 @@ func (ui *uiserver) snapshotVFSSearch(w http.ResponseWriter, r *http.Request) er
 		path = "/"
 	}
 
+	mimes := r.URL.Query()["mime"]
+	filterMimesAfterSearch := pattern != "" && len(mimes) > 0
+	searchMimes := mimes
+	searchOffset := offset
+	searchLimit := limit
+	if filterMimesAfterSearch {
+		searchMimes = nil
+		searchOffset = 0
+		searchLimit = 0
+	}
+
 	// for pagination: fetch one more item so we know
 	// whether there's a next page of results.
 	limit++
+	if !filterMimesAfterSearch {
+		searchLimit = limit
+	}
 
 	searchOpts := snapshot.SearchOpts{
 		Recursive:  r.URL.Query().Get("recursive") == "true",
-		Mimes:      r.URL.Query()["mime"],
+		Mimes:      searchMimes,
 		Prefix:     path,
 		NameFilter: pattern,
 
-		Offset: offset,
-		Limit:  limit,
+		Offset: searchOffset,
+		Limit:  searchLimit,
 	}
 
 	items := ItemsPage[*vfs.Entry]{
@@ -640,6 +656,7 @@ func (ui *uiserver) snapshotVFSSearch(w http.ResponseWriter, r *http.Request) er
 		return err
 	}
 
+	var filteredOffset int
 	for entry, err := range it {
 		if err != nil {
 			if err == context.Canceled {
@@ -648,7 +665,20 @@ func (ui *uiserver) snapshotVFSSearch(w http.ResponseWriter, r *http.Request) er
 			return err
 		}
 
+		if filterMimesAfterSearch {
+			if !searchMIMEFilterMatches(mimes, entry.GetContentType()) {
+				continue
+			}
+			if filteredOffset < offset {
+				filteredOffset++
+				continue
+			}
+		}
+
 		items.Items = append(items.Items, entry)
+		if filterMimesAfterSearch && len(items.Items) >= limit {
+			break
+		}
 	}
 
 	if limit == len(items.Items) {
@@ -738,6 +768,39 @@ type DownloadQuery struct {
 	Name   string         `json:"name"`
 	Items  []DownloadItem `json:"items"`
 	Rebase bool           `json:"rebase,omitempty"`
+}
+
+const (
+	mediaTypeSeparator = "/"
+)
+
+func searchMIMEFilterMatches(filters []string, contentType string) bool {
+	if len(filters) == 0 {
+		return true
+	}
+
+	mediaType, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		mediaType = strings.TrimSpace(strings.SplitN(contentType, ";", 2)[0])
+	}
+	targetType, targetSubtype, ok := strings.Cut(mediaType, mediaTypeSeparator)
+	if !ok {
+		return false
+	}
+
+	for _, filter := range filters {
+		filterType, filterSubtype, ok := strings.Cut(filter, mediaTypeSeparator)
+		if !ok {
+			if filterType == targetType {
+				return true
+			}
+			continue
+		}
+		if filterType == targetType && (filterSubtype == "*" || filterSubtype == targetSubtype) {
+			return true
+		}
+	}
+	return false
 }
 
 func (ui *uiserver) snapshotVFSDownloader(w http.ResponseWriter, r *http.Request) error {
