@@ -57,6 +57,23 @@ type loginFlow struct {
 	baseURL string
 }
 
+// userAgent is how plakar presents itself to the API, which tells from it
+// which plakar a sign-in is used from.
+func userAgent() string {
+	return fmt.Sprintf("plakar/%s (%s/%s)", utils.VERSION, runtime.GOOS, runtime.GOARCH)
+}
+
+// postJSON is http.Post for a JSON body, presenting plakar's User-Agent.
+func postJSON(url string, body io.Reader) (*http.Response, error) {
+	req, err := http.NewRequest("POST", url, body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", userAgent())
+	return http.DefaultClient.Do(req)
+}
+
 func NewLoginFlow(appCtx *appcontext.AppContext, noSpawn bool) (*loginFlow, error) {
 	flow := &loginFlow{
 		appCtx:  appCtx,
@@ -127,6 +144,7 @@ func (flow *loginFlow) PollOnce(pollID, completionCode string) (string, PollStat
 	if err != nil {
 		return "", PollPending, fmt.Errorf("the /auth/login/github/poll API endpoint failed: %w", err)
 	}
+	req.Header.Set("User-Agent", userAgent())
 	if completionCode != "" {
 		req.Header.Set("X-Completion-Code", completionCode)
 	}
@@ -198,7 +216,7 @@ func (flow *loginFlow) Run(provider string, parameters map[string]string) (strin
 		body = bytes.NewBuffer(bodyBytes)
 	}
 
-	resp, err := http.Post(url, "application/json", body)
+	resp, err := postJSON(url, body)
 	if err != nil {
 		return "", fmt.Errorf("unable to get the login URL: %w", err)
 	}
@@ -315,7 +333,7 @@ func (flow *loginFlow) RunUI(provider string, parameters map[string]string) (*UI
 		return nil, fmt.Errorf("failed to marshal JSON: %v", err)
 	}
 
-	resp, err := http.Post(url, "application/json", bytes.NewReader(bodyBytes))
+	resp, err := postJSON(url, bytes.NewReader(bodyBytes))
 	if err != nil {
 		return nil, fmt.Errorf("unable to get the login URL: %w", err)
 	}
@@ -358,7 +376,7 @@ func DeriveToken(ctx *appcontext.AppContext) (string, error) {
 		return "", err
 	}
 
-	req.Header.Set("User-Agent", fmt.Sprintf("plakar/%s (%s/%s)", utils.VERSION, runtime.GOOS, runtime.GOARCH))
+	req.Header.Set("User-Agent", userAgent())
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 
 	client := http.Client{}
