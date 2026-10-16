@@ -37,3 +37,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm run check
+      # Releases ship what make ui builds: build it here too, so a build error
+      # shows up on the PR rather than on the release branch.
+      - run: make ui
+        working-directory: .

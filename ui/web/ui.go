@@ -18,6 +18,7 @@ package web
 
 import (
 	"embed"
+	"errors"
 	"fmt"
 	"io/fs"
 	"math/rand/v2"
@@ -44,30 +45,21 @@ type UiOptions struct {
 //go:embed all:build/*
 var content embed.FS
 
+// Only release tags carry the built UI: on main, build/ holds nothing but a
+// .gitkeep, and this page explains how to get a binary with the UI.
+//
+//go:embed placeholder.html
+var placeholder []byte
+
 func Ui(repo *repository.Repository, ctx *appcontext.AppContext, addr string, opts *UiOptions) error {
 	server := http.NewServeMux()
 	api.SetupRoutes(server, repo, ctx, opts.Token, opts.NoRefresh)
 
-	statics, err := fs.Sub(content, "build")
+	statics, err := staticHandler(content)
 	if err != nil {
 		return err
 	}
-	staticsFS := http.FS(statics)
-
-	// Serve files from the ./build directory
-	server.HandleFunc("/{path...}", func(w http.ResponseWriter, r *http.Request) {
-		p := path.Join("build", r.PathValue("path"))
-
-		// If the asset does not exist, serve index.html.
-		// All other errors are handled by the file server below.
-		_, err := fs.Stat(content, p)
-		if err != nil && os.IsNotExist(err) {
-			http.ServeFileFS(w, r, content, "build/index.html")
-			return
-		}
-
-		http.FileServer(staticsFS).ServeHTTP(w, r)
-	})
+	server.Handle("/{path...}", statics)
 
 	if addr == "" {
 		var port uint16
@@ -116,6 +108,39 @@ func Ui(repo *repository.Repository, ctx *appcontext.AppContext, addr string, op
 		return s.ListenAndServeTLS(opts.Cert, opts.Key)
 	}
 	return s.ListenAndServe()
+}
+
+// staticHandler serves the UI built in content's build/ directory, or the
+// placeholder page when it was not built.
+func staticHandler(content fs.FS) (http.Handler, error) {
+	if _, err := fs.Stat(content, "build/index.html"); errors.Is(err, fs.ErrNotExist) {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.WriteHeader(http.StatusNotFound)
+			_, _ = w.Write(placeholder)
+		}), nil
+	}
+
+	statics, err := fs.Sub(content, "build")
+	if err != nil {
+		return nil, err
+	}
+	staticsFS := http.FS(statics)
+
+	// Serve files from the ./build directory
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		p := path.Join("build", r.PathValue("path"))
+
+		// If the asset does not exist, serve index.html.
+		// All other errors are handled by the file server below.
+		_, err := fs.Stat(content, p)
+		if err != nil && os.IsNotExist(err) {
+			http.ServeFileFS(w, r, content, "build/index.html")
+			return
+		}
+
+		http.FileServer(staticsFS).ServeHTTP(w, r)
+	}), nil
 }
 
 func corsMiddleware(next http.Handler) http.Handler {

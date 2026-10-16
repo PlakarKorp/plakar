@@ -2,7 +2,7 @@
 
 The web UI of Plakar, served by `plakar ui`. It is open source, under the ISC license (see [LICENSE](../../../LICENSE)).
 
-The build outputs are static files. They are committed in [ui/web/build](../build), which the `plakar` binary embeds.
+The build outputs are static files. `make ui`, from the root of the repository, builds them into [ui/web/build](../build), which the `plakar` binary embeds. Only release tags commit them.
 
 ## Layout
 
@@ -26,7 +26,7 @@ pnpm install
 pnpm run build
 ```
 
-The build of the Plakar UI is in `apps/oss/dist`. To use it with Plakar, copy it to `../build` and rebuild `plakar`.
+The build of the Plakar UI is in `apps/oss/dist`. To use it with Plakar, run `make ui` from the root of the repository, then rebuild `plakar`.
 
 ## Development
 

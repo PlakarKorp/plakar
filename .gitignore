@@ -5,3 +5,5 @@
 /coverage.out
 /junit.xml
 .idea
+/ui/web/build/*
+!/ui/web/build/.gitkeep

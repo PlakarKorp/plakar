@@ -18,8 +18,8 @@ make coverage   # statement coverage, testing/ helpers excluded
 Run `gofmt -w` on what you touch and `go vet ./...` before submitting.
 
 The web UI served by `plakar ui` lives in [ui/web/src/](ui/web/src/), see
-[ui/web/src/README.md](ui/web/src/README.md). Its build is committed in `ui/web/build`;
-do not edit it by hand.
+[ui/web/src/README.md](ui/web/src/README.md). `make ui` builds it into
+`ui/web/build`, which only release tags commit; do not commit it on `main`.
 
 ## Conventions
 

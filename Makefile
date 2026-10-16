@@ -14,6 +14,27 @@ all: plakar
 plakar:
 	${GO} build -v .
 
+# Build the web UI into ui/web/build.
+ui:
+	cd ui/web/src && pnpm install --frozen-lockfile && pnpm --filter oss run build
+	find ui/web/build -mindepth 1 -maxdepth 1 ! -name .gitkeep -exec rm -rf {} +
+	cp -R ui/web/src/apps/oss/dist/. ui/web/build/
+	@# Stamp the sources it was built from, which the release workflow checks
+	@# against the tag. Uncommitted changes make the stamp match nothing.
+	@if [ -n "$$(git status --porcelain ui/web/src)" ]; then echo dirty; \
+	else git rev-parse HEAD:ui/web/src; fi > ui/web/build/.src-tree
+
+# Build the UI and stage it for a release commit. Only release branches
+# commit ui/web/build: main ignores it, hence the -f.
+release-ui: ui
+	git add -f ui/web/build
+
+# Put ui/web/build back to what is checked out: drop what make ui wrote, and
+# on a release branch restore the committed build.
+ui-clean:
+	git restore --staged --worktree ui/web/build
+	git clean -fdX ui/web/build
+
 install:
 	mkdir -p ${DESTDIR}${BINDIR}
 	mkdir -p ${DESTDIR}${MANDIR}/man1
@@ -43,4 +64,4 @@ coverage:
 	@grep -v '/plakar/testing/' ${COVERPROFILE} > ${COVERPROFILE}.tmp && mv ${COVERPROFILE}.tmp ${COVERPROFILE}
 	@${GO} tool cover -func=${COVERPROFILE} | tail -1
 
-.PHONY: all plakar install check test coverage junit
+.PHONY: all plakar ui release-ui ui-clean install check test coverage junit

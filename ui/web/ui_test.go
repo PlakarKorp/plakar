@@ -4,7 +4,9 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"testing/fstest"
 )
 
 func TestCorsMiddleware_SetsHeadersOnGET(t *testing.T) {
@@ -57,5 +59,54 @@ func TestCorsMiddleware_OptionsShortCircuits(t *testing.T) {
 	}
 	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "*" {
 		t.Fatalf("Allow-Origin = %q, want *", got)
+	}
+}
+
+func TestStaticHandler_ServesPlaceholderWithoutBuild(t *testing.T) {
+	handler, err := staticHandler(fstest.MapFS{
+		"build/.gitkeep": &fstest.MapFile{},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, target := range []string{"/", "/snapshots"} {
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, target, nil))
+
+		if rec.Code != http.StatusNotFound {
+			t.Fatalf("%s: status = %d, want %d", target, rec.Code, http.StatusNotFound)
+		}
+		if !strings.Contains(rec.Body.String(), "built without its web UI") {
+			t.Fatalf("%s: body does not explain the UI is missing: %q", target, rec.Body.String())
+		}
+	}
+}
+
+func TestStaticHandler_ServesBuild(t *testing.T) {
+	handler, err := staticHandler(fstest.MapFS{
+		"build/index.html":    &fstest.MapFile{Data: []byte("index")},
+		"build/assets/app.js": &fstest.MapFile{Data: []byte("app")},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mux := http.NewServeMux()
+	mux.Handle("/{path...}", handler)
+
+	for target, want := range map[string]string{
+		"/assets/app.js": "app",
+		"/snapshots":     "index",
+	} {
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, target, nil))
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("%s: status = %d, want %d", target, rec.Code, http.StatusOK)
+		}
+		if rec.Body.String() != want {
+			t.Fatalf("%s: body = %q, want %q", target, rec.Body.String(), want)
+		}
 	}
 }
