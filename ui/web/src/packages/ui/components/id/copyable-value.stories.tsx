@@ -41,7 +41,7 @@ export const Command: Story = {
   args: {
     label: "Verify with",
     copyLabel: "command",
-    value: "plakman attestation-verify --key residency.pub residency.jsonl",
+    value: "plakar at /var/backups check",
   },
 };
 
@@ -49,6 +49,6 @@ export const PublicKey: Story = {
   args: {
     label: "Public key",
     value:
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK7Qm4vXJ2pL9sN3rT8wY1cF5hB6dE0aG2jU4mZ9xV7n attestation@plakman",
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK7Qm4vXJ2pL9sN3rT8wY1cF5hB6dE0aG2jU4mZ9xV7n user@example.com",
   },
 };

@@ -6,7 +6,7 @@ const meta = {
   title: "Components/Sign Out Card",
   tags: ["autodocs"],
   args: {
-    productName: "Plakar Control Plane",
+    productName: "Plakar",
     account: {
       name: "Édouard de Carheil",
       email: "edouard@plakar.io",

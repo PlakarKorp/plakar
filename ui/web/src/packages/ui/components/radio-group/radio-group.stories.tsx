@@ -92,8 +92,8 @@ export const CardRadios: Story = {
         />
 
         <CardRadio
-          value="control-plane"
-          label="Control Plane"
+          value="enterprise"
+          label="Enterprise"
           description="Security + compliance at scale"
         />
       </div>
