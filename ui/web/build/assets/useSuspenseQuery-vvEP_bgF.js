@@ -1,0 +1,1 @@
+import{a as e,l as t,o as n}from"./enrich-CkOMd76X.js";function r(r,i){return e({...r,enabled:!0,suspense:!0,throwOnError:n,placeholderData:void 0},t,i)}export{r as t};
