@@ -71,29 +71,24 @@ func (tui *tui) Run() error {
 
 		hasSeenStop := false
 		for e := range events {
-			// If app is running, forward event (non-blocking / cancel-safe)
 			if !tui.cancel.Load() {
 				if tui.app != nil {
 					tui.app.state.Update(*e)
 					select {
 					case <-tui.app.done:
-						if tui.app.err != nil {
+						if tui.app.err != nil && !hasSeenStop {
+							hasSeenStop = true
 							if errors.Is(tui.app.err, tea.ErrInterrupted) {
-								if !hasSeenStop {
-									hasSeenStop = true
-									tui.done <- ui.ErrUserAbort
-								}
+								tui.done <- ui.ErrUserAbort
 							} else {
-								if !hasSeenStop {
-									hasSeenStop = true
-									tui.done <- tui.app.err
-								}
+								tui.done <- tui.app.err
 							}
 						}
 					default:
 					}
 
-					// Close app on matching workflow.end
+					// Close the app on its matching workflow.end; the final frame
+					// is reprinted after the program exits (see newApplication).
 					if e.Type == "workflow.end" && e.Job == tui.app.job {
 						tui.app.Stop()
 						tui.app = nil
@@ -101,7 +96,6 @@ func (tui *tui) Run() error {
 					continue
 				}
 
-				// No app: start when workflow.start matches a known model
 				if e.Type == "workflow.start" {
 					tui.app = newApplication(tui.ctx, e.Data["workflow"].(string), tui.repo)
 					if tui.app != nil {
@@ -112,7 +106,6 @@ func (tui *tui) Run() error {
 				}
 			}
 
-			// default fallback
 			stdio.HandleEvent(tui.ctx, e)
 		}
 		if tui.app != nil {

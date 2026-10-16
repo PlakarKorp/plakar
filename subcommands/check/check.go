@@ -113,9 +113,8 @@ func (cmd *Check) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 	}
 	defer checkCache.Close()
 
-	emitter := repo.Emitter("check")
-	defer emitter.Close()
-
+	// Each snapshot's Check emits its own "check" workflow, so the UI shows one
+	// progress view per snapshot; a run-spanning emitter would collapse them.
 	var failures int
 	for _, arg := range snapshots {
 		snap, pathname, err := locate.OpenSnapshotByPath(repo, arg)
