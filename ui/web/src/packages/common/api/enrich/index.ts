@@ -6,6 +6,5 @@ export * from "./filemode";
 export * from "./integration";
 export * from "./number";
 export * from "./path";
-export * from "./residency";
 export * from "./size";
 export * from "./version";

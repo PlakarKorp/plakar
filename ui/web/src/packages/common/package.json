@@ -10,7 +10,6 @@
     "./api/errors": "./api/errors.ts",
     "./api/kloset": "./api/kloset/index.ts",
     "./api/pagination": "./api/pagination.ts",
-    "./api/storage-tier": "./api/storage-tier.ts",
     "./components": "./components/index.ts",
     "./layouts": "./layouts/index.ts",
     "./hooks": "./hooks/index.ts",
@@ -23,7 +22,6 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@dagrejs/dagre": "^3.1.1",
     "@fontsource/inter": "^5.3.0",
     "@fontsource/roboto-mono": "^5.3.0",
     "@fontsource/space-grotesk": "^5.3.0",
@@ -38,7 +36,6 @@
     "@tanstack/react-table": "^9.2.4",
     "@types/node": "^26.2.0",
     "@types/react": "^19.2.18",
-    "@xyflow/react": "^12.11.3",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
     "eslint": "^10.8.1",
