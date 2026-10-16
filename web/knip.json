@@ -1,12 +1,8 @@
 {
-  "ignore": ["**/routeTree.gen.ts", "**/vite-env.d.ts"],
   "ignoreDependencies": [
     "@fontsource/inter",
     "@fontsource/roboto-mono",
     "@fontsource/space-grotesk",
-    "tailwindcss-react-aria-components",
-    "@plakar-ui/common",
-    "@plakar-ui/ui",
-    "oss"
+    "tailwindcss-react-aria-components"
   ]
 }
