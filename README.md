@@ -81,6 +81,8 @@ Plakar requires Go 1.23.3 or higher.
 go install github.com/PlakarKorp/plakar@latest
 ```
 
+`@latest` installs the latest release, which includes the web UI. A build of the `main` branch does not: with `go install github.com/PlakarKorp/plakar@main`, or `make` in a clone, `plakar ui` serves the API and a page explaining how to get the UI. To build the UI in a clone, run `make ui` before `make`; it requires Node.js and pnpm.
+
 ## More with Plakar
 
 **Archives.** You can export one or more snapshots as a `.ptar` archive using `plakar ptar`. A `.ptar` file is a self-contained, deduplicated, compressed, and encrypted archive.
