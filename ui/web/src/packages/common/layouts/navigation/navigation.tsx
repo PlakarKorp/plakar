@@ -17,7 +17,7 @@ export type NavigationProps = Pick<
   | "controls"
   | "scope"
   | "footer"
-  | "isControlPlane"
+  | "logo"
   | "isOffline"
 >;
 

@@ -34,15 +34,3 @@ export const Full: Story = {
     variant: "full",
   },
 };
-
-export const ControlPlaneIcon: Story = {
-  args: {
-    variant: "icon-control-plane",
-  },
-};
-
-export const ControlPlaneFull: Story = {
-  args: {
-    variant: "full-control-plane",
-  },
-};

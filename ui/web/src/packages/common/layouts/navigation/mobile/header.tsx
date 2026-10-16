@@ -17,7 +17,7 @@ type HeaderProps = Pick<
   | "controls"
   | "scope"
   | "footer"
-  | "isControlPlane"
+  | "logo"
   | "isOffline"
 >;
 
@@ -29,14 +29,14 @@ export function Header(contentProps: HeaderProps) {
     .flatMap((item) => item.subItems || item)
     .find((item) => item.isSelected);
 
-  const logo = contentProps.isControlPlane ? "icon-control-plane" : "icon";
+  const ProductLogo = contentProps.logo ?? Logo;
 
   return (
     <>
       <header className="border-primary bg-primary flex items-center justify-between border-b p-2 pl-4 lg:hidden">
         <div className="flex items-center gap-2">
           <Link href={navItems[0].href}>
-            <Logo variant={logo} className="h-8.5" />
+            <ProductLogo variant="icon" className="h-8.5" />
           </Link>
           <Button
             variant="tertiary"

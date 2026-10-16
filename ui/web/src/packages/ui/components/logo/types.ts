@@ -1,8 +1,3 @@
-export const LogoVariants = [
-  "icon",
-  "full",
-  "icon-control-plane",
-  "full-control-plane",
-];
+export const LogoVariants = ["icon", "full"] as const;
 
 export type LogoVariant = (typeof LogoVariants)[number];

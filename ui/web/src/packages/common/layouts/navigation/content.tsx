@@ -9,7 +9,7 @@ import {
   Tag,
 } from "@plakar-ui/ui/components";
 import clsx from "clsx";
-import { cloneElement, useState } from "react";
+import { cloneElement, ComponentType, useState } from "react";
 import { Link } from "react-aria-components";
 
 import { User, UserAvatar } from "./user-avatar";
@@ -35,7 +35,8 @@ export type ContentProps = {
   controls?: React.ReactNode;
   scope?: React.ReactElement<NavigationScopeProps>;
   footer?: React.ReactElement<{ forceClose?: boolean }>;
-  isControlPlane?: boolean;
+  /** Logo of the product, defaults to the Plakar logo. */
+  logo?: ComponentType<{ variant: LogoVariant; className?: string }>;
   isOffline?: boolean;
   onCloseMenu?: () => void;
   handleToggle?: () => void;
@@ -60,15 +61,13 @@ export function Content({
   controls,
   scope,
   footer,
-  isControlPlane = false,
+  logo: ProductLogo = Logo,
   isOffline = false,
   handleToggle,
   onCloseMenu,
   onPopoverOpenChange,
 }: ContentProps) {
-  const logoVariant: LogoVariant = isExpanded
-    ? `full${isControlPlane ? "-control-plane" : ""}`
-    : `icon${isControlPlane ? "-control-plane" : ""}`;
+  const logoVariant: LogoVariant = isExpanded ? "full" : "icon";
   const chevronsIcon =
     isExpanded && !isFloating ? "chevrons-left" : "chevrons-right";
   const login = subNavItems.find((item) => item.label === "Login");
@@ -90,16 +89,13 @@ export function Content({
       <div className="flex flex-col gap-8">
         <div className={clsx("ml-[3.5px] flex items-center justify-between")}>
           <Link href={navItems[0].href}>
-            <Logo variant={logoVariant} className="h-[32px]" />
+            <ProductLogo variant={logoVariant} className="h-[32px]" />
           </Link>
           {isExpanded && (
             <div
-              className={clsx(
-                "flex flex-col items-end gap-1",
-                isControlPlane && plan && "-mb-2"
-              )}
+              className={clsx("flex flex-col items-end gap-1", plan && "-mb-2")}
             >
-              {isControlPlane && plan && (
+              {plan && (
                 <Tag variant="brand" radius="sqrt" size="sm">
                   <span className="capitalize">{plan}</span> plan
                 </Tag>
