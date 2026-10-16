@@ -6,7 +6,31 @@ on:
   pull_request:
 
 jobs:
+  # A PR touching only ui/web/src/ skips the build job instead of not starting
+  # the workflow: a skipped job satisfies a required check, a missing one does
+  # not.
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      go: ${{ steps.filter.outputs.go }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 2
+
+    - id: filter
+      run: |
+        if [ "$GITHUB_EVENT_NAME" = pull_request ] && ! git diff --name-only HEAD^1 HEAD | grep -qv '^ui/web/src/'; then
+          echo "go=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "go=true" >> "$GITHUB_OUTPUT"
+        fi
+
   build:
+    needs: changes
+    if: needs.changes.outputs.go == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

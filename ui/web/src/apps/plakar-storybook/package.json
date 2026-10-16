@@ -1,0 +1,28 @@
+{
+  "name": "plakar-storybook",
+  "version": "1.0.0",
+  "private": true,
+  "license": "ISC",
+  "type": "module",
+  "scripts": {
+    "dev": "storybook dev -p 6006 --no-open",
+    "lint": "eslint .",
+    "check-ts": "tsc -b --noEmit"
+  },
+  "dependencies": {
+    "@plakar-ui/common": "workspace:*",
+    "@plakar-ui/config": "workspace:*",
+    "@plakar-ui/ui": "workspace:*",
+    "@storybook/addon-docs": "^10.5.9",
+    "@storybook/react-vite": "^10.5.9",
+    "@tailwindcss/vite": "^4.3.3",
+    "@tanstack/react-router": "^1.170.38",
+    "@types/react": "^19.2.18",
+    "@vitejs/plugin-react": "^6.1.1",
+    "eslint": "^10.8.1",
+    "react": "^19.2.8",
+    "storybook": "^10.5.9",
+    "typescript": "^5.9.3",
+    "vite": "^8.2.2"
+  }
+}

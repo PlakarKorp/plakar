@@ -1,0 +1,8 @@
+{
+  "ignoreDependencies": [
+    "@fontsource/inter",
+    "@fontsource/roboto-mono",
+    "@fontsource/space-grotesk",
+    "tailwindcss-react-aria-components"
+  ]
+}

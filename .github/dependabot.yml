@@ -9,3 +9,10 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
+  - package-ecosystem: "npm"
+    directory: "/ui/web/src"
+    schedule:
+      interval: "weekly"
+    # Matches minimumReleaseAge in ui/web/src/pnpm-workspace.yaml.
+    cooldown:
+      default-days: 7

@@ -35,7 +35,7 @@ func TestPkgExecuteNoAction(t *testing.T) {
 func TestPkgCreateParseAbsoluteManifest(t *testing.T) {
 	ctx := newCtx(t)
 	manifest := filepath.Join(ctx.CWD, "manifest.yaml")
-	require.NoError(t, os.WriteFile(manifest, []byte("name: myplugin\nconnectors:\n  - type: importer\n    executable: myplugin\n"), 0644))
+	require.NoError(t, os.WriteFile(manifest, []byte("name: myplugin\nconnectors:\n  - type: importer\n    protocols:\n      - myproto\n    executable: myplugin\n"), 0644))
 
 	// Pass an absolute, uncleaned path to take the filepath.Clean branch.
 	dirty := filepath.Join(ctx.CWD, ".", "manifest.yaml")
@@ -48,7 +48,7 @@ func TestPkgCreateParseAbsoluteManifest(t *testing.T) {
 func TestPkgCreateParseGOOSGOARCHEnv(t *testing.T) {
 	ctx := newCtx(t)
 	manifest := filepath.Join(ctx.CWD, "manifest.yaml")
-	require.NoError(t, os.WriteFile(manifest, []byte("name: myplugin\nconnectors:\n  - type: importer\n    executable: myplugin\n"), 0644))
+	require.NoError(t, os.WriteFile(manifest, []byte("name: myplugin\nconnectors:\n  - type: importer\n    protocols:\n      - myproto\n    executable: myplugin\n"), 0644))
 
 	t.Setenv("GOOS", "plan9")
 	t.Setenv("GOARCH", "mips")
@@ -76,7 +76,7 @@ func TestPkgCreateExecuteFailsOnBadConnector(t *testing.T) {
 	// connector executable is NOT marked executable -> dofile emits an error
 	// record during the scan.
 	manifest := filepath.Join(work, "manifest.yaml")
-	require.NoError(t, os.WriteFile(manifest, []byte("name: myplugin\nconnectors:\n  - type: importer\n    executable: myplugin\n"), 0644))
+	require.NoError(t, os.WriteFile(manifest, []byte("name: myplugin\nconnectors:\n  - type: importer\n    protocols:\n      - myproto\n    executable: myplugin\n"), 0644))
 	require.NoError(t, os.WriteFile(filepath.Join(work, "myplugin"), []byte("not exec"), 0644))
 
 	out := filepath.Join(work, "out.ptar")

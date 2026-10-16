@@ -118,7 +118,7 @@ func TestPkgBuildParseErrors(t *testing.T) {
 func TestPkgCreateParseOk(t *testing.T) {
 	ctx := newCtx(t)
 	manifest := filepath.Join(ctx.CWD, "manifest.yaml")
-	require.NoError(t, os.WriteFile(manifest, []byte("name: myplugin\nconnectors:\n  - type: importer\n    executable: myplugin\n"), 0644))
+	require.NoError(t, os.WriteFile(manifest, []byte("name: myplugin\nconnectors:\n  - type: importer\n    protocols:\n      - myproto\n    executable: myplugin\n"), 0644))
 
 	cmd := &PkgCreate{}
 	require.NoError(t, cmd.Parse(ctx, []string{"manifest.yaml", "v1.2.3"}))
@@ -357,7 +357,7 @@ func TestPkgCreateExecuteBuildsPtar(t *testing.T) {
 	ctx.CWD = work
 
 	manifest := filepath.Join(work, "manifest.yaml")
-	require.NoError(t, os.WriteFile(manifest, []byte("name: myplugin\nconnectors:\n  - type: importer\n    executable: myplugin\n"), 0644))
+	require.NoError(t, os.WriteFile(manifest, []byte("name: myplugin\nconnectors:\n  - type: importer\n    protocols:\n      - myproto\n    executable: myplugin\n"), 0644))
 	exe := filepath.Join(work, "myplugin")
 	require.NoError(t, os.WriteFile(exe, []byte("#!/bin/sh\necho hi\n"), 0755))
 

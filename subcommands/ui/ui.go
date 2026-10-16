@@ -26,7 +26,7 @@ import (
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
-	v2 "github.com/PlakarKorp/plakar/ui/v2"
+	"github.com/PlakarKorp/plakar/ui/web"
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 )
@@ -77,7 +77,7 @@ func (cmd *Ui) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 func (cmd *Ui) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	ui_opts := v2.UiOptions{
+	ui_opts := web.UiOptions{
 		NoSpawn:   cmd.NoSpawn,
 		NoRefresh: cmd.NoRefresh,
 		Cors:      cmd.Cors,
@@ -94,7 +94,7 @@ func (cmd *Ui) Execute(ctx *appcontext.AppContext, repo *repository.Repository) 
 		}
 	}
 
-	err := v2.Ui(repo, ctx, cmd.Addr, &ui_opts)
+	err := web.Ui(repo, ctx, cmd.Addr, &ui_opts)
 	if err != nil {
 		fmt.Fprintf(ctx.Stderr, "ui: %s\n", err)
 		return 1, err

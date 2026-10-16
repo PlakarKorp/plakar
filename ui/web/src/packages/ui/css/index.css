@@ -1,0 +1,567 @@
+@import "tailwindcss";
+@plugin "tailwindcss-react-aria-components";
+
+/*
+According to https://www.npmjs.com/package/@fontsource/space-grotesk
+
+To import specific font weights and styles:
+  import "@fontsource/space-grotesk"; // Defaults to weight 400
+  import "@fontsource/space-grotesk/400.css"; // Specify weight
+  import "@fontsource/space-grotesk/400-italic.css"; // Specify weight and style
+
+Supported variables:
+  Weights: [300,400,500,600,700]
+  Styles: [normal]
+  Subsets: [latin,latin-ext,vietnamese]
+*/
+@import "@fontsource/space-grotesk/300.css"; /* font-light */
+@import "@fontsource/space-grotesk/400.css"; /* font-normal */
+@import "@fontsource/space-grotesk/500.css"; /* font-medium */
+@import "@fontsource/space-grotesk/600.css"; /* font-semibold */
+@import "@fontsource/space-grotesk/700.css"; /* font-bold */
+
+/*
+According to https://www.npmjs.com/package/@fontsource/inter
+
+To import specific font weights and styles:
+  import "@fontsource/inter"; // Defaults to weight 400
+  import "@fontsource/inter/400.css"; // Specify weight
+  import "@fontsource/inter/400-italic.css"; // Specify weight and style
+
+Supported variables:
+  Weights: [100,200,300,400,500,600,700,800,900]
+  Styles: [italic,normal]
+  Subsets: [cyrillic,cyrillic-ext,greek,greek-ext,latin,latin-ext,vietnamese]
+*/
+@import "@fontsource/inter/100.css"; /* font-thin */
+@import "@fontsource/inter/200.css"; /* font-extralight */
+@import "@fontsource/inter/300.css"; /* font-light */
+@import "@fontsource/inter/400.css"; /* font-normal */
+@import "@fontsource/inter/500.css"; /* font-medium */
+@import "@fontsource/inter/600.css"; /* font-semibold */
+@import "@fontsource/inter/700.css"; /* font-bold */
+@import "@fontsource/inter/800.css"; /* font-extrabold */
+@import "@fontsource/inter/900.css"; /* font-black */
+
+/*
+According to https://www.npmjs.com/package/@fontsource/roboto-mono
+
+To import specific font weights and styles:
+  import "@fontsource/roboto-mono"; // Defaults to weight 400
+  import "@fontsource/roboto-mono/400.css"; // Specify weight
+  import "@fontsource/roboto-mono/400-italic.css"; // Specify weight and style
+
+Supported variables:
+  Weights: [100,200,300,400,500,600,700]
+  Styles: [italic,normal]
+  Subsets: [cyrillic,cyrillic-ext,greek,latin,latin-ext,vietnamese]
+*/
+@import "@fontsource/roboto-mono/100.css"; /* font-thin */
+@import "@fontsource/roboto-mono/200.css"; /* font-extralight */
+@import "@fontsource/roboto-mono/300.css"; /* font-light */
+@import "@fontsource/roboto-mono/400.css"; /* font-normal */
+@import "@fontsource/roboto-mono/500.css"; /* font-medium */
+@import "@fontsource/roboto-mono/600.css"; /* font-semibold */
+@import "@fontsource/roboto-mono/700.css"; /* font-bold */
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Color scheme: render controls in light or dark mode (ie: scrollbar) */
+:root {
+  color-scheme: light;
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+@layer base {
+  html {
+    @apply bg-secondary text-primary;
+
+    :focus-visible {
+      @apply outline-focus;
+    }
+
+    mark {
+      @apply bg-mark;
+    }
+  }
+}
+
+@theme {
+  --font-sans: "Inter";
+  --font-serif: "Space Grotesk";
+  --font-mono: "Roboto Mono";
+
+  --blue-brand-50: #ecf0ff;
+  --blue-brand-100: #dde3ff;
+  --blue-brand-200: #c2ccff;
+  --blue-brand-300: #9ca9ff;
+  --blue-brand-400: #757aff;
+  --blue-brand-500: #524cff;
+  --blue-brand-600: #4b36f5;
+  --blue-brand-700: #412ad8;
+  --blue-brand-800: #3425ae;
+  --blue-brand-900: #2e2689;
+  --blue-brand-950: #1d1650;
+
+  /* Background */
+  --background-background: var(--color-slate-50);
+
+  --background-color-primary: var(--color-white);
+  --background-color-primary-hover: var(--color-slate-50);
+
+  --background-color-secondary: var(--color-slate-50);
+  --background-color-secondary-hover: var(--color-slate-100);
+
+  --background-color-tertiary: var(--color-slate-100);
+  --background-color-tertiary-hover: var(--color-slate-200);
+
+  --background-color-accent-heavy: var(--color-slate-900);
+  --background-color-accent: var(--blue-brand-500);
+  --background-color-accent-hover: var(--blue-brand-400);
+  --background-color-accent-secondary: var(--blue-brand-300);
+  --background-color-accent-tertiary: var(--blue-brand-100);
+  --background-color-accent-tertiary-hover: var(--blue-brand-50);
+  --background-color-accent-quaternary: var(--blue-brand-50);
+  --background-color-focus: var(--border-color-accent);
+
+  --background-color-success: var(--color-emerald-500);
+  --background-color-success-secondary: var(--color-emerald-300);
+  --background-color-success-tertiary: var(--color-emerald-100);
+
+  --background-color-warning: var(--color-yellow-500);
+  --background-color-warning-secondary: var(--color-yellow-300);
+  --background-color-warning-tertiary: var(--color-yellow-100);
+
+  --background-color-error: var(--color-red-500);
+  --background-color-error-hover: var(--color-red-400);
+  --background-color-error-secondary: var(--color-red-300);
+  --background-color-error-tertiary: var(--color-red-100);
+
+  --background-color-disable: var(--color-slate-200);
+  --background-color-placeholder: var(--color-slate-200);
+
+  --background-color-foreground-light: var(--color-white);
+  --background-color-foreground-black: var(--color-zinc-950);
+
+  --background-color-terminal: var(--color-slate-900);
+  --background-color-terminal-hover: var(--color-slate-700);
+  --background-color-terminal-heavy: var(--color-slate-800);
+
+  --background-color-mark: var(--color-yellow-300);
+
+  /* Text */
+  --text-color-primary: var(--color-slate-900);
+  --text-color-secondary: var(--color-slate-700);
+  --text-color-tertiary: var(--color-slate-500);
+  --text-color-quaternary: var(--color-slate-400);
+
+  --text-color-disable: var(--color-slate-400);
+  --text-color-placeholder: var(--color-slate-400);
+
+  --text-color-on-accent: var(--color-white);
+  --text-color-on-brand: var(--color-white);
+  --text-color-on-brand-secondary: var(--blue-brand-100);
+  --text-color-accent: var(--blue-brand-500);
+  --text-color-accent-hover: var(--blue-brand-400);
+
+  --text-color-success: var(--color-emerald-700);
+  --text-color-warning: var(--color-yellow-700);
+  --text-color-error: var(--color-red-700);
+
+  --text-color-terminal: var(--color-slate-500);
+  --text-color-terminal-secondary: var(--color-slate-300);
+
+  /* Borders */
+  --border-color-primary: var(--color-slate-300);
+  --border-color-secondary: var(--color-slate-200);
+  --border-color-tertiary: var(--color-slate-100);
+
+  --border-color-accent: var(--blue-brand-500);
+  --border-color-accent-secondary: var(--blue-brand-300);
+  --border-color-accent-heavy: var(--color-slate-900);
+  --border-color-on-accent: var(--color-white);
+
+  --border-color-success: var(--color-emerald-600);
+  --border-color-warning: var(--color-yellow-600);
+  --border-color-error: var(--color-red-600);
+
+  --border-color-terminal: var(--color-slate-700);
+
+  /* If you need to reuse colors for other purposes than borders */
+  --color-text-on-accent: var(--text-color-on-accent);
+  --color-border-primary: var(--border-color-primary);
+  --color-border-secondary: var(--border-color-secondary);
+  --color-border-accent: var(--border-color-accent);
+  --color-background-accent-hover: var(--background-color-accent-hover);
+  --color-background-accent-tertiary: var(--background-color-accent-tertiary);
+  --color-background-disable: var(--background-color-disable);
+  --color-background-success: var(--background-color-success);
+  --color-background-warning: var(--background-color-warning);
+  --color-background-error: var(--background-color-error);
+  --color-background-primary: var(--background-color-primary);
+  --color-background-secondary: var(--background-color-secondary);
+  --color-background-tertiary: var(--background-color-tertiary);
+
+  /* Outlines (similar to borders) */
+  --outline-color-primary: var(--border-color-primary);
+  --outline-color-secondary: var(--border-color-secondary);
+  --outline-color-tertiary: var(--border-color-tertiary);
+
+  --outline-color-accent: var(--border-color-accent);
+  --outline-color-accent-secondary: var(--border-color-accent-secondary);
+  --outline-color-accent-heavy: var(--border-color-accent-heavy);
+
+  --outline-color-success: var(--border-color-success);
+  --outline-color-warning: var(--border-color-warning);
+  --outline-color-error: var(--border-color-error);
+
+  --outline-color-focus: var(--border-color-accent);
+
+  /* Configurations colors */
+  --background-color-source-accent: var(--color-rose-600);
+  --background-color-source-tertiary: var(--color-rose-100);
+  --text-color-source: var(--color-rose-600);
+  --border-color-source: var(--color-rose-600);
+
+  --background-color-destination-accent: var(--color-emerald-600);
+  --background-color-destination-tertiary: var(--color-emerald-100);
+  --text-color-destination: var(--color-emerald-600);
+  --border-color-destination: var(--color-emerald-600);
+
+  --background-color-store-accent: var(--color-blue-600);
+  --background-color-store-tertiary: var(--color-blue-100);
+  --text-color-store: var(--color-blue-600);
+  --border-color-store: var(--color-blue-600);
+
+  --background-color-secret-provider-accent: var(--color-violet-600);
+  --background-color-secret-provider-tertiary: var(--color-violet-100);
+  --text-color-secret-provider: var(--color-violet-600);
+  --border-color-secret-provider: var(--color-violet-600);
+
+  /* Providers colors */
+  --color-aws: #202b3b;
+  --color-openwrt: #002843;
+  --color-ovh: #000e9c;
+  --color-routeros: #263037;
+  --color-scaleway: #57009f;
+  --color-vmware: #000000;
+}
+
+.dark {
+  /* Background */
+  --background-background: var(--color-zinc-950);
+
+  --background-color-primary: var(--color-zinc-900);
+  --background-color-primary-hover: var(--color-zinc-800);
+
+  --background-color-secondary: var(--color-zinc-950);
+  --background-color-secondary-hover: var(--color-zinc-900);
+
+  --background-color-tertiary: var(--color-zinc-800);
+  --background-color-tertiary-hover: var(--color-zinc-700);
+
+  --background-color-accent-heavy: var(--color-white);
+  --background-color-accent: var(--blue-brand-500);
+  --background-color-accent-hover: var(--blue-brand-400);
+  --background-color-accent-secondary: var(--blue-brand-700);
+  --background-color-accent-tertiary: var(--blue-brand-900);
+  --background-color-accent-tertiary-hover: var(--blue-brand-950);
+  --background-color-accent-quaternary: var(--blue-brand-950);
+  --background-color-focus: var(--blue-brand-300);
+
+  --background-color-success: var(--color-emerald-500);
+  --background-color-success-secondary: var(--color-emerald-800);
+  --background-color-success-tertiary: var(--color-emerald-950);
+
+  --background-color-warning: var(--color-yellow-500);
+  --background-color-warning-secondary: var(--color-yellow-800);
+  --background-color-warning-tertiary: var(--color-yellow-950);
+
+  --background-color-error: var(--color-red-500);
+  --background-color-error-hover: var(--color-red-400);
+  --background-color-error-secondary: var(--color-red-800);
+  --background-color-error-tertiary: var(--color-red-950);
+
+  --background-color-disable: var(--color-zinc-800);
+  --background-color-placeholder: var(--color-slate-500);
+
+  --background-color-foreground-light: var(--color-white);
+  --background-color-foreground-black: var(--color-zinc-950);
+
+  --background-color-terminal: var(--color-slate-900);
+  --background-color-terminal-hover: var(--color-slate-700);
+  --background-color-terminal-heavy: var(--color-slate-800);
+
+  --background-color-mark: var(--color-yellow-300);
+
+  /* Text */
+  --text-color-primary: var(--color-zinc-100);
+  --text-color-secondary: var(--color-zinc-300);
+  --text-color-tertiary: var(--color-zinc-400);
+  --text-color-quaternary: var(--color-zinc-500);
+
+  --text-color-disable: var(--color-zinc-600);
+  --text-color-placeholder: var(--color-zinc-600);
+
+  --text-color-on-accent: var(--color-zinc-900);
+  --text-color-on-brand: var(--color-white);
+  --text-color-on-brand-secondary: var(--blue-brand-100);
+  --text-color-accent: var(--blue-brand-100);
+  --text-color-accent-hover: var(--blue-brand-200);
+
+  --text-color-success: var(--color-emerald-300);
+  --text-color-warning: var(--color-yellow-300);
+  --text-color-error: var(--color-red-300);
+
+  --text-color-terminal: var(--color-slate-500);
+  --text-color-terminal-secondary: var(--color-slate-300);
+
+  /* Borders */
+  --border-color-primary: var(--color-zinc-600);
+  --border-color-secondary: var(--color-zinc-700);
+  --border-color-tertiary: var(--color-zinc-800);
+
+  --border-color-accent: var(--blue-brand-500);
+  --border-color-accent-secondary: var(--blue-brand-700);
+  --border-color-accent-heavy: var(--color-white);
+  --border-color-on-accent: var(--color-zinc-900);
+
+  --border-color-success: var(--color-emerald-600);
+  --border-color-warning: var(--color-yellow-600);
+  --border-color-error: var(--color-red-600);
+
+  --border-color-terminal: var(--color-slate-700);
+
+  /* If you need to reuse colors for other purposes than borders */
+  --color-text-on-accent: var(--text-color-on-accent);
+  --color-border-primary: var(--border-color-primary);
+  --color-border-secondary: var(--border-color-secondary);
+  --color-border-accent: var(--border-color-accent);
+  --color-background-accent-hover: var(--background-color-accent-hover);
+  --color-background-accent-tertiary: var(--background-color-accent-tertiary);
+  --color-background-disable: var(--background-color-disable);
+  --color-background-success: var(--background-color-success);
+  --color-background-warning: var(--background-color-warning);
+  --color-background-error: var(--background-color-error);
+  --color-background-primary: var(--background-color-primary);
+  --color-background-secondary: var(--background-color-secondary);
+  --color-background-tertiary: var(--background-color-tertiary);
+
+  /* Outlines (similar to borders) */
+  --outline-color-primary: var(--border-color-primary);
+  --outline-color-secondary: var(--border-color-secondary);
+  --outline-color-tertiary: var(--border-color-tertiary);
+
+  --outline-color-accent: var(--border-color-accent);
+  --outline-color-accent-secondary: var(--border-color-accent-secondary);
+  --outline-color-accent-heavy: var(--border-color-accent-heavy);
+
+  --outline-color-success: var(--border-color-success);
+  --outline-color-warning: var(--border-color-warning);
+  --outline-color-error: var(--border-color-error);
+
+  --outline-color-focus: var(--blue-brand-300);
+
+  /* Configurations colors */
+  --background-color-source-accent: var(--color-rose-800);
+  --background-color-source-tertiary: var(--color-rose-900);
+  --text-color-source: var(--color-rose-100);
+  --border-color-source: var(--color-rose-800);
+
+  --background-color-destination-accent: var(--color-emerald-800);
+  --background-color-destination-tertiary: var(--color-emerald-900);
+  --text-color-destination: var(--color-emerald-100);
+  --border-color-destination: var(--color-emerald-800);
+
+  --background-color-store-accent: var(--color-blue-800);
+  --background-color-store-tertiary: var(--color-blue-900);
+  --text-color-store: var(--color-blue-100);
+  --border-color-store: var(--color-blue-800);
+
+  --background-color-secret-provider-accent: var(--color-violet-800);
+  --background-color-secret-provider-tertiary: var(--color-violet-900);
+  --text-color-secret-provider: var(--color-violet-100);
+  --border-color-secret-provider: var(--color-violet-800);
+
+  /* Providers colors */
+  --color-aws: #ffffff;
+  --color-openwrt: #ffffff;
+  --color-ovh: #ffffff;
+  --color-routeros: #ffffff;
+  --color-scaleway: #ffffff;
+  --color-vmware: #ffffff;
+}
+
+.scrollbar-hide {
+  -webkit-scrollbar: none;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Animations */
+@keyframes modal-blur {
+  from {
+    background: rgba(0 0 0 / 0);
+  }
+
+  to {
+    background: rgba(0 0 0 / 0.5);
+  }
+}
+
+@keyframes modal-slide {
+  from {
+    transform: translateX(100%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes modal-slide-right {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes modal-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-zoom {
+  from {
+    transform: scale(0.8);
+  }
+
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.toast-enter {
+  animation: toast-in 400ms;
+}
+
+@keyframes entering-bottom {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes exiting-bottom {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes entering-top {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes exiting-top {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@keyframes entering-left {
+  from {
+    opacity: 0;
+    transform: translateX(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes exiting-left {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(4px);
+  }
+}
+
+@keyframes entering-right {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes exiting-right {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+}
+
+@keyframes caret-blink {
+  0%,
+  70%,
+  100% {
+    opacity: 1;
+  }
+  35% {
+    opacity: 0;
+  }
+}

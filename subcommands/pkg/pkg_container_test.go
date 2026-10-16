@@ -212,7 +212,7 @@ func TestPkgAddContainerRunsInstallHook(t *testing.T) {
 
 func TestPkgerImporterManifestData(t *testing.T) {
 	dir := t.TempDir()
-	data := []byte("name: myplugin\nconnectors:\n  - type: importer\n    image_id: sha256:aa\n")
+	data := []byte("name: myplugin\nconnectors:\n  - type: importer\n    protocols:\n      - myproto\n    image_id: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n")
 
 	var m ppkg.Manifest
 	require.NoError(t, m.Parse(bytes.NewReader(data)))

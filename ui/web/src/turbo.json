@@ -1,0 +1,29 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "tasks": {
+    "lint": {
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/packages/config/eslint/**"]
+    },
+    "check-ts": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/packages/config/typescript/**"
+      ]
+    },
+    "//#check-format": {},
+    "//#check-knip": {},
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "preview": {
+      "cache": false,
+      "persistent": true
+    },
+    "build": {
+      "dependsOn": ["^test", "^check-ts", "^lint"],
+      "outputs": ["dist/**"]
+    },
+    "test": {}
+  }
+}

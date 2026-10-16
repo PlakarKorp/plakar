@@ -17,7 +17,6 @@ import (
 func renderModel(s *State) appModel {
 	return appModel{
 		application: &Application{name: "import", state: s},
-		progress:    progressBar(),
 	}
 }
 
@@ -25,7 +24,8 @@ func renderModel(s *State) appModel {
 // having processed a handful of files/dirs.
 func driveSummaryState() *State {
 	s := newApplicationState()
-	s.Update(Event{Type: "workflow.start", Snapshot: objects.MAC{0xde, 0xad, 0xbe, 0xef}})
+	s.Update(Event{Type: "workflow.start", Snapshot: objects.MAC{0xde, 0xad, 0xbe, 0xef},
+		Data: map[string]any{"workflow": "import"}})
 	s.startTime = time.Now().Add(-5 * time.Second)
 	s.Update(Event{Type: "snapshot.import.start"})
 	s.Update(Event{
@@ -44,6 +44,108 @@ func driveSummaryState() *State {
 	s.Update(Event{Type: "path.ok"})
 	s.Update(Event{Type: "file.ok", Data: map[string]any{"fileinfo": objects.FileInfo{Lsize: 2048}}})
 	return s
+}
+
+func TestRenderView_ProgressModeShowsETA(t *testing.T) {
+	t.Parallel()
+	// driveSummaryState has bytes processed over several seconds, so the
+	// whole-run average yields an ETA on the bar line.
+	s := driveSummaryState()
+	m := renderModel(s)
+	m.width = 80
+	m.height = 24
+	out := m.View()
+	if !strings.Contains(out, "ETA") {
+		t.Fatalf("progress mode should render an ETA, got:\n%s", out)
+	}
+}
+
+func TestRenderView_ShowsPhaseWhenNoCurrentPath(t *testing.T) {
+	t.Parallel()
+	s := driveSummaryState()
+	// Enter a later phase that clears the current path (as the VFS/index/commit
+	// stages do). The phase label must still appear on line 1.
+	s.Update(Event{Type: "snapshot.vfs.start"}) // sets phase "building VFS", clears lastItem
+	if s.lastItem != "" {
+		t.Fatalf("precondition: vfs.start should clear lastItem, got %q", s.lastItem)
+	}
+	m := renderModel(s)
+	m.width = 80
+	m.height = 24
+	out := m.View()
+	if !strings.Contains(out, "building VFS") {
+		t.Fatalf("expected the phase label on line 1 when there is no current path, got:\n%s", out)
+	}
+}
+
+// summaryOnlyState has a byte total but nothing processed yet (bytesDone == 0).
+func summaryOnlyState() *State {
+	s := newApplicationState()
+	s.Update(Event{Type: "workflow.start", Snapshot: objects.MAC{0xde, 0xad, 0xbe, 0xef},
+		Data: map[string]any{"workflow": "import"}})
+	s.startTime = time.Now().Add(-5 * time.Second)
+	s.Update(Event{Type: "snapshot.import.start"})
+	s.Update(Event{Type: "fs.summary", Data: map[string]any{
+		"files": uint64(10), "directories": uint64(3), "symlinks": uint64(1),
+		"xattrs": uint64(0), "size": uint64(4096),
+	}})
+	return s
+}
+
+func TestRenderView_ETAComputingBeforeAnyBytes(t *testing.T) {
+	t.Parallel()
+	s := summaryOnlyState() // nothing processed yet, no rate sampled
+	m := renderModel(s)
+	m.width = 80
+	m.height = 24
+	out := m.View()
+	if !strings.Contains(out, "ETA …") {
+		t.Fatalf("with zero bytes processed the ETA should read \"ETA …\", got:\n%s", out)
+	}
+	if strings.Contains(out, "stalled") {
+		t.Fatalf("startup must not report stalled, got:\n%s", out)
+	}
+}
+
+func TestRenderView_ETAStalledWhenNoProgress(t *testing.T) {
+	t.Parallel()
+	// A long time has elapsed with no bytes moved — nothing to project from,
+	// so ETA is --stalled--.
+	s := summaryOnlyState()
+	s.startTime = time.Now().Add(-30 * time.Second)
+	m := renderModel(s)
+	m.width = 80
+	m.height = 24
+	out := m.View()
+	if !strings.Contains(out, "--stalled--") {
+		t.Fatalf("stale rate with no progress should render \"--stalled--\", got:\n%s", out)
+	}
+}
+
+func TestRenderView_ETAFromAverageRate(t *testing.T) {
+	t.Parallel()
+	// No sampler rate, but a healthy amount of bytes has moved over several
+	// seconds; the ETA must compute from the whole-run average, not stall.
+	s := newApplicationState()
+	s.Update(Event{Type: "workflow.start", Snapshot: objects.MAC{0xde, 0xad, 0xbe, 0xef},
+		Data: map[string]any{"workflow": "import"}})
+	s.startTime = time.Now().Add(-5 * time.Second)
+	s.Update(Event{Type: "fs.summary", Data: map[string]any{
+		"files": uint64(10), "directories": uint64(1), "symlinks": uint64(0),
+		"xattrs": uint64(0), "size": uint64(100 << 20), // 100 MiB total
+	}})
+	s.Update(Event{Type: "file.ok", Data: map[string]any{ // 20 MiB done
+		"fileinfo": objects.FileInfo{Lsize: 20 << 20}}})
+	m := renderModel(s)
+	m.width = 80
+	m.height = 24
+	out := m.View()
+	if strings.Contains(out, "stalled") || strings.Contains(out, "ETA …") {
+		t.Fatalf("with real progress but no sampler rate, ETA should compute from the average, got:\n%s", out)
+	}
+	if !strings.Contains(out, "ETA") {
+		t.Fatalf("expected an ETA, got:\n%s", out)
+	}
 }
 
 func TestRenderView_ProgressModeNonEmpty(t *testing.T) {
@@ -197,15 +299,16 @@ func TestRenderView_WithRealRepoStoreSummary(t *testing.T) {
 	var out, errb bytes.Buffer
 	repo, _ := ptesting.GenerateRepository(t, &out, &errb, nil)
 
-	s := driveSummaryState()
+	s := driveSummaryState() // workflow "import"
 	m := renderModel(s)
 	m.repo = repo
 	m.width = 100
 	m.height = 24
-	// debounceStat is zero => the store-summary branch computes IOStats.
 	rendered := m.View()
-	if !strings.Contains(rendered, "store:") {
-		t.Fatalf("expected store summary line with non-nil repo, got:\n%s", rendered)
+	// The I/O line shows read (↓) and write (↑) transfer totals, sourced from
+	// the live repository trackers when a repo is present.
+	if !strings.Contains(rendered, "↓") || !strings.Contains(rendered, "↑") {
+		t.Fatalf("expected ↓/↑ I/O line with non-nil repo, got:\n%s", rendered)
 	}
 }
 
@@ -224,40 +327,12 @@ func TestRenderUpdate_WindowSize(t *testing.T) {
 	}
 }
 
-func TestRenderUpdate_TickComputesRateAndRearms(t *testing.T) {
-	t.Parallel()
-	s := driveSummaryState()
-	// boost result counters so resDone > lastDone yields a positive rate
-	s.countFileOk = 100
-	s.countSymlinkOk = 5
-	s.countXattrOk = 2
-	m := renderModel(s)
-	// pre-seed lastETAAt in the past so dt > 0.2 path runs
-	m.lastETAAt = time.Now().Add(-1 * time.Second)
-	m.lastDone = 0
-	next, cmd := m.Update(tickMsg{})
-	got := next.(appModel)
-	if got.rateEMA <= 0 {
-		t.Fatalf("tick should compute a positive rateEMA, got %v", got.rateEMA)
-	}
-	if cmd == nil {
-		t.Fatal("tickMsg should re-arm the tick command")
-	}
-}
-
-func TestRenderUpdate_TickFirstSeedsETAClock(t *testing.T) {
+func TestRenderUpdate_TickRearms(t *testing.T) {
 	t.Parallel()
 	m := renderModel(driveSummaryState())
-	if !m.lastETAAt.IsZero() {
-		t.Fatal("precondition: lastETAAt should start zero")
-	}
-	next, cmd := m.Update(tickMsg{})
-	got := next.(appModel)
-	if got.lastETAAt.IsZero() {
-		t.Fatal("first tick should seed lastETAAt")
-	}
+	_, cmd := m.Update(tickMsg{})
 	if cmd == nil {
-		t.Fatal("tickMsg should always re-arm")
+		t.Fatal("tickMsg should re-arm the tick command")
 	}
 }
 
@@ -312,6 +387,76 @@ func TestRenderUpdate_QuitMsg(t *testing.T) {
 	_, cmd := m.Update(tea.QuitMsg{})
 	if cmd == nil {
 		t.Fatal("QuitMsg should return tea.Quit")
+	}
+}
+
+func TestRenderUpdate_DToggleDebug(t *testing.T) {
+	t.Parallel()
+	m := renderModel(newApplicationState())
+	if m.debug {
+		t.Fatal("debug should start off")
+	}
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}})
+	if !next.(appModel).debug {
+		t.Fatal("pressing d should enable debug")
+	}
+	next, _ = next.(appModel).Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}})
+	if next.(appModel).debug {
+		t.Fatal("pressing d again should disable debug")
+	}
+}
+
+func TestStateSampleIO_Activity(t *testing.T) {
+	t.Parallel()
+	s := newApplicationState()
+	t0 := s.startTime
+
+	// Nothing transferred yet: both sides report none.
+	if r, w := s.sampleIO(0, 0, t0); r != ioNone || w != ioNone {
+		t.Fatalf("initial activity = %v/%v, want none/none", r, w)
+	}
+	// Both advance: moving.
+	if r, w := s.sampleIO(100, 50, t0.Add(time.Second)); r != ioMoving || w != ioMoving {
+		t.Fatalf("after movement = %v/%v, want moving/moving", r, w)
+	}
+	// No further movement, well past the window: idle (but not none — they moved).
+	if r, w := s.sampleIO(100, 50, t0.Add(10*time.Second)); r != ioIdle || w != ioIdle {
+		t.Fatalf("after idle = %v/%v, want idle/idle", r, w)
+	}
+}
+
+func TestRateSampler_WallClockDist(t *testing.T) {
+	t.Parallel()
+	var rs rateSampler
+	t0 := time.Now()
+
+	// First observation only seeds; no sample yet.
+	rs.observe(0, t0)
+	if d := rs.dist(); d.n != 0 {
+		t.Fatalf("no samples expected after seed, got n=%d", d.n)
+	}
+	// +10 MiB over each 1s interval => 10 MiB/s.
+	const mib = 1 << 20
+	rs.observe(10*mib, t0.Add(1*time.Second))
+	rs.observe(20*mib, t0.Add(2*time.Second))
+	rs.observe(30*mib, t0.Add(3*time.Second))
+
+	d := rs.dist()
+	if d.n != 3 {
+		t.Fatalf("n = %d, want 3", d.n)
+	}
+	// Fixed-cadence sampling keeps this at the true wall-clock rate; a burst
+	// clustered in one interval can't exceed it.
+	if d.avg < 9.5*mib || d.avg > 10.5*mib {
+		t.Fatalf("avg = %.0f, want ~10 MiB/s", d.avg)
+	}
+	if d.max > 10.5*mib {
+		t.Fatalf("max = %.0f, must not exceed wall-clock rate", d.max)
+	}
+	// Below the interval, no new sample is recorded.
+	rs.observe(30*mib+123, t0.Add(3*time.Second+10*time.Millisecond))
+	if d2 := rs.dist(); d2.n != 3 {
+		t.Fatalf("sub-interval observe should not add a sample, n=%d", d2.n)
 	}
 }
 
@@ -426,6 +571,21 @@ func TestNewApplicationUnknownNameReturnsNil(t *testing.T) {
 	_, ctx := ptesting.GenerateRepository(t, &out, &errb, nil)
 	if app := newApplication(ctx, "totally-unknown", nil); app != nil {
 		t.Fatal("unknown application name should return nil")
+	}
+}
+
+func TestDisplayName(t *testing.T) {
+	t.Parallel()
+	// The export workflow is only ever driven by `restore`, so it is labelled
+	// "restore"; import is labelled "backup"; anything else passes through.
+	if got := displayName("export"); got != "restore" {
+		t.Fatalf("displayName(export) = %q, want restore", got)
+	}
+	if got := displayName("import"); got != "backup" {
+		t.Fatalf("displayName(import) = %q, want backup", got)
+	}
+	if got := displayName("check"); got != "check" {
+		t.Fatalf("displayName(check) = %q, want check (passthrough)", got)
 	}
 }
 

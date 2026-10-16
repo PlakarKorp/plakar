@@ -170,8 +170,9 @@ func GenerateRepositoryWithoutConfig(t *testing.T, bufout *bytes.Buffer, buferr 
 	// logger.EnableTrace("all")
 	ctx.SetLogger(logger)
 
-	repo, err := repository.Inexistent(ctx.GetInner(), map[string]string{"location": tmpRepoDirRoot + "/repo"})
+	store, err := storage.New(ctx.GetInner(), map[string]string{"location": tmpRepoDirRoot + "/repo"})
 	require.NoError(t, err, "creating repository")
+	repo := repository.Inexistent(ctx.GetInner(), store)
 
 	return repo, ctx
 }
