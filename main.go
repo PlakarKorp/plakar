@@ -423,11 +423,12 @@ func entryPoint() int {
 	if cmd.GetFlags()&subcommands.BeforeRepositoryOpen != 0 {
 		// store and repo can stay nil
 	} else if cmd.GetFlags()&subcommands.BeforeRepositoryWithStorage != 0 {
-		repo, err = repository.Inexistent(ctx.GetInner(), storeConfig)
+		store, err = storage.New(ctx.GetInner(), storeConfig)
 		if err != nil {
 			logger.Stderr("%s: %s\n", progName(), err)
 			return 1
 		}
+		repo = repository.Inexistent(ctx.GetInner(), store)
 	} else {
 		var serializedConfig []byte
 		store, serializedConfig, err = storage.Open(ctx.GetInner(), storeConfig)

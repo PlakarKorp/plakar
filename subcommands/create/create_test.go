@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	_ "github.com/PlakarKorp/integrations/fs/storage"
+	"github.com/PlakarKorp/kloset/connectors/storage"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/stretchr/testify/require"
@@ -24,8 +25,9 @@ func TestExecuteCmdCreateDefaultWithHashing(t *testing.T) {
 	ctx := appcontext.NewAppContext()
 	defer ctx.Close()
 
-	repo, err := repository.Inexistent(ctx.GetInner(), map[string]string{"location": tmpRepoDirRoot + "/repo"})
+	store, err := storage.New(ctx.GetInner(), map[string]string{"location": tmpRepoDirRoot + "/repo"})
 	require.NoError(t, err)
+	repo := repository.Inexistent(ctx.GetInner(), store)
 
 	args := []string{"-plaintext"}
 
@@ -51,8 +53,9 @@ func TestExecuteCmdCreateDefaultWithoutCompression(t *testing.T) {
 	ctx := appcontext.NewAppContext()
 	defer ctx.Close()
 
-	repo, err := repository.Inexistent(ctx.GetInner(), map[string]string{"location": tmpRepoDirRoot + "/repo"})
+	store, err := storage.New(ctx.GetInner(), map[string]string{"location": tmpRepoDirRoot + "/repo"})
 	require.NoError(t, err)
+	repo := repository.Inexistent(ctx.GetInner(), store)
 	args := []string{"-plaintext"}
 
 	subcommand := &Create{}
@@ -77,8 +80,9 @@ func TestExecuteCmdCreateDefaultWithoutEncryption(t *testing.T) {
 	ctx := appcontext.NewAppContext()
 	defer ctx.Close()
 
-	repo, err := repository.Inexistent(ctx.GetInner(), map[string]string{"location": tmpRepoDirRoot + "/repo"})
+	store, err := storage.New(ctx.GetInner(), map[string]string{"location": tmpRepoDirRoot + "/repo"})
 	require.NoError(t, err)
+	repo := repository.Inexistent(ctx.GetInner(), store)
 	args := []string{"-plaintext"}
 
 	subcommand := &Create{}
@@ -133,8 +137,9 @@ func TestExecuteCmdCreateUnknownHashingConfig(t *testing.T) {
 	ctx := appcontext.NewAppContext()
 	defer ctx.Close()
 
-	repo, err := repository.Inexistent(ctx.GetInner(), map[string]string{"location": tmpRepoDirRoot + "/repo"})
+	store, err := storage.New(ctx.GetInner(), map[string]string{"location": tmpRepoDirRoot + "/repo"})
 	require.NoError(t, err)
+	repo := repository.Inexistent(ctx.GetInner(), store)
 
 	cmd := &Create{NoEncryption: true, Hashing: "NOTAHASH"}
 	status, err := cmd.Execute(ctx, repo)
@@ -151,8 +156,9 @@ func TestExecuteCmdCreateDefaultWithKeyfile(t *testing.T) {
 	ctx := appcontext.NewAppContext()
 	defer ctx.Close()
 
-	repo, err := repository.Inexistent(ctx.GetInner(), map[string]string{"location": tmpRepoDirRoot + "/repo"})
+	store, err := storage.New(ctx.GetInner(), map[string]string{"location": tmpRepoDirRoot + "/repo"})
 	require.NoError(t, err)
+	repo := repository.Inexistent(ctx.GetInner(), store)
 	ctx.KeyFromFile = "aZeRtY123456$#@!@"
 	args := []string{}
 
