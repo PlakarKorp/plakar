@@ -26,6 +26,19 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Release tags carry the built UI (see "Releasing" in README.md). It must
+      # be built from this tag's sources: a patch release branch inherits the
+      # previous release's build, and the UI keeps no compatibility with an
+      # older or newer API. make ui stamps the sources it built from.
+      - name: Check the UI is built in, from this tag's sources
+        run: |
+          want=$(git rev-parse HEAD:ui/web/src)
+          got=$(cat ui/web/build/.src-tree 2>/dev/null || true)
+          if [ ! -f ui/web/build/index.html ] || [ "$got" != "$want" ]; then
+            echo "::error::ui/web/build is missing or was not built from this tag's ui/web/src (built from '${got:-nothing}', want '$want'): run make release-ui on the release branch and commit before tagging."
+            exit 1
+          fi
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
