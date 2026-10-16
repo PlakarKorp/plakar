@@ -17,12 +17,14 @@ import (
 	"github.com/PlakarKorp/pkg"
 )
 
+const testImageID = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
 // uniqueProto returns a protocol name that is unique to the test, so the
 // global Register/Unregister table doesn't collide across runs or tests.
 // We pair it with a t.Cleanup that unregisters in the right registry.
 func uniqueProto(t *testing.T) string {
 	t.Helper()
-	return "test-" + strings.ReplaceAll(strings.ToLower(t.Name()), "/", "-")
+	return "test-" + strings.NewReplacer("/", "-", "_", "-").Replace(strings.ToLower(t.Name()))
 }
 
 // ---------- RegisterStorage / RegisterImporter / RegisterExporter ----------
@@ -100,7 +102,7 @@ func TestLoad_ImageConnector(t *testing.T) {
 
 	m := &pkg.Manifest{
 		Connectors: []pkg.ManifestConnector{
-			{Type: "storage", Protocols: []string{stg}, ImageID: "sha256:aa"},
+			{Type: "storage", Protocols: []string{stg}, ImageID: testImageID},
 		},
 	}
 
@@ -115,11 +117,11 @@ func TestLoad_ImageConnector(t *testing.T) {
 func TestLoad_RejectsInvalidConnectors(t *testing.T) {
 	for _, conn := range []pkg.ManifestConnector{
 		// Both executable and image_id.
-		{Type: "storage", Protocols: []string{"never-registered"}, Executable: "noop", ImageID: "sha256:aa"},
+		{Type: "storage", Protocols: []string{"never-registered"}, Executable: "noop", ImageID: testImageID},
 		// Neither.
 		{Type: "storage", Protocols: []string{"never-registered"}},
 		// localfs connectors never run as containers.
-		{Type: "importer", Protocols: []string{"never-registered"}, ImageID: "sha256:aa", LocationFlags: []string{"localfs"}},
+		{Type: "importer", Protocols: []string{"never-registered"}, ImageID: testImageID, LocationFlags: []string{"localfs"}},
 	} {
 		m := &pkg.Manifest{Connectors: []pkg.ManifestConnector{conn}}
 		if err := Load(m, "/tmp"); err == nil {
