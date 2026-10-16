@@ -1,8 +1,8 @@
 # Plakar UI
 
-The web UI of Plakar, served by `plakar ui`. It is open source, under the ISC license (see [LICENSE](../LICENSE)).
+The web UI of Plakar, served by `plakar ui`. It is open source, under the ISC license (see [LICENSE](../../../LICENSE)).
 
-The build outputs are static files. They are committed in [ui/web/build](../ui/web/build), which the `plakar` binary embeds.
+The build outputs are static files. They are committed in [ui/web/build](../build), which the `plakar` binary embeds.
 
 ## Layout
 
@@ -17,7 +17,7 @@ The build outputs are static files. They are committed in [ui/web/build](../ui/w
 - Node.js 24+
 - pnpm 10: `npm install -g pnpm`. It switches itself to the version pinned in `package.json`.
 
-All commands below run from this `web/` directory.
+All commands below run from this `ui/web/src/` directory.
 
 ## Build
 
@@ -26,7 +26,7 @@ pnpm install
 pnpm run build
 ```
 
-The build of the Plakar UI is in `apps/oss/dist`. To use it with Plakar, copy it to `../ui/web/build` and rebuild `plakar`.
+The build of the Plakar UI is in `apps/oss/dist`. To use it with Plakar, copy it to `../build` and rebuild `plakar`.
 
 ## Development
 

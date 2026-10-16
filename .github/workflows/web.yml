@@ -3,12 +3,12 @@ name: Web
 on:
   pull_request:
     paths:
-      - "web/**"
+      - "ui/web/src/**"
       - ".github/workflows/web.yml"
   push:
     branches: [main]
     paths:
-      - "web/**"
+      - "ui/web/src/**"
       - ".github/workflows/web.yml"
 
 permissions:
@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: web
+        working-directory: ui/web/src
 
     steps:
       - uses: actions/checkout@v4
@@ -28,12 +28,12 @@ jobs:
       - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061
         with:
           run_install: false
-          package_json_file: web/package.json
+          package_json_file: ui/web/src/package.json
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: "pnpm"
-          cache-dependency-path: web/pnpm-lock.yaml
+          cache-dependency-path: ui/web/src/pnpm-lock.yaml
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm run check

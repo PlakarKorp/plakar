@@ -2,11 +2,11 @@
 
 **pnpm monorepo** managed by Turbo. `apps/oss/` is the web UI served by `plakar ui`.
 
-The app is built and its build is committed in `../ui/web/build`, so it always ships together with the API it talks to. There is no need to maintain backward compatibility with the API — all API responses must be validated with Zod.
+The app is built and its build is committed in `../build`, so it always ships together with the API it talks to. There is no need to maintain backward compatibility with the API — all API responses must be validated with Zod.
 
 **Typing rules:** Never use `any` or `unknown`. All data must be fully typed in the API layer, and those types must be reused throughout the application.
 
-All commands run from this `web/` directory.
+All commands run from this `ui/web/src/` directory.
 
 ## Running the backend
 

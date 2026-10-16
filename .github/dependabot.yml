@@ -10,9 +10,9 @@ updates:
     schedule:
       interval: "weekly"
   - package-ecosystem: "npm"
-    directory: "/web"
+    directory: "/ui/web/src"
     schedule:
       interval: "weekly"
-    # Matches minimumReleaseAge in web/pnpm-workspace.yaml.
+    # Matches minimumReleaseAge in ui/web/src/pnpm-workspace.yaml.
     cooldown:
       default-days: 7

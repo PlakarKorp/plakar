@@ -1,2 +1,2 @@
 * @plakarkorp/core
-/web/ @plakarkorp/ui
+/ui/web/src/ @plakarkorp/ui
