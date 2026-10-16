@@ -24,6 +24,11 @@ ui:
 	@if [ -n "$$(git status --porcelain ui/web/src)" ]; then echo dirty; \
 	else git rev-parse HEAD:ui/web/src; fi > ui/web/build/.src-tree
 
+# Build the UI and stage it for a release commit. Only release branches
+# commit ui/web/build: main ignores it, hence the -f.
+release-ui: ui
+	git add -f ui/web/build
+
 install:
 	mkdir -p ${DESTDIR}${BINDIR}
 	mkdir -p ${DESTDIR}${MANDIR}/man1
@@ -53,4 +58,4 @@ coverage:
 	@grep -v '/plakar/testing/' ${COVERPROFILE} > ${COVERPROFILE}.tmp && mv ${COVERPROFILE}.tmp ${COVERPROFILE}
 	@${GO} tool cover -func=${COVERPROFILE} | tail -1
 
-.PHONY: all plakar ui install check test coverage junit
+.PHONY: all plakar ui release-ui install check test coverage junit
