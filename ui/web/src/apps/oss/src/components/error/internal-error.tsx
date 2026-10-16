@@ -36,14 +36,7 @@ export default function DefaultError({ error, reset }: ErrorComponentProps) {
   }
 
   if (error instanceof APINetworkError) {
-    return (
-      <NetworkError
-        variant="plakar"
-        url={PLAKAR_URL}
-        error={error}
-        reset={retry}
-      />
-    );
+    return <NetworkError url={PLAKAR_URL} error={error} reset={retry} />;
   }
 
   if (error instanceof APIResponseInternalError) {

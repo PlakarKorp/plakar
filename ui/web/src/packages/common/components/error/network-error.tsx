@@ -1,20 +1,22 @@
 import { Alert, Button, Terminal } from "@plakar-ui/ui/components";
+import { ReactNode } from "react";
 
 import { Error } from "./error";
 import { APINetworkError } from "../../api/errors";
 
 type NetworkErrorProps = {
-  variant: "plakar" | "plakman";
   url?: string;
   reset: () => void;
   error: APINetworkError;
+  /** How to start the API with CORS enabled, defaults to `plakar ui`. */
+  corsInstructions?: ReactNode;
 };
 
 export function NetworkError({
-  variant,
   url = "",
   error,
   reset,
+  corsInstructions,
 }: NetworkErrorProps) {
   let devaddr = "…";
   let errorUrl;
@@ -67,52 +69,17 @@ export function NetworkError({
                 To enable CORS, start the API as follows:
               </p>
 
-              {
-                {
-                  plakar: (
-                    <Terminal
-                      title="Run Plakar UI with CORS enabled"
-                      className="mt-2"
-                    >
-                      <Terminal.Command
-                        prompt="$ "
-                        command={`plakar ui -cors -addr ${devaddr} -no-spawn -no-auth`}
-                      />
-                    </Terminal>
-                  ),
-                  plakman: (
-                    <Terminal
-                      title="Run Plakar Control Plane with CORS enabled"
-                      className="mt-2"
-                    >
-                      <Terminal.Command
-                        prompt="$ "
-                        command={`cat ./plakman.yml`}
-                      >
-                        <Terminal.CommandOutputLine>
-                          …
-                        </Terminal.CommandOutputLine>
-                        <Terminal.CommandOutputLine>
-                          api:
-                        </Terminal.CommandOutputLine>
-                        <Terminal.CommandOutputLine>
-                          &nbsp;&nbsp;v1:
-                        </Terminal.CommandOutputLine>
-                        <Terminal.CommandOutputLine>
-                          &nbsp;&nbsp;&nbsp;&nbsp;cors: true
-                        </Terminal.CommandOutputLine>
-                        <Terminal.CommandOutputLine>
-                          …
-                        </Terminal.CommandOutputLine>
-                      </Terminal.Command>
-                      <Terminal.Command
-                        prompt="$ "
-                        command={`plakman -config ./plakman.yaml -foreground -debug`}
-                      />
-                    </Terminal>
-                  ),
-                }[variant]
-              }
+              {corsInstructions ?? (
+                <Terminal
+                  title="Run Plakar UI with CORS enabled"
+                  className="mt-2"
+                >
+                  <Terminal.Command
+                    prompt="$ "
+                    command={`plakar ui -cors -addr ${devaddr} -no-spawn -no-auth`}
+                  />
+                </Terminal>
+              )}
             </Alert>
           )}
         </>
