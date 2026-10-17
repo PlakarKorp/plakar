@@ -21,7 +21,7 @@
     "@vitejs/plugin-react": "^6.1.1",
     "eslint": "^10.8.1",
     "react": "^19.2.8",
-    "storybook": "^10.5.9",
+    "storybook": "^10.6.1",
     "typescript": "^5.9.3",
     "vite": "^8.2.2"
   }
