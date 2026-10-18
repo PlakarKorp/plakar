@@ -204,10 +204,12 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 			return 1, err
 		}
 
-		backupErrorCount, err := snapshotBackupErrorCount(snap)
-		if err != nil {
-			ctx.GetLogger().Warn("could not inspect snapshot backup errors: %s", err)
-		} else if backupErrorCount != 0 {
+		backupErrorCount := uint64(0)
+		for i := 0; i < len(snap.Header.Sources); i++ {
+			s := snap.Header.GetSource(i)
+			backupErrorCount += s.Summary.Directory.Errors + s.Summary.Below.Errors
+		}
+		if backupErrorCount != 0 {
 			errorWord := "errors"
 			if backupErrorCount == 1 {
 				errorWord = "error"
@@ -242,20 +244,4 @@ func executeHook(ctx *appcontext.AppContext, hook string) error {
 	cmd.Stdout = ctx.Stdout
 	cmd.Stderr = ctx.Stderr
 	return cmd.Run()
-}
-
-func snapshotBackupErrorCount(snap *snapshot.Snapshot) (int, error) {
-	fsc, err := snap.Filesystem()
-	if err != nil {
-		return 0, err
-	}
-
-	count := 0
-	for _, err := range fsc.Errors("/") {
-		if err != nil {
-			return 0, err
-		}
-		count++
-	}
-	return count, nil
 }
