@@ -17,15 +17,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const (
-	restoreWarningRootPath       = "/"
-	restoreWarningDataPath       = "/data.txt"
-	restoreWarningDeniedPath     = "/denied.txt"
-	restoreWarningDataName       = "data.txt"
-	restoreWarningPayload        = "payload"
-	restoreWarningExpectedOutput = "snapshot contains 1 backup error"
-)
-
 func mkRestoreDir(t *testing.T) string {
 	t.Helper()
 	dir, err := os.MkdirTemp("", "tmp_to_restore")
@@ -382,17 +373,17 @@ func TestRestoreWarnsWhenSnapshotContainsBackupErrors(t *testing.T) {
 	mtime := time.Unix(0, 0).UTC()
 	snap := ptesting.GenerateSnapshot(t, repo, nil,
 		ptesting.WithGenerator(func(ch chan<- *connectors.Record) {
-			ch <- connectors.NewRecord(restoreWarningRootPath, "",
-				objects.NewFileInfo(restoreWarningRootPath, 0, os.ModeDir|0755, mtime, 0, 0, 0, 0, 1),
+			ch <- connectors.NewRecord("/", "",
+				objects.NewFileInfo("/", 0, os.ModeDir|0755, mtime, 0, 0, 0, 0, 1),
 				nil, nil)
-			ch <- connectors.NewRecord(restoreWarningDataPath, "",
-				objects.NewFileInfo(restoreWarningDataName, int64(len(restoreWarningPayload)), 0644, mtime, 0, 0, 0, 0, 1),
+			ch <- connectors.NewRecord("/data.txt", "",
+				objects.NewFileInfo("data.txt", int64(len("payload")), 0644, mtime, 0, 0, 0, 0, 1),
 				nil, func() (io.ReadCloser, error) {
-					return io.NopCloser(strings.NewReader(restoreWarningPayload)), nil
+					return io.NopCloser(strings.NewReader("payload")), nil
 				})
 			// A record whose reader fails is what the snapshot records as a
 			// backup error; restore must warn instead of staying silent.
-			ch <- connectors.NewRecord(restoreWarningDeniedPath, "",
+			ch <- connectors.NewRecord("/denied.txt", "",
 				objects.NewFileInfo("denied.txt", 3, 0000, mtime, 0, 0, 0, 0, 1),
 				nil, func() (io.ReadCloser, error) { return nil, os.ErrPermission })
 		}),
@@ -407,5 +398,5 @@ func TestRestoreWarnsWhenSnapshotContainsBackupErrors(t *testing.T) {
 	status, err := cmd.Execute(ctx, repo)
 	require.NoError(t, err)
 	require.Equal(t, 0, status)
-	require.Contains(t, bufErr.String(), restoreWarningExpectedOutput)
+	require.Contains(t, bufErr.String(), "snapshot contains 1 backup error")
 }
