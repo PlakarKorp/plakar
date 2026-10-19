@@ -101,3 +101,38 @@ export function diffHunks(lines: DiffLine[], context = 3): DiffHunkLine[] {
   if (skipped) out.push({ op: "skip", count: skipped });
   return out;
 }
+
+export type DirectoryDiffStatus = "added" | "removed" | "changed" | "unchanged";
+
+export type DirectoryDiffEntry<T> = {
+  name: string;
+  status: DirectoryDiffStatus;
+  before?: T;
+  after?: T;
+};
+
+/**
+ * Pairs the entries of two versions of a directory by name and says how each
+ * changed. Entries count as changed when their MAC differs, which covers both
+ * content and metadata.
+ */
+export function diffDirectories<T extends { name: string; mac: string }>(
+  before: T[],
+  after: T[]
+): DirectoryDiffEntry<T>[] {
+  const old = new Map(before.map((entry) => [entry.name, entry]));
+  const cur = new Map(after.map((entry) => [entry.name, entry]));
+  const names = [...new Set([...old.keys(), ...cur.keys()])].sort();
+  return names.map((name) => {
+    const a = old.get(name);
+    const b = cur.get(name);
+    const status: DirectoryDiffStatus = !a
+      ? "added"
+      : !b
+        ? "removed"
+        : a.mac !== b.mac
+          ? "changed"
+          : "unchanged";
+    return { name, status, before: a, after: b };
+  });
+}

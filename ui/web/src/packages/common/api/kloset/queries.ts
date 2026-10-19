@@ -1,6 +1,7 @@
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 
 import { MIME_FILTERS } from "../../components";
+import { APIResponseNotFoundError } from "../errors";
 import { PaginationParams } from "../pagination";
 import { KlosetAPI } from "./api";
 import { klosetKeys } from "./keys";
@@ -342,6 +343,72 @@ export const SnapshotFileHeadQueryOptions = (
       }
       return (await res.text()).slice(0, bytes);
     },
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    staleTime: Infinity,
+  });
+
+/**
+ * Lists a whole directory of a snapshot, up to `max` entries, for views that
+ * need every entry at once such as a comparison. Resolves to null when the
+ * path does not exist in the snapshot or is not a directory.
+ */
+export const SnapshotDirectoryQueryOptions = (
+  api: KlosetAPI,
+  {
+    repository,
+    snapshot,
+    source,
+    path,
+    max,
+  }: {
+    repository?: string;
+    snapshot: string;
+    source: number;
+    path: string;
+    max: number;
+  }
+) =>
+  queryOptions({
+    queryKey: klosetKeys.snapshotDirectory({
+      repository,
+      snapshot,
+      source,
+      path,
+      max,
+    }),
+    queryFn: async () => {
+      let entry: VFSEntryType;
+      try {
+        entry = (
+          await api.getSnapshotPath({ repository, snapshot, source, path })
+        ).item;
+      } catch (err) {
+        if (err instanceof APIResponseNotFoundError) return null;
+        throw err;
+      }
+      if (!entry.file_info.mode.isDir()) return null;
+
+      const total = entry.summary?.directory.children ?? 0;
+      // The listing starts with ".." below the root: ask for one more.
+      const resp = await api.getSnapshotPathChildren({
+        repository,
+        snapshot,
+        source,
+        path,
+        pagination: { page: 0, perPage: Math.min(total, max) + 1 },
+      });
+      return {
+        entry,
+        children: enrichGetSnapshotPathChildren(
+          entry,
+          resp.items.filter((child) => child.file_info.name !== "..")
+        ),
+        isTruncated: total > max,
+      };
+    },
+    // Snapshots are immutable.
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: false,

@@ -71,6 +71,14 @@ export const klosetKeys = {
     bytes: number;
   }) => [...klosetKeys.all(), "snapshot.file-head", params] as const,
 
+  snapshotDirectory: (params: {
+    repository?: string;
+    snapshot: string;
+    source: number;
+    path: string;
+    max: number;
+  }) => [...klosetKeys.all(), "snapshot.directory", params] as const,
+
   snapshotChunks: (params: {
     repository: string | undefined;
     snapshot: string;
