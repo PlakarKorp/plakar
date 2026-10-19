@@ -8,6 +8,7 @@ import {
 } from "@plakar-ui/ui/components";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import clsx from "clsx";
+import { SyntheticEvent, useState } from "react";
 
 import {
   RepositoryLocatePathname,
@@ -16,6 +17,8 @@ import {
   useKlosetAPI,
   VFSEntryType,
 } from "@plakar-ui/common/api/kloset";
+
+import { DiffModal } from "./diff";
 
 type TimelineProps = {
   snapshot: SnapshotType;
@@ -41,6 +44,9 @@ export function Timeline({
   onSnapshotChange,
 }: TimelineProps) {
   const { api, repository } = useKlosetAPI();
+  const [diffWith, setDiffWith] = useState<RepositoryLocatePathname | null>(
+    null
+  );
   const query = useInfiniteQuery(
     RepositoryLocatePathnameQueryOptions(api, snapshot, source, vfsEntry, {
       repository,
@@ -97,7 +103,14 @@ export function Timeline({
   const entries = query.data.pages.map((page) => page.response.items).flat();
 
   const menuItems = entries.map((entry) =>
-    getTimelineEntry(snapshot, entry, vfsEntry, onSnapshotChange, variant)
+    getTimelineEntry(
+      snapshot,
+      entry,
+      vfsEntry,
+      onSnapshotChange,
+      variant,
+      setDiffWith
+    )
   );
 
   // Total number of items.
@@ -148,36 +161,105 @@ export function Timeline({
           query.data.pages[0].lastEntry,
           vfsEntry,
           onSnapshotChange,
-          variant
+          variant,
+          setDiffWith
         )
       );
     }
   }
 
+  // The diff reads oldest to newest, whichever of the two is the current one.
+  const diffSides =
+    diffWith &&
+    [
+      { entry: diffWith, isCurrent: false },
+      {
+        entry: {
+          snapshot,
+          vfs_entry: vfsEntry,
+        },
+        isCurrent: true,
+      },
+    ].sort(
+      (x, y) =>
+        x.entry.snapshot.timestamp.Date.getTime() -
+        y.entry.snapshot.timestamp.Date.getTime()
+    );
+  const toSide = (side: {
+    entry: Pick<RepositoryLocatePathname, "snapshot" | "vfs_entry">;
+    isCurrent: boolean;
+  }) => ({
+    snapshot: side.entry.snapshot.identifier.Value,
+    path: side.entry.vfs_entry.path,
+    size: side.entry.vfs_entry.file_info.size.Value,
+    label: `${side.entry.snapshot.identifier.toHumanString()}${side.isCurrent ? " (this one)" : ""}`,
+  });
+
   return (
-    <Menu
-      className={clsx(
-        variant === "compact" && "max-h-[300px] min-w-[320px] overflow-auto"
-      )}
-      unstyled={variant === "default"}
-      aria-label="Timeline"
-    >
-      {menuItems.map((item) => (
-        <Menu.Item
-          key={item.id}
-          leftIcon={item.icon}
-          label={item.label}
-          altText={item.alt}
-          onAction={item.onAction}
-          className={clsx(
-            variant === "default" && "mb-2 rounded-xl border p-4",
-            item.className
-          )}
-          // @ts-expect-error: closeOnSelect isn't a valid prop for Menu.Item
-          closeOnSelect={item.closeOnSelect}
+    <>
+      {diffSides && (
+        <DiffModal
+          isOpen
+          onOpenChange={(open) => !open && setDiffWith(null)}
+          source={source}
+          before={toSide(diffSides[0])}
+          after={toSide(diffSides[1])}
         />
-      ))}
-    </Menu>
+      )}
+      <Menu
+        className={clsx(
+          variant === "compact" && "max-h-[300px] min-w-[320px] overflow-auto"
+        )}
+        unstyled={variant === "default"}
+        aria-label="Timeline"
+      >
+        {menuItems.map((item) => (
+          <Menu.Item
+            key={item.id}
+            leftIcon={item.icon}
+            label={item.label}
+            altText={item.alt}
+            onAction={item.onAction}
+            className={clsx(
+              variant === "default" && "mb-2 rounded-xl border p-4",
+              item.className
+            )}
+            // @ts-expect-error: closeOnSelect isn't a valid prop for Menu.Item
+            closeOnSelect={item.closeOnSelect}
+          />
+        ))}
+      </Menu>
+    </>
+  );
+}
+
+// A plain button: the menu row around it acts on pointer and key events, so
+// they must stop here for the press to open the diff instead of the version.
+function DiffButton({ onPress }: { onPress: () => void }) {
+  const stop = (e: SyntheticEvent) => e.stopPropagation();
+  return (
+    <button
+      type="button"
+      onPointerDown={stop}
+      onPointerUp={stop}
+      onMouseDown={stop}
+      onMouseUp={stop}
+      onKeyDown={(e) => {
+        e.stopPropagation();
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onPress();
+        }
+      }}
+      onClick={(e) => {
+        e.stopPropagation();
+        onPress();
+      }}
+      className="border-primary bg-primary text-secondary hover:bg-primary-hover focus-visible:outline-focus flex cursor-pointer items-center gap-1 rounded-md border px-2 py-0.5 text-xs focus-visible:outline-2"
+    >
+      <Icon type="not-equal" size="xs" />
+      View diff
+    </button>
   );
 }
 
@@ -186,7 +268,8 @@ type GetTimelineEntry = (
   entry: RepositoryLocatePathname,
   vfsEntry: VFSEntryType,
   onSnapshotChange: (snapshotId: string) => void,
-  variant: "default" | "compact"
+  variant: "default" | "compact",
+  onDiff: (entry: RepositoryLocatePathname) => void
 ) => {
   id: string;
   label: React.ReactNode;
@@ -202,7 +285,8 @@ const getTimelineEntry: GetTimelineEntry = function (
   entry,
   vfsEntry,
   onSnapshotChange,
-  variant
+  variant,
+  onDiff
 ) {
   const isModified = vfsEntry.object
     ? vfsEntry.object.contentMAC !== entry.vfs_entry.object?.contentMAC
@@ -243,7 +327,15 @@ const getTimelineEntry: GetTimelineEntry = function (
         )}
       </div>
     ),
-    alt: entry.snapshot.timestamp.relativeToNow(),
+    alt:
+      isModified && !isCurrent && vfsEntry.file_info.mode.isRegular() ? (
+        <div className="flex items-center gap-2">
+          <span>{entry.snapshot.timestamp.relativeToNow()}</span>
+          <DiffButton onPress={() => onDiff(entry)} />
+        </div>
+      ) : (
+        entry.snapshot.timestamp.relativeToNow()
+      ),
     icon: "clock",
     className: isCurrent
       ? "border-accent-heavy"
