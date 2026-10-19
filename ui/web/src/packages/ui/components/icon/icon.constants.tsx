@@ -50,6 +50,7 @@ export const IconTypes = [
   "comments",
   "cube",
   "cubes",
+  "cubes-stacked",
   "database",
   "diagram-project",
   "discord",

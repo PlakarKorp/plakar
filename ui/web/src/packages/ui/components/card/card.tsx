@@ -55,6 +55,7 @@ function CardRoot({
 type CardHeaderProps = {
   prefix?: React.ReactNode;
   title: string;
+  titleSuffix?: React.ReactNode;
   description?: string;
   suffix?: React.ReactNode;
   buttonProps?: ComponentProps<typeof Button>;
@@ -64,6 +65,7 @@ type CardHeaderProps = {
 function CardHeader({
   prefix,
   title,
+  titleSuffix,
   description,
   suffix,
   buttonProps,
@@ -83,15 +85,18 @@ function CardHeader({
         {prefix}
 
         <div>
-          <Typography
-            as="h2"
-            variant="body"
-            size="md"
-            weight="medium"
-            className="text-primary"
-          >
-            {title}
-          </Typography>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <Typography
+              as="h2"
+              variant="body"
+              size="md"
+              weight="medium"
+              className="text-primary"
+            >
+              {title}
+            </Typography>
+            {titleSuffix}
+          </div>
           {description && (
             <Typography size="xs" className="text-tertiary">
               {description}
