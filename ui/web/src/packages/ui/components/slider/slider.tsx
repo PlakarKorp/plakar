@@ -9,6 +9,7 @@ export type SliderProps = {
   "aria-label": string;
   value: number;
   onChange: (value: number) => void;
+  onChangeEnd?: (value: number) => void;
   minValue?: number;
   maxValue?: number;
   step?: number;
@@ -19,6 +20,7 @@ export type SliderProps = {
 export function Slider({
   value,
   onChange,
+  onChangeEnd,
   minValue = 0,
   maxValue = 100,
   step = 1,
@@ -26,15 +28,17 @@ export function Slider({
   className,
   ...props
 }: SliderProps) {
+  const isEmptyRange = maxValue <= minValue;
   return (
     <RASlider
       aria-label={props["aria-label"]}
       value={value}
       onChange={onChange}
+      onChangeEnd={onChangeEnd}
       minValue={minValue}
-      maxValue={maxValue}
+      maxValue={isEmptyRange ? minValue + step : maxValue}
       step={step}
-      isDisabled={isDisabled}
+      isDisabled={isDisabled || isEmptyRange}
       className={clsx("flex items-center", className)}
     >
       <RASliderTrack className="group relative h-4 w-full cursor-pointer data-disabled:cursor-default">

@@ -69,6 +69,7 @@ Supported variables:
 /* Color scheme: render controls in light or dark mode (ie: scrollbar) */
 :root {
   color-scheme: light;
+  --pagination-height: 55px;
 }
 
 .dark {

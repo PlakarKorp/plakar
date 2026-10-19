@@ -42,7 +42,7 @@ export function Pagination({
         aria-label="Pagination"
         className="absolute bottom-0 left-0 z-2 w-full max-lg:px-2 lg:px-4"
       >
-        <div className="border-secondary bg-secondary flex h-[55px] w-full items-center justify-between border-t py-2 max-sm:justify-center 2xl:container 2xl:mx-auto">
+        <div className="border-secondary bg-secondary flex h-(--pagination-height) w-full items-center justify-between border-t py-2 max-sm:justify-center 2xl:container 2xl:mx-auto">
           <div className="hidden sm:block">
             {!count || !perPage ? (
               <PaginationInfoNoTotal page={currentPage} />
