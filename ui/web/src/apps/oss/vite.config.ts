@@ -2,9 +2,11 @@ import tailwindcss from "@tailwindcss/vite";
 import { devtools } from "@tanstack/devtools-vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
+import { createRequire } from "node:module";
 import { visualizer } from "rollup-plugin-visualizer";
 import { defineConfig } from "vite";
-import { nodePolyfills } from "vite-plugin-node-polyfills";
+
+const require = createRequire(import.meta.url);
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -23,14 +25,12 @@ export default defineConfig({
       template: "flamegraph",
       gzipSize: true,
     }), // On build, create stats.html to visualize the bundle size
-    nodePolyfills({
-      include: ["path"],
-    }),
     tailwindcss(),
   ],
   resolve: {
     alias: {
       "~": "/src",
+      path: require.resolve("path-browserify"),
     },
   },
 });
