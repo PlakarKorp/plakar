@@ -103,6 +103,26 @@ export function browseViewCounts(
   };
 }
 
+/**
+ * Lists the views a directory surely has nothing for. Documents only count as
+ * empty without any text or application/ file, where PDFs and JSON live.
+ */
+export function emptyBrowseViews(entry: VFSEntryType): Set<BrowseViewId> {
+  const directory = entry.summary?.directory;
+  const counts = browseViewCounts(entry);
+  const mayHoldDocuments =
+    (directory?.MIME_text ?? 0) + (directory?.MIME_application ?? 0) > 0;
+  return new Set(
+    BROWSE_VIEW_IDS.filter((id) =>
+      id === "all"
+        ? false
+        : id === "documents"
+          ? !mayHoldDocuments
+          : counts[id] === 0
+    )
+  );
+}
+
 // The share of a directory's files one kind must reach to become its default
 // view, and the number of files below which "all" always wins.
 const SUGGEST_SHARE = 0.6;

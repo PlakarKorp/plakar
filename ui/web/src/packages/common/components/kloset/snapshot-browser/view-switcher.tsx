@@ -1,4 +1,5 @@
 import { Tab } from "@plakar-ui/ui/components";
+import clsx from "clsx";
 
 import { BROWSE_VIEWS, BrowseViewId } from "./browse-views";
 
@@ -6,15 +7,22 @@ type ViewSwitcherProps = {
   view: BrowseViewId;
   // Left out while searching: the summary does not count the results.
   counts?: Record<BrowseViewId, number>;
+  emptyViews?: ReadonlySet<BrowseViewId>;
   onChange: (view: BrowseViewId) => void;
+  className?: string;
 };
 
 /**
  * Tabs to browse a directory by kind of content, each with the number of files
- * of that kind it holds. Kinds the directory has none of are disabled, except
- * documents: their count misses PDFs, so it can read zero when there are some.
+ * of that kind it holds. Kinds the directory surely has none of are disabled.
  */
-export function ViewSwitcher({ view, counts, onChange }: ViewSwitcherProps) {
+export function ViewSwitcher({
+  view,
+  counts,
+  emptyViews,
+  onChange,
+  className,
+}: ViewSwitcherProps) {
   const items = BROWSE_VIEWS.map((item) => {
     const count = counts?.[item.id];
     return {
@@ -22,7 +30,7 @@ export function ViewSwitcher({ view, counts, onChange }: ViewSwitcherProps) {
       title: item.name,
       icon: item.icon,
       tag: count,
-      isDisabled: item.id !== "all" && item.id !== "documents" && count === 0,
+      isDisabled: emptyViews?.has(item.id) ?? false,
     };
   });
 
@@ -30,6 +38,7 @@ export function ViewSwitcher({ view, counts, onChange }: ViewSwitcherProps) {
     <Tab
       variant="underlined"
       ariaLabel="Browse by kind of content"
+      className={clsx("max-w-full min-w-0", className)}
       items={items}
       selected={view}
       onSelectionChange={(key) => {

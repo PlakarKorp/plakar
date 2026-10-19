@@ -208,9 +208,9 @@ function FileTile({
     >
       <div
         className={clsx(
-          "absolute top-2 left-2 z-10 rounded-md bg-black/40 p-1 backdrop-blur-sm",
+          "absolute top-2 left-2 z-10 flex rounded-md bg-black/40 p-1 backdrop-blur-sm",
           isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100",
-          "focus-within:opacity-100 motion-safe:transition-opacity"
+          "has-data-focus-visible:opacity-100 motion-safe:transition-opacity"
         )}
       >
         <Checkbox

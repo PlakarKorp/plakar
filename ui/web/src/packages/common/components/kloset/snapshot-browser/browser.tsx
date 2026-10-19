@@ -1,11 +1,13 @@
 import {
   Alert,
   Button as UIButton,
+  EmptyList,
   Icon,
   IconButton,
   Menu,
   Pagination as UIPagination,
   SegmentedControl,
+  Spinner,
   Tooltip,
   Typography,
 } from "@plakar-ui/ui/components";
@@ -53,6 +55,7 @@ import { Main, SidePanelLayout } from "@plakar-ui/common/layouts";
 import {
   browseViewCounts,
   BrowseViewId,
+  emptyBrowseViews,
   getBrowseView,
   viewerKind,
   suggestBrowseView,
@@ -61,7 +64,7 @@ import {
 import { Gallery, GalleryDensity } from "./gallery";
 import { Lightbox } from "./lightbox";
 import { MainTitle } from "./main-title";
-import { MusicView } from "./music";
+import { MusicPlayer, MusicView } from "./music";
 import { ViewSwitcher } from "./view-switcher";
 
 type FiltersProps = {
@@ -128,6 +131,7 @@ export function FilesBrowser({
   onViewChange,
 }: FilesBrowserProps) {
   const [localView, setLocalView] = useState<BrowseViewId>();
+  const [playingPath, setPlayingPath] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<{
     path: string;
     followsPreview: boolean;
@@ -135,6 +139,7 @@ export function FilesBrowser({
   const explicitView = view ?? localView;
   const changeView = (next: BrowseViewId) => {
     setLightbox(null);
+    setPlayingPath(null);
     if (onViewChange) onViewChange(next);
     else setLocalView(next);
   };
@@ -587,37 +592,28 @@ export function FilesBrowser({
                 )}
 
                 <div className="flex flex-col gap-3">
-                  <div className="border-secondary flex flex-wrap items-end justify-between gap-3 border-b">
+                  <div className="border-secondary flex flex-col gap-2 md:flex-row md:items-end md:justify-between md:gap-3 md:border-b">
                     <ViewSwitcher
+                      className="border-secondary border-b md:border-b-0"
                       view={activeView}
                       // The summary counts the directory, not what a search
                       // finds: hide counts that would not match the results.
                       counts={
                         hasFilters ? undefined : browseViewCounts(vfsEntry)
                       }
+                      emptyViews={
+                        hasFilters ? undefined : emptyBrowseViews(vfsEntry)
+                      }
                       onChange={changeView}
                     />
-                    <div className="flex items-center gap-2 pb-1">
+                    <div className="flex items-center justify-between gap-2 md:justify-end md:pb-1">
                       {!isListView && activeView !== "music" && (
                         <SegmentedControl
                           ariaLabel="Thumbnail size"
-                          hideLabels
                           items={[
-                            {
-                              id: "small",
-                              label: "Small thumbnails",
-                              icon: "minus",
-                            },
-                            {
-                              id: "medium",
-                              label: "Medium thumbnails",
-                              icon: "equals",
-                            },
-                            {
-                              id: "large",
-                              label: "Large thumbnails",
-                              icon: "plus",
-                            },
+                            { id: "small", label: "Small" },
+                            { id: "medium", label: "Medium" },
+                            { id: "large", label: "Large" },
                           ]}
                           selectedId={density}
                           onSelect={(id) => setDensity(id as GalleryDensity)}
@@ -632,7 +628,7 @@ export function FilesBrowser({
                             {
                               id: "grid",
                               label: "Grid",
-                              icon: "boxes-stacked",
+                              icon: "grid",
                             },
                           ]}
                           selectedId={layout}
@@ -645,27 +641,26 @@ export function FilesBrowser({
                   </div>
 
                   {isAutoView && activeView !== "all" && (
-                    <div className="bg-accent-quaternary flex flex-wrap items-center gap-2 rounded-lg px-3 py-2">
-                      <Icon
-                        type="wand-magic-sparkles"
-                        size="sm"
-                        className="text-accent"
-                      />
-                      <Typography size="sm" className="text-secondary flex-1">
-                        {hasFilters
-                          ? `These results are mostly ${viewDef.name.toLowerCase()}, so they show in the ${viewDef.name} view.`
-                          : `This folder mostly holds ${viewDef.name.toLowerCase()}, so it opens in the ${viewDef.name} view.`}
-                        {hiddenCount > 0 &&
-                          ` ${hiddenCount} other ${hiddenCount === 1 ? "result is" : "results are"} in All files.`}
-                      </Typography>
-                      <UIButton
-                        size="sm"
-                        variant="accent-quaternary"
-                        onPress={() => changeView("all")}
-                      >
-                        {hasFilters ? "Show all results" : "Show all files"}
-                      </UIButton>
-                    </div>
+                    <Alert
+                      variant="brand"
+                      icon="wand-magic-sparkles"
+                      title={`Showing the ${viewDef.name} view`}
+                      actions={
+                        <UIButton
+                          size="sm"
+                          variant="accent-quaternary"
+                          onPress={() => changeView("all")}
+                        >
+                          {hasFilters ? "Show all results" : "Show all files"}
+                        </UIButton>
+                      }
+                    >
+                      {hasFilters
+                        ? `These results are mostly ${viewDef.name.toLowerCase()}.`
+                        : `This folder mostly holds ${viewDef.name.toLowerCase()}.`}
+                      {hiddenCount > 0 &&
+                        ` ${hiddenCount} other ${hiddenCount === 1 ? "result is" : "results are"} in All files.`}
+                    </Alert>
                   )}
 
                   {activeView !== "all" &&
@@ -685,23 +680,25 @@ export function FilesBrowser({
                   <div className="flex flex-col gap-4">
                     {filterBar}
                     {query.isPending ? (
-                      <div className="grid place-items-center p-10">
-                        <Icon
-                          type="spinner"
-                          size="2xl"
-                          className="text-tertiary animate-spin"
-                        />
-                      </div>
+                      <Spinner size="2xl" className="p-10" />
                     ) : query.isError ? (
                       <Alert variant="error" title="Unable to list this folder">
                         {query.error.message}
                       </Alert>
                     ) : items.length === 0 ? (
-                      <Typography className="text-tertiary p-10 text-center">
-                        {isSearching
-                          ? `No ${viewDef.name.toLowerCase()} match this search.`
-                          : `No ${viewDef.name.toLowerCase()} on this page.`}
-                      </Typography>
+                      <EmptyList
+                        size="sm"
+                        title={
+                          isSearching
+                            ? `No ${viewDef.name.toLowerCase()} match this search`
+                            : `No ${viewDef.name.toLowerCase()} on this page`
+                        }
+                        description={
+                          isSearching
+                            ? "Try another name, or search from All files."
+                            : "Other pages, or All files, may hold some."
+                        }
+                      />
                     ) : activeView === "music" ? (
                       <MusicView
                         snapshot={snapshot.identifier.Value}
@@ -710,6 +707,8 @@ export function FilesBrowser({
                         basePath={vfsEntry.path}
                         selected={selectedPaths}
                         onToggleSelected={toggleSelected}
+                        playingPath={playingPath}
+                        onPlay={setPlayingPath}
                       />
                     ) : (
                       <Gallery
@@ -772,15 +771,24 @@ export function FilesBrowser({
                 )}
               </div>
 
-              {selected.length > 0 && (
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 -translate-y-1/2">
+              <div className="pointer-events-none absolute inset-x-0 bottom-[calc(55px+0.75rem)] flex flex-col items-center gap-2 px-3 *:pointer-events-auto">
+                {activeView === "music" && (
+                  <MusicPlayer
+                    snapshot={snapshot.identifier.Value}
+                    source={source}
+                    tracks={items}
+                    playingPath={playingPath}
+                    onPlay={setPlayingPath}
+                  />
+                )}
+                {selected.length > 0 && (
                   <SelectedList
                     snapshot={snapshot}
                     childEntries={selected}
                     removeSelection={() => setSelected([])}
                   />
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
           {lightboxIndex >= 0 && (

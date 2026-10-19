@@ -4,6 +4,7 @@ import { VFSEntrySchema } from "@plakar-ui/common/api/kloset";
 
 import {
   browseViewCounts,
+  emptyBrowseViews,
   getBrowseView,
   isDocumentContentType,
   suggestBrowseView,
@@ -111,6 +112,15 @@ describe("browse views", () => {
         file("notes.txt", "text/plain"),
       ])
     ).toBe("all");
+  });
+
+  it("disables documents only without any text or application file", () => {
+    expect(emptyBrowseViews(directory({ files: 6, MIME_audio: 6 }))).toEqual(
+      new Set(["photos", "videos", "documents"])
+    );
+    expect(
+      emptyBrowseViews(directory({ files: 2, MIME_application: 2 }))
+    ).toEqual(new Set(["photos", "videos", "music"]));
   });
 
   it("counts the files a directory holds directly", () => {

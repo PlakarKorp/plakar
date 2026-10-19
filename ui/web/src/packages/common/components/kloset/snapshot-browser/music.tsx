@@ -2,11 +2,14 @@ import {
   Checkbox,
   Icon,
   IconButton,
+  Slider,
+  Tag,
   Typography,
 } from "@plakar-ui/ui/components";
 import clsx from "clsx";
 import std_path from "path";
 import { useEffect, useRef, useState } from "react";
+import { Button } from "react-aria-components";
 
 import { EnrichedChildEntryType } from "@plakar-ui/common/api/kloset";
 import { useInView, useLocalStorage } from "@plakar-ui/common/hooks";
@@ -23,6 +26,8 @@ type MusicViewProps = {
   basePath: string;
   selected: ReadonlySet<string>;
   onToggleSelected: (entry: EnrichedChildEntryType) => void;
+  playingPath: string | null;
+  onPlay: (path: string | null) => void;
 };
 
 /**
@@ -36,12 +41,11 @@ export function MusicView({
   basePath,
   selected,
   onToggleSelected,
+  playingPath,
+  onPlay,
 }: MusicViewProps) {
-  const [current, setCurrent] = useState<number | null>(null);
-  const playing = current !== null ? tracks[current] : undefined;
-
   return (
-    <div className={clsx("flex flex-col gap-3", playing && "pb-28")}>
+    <div className={clsx("flex flex-col gap-3", playingPath && "pb-28")}>
       <div className="flex items-center justify-between gap-3">
         <Typography
           as="h3"
@@ -55,13 +59,13 @@ export function MusicView({
           icon="play"
           variant="primary"
           size="sm"
-          onPress={() => setCurrent(0)}
+          onPress={() => onPlay(tracks[0].path)}
         >
           Play all
         </IconButton>
       </div>
 
-      <ol className="border-secondary divide-secondary flex flex-col divide-y rounded-lg border">
+      <ol className="border-secondary divide-secondary flex flex-col divide-y overflow-hidden rounded-lg border">
         {tracks.map((track, i) => (
           <TrackRow
             key={track.path}
@@ -70,33 +74,51 @@ export function MusicView({
             track={track}
             folder={std_path.relative(basePath, track.parent_path)}
             position={i + 1}
-            isCurrent={playing?.path === track.path}
+            isCurrent={playingPath === track.path}
             isSelected={selected.has(track.path)}
             onToggleSelected={() => onToggleSelected(track)}
-            onPlay={() => setCurrent(i)}
+            onPlay={() => onPlay(track.path)}
           />
         ))}
       </ol>
-
-      {playing && current !== null && (
-        <PlayerBar
-          snapshot={snapshot}
-          source={source}
-          track={playing}
-          position={current + 1}
-          count={tracks.length}
-          onPrevious={() =>
-            setCurrent((current - 1 + tracks.length) % tracks.length)
-          }
-          onNext={() =>
-            current < tracks.length - 1
-              ? setCurrent(current + 1)
-              : setCurrent(null)
-          }
-          onClose={() => setCurrent(null)}
-        />
-      )}
     </div>
+  );
+}
+
+type MusicPlayerProps = {
+  snapshot: string;
+  source: number;
+  tracks: EnrichedChildEntryType[];
+  playingPath: string | null;
+  onPlay: (path: string | null) => void;
+};
+
+export function MusicPlayer({
+  snapshot,
+  source,
+  tracks,
+  playingPath,
+  onPlay,
+}: MusicPlayerProps) {
+  const index = tracks.findIndex((track) => track.path === playingPath);
+  if (index === -1) {
+    return null;
+  }
+  return (
+    <PlayerBar
+      snapshot={snapshot}
+      source={source}
+      track={tracks[index]}
+      position={index + 1}
+      count={tracks.length}
+      onPrevious={() =>
+        onPlay(tracks[(index - 1 + tracks.length) % tracks.length].path)
+      }
+      onNext={() =>
+        onPlay(index < tracks.length - 1 ? tracks[index + 1].path : null)
+      }
+      onClose={() => onPlay(null)}
+    />
   );
 }
 
@@ -158,11 +180,10 @@ function TrackRow({
         isSelected={isSelected}
         onChange={onToggleSelected}
       />
-      <button
-        type="button"
-        onClick={onPlay}
+      <Button
+        onPress={onPlay}
         aria-label={`Play ${title}`}
-        className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left"
+        className="data-focus-visible:outline-focus flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded text-left data-focus-visible:outline-2"
       >
         <span className="text-tertiary grid w-6 place-items-center tabular-nums">
           {isCurrent ? (
@@ -194,16 +215,16 @@ function TrackRow({
           </Typography>
         </span>
         {tag && (
-          <Typography
-            as="span"
-            size="xs"
-            className="bg-tertiary text-secondary hidden rounded-full px-2 py-0.5 capitalize md:inline"
+          <Tag
+            variant="default_borderless"
+            size="sm"
+            className="hidden capitalize md:inline-flex"
           >
             {tag}
-          </Typography>
+          </Tag>
         )}
         <TrackDuration snapshot={snapshot} source={source} track={track} />
-      </button>
+      </Button>
     </li>
   );
 }
@@ -315,7 +336,7 @@ function PlayerBar({
     <div
       role="region"
       aria-label="Player"
-      className="border-primary bg-primary/90 fixed inset-x-3 bottom-3 z-40 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-2xl border px-4 py-3 shadow-xl backdrop-blur-md md:left-auto md:w-[min(900px,calc(100vw-2rem))]"
+      className="border-primary bg-primary/90 flex w-full max-w-[900px] flex-wrap items-center gap-x-6 gap-y-2 rounded-2xl border px-4 py-3 shadow-xl backdrop-blur-md"
     >
       {url && (
         <audio
@@ -376,18 +397,18 @@ function PlayerBar({
           >
             {formatClock(time)}
           </Typography>
-          <input
-            type="range"
+          <Slider
             aria-label="Seek"
-            min={0}
-            max={duration || 0}
+            minValue={0}
+            maxValue={duration || 0}
             step={0.1}
             value={time}
-            onChange={(e) => {
+            onChange={(value) => {
               const audio = audioRef.current;
-              if (audio) audio.currentTime = Number(e.target.value);
+              if (audio) audio.currentTime = value;
             }}
-            className="h-1 flex-1 cursor-pointer accent-[var(--background-color-accent)]"
+            isDisabled={!duration}
+            className="flex-1"
           />
           <Typography
             as="span"
@@ -400,16 +421,15 @@ function PlayerBar({
       </div>
 
       <div className="hidden flex-[1_1_160px] items-center justify-end gap-2 md:flex">
-        <Icon type="md-audio-file" size="sm" className="text-tertiary" />
-        <input
-          type="range"
+        <Icon type="volume-high" size="sm" className="text-tertiary" />
+        <Slider
           aria-label="Volume"
-          min={0}
-          max={1}
+          minValue={0}
+          maxValue={1}
           step={0.05}
           value={volume}
-          onChange={(e) => setVolume(Number(e.target.value))}
-          className="h-1 w-24 cursor-pointer accent-[var(--background-color-accent)]"
+          onChange={setVolume}
+          className="w-24"
         />
         <IconButton
           icon="close"
