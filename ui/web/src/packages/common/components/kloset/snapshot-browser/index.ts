@@ -1,3 +1,4 @@
+export * from "./browse-views";
 export * from "./browser";
 export * from "./details";
 export * from "./details-panel";

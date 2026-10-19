@@ -1,11 +1,15 @@
 import {
+  Alert,
+  Button as UIButton,
   Icon,
   IconButton,
   Menu,
+  Pagination as UIPagination,
+  SegmentedControl,
   Tooltip,
   Typography,
 } from "@plakar-ui/ui/components";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { RowSelectionState } from "@tanstack/react-table";
 import {
   createColumnHelper,
@@ -43,9 +47,21 @@ import {
   SelectedList,
   SnapshotErrorsAlert,
 } from "@plakar-ui/common/components";
+import { useLocalStorage } from "@plakar-ui/common/hooks";
 import { Main, SidePanelLayout } from "@plakar-ui/common/layouts";
 
+import {
+  browseViewCounts,
+  BrowseViewId,
+  getBrowseView,
+  isDocumentContentType,
+  suggestBrowseView,
+} from "./browse-views";
+import { Gallery, GalleryDensity } from "./gallery";
+import { Lightbox } from "./lightbox";
 import { MainTitle } from "./main-title";
+import { MusicView } from "./music";
+import { ViewSwitcher } from "./view-switcher";
 
 type FiltersProps = {
   mime?: (typeof MIME_FILTERS)[number];
@@ -75,6 +91,11 @@ type FilesBrowserProps = {
   // placed -- rather than as a prop per item and a second one to gate it.
   actions?: ReactNode;
   onMount?: (mountId: string) => void;
+  // The kind of content to browse. Left undefined, the browser picks the view
+  // matching what the directory mostly holds; without onViewChange, it keeps
+  // the choice to itself.
+  view?: BrowseViewId;
+  onViewChange?: (view: BrowseViewId) => void;
 };
 
 const columnHelper = createColumnHelper<
@@ -102,8 +123,48 @@ export function FilesBrowser({
   errorPageHref,
   actions,
   onMount,
+  view,
+  onViewChange,
 }: FilesBrowserProps) {
+  const [localView, setLocalView] = useState<BrowseViewId>();
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const suggestedView = suggestBrowseView(vfsEntry);
+  const activeView = view ?? localView ?? suggestedView;
+  const isAutoView = view === undefined && localView === undefined;
+  const viewDef = getBrowseView(activeView);
+  const changeView = (next: BrowseViewId) => {
+    setLightboxIndex(null);
+    if (onViewChange) onViewChange(next);
+    else setLocalView(next);
+  };
+
+  const [layout, setLayout] = useLocalStorage<"list" | "grid">(
+    "browserLayout",
+    "list"
+  );
+  const [density, setDensity] = useLocalStorage<GalleryDensity>(
+    "browserDensity",
+    "medium"
+  );
+
+  const isListView = activeView === "all" && layout === "list";
+
   const hasFilters = Object.values(filters).some((filter) => filter);
+
+  const search = viewDef.mimes
+    ? {
+        // A view browses the directory itself, not the tree below it.
+        contentTypes: viewDef.mimes,
+        filename: filters.filename,
+        recursive: false,
+      }
+    : hasFilters
+      ? {
+          contentTypes: filters.mime?.contentTypes,
+          filename: filters.filename,
+        }
+      : undefined;
+
   const { api, repository } = useKlosetAPI();
   const query = useQuery({
     ...SnapshotVFSQueryOptions(api, {
@@ -113,14 +174,17 @@ export function FilesBrowser({
       vfsEntry,
       page,
       perPage,
-      search: hasFilters
-        ? {
-            contentTypes: filters.mime?.contentTypes,
-            filename: filters.filename,
-          }
-        : undefined,
+      search,
     }),
-    placeholderData: keepPreviousData,
+    // Keep showing the previous results while the next ones load, but not
+    // those of another kind of content: filtered by this view, they would
+    // read as an empty directory until the new results are in.
+    placeholderData: (previous, previousQuery) =>
+      previousQuery &&
+      String(previousQuery.queryKey[2].search?.contentTypes) ===
+        String(search?.contentTypes)
+        ? previous
+        : undefined,
   });
 
   const columns = useMemo(
@@ -358,7 +422,13 @@ export function FilesBrowser({
     },
   });
 
-  const items = query.data?.items ?? [];
+  // The search endpoint matches content types loosely when it does not recurse
+  // (documents ask for all of application/), so views filter what comes back.
+  const items = (query.data?.items ?? []).filter(
+    (item) =>
+      activeView === "all" ||
+      (!item.file_info.mode.isDir() && viewDef.matches(item.contentType))
+  );
   const currentIndex = items.findIndex((item) => item.path === preview);
 
   // if currentIndex is not found, rest contains all elements starting with the first
@@ -383,6 +453,47 @@ export function FilesBrowser({
     const prevItem = items[currentIndex - prevOffset - 1];
     if (prevItem) onPreviewChange(prevItem.path);
   };
+
+  const selectedPaths = new Set(selected.map((item) => item.path));
+  const toggleSelected = (entry: EnrichedChildEntryType) =>
+    setSelected((prev) =>
+      prev.some((item) => item.path === entry.path)
+        ? prev.filter((item) => item.path !== entry.path)
+        : [...prev, entry]
+    );
+
+  // The files the lightbox pages through: those of the same kind as the one
+  // opened, in the order they are shown.
+  const [lightboxItems, setLightboxItems] = useState<EnrichedChildEntryType[]>(
+    []
+  );
+  const openEntry = (entry: EnrichedChildEntryType) => {
+    const kindOf = (item: EnrichedChildEntryType) =>
+      item.contentType.startsWith("image/")
+        ? "photo"
+        : item.contentType.startsWith("video/")
+          ? "video"
+          : isDocumentContentType(item.contentType)
+            ? "document"
+            : null;
+    const kind = kindOf(entry);
+    if (kind === null) {
+      onPreviewChange(entry.path);
+      return;
+    }
+    const pool = items.filter(
+      (item) => !item.file_info.mode.isDir() && kindOf(item) === kind
+    );
+    setLightboxItems(pool);
+    setLightboxIndex(pool.findIndex((item) => item.path === entry.path));
+  };
+
+  const hasNextPage = Boolean(
+    query.data &&
+    (isPaginationResponseWithTotal(query.data)
+      ? (page + 1) * perPage < query.data.total
+      : query.data.has_next)
+  );
 
   return (
     <SidePanelLayout
@@ -430,32 +541,185 @@ export function FilesBrowser({
                   />
                 )}
 
-                <PaginatedTable<EnrichedChildEntryType>
-                  query={query}
-                  table={table}
-                  softSelectionState={[
-                    items.find((item) => item.path === preview) ?? null,
-                    (entry) => {
-                      if (entry) {
-                        onPreviewChange(entry.path);
-                      }
-                    },
-                  ]}
-                  isSoftSelectionEnabledForRow={(row) =>
-                    !row.file_info.mode.isDir()
-                  }
-                  filters={
-                    <FileFilters
-                      mime={filters.mime}
-                      filename={filters.filename}
-                      onSearch={onSearch}
-                      onRemove={onRemoveFilter}
-                      onApply={onApplyFilter}
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-wrap items-end justify-between gap-3">
+                    <ViewSwitcher
+                      view={activeView}
+                      counts={browseViewCounts(vfsEntry)}
+                      onChange={changeView}
                     />
-                  }
-                  ariaLabel="Restore point files table"
-                  isLoading={query.isFetching}
-                />
+                    <div className="flex items-center gap-2 pb-1">
+                      {!isListView && activeView !== "music" && (
+                        <SegmentedControl
+                          ariaLabel="Thumbnail size"
+                          hideLabels
+                          items={[
+                            {
+                              id: "small",
+                              label: "Small thumbnails",
+                              icon: "minus",
+                            },
+                            {
+                              id: "medium",
+                              label: "Medium thumbnails",
+                              icon: "equals",
+                            },
+                            {
+                              id: "large",
+                              label: "Large thumbnails",
+                              icon: "plus",
+                            },
+                          ]}
+                          selectedId={density}
+                          onSelect={(id) => setDensity(id as GalleryDensity)}
+                        />
+                      )}
+                      {activeView === "all" && (
+                        <SegmentedControl
+                          ariaLabel="Layout"
+                          hideLabels
+                          items={[
+                            { id: "list", label: "List", icon: "list" },
+                            {
+                              id: "grid",
+                              label: "Grid",
+                              icon: "boxes-stacked",
+                            },
+                          ]}
+                          selectedId={layout}
+                          onSelect={(id) =>
+                            setLayout(id === "grid" ? "grid" : "list")
+                          }
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {isAutoView && activeView !== "all" && (
+                    <div className="bg-accent-quaternary flex flex-wrap items-center gap-2 rounded-lg px-3 py-2">
+                      <Icon
+                        type="wand-magic-sparkles"
+                        size="sm"
+                        className="text-accent"
+                      />
+                      <Typography size="sm" className="text-secondary flex-1">
+                        This folder mostly holds {viewDef.name.toLowerCase()},
+                        so it opens in the {viewDef.name} view.
+                      </Typography>
+                      <UIButton
+                        size="sm"
+                        variant="accent-quaternary"
+                        onPress={() => changeView("all")}
+                      >
+                        Show all files
+                      </UIButton>
+                    </div>
+                  )}
+
+                  {activeView !== "all" &&
+                    (vfsEntry.summary?.directory.directories ?? 0) > 0 && (
+                      <Typography size="xs" className="text-tertiary">
+                        This view shows the files of this folder only.{" "}
+                        {vfsEntry.summary?.directory.directories === 1
+                          ? "Its subfolder is"
+                          : `Its ${vfsEntry.summary?.directory.directories} subfolders are`}{" "}
+                        in All files.
+                      </Typography>
+                    )}
+                </div>
+
+                {!isListView && (
+                  <div className="flex flex-col gap-4">
+                    {query.isPending ? (
+                      <div className="grid place-items-center p-10">
+                        <Icon
+                          type="spinner"
+                          size="2xl"
+                          className="text-tertiary animate-spin"
+                        />
+                      </div>
+                    ) : query.isError ? (
+                      <Alert variant="error" title="Unable to list this folder">
+                        {query.error.message}
+                      </Alert>
+                    ) : items.length === 0 ? (
+                      <Typography className="text-tertiary p-10 text-center">
+                        No {viewDef.name.toLowerCase()} on this page.
+                      </Typography>
+                    ) : activeView === "music" ? (
+                      <MusicView
+                        snapshot={snapshot.identifier.Value}
+                        source={source}
+                        tracks={items}
+                        selected={selectedPaths}
+                        onToggleSelected={toggleSelected}
+                      />
+                    ) : (
+                      <Gallery
+                        snapshot={snapshot.identifier.Value}
+                        source={source}
+                        view={activeView}
+                        entries={items}
+                        density={density}
+                        selected={selectedPaths}
+                        onToggleSelected={toggleSelected}
+                        onOpen={openEntry}
+                        onOpenDirectory={onPathChange}
+                      />
+                    )}
+                    <UIPagination
+                      currentPage={page}
+                      onPrev={
+                        page > 0
+                          ? () => onPageChange(page - 1, perPage)
+                          : undefined
+                      }
+                      onNext={
+                        hasNextPage
+                          ? () => onPageChange(page + 1, perPage)
+                          : undefined
+                      }
+                      onPageSizeChange={(size) => onPageChange(0, size)}
+                      total={{
+                        count:
+                          query.data &&
+                          isPaginationResponseWithTotal(query.data)
+                            ? query.data.total
+                            : undefined,
+                        perPage,
+                      }}
+                    />
+                  </div>
+                )}
+
+                {isListView && (
+                  <PaginatedTable<EnrichedChildEntryType>
+                    query={query}
+                    table={table}
+                    softSelectionState={[
+                      items.find((item) => item.path === preview) ?? null,
+                      (entry) => {
+                        if (entry) {
+                          onPreviewChange(entry.path);
+                        }
+                      },
+                    ]}
+                    isSoftSelectionEnabledForRow={(row) =>
+                      !row.file_info.mode.isDir()
+                    }
+                    filters={
+                      <FileFilters
+                        mime={filters.mime}
+                        filename={filters.filename}
+                        onSearch={onSearch}
+                        onRemove={onRemoveFilter}
+                        onApply={onApplyFilter}
+                      />
+                    }
+                    ariaLabel="Restore point files table"
+                    isLoading={query.isFetching}
+                  />
+                )}
               </div>
 
               {selected.length > 0 && (
@@ -469,6 +733,16 @@ export function FilesBrowser({
               )}
             </div>
           </div>
+          {lightboxIndex !== null && lightboxIndex >= 0 && (
+            <Lightbox
+              snapshot={snapshot}
+              source={source}
+              items={lightboxItems}
+              index={lightboxIndex}
+              onIndexChange={setLightboxIndex}
+              onClose={() => setLightboxIndex(null)}
+            />
+          )}
         </Main>
       }
       sidebar={

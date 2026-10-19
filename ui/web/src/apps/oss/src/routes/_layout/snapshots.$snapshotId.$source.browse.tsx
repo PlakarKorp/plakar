@@ -3,6 +3,8 @@ import {
   GetSnapshotQueryOptions,
 } from "@plakar-ui/common/api/kloset";
 import {
+  BROWSE_VIEW_IDS,
+  BrowseViewId,
   Breadcrumbs,
   FilesBrowser,
   MIME_FILTERS,
@@ -47,6 +49,8 @@ export const Route = createFileRoute(
       .default(""),
     filename: z.string().catch("").default(""),
     preview: z.string().catch("").default(""),
+    // Left out, the browser picks the view that fits the directory.
+    view: z.enum(BROWSE_VIEW_IDS).optional().catch(undefined),
   }),
 
   loaderDeps: ({ search }) => {
@@ -121,6 +125,7 @@ function Component() {
           ...prev,
           path,
           page: 0,
+          view: undefined,
         }),
       }),
     [navigate, params.snapshotId]
@@ -163,6 +168,19 @@ function Component() {
       });
     },
     [navigate, params.snapshotId]
+  );
+
+  const onViewChange = useCallback(
+    (view: BrowseViewId) =>
+      navigate({
+        search: (prev) => ({
+          ...prev,
+          view,
+          page: 0,
+          preview: "",
+        }),
+      }),
+    [navigate]
   );
 
   const handleSearch = useCallback(
@@ -221,6 +239,8 @@ function Component() {
       onSnapshotChange={onSnapshotChange}
       preview={search.preview}
       onPreviewChange={onPreviewChange}
+      view={search.view}
+      onViewChange={onViewChange}
       breadcrumb={
         <Breadcrumbs>
           {breadcrumbsForSource(

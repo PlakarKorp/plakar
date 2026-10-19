@@ -442,6 +442,16 @@ Supported variables:
   }
 }
 
+@keyframes equalizer {
+  0%,
+  100% {
+    transform: scaleY(0.25);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
 @keyframes modal-zoom {
   from {
     transform: scale(0.8);

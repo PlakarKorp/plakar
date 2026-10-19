@@ -82,6 +82,8 @@ export const SnapshotVFSQueryOptions = (
     search?: {
       contentTypes?: (typeof MIME_FILTERS)[number]["contentTypes"];
       filename?: string;
+      // Defaults to true: the filters search the whole tree below the path.
+      recursive?: boolean;
     };
   } & PaginationParams
 ) =>
@@ -110,7 +112,7 @@ export const SnapshotVFSQueryOptions = (
             source,
             path: vfsEntry.path,
             pagination: { page, perPage },
-            recursive: true,
+            recursive: search.recursive ?? true,
             mimes: search.contentTypes,
             filename: search.filename,
           }));
@@ -268,6 +270,112 @@ export const SnapshotReaderSignUrlQueryOptions = (
       return { type, signature, downloadUrl };
     },
     // Files are immutable, so we don't need to refetch them.
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    staleTime: Infinity,
+  });
+
+/**
+ * Signs the URL to read one file, without the extra lookup of its type that
+ * SnapshotReaderSignUrlQueryOptions does: galleries need hundreds of these.
+ */
+export const SnapshotReaderURLQueryOptions = (
+  api: KlosetAPI,
+  {
+    repository,
+    snapshot,
+    source,
+    path,
+    params,
+  }: {
+    repository?: string;
+    snapshot: string;
+    source: number;
+    path: string;
+    params?: ReadFileParams;
+  }
+) =>
+  queryOptions({
+    queryKey: klosetKeys.snapshotReaderURL({
+      repository,
+      snapshot,
+      source,
+      path,
+      params,
+    }),
+    queryFn: async () => {
+      const reader = new SnapshotReader(
+        api,
+        repository,
+        snapshot,
+        source,
+        path
+      );
+      const signature = await reader.getSignature();
+      if (signature.status !== "ok") {
+        return { status: signature.status, url: null };
+      }
+      return {
+        status: signature.status,
+        url: reader.getPublicUrl(signature.value, params),
+      };
+    },
+    // Signatures last two hours: refresh them well before that.
+    staleTime: 60 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+/**
+ * Reads the first bytes of a file as text, for the previews that only need
+ * its opening lines.
+ */
+export const SnapshotFileHeadQueryOptions = (
+  api: KlosetAPI,
+  {
+    repository,
+    snapshot,
+    source,
+    path,
+    bytes,
+  }: {
+    repository?: string;
+    snapshot: string;
+    source: number;
+    path: string;
+    bytes: number;
+  }
+) =>
+  queryOptions({
+    queryKey: klosetKeys.snapshotFileHead({
+      repository,
+      snapshot,
+      source,
+      path,
+      bytes,
+    }),
+    queryFn: async ({ signal }) => {
+      const reader = new SnapshotReader(
+        api,
+        repository,
+        snapshot,
+        source,
+        path
+      );
+      const signature = await reader.getSignature();
+      if (signature.status !== "ok") {
+        return null;
+      }
+      const res = await fetch(
+        reader.getPublicUrl(signature.value, { render: "text" }),
+        { headers: { Range: `bytes=0-${bytes - 1}` }, signal }
+      );
+      if (!res.ok) {
+        throw new Error(`reading ${path} failed with HTTP/${res.status}`);
+      }
+      return (await res.text()).slice(0, bytes);
+    },
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: false,
