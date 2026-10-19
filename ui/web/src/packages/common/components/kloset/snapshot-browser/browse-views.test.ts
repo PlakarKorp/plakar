@@ -145,6 +145,12 @@ describe("browse views", () => {
     );
   });
 
+  it("keeps all files for directories with subfolders", () => {
+    expect(
+      suggestBrowseView(directory({ files: 4, MIME_audio: 4, directories: 4 }))
+    ).toBe("all");
+  });
+
   it("keeps all files when no kind dominates", () => {
     expect(
       suggestBrowseView(directory({ files: 10, MIME_image: 5, MIME_video: 5 }))

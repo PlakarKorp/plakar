@@ -130,11 +130,13 @@ const SUGGEST_MIN_FILES = 3;
 
 /**
  * Picks the view a directory opens in: the one matching most of its files when
- * one kind clearly dominates, "all" otherwise.
+ * one kind clearly dominates, "all" otherwise. A directory with subfolders is
+ * being browsed through, so it stays on "all" where they are listed.
  */
 export function suggestBrowseView(entry: VFSEntryType): BrowseViewId {
   const counts = browseViewCounts(entry);
-  if (counts.all < SUGGEST_MIN_FILES) {
+  const hasSubfolders = (entry.summary?.directory.directories ?? 0) > 0;
+  if (hasSubfolders || counts.all < SUGGEST_MIN_FILES) {
     return "all";
   }
   const candidates: BrowseViewId[] = ["photos", "videos", "music"];
