@@ -29,6 +29,8 @@ github.com/PlakarKorp/integrations/tar v1.1.1 h1:2v1BF5LLE88vm8C6ZbzhCOEXv44js9M
 github.com/PlakarKorp/integrations/tar v1.1.1/go.mod h1:lq8UXspuZFCKqOZUsUL9f4pM3xWXqZNeLTAc7GIBMsg=
 github.com/PlakarKorp/kloset v1.2.0-alpha.2.0.20261015225801-4937477bbf69 h1:rmQGyKoBJ8lkl0OoUcFeJj32sRQ1LMXbgZLwvW/WGpU=
 github.com/PlakarKorp/kloset v1.2.0-alpha.2.0.20261015225801-4937477bbf69/go.mod h1:krK2lrnjAyjc2ksbLElkELu1q26s9Rp9kkJ1kr2jIAc=
+github.com/PlakarKorp/kloset v1.2.0-alpha.2.0.20261019121718-103dedcd9ea9 h1:0B93KJD6k8e2eitLOzL1CkLkCFf18AHdWoNCB1A+zOM=
+github.com/PlakarKorp/kloset v1.2.0-alpha.2.0.20261019121718-103dedcd9ea9/go.mod h1:pFJtEVSlbnPIJlwIFYxeOyf1j9jGn3xeeNKFzEXajn0=
 github.com/PlakarKorp/pkg v1.1.9 h1:izxjIL+j2hDphEnW66A4EZaT8Bmirr+m5rVshXmvaMY=
 github.com/PlakarKorp/pkg v1.1.9/go.mod h1:fr6EcmMssAZ9ab1f5Wq8P8K259Ir3Nd4BtRs71GKI30=
 github.com/RaduBerinde/axisds v0.1.0 h1:YItk/RmU5nvlsv/awo2Fjx97Mfpt4JfgtEVAGPrLdz8=
@@ -290,6 +292,8 @@ github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
 github.com/klauspost/compress v1.20.1 h1:T7kKElXUMXrUJ2E9QhQhxFtcK5rPyLdsGZvdbLMPdiQ=
 github.com/klauspost/compress v1.20.1/go.mod h1:LUdAzn7YLVvxLpc7y3V1m40wESHTgc1422pwwBSKYuI=
+github.com/klauspost/compress v1.20.3 h1:zWNoFqq/lSuYQRim3dUXlXeA0IqwuZGicdG5ZTfY5j4=
+github.com/klauspost/compress v1.20.3/go.mod h1:LUdAzn7YLVvxLpc7y3V1m40wESHTgc1422pwwBSKYuI=
 github.com/klauspost/cpuid/v2 v2.4.0 h1:S6Hrbc7+ywsr0r+RLapfGBHfyefhCTwEh3A0tV913Dw=
 github.com/klauspost/cpuid/v2 v2.4.0/go.mod h1:19jmZ9mjzoF//ddRSUsv0zfBTJWh3QJh9FNxZTMrGxU=
 github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
