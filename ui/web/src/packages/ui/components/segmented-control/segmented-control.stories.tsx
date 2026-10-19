@@ -46,6 +46,33 @@ export const IconsOnly: Story = {
   },
 };
 
+export const LabelsBesideIcons: Story = {
+  render: () => (
+    <div className="flex items-center gap-2">
+      <SegmentedControl
+        ariaLabel="Thumbnail size"
+        items={[
+          { id: "small", label: "Small" },
+          { id: "medium", label: "Medium" },
+          { id: "large", label: "Large" },
+        ]}
+        selectedId="medium"
+        onSelect={() => {}}
+      />
+      <SegmentedControl
+        ariaLabel="Layout"
+        hideLabels
+        items={[
+          { id: "list", label: "List", icon: "list" },
+          { id: "grid", label: "Grid", icon: "grid" },
+        ]}
+        selectedId="grid"
+        onSelect={() => {}}
+      />
+    </div>
+  ),
+};
+
 export const Disabled: Story = {
   args: {
     isDisabled: true,
