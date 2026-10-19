@@ -307,6 +307,7 @@ export function EntryViewer({
   }
   return (
     <Viewer
+      key={entry.path}
       variant={variant}
       name={entry.file_info.name}
       contentType={entry.contentType}

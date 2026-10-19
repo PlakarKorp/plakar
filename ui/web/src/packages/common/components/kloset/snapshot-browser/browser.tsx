@@ -132,6 +132,12 @@ export function FilesBrowser({
 }: FilesBrowserProps) {
   const [localView, setLocalView] = useState<BrowseViewId>();
   const [playingPath, setPlayingPath] = useState<string | null>(null);
+  const listing = `${vfsEntry.path}:${page}`;
+  const [playingListing, setPlayingListing] = useState(listing);
+  if (playingListing !== listing) {
+    setPlayingListing(listing);
+    setPlayingPath(null);
+  }
   const [lightbox, setLightbox] = useState<{
     path: string;
     followsPreview: boolean;
@@ -498,6 +504,9 @@ export function FilesBrowser({
   const lightboxIndex = lightboxItems.findIndex(
     (item) => item.path === lightbox?.path
   );
+  if (lightbox && lightboxIndex === -1) {
+    setLightbox(null);
+  }
   const openEntry = (
     entry: EnrichedChildEntryType,
     { followPreview = false } = {}
@@ -771,7 +780,7 @@ export function FilesBrowser({
                 )}
               </div>
 
-              <div className="pointer-events-none absolute inset-x-0 bottom-[calc(55px+0.75rem)] flex flex-col items-center gap-2 px-3 *:pointer-events-auto">
+              <div className="pointer-events-none absolute inset-x-0 bottom-[calc(var(--pagination-height)+0.75rem)] flex flex-col items-center gap-2 px-3 *:pointer-events-auto">
                 {activeView === "music" && (
                   <MusicPlayer
                     snapshot={snapshot.identifier.Value}

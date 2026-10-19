@@ -7,7 +7,7 @@ const TEXT_APPLICATION_TYPES = [
 ];
 
 export function ContentType(value: string) {
-  if (value.includes("text")) {
+  if (value.startsWith("text/")) {
     return { resolved: "text", raw: value } as const;
   } else if (value.includes("json")) {
     return { resolved: "json", raw: value } as const;

@@ -35,7 +35,6 @@ export function useEntryURL({
     url: getUrl?.(),
     getUrl,
     isColdStorage: query.data?.status === "glacier",
-    isPending: query.isPending,
     error: query.error,
   };
 }

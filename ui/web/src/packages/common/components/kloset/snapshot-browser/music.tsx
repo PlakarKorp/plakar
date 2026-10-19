@@ -310,6 +310,7 @@ function PlayerBar({
   const audioRef = useRef<HTMLAudioElement>(null);
   const [paused, setPaused] = useState(true);
   const [time, setTime] = useState(0);
+  const [seekingTo, setSeekingTo] = useState<number | null>(null);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useLocalStorage("playerVolume", 0.8);
   const { title, tag } = parseTrackName(track.file_info.name);
@@ -395,19 +396,20 @@ function PlayerBar({
             size="xs"
             className="text-tertiary w-10 text-right tabular-nums"
           >
-            {formatClock(time)}
+            {formatClock(seekingTo ?? time)}
           </Typography>
           <Slider
             aria-label="Seek"
             minValue={0}
-            maxValue={duration || 0}
+            maxValue={duration}
             step={0.1}
-            value={time}
-            onChange={(value) => {
+            value={seekingTo ?? time}
+            onChange={setSeekingTo}
+            onChangeEnd={(value) => {
               const audio = audioRef.current;
               if (audio) audio.currentTime = value;
+              setSeekingTo(null);
             }}
-            isDisabled={!duration}
             className="flex-1"
           />
           <Typography

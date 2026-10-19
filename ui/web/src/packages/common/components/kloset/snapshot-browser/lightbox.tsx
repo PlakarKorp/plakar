@@ -48,10 +48,19 @@ export function Lightbox({
   const [hasEntered, setHasEntered] = useState(false);
 
   useEffect(() => {
-    const animations = overlayRef.current?.getAnimations() ?? [];
-    void Promise.allSettled(animations.map((a) => a.finished)).then(() =>
-      setHasEntered(true)
-    );
+    const overlay = overlayRef.current;
+    if (!overlay) return;
+    const settle = (event?: AnimationEvent) => {
+      if (!event || event.target === overlay) setHasEntered(true);
+    };
+    overlay.addEventListener("animationend", settle);
+    const frame = requestAnimationFrame(() => {
+      if (overlay.getAnimations().length === 0) settle();
+    });
+    return () => {
+      overlay.removeEventListener("animationend", settle);
+      cancelAnimationFrame(frame);
+    };
   }, []);
 
   const go = (delta: number) => {

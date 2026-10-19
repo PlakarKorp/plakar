@@ -85,6 +85,7 @@ export function MountDetailsPanel({
       ) : (
         data && (
           <Viewer
+            key={path}
             variant="panel"
             name={fileName}
             contentType={data.content_type}
