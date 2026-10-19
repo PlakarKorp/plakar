@@ -13,7 +13,7 @@ import {
 import { FileIcon } from "@plakar-ui/common/components";
 import { useInView } from "@plakar-ui/common/hooks";
 
-import { BrowseViewId, isDocumentContentType } from "./browse-views";
+import { BrowseViewId, viewerKind } from "./browse-views";
 import { formatClock } from "./media-utils";
 import { useEntryURL } from "./use-entry-url";
 
@@ -182,13 +182,7 @@ function FileTile({
 }: FileTileProps) {
   const [ref, inView] = useInView<HTMLDivElement>();
   const contentType = entry.contentType;
-  const kind = contentType.startsWith("image/")
-    ? "photo"
-    : contentType.startsWith("video/")
-      ? "video"
-      : isDocumentContentType(contentType)
-        ? "document"
-        : "other";
+  const kind = viewerKind(contentType);
 
   // In the photos view the picture is the whole tile; elsewhere tiles share a
   // shape so mixed folders line up.

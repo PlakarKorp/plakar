@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
 import {
-  ReadFileParams,
   SnapshotReaderURLQueryOptions,
   useKlosetAPI,
 } from "@plakar-ui/common/api/kloset";
@@ -15,13 +14,11 @@ export function useEntryURL({
   source,
   path,
   enabled = true,
-  params,
 }: {
   snapshot: string;
   source: number;
   path: string;
   enabled?: boolean;
-  params?: ReadFileParams;
 }) {
   const { api, repository } = useKlosetAPI();
   const query = useQuery({
@@ -30,13 +27,15 @@ export function useEntryURL({
       snapshot,
       source,
       path,
-      params,
     }),
     enabled,
   });
+  const getUrl = query.data?.getUrl ?? undefined;
   return {
-    url: query.data?.url ?? undefined,
+    url: getUrl?.(),
+    getUrl,
     isColdStorage: query.data?.status === "glacier",
-    isError: query.isError,
+    isPending: query.isPending,
+    error: query.error,
   };
 }

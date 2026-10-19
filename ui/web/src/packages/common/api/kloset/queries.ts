@@ -244,61 +244,9 @@ export class SnapshotReader {
   }
 }
 
-export const SnapshotReaderSignUrlQueryOptions = (
-  api: KlosetAPI,
-  {
-    repository,
-    snapshot,
-    source,
-    path,
-  }: {
-    repository?: string;
-    snapshot: string;
-    source: number;
-    path: string;
-  }
-) =>
-  queryOptions({
-    queryKey: klosetKeys.snapshotReaderSignUrl({
-      repository,
-      snapshot,
-      source,
-      path,
-    }),
-    queryFn: async () => {
-      const reader = new SnapshotReader(
-        api,
-        repository,
-        snapshot,
-        source,
-        path
-      );
-
-      const [type, signature] = await Promise.all([
-        reader.getType(),
-        reader.getSignature(),
-      ]);
-
-      if (signature.status !== "ok") {
-        return { type, signature };
-      }
-
-      const downloadUrl = reader.getPublicUrl(signature.value, {
-        download: true,
-      });
-
-      return { type, signature, downloadUrl };
-    },
-    // Files are immutable, so we don't need to refetch them.
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
-    staleTime: Infinity,
-  });
-
 /**
- * Signs the URL to read one file, without the extra lookup of its type that
- * SnapshotReaderSignUrlQueryOptions does: galleries need hundreds of these.
+ * Signs the URL to read one file. One signature serves every way of reading
+ * it, so the viewer, its download button and a gallery tile share the query.
  */
 export const SnapshotReaderURLQueryOptions = (
   api: KlosetAPI,
@@ -307,13 +255,11 @@ export const SnapshotReaderURLQueryOptions = (
     snapshot,
     source,
     path,
-    params,
   }: {
     repository?: string;
     snapshot: string;
     source: number;
     path: string;
-    params?: ReadFileParams;
   }
 ) =>
   queryOptions({
@@ -322,7 +268,6 @@ export const SnapshotReaderURLQueryOptions = (
       snapshot,
       source,
       path,
-      params,
     }),
     queryFn: async () => {
       const reader = new SnapshotReader(
@@ -334,11 +279,12 @@ export const SnapshotReaderURLQueryOptions = (
       );
       const signature = await reader.getSignature();
       if (signature.status !== "ok") {
-        return { status: signature.status, url: null };
+        return { status: signature.status, getUrl: null };
       }
       return {
         status: signature.status,
-        url: reader.getPublicUrl(signature.value, params),
+        getUrl: (params?: ReadFileParams) =>
+          reader.getPublicUrl(signature.value, params),
       };
     },
     // Signatures last two hours: refresh them well before that.

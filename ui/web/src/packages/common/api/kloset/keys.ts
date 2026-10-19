@@ -1,5 +1,5 @@
 import type { PaginationParams } from "../pagination";
-import type { ReadFileParams, SnapshotType, VFSEntryType } from "./schema";
+import type { SnapshotType, VFSEntryType } from "./schema";
 
 type SnapshotVFSKeyParams = {
   repository?: string;
@@ -56,19 +56,11 @@ export const klosetKeys = {
     path: string;
   }) => [...klosetKeys.all(), "snapshot.path", params] as const,
 
-  snapshotReaderSignUrl: (params: {
-    repository?: string;
-    snapshot: string;
-    source: number;
-    path: string;
-  }) => [...klosetKeys.all(), "snapshot.reader-sign-url", params] as const,
-
   snapshotReaderURL: (params: {
     repository?: string;
     snapshot: string;
     source: number;
     path: string;
-    params?: ReadFileParams;
   }) => [...klosetKeys.all(), "snapshot.reader-url", params] as const,
 
   snapshotFileHead: (params: {

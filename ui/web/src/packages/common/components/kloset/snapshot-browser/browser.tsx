@@ -54,7 +54,7 @@ import {
   browseViewCounts,
   BrowseViewId,
   getBrowseView,
-  isDocumentContentType,
+  viewerKind,
   suggestBrowseView,
   suggestBrowseViewForEntries,
 } from "./browse-views";
@@ -128,10 +128,13 @@ export function FilesBrowser({
   onViewChange,
 }: FilesBrowserProps) {
   const [localView, setLocalView] = useState<BrowseViewId>();
-  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [lightbox, setLightbox] = useState<{
+    path: string;
+    followsPreview: boolean;
+  } | null>(null);
   const explicitView = view ?? localView;
   const changeView = (next: BrowseViewId) => {
-    setLightboxIndex(null);
+    setLightbox(null);
     if (onViewChange) onViewChange(next);
     else setLocalView(next);
   };
@@ -443,6 +446,7 @@ export function FilesBrowser({
       (!item.file_info.mode.isDir() && viewDef.matches(item.contentType))
   );
   const currentIndex = items.findIndex((item) => item.path === preview);
+  const previewEntry = currentIndex === -1 ? undefined : items[currentIndex];
 
   // if currentIndex is not found, rest contains all elements starting with the first
   const rest = items.slice(currentIndex + 1);
@@ -475,30 +479,36 @@ export function FilesBrowser({
         : [...prev, entry]
     );
 
-  // The files the lightbox pages through: those of the same kind as the one
-  // opened, in the order they are shown.
-  const [lightboxItems, setLightboxItems] = useState<EnrichedChildEntryType[]>(
-    []
+  const lightboxEntry = lightbox
+    ? items.find((item) => item.path === lightbox.path)
+    : undefined;
+  const lightboxKind = lightboxEntry && viewerKind(lightboxEntry.contentType);
+  const lightboxItems = lightboxKind
+    ? items.filter(
+        (item) =>
+          !item.file_info.mode.isDir() &&
+          viewerKind(item.contentType) === lightboxKind
+      )
+    : [];
+  const lightboxIndex = lightboxItems.findIndex(
+    (item) => item.path === lightbox?.path
   );
-  const openEntry = (entry: EnrichedChildEntryType) => {
-    const kindOf = (item: EnrichedChildEntryType) =>
-      item.contentType.startsWith("image/")
-        ? "photo"
-        : item.contentType.startsWith("video/")
-          ? "video"
-          : isDocumentContentType(item.contentType)
-            ? "document"
-            : null;
-    const kind = kindOf(entry);
-    if (kind === null) {
+  const openEntry = (
+    entry: EnrichedChildEntryType,
+    { followPreview = false } = {}
+  ) => {
+    if (viewerKind(entry.contentType) === null) {
       onPreviewChange(entry.path);
       return;
     }
-    const pool = items.filter(
-      (item) => !item.file_info.mode.isDir() && kindOf(item) === kind
-    );
-    setLightboxItems(pool);
-    setLightboxIndex(pool.findIndex((item) => item.path === entry.path));
+    setLightbox({ path: entry.path, followsPreview: followPreview });
+  };
+  const changeLightboxIndex = (index: number) => {
+    const { path } = lightboxItems[index];
+    setLightbox((current) => current && { ...current, path });
+    if (lightbox?.followsPreview) {
+      onPreviewChange(path);
+    }
   };
 
   // In a view, the view is the type filter: only the name search remains.
@@ -745,7 +755,7 @@ export function FilesBrowser({
                     query={query}
                     table={table}
                     softSelectionState={[
-                      items.find((item) => item.path === preview) ?? null,
+                      previewEntry ?? null,
                       (entry) => {
                         if (entry) {
                           onPreviewChange(entry.path);
@@ -773,26 +783,32 @@ export function FilesBrowser({
               )}
             </div>
           </div>
-          {lightboxIndex !== null && lightboxIndex >= 0 && (
+          {lightboxIndex >= 0 && (
             <Lightbox
               snapshot={snapshot}
               source={source}
               items={lightboxItems}
               index={lightboxIndex}
-              onIndexChange={setLightboxIndex}
-              onClose={() => setLightboxIndex(null)}
+              onIndexChange={changeLightboxIndex}
+              onClose={() => setLightbox(null)}
             />
           )}
         </Main>
       }
       sidebar={
-        preview && (
+        preview &&
+        lightboxIndex < 0 && (
           <DetailsPanel
             snapshot={snapshot}
             source={source}
             path={preview}
             onSnapshotChange={onSnapshotChange}
             onMount={onMount}
+            onExpand={
+              previewEntry && viewerKind(previewEntry.contentType)
+                ? () => openEntry(previewEntry, { followPreview: true })
+                : undefined
+            }
           />
         )
       }

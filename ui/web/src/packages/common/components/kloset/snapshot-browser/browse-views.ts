@@ -1,5 +1,6 @@
 import { IconType } from "@plakar-ui/ui/components";
 
+import { ContentType } from "@plakar-ui/common/api/enrich";
 import { VFSEntryType } from "@plakar-ui/common/api/kloset";
 
 export const BROWSE_VIEW_IDS = [
@@ -21,26 +22,16 @@ type BrowseView = {
   // so a view also filters what comes back with matches().
   mimes?: string[];
   matches: (contentType: string) => boolean;
+  kind?: ViewerKind;
 };
 
-const DOCUMENT_TYPES = [
-  "application/pdf",
-  "application/json",
-  "application/xml",
-  "application/javascript",
-  "application/x-yaml",
-  "application/yaml",
-  "application/toml",
-];
+const DOCUMENT_TYPES = ["text", "json", "pdf"];
 
-/**
- * Says whether a content type is something people read: text, PDFs, and the
- * structured text formats that the content sniffer files under application/.
- */
 export function isDocumentContentType(contentType: string) {
-  const base = contentType.split(";")[0].trim();
-  return base.startsWith("text/") || DOCUMENT_TYPES.includes(base);
+  return DOCUMENT_TYPES.includes(ContentType(contentType).resolved);
 }
+
+export type ViewerKind = "photo" | "video" | "audio" | "document";
 
 export const BROWSE_VIEWS: BrowseView[] = [
   {
@@ -55,6 +46,7 @@ export const BROWSE_VIEWS: BrowseView[] = [
     icon: "md-image",
     mimes: ["image"],
     matches: (contentType) => contentType.startsWith("image/"),
+    kind: "photo",
   },
   {
     id: "videos",
@@ -62,6 +54,7 @@ export const BROWSE_VIEWS: BrowseView[] = [
     icon: "md-video-file",
     mimes: ["video"],
     matches: (contentType) => contentType.startsWith("video/"),
+    kind: "video",
   },
   {
     id: "music",
@@ -69,6 +62,7 @@ export const BROWSE_VIEWS: BrowseView[] = [
     icon: "md-audio-file",
     mimes: ["audio"],
     matches: (contentType) => contentType.startsWith("audio/"),
+    kind: "audio",
   },
   {
     id: "documents",
@@ -76,8 +70,16 @@ export const BROWSE_VIEWS: BrowseView[] = [
     icon: "md-file-copy",
     mimes: ["text", "application"],
     matches: isDocumentContentType,
+    kind: "document",
   },
 ];
+
+export function viewerKind(contentType: string): ViewerKind | null {
+  return (
+    BROWSE_VIEWS.find((view) => view.kind && view.matches(contentType))?.kind ??
+    null
+  );
+}
 
 export function getBrowseView(id: BrowseViewId) {
   return BROWSE_VIEWS.find((view) => view.id === id) ?? BROWSE_VIEWS[0];

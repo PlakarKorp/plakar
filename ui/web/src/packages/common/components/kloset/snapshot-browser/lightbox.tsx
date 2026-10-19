@@ -1,4 +1,4 @@
-import { Button, Icon, IconButton, Typography } from "@plakar-ui/ui/components";
+import { IconButton, Typography } from "@plakar-ui/ui/components";
 import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
 import { Dialog, Modal, ModalOverlay } from "react-aria-components";
@@ -7,10 +7,12 @@ import {
   EnrichedChildEntryType,
   SnapshotType,
 } from "@plakar-ui/common/api/kloset";
-import { FileIcon, FilePreview } from "@plakar-ui/common/components";
+import { FileIcon } from "@plakar-ui/common/components";
 import { useInView, useLocalStorage } from "@plakar-ui/common/hooks";
 
+import { viewerKind } from "./browse-views";
 import { useEntryURL } from "./use-entry-url";
+import { EntryViewer } from "./viewer";
 
 const SLIDESHOW_INTERVAL = 3500;
 
@@ -24,8 +26,8 @@ type LightboxProps = {
 };
 
 /**
- * Full-screen viewer to page through the photos, videos or documents of a
- * directory, with a filmstrip, a details panel and a slideshow for photos.
+ * Full-screen viewer to page through the photos, videos, songs or documents
+ * of a directory, with a filmstrip, a details panel and a slideshow for photos.
  */
 export function Lightbox({
   snapshot,
@@ -41,7 +43,16 @@ export function Lightbox({
     false
   );
   const [playing, setPlaying] = useState(false);
-  const isPhoto = entry?.contentType.startsWith("image/") ?? false;
+  const isPhoto = entry ? viewerKind(entry.contentType) === "photo" : false;
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const [hasEntered, setHasEntered] = useState(false);
+
+  useEffect(() => {
+    const animations = overlayRef.current?.getAnimations() ?? [];
+    void Promise.allSettled(animations.map((a) => a.finished)).then(() =>
+      setHasEntered(true)
+    );
+  }, []);
 
   const go = (delta: number) => {
     if (items.length === 0) return;
@@ -85,6 +96,7 @@ export function Lightbox({
 
   return (
     <ModalOverlay
+      ref={overlayRef}
       isOpen
       isDismissable
       onOpenChange={(open) => !open && onClose()}
@@ -137,13 +149,16 @@ export function Lightbox({
             )}
           >
             <div className="relative grid min-h-0 min-w-0 place-items-center px-2 md:px-16">
-              <Stage
-                key={entry.path}
-                snapshot={snapshot}
-                source={source}
-                entry={entry}
-                onEnded={() => index < items.length - 1 && go(1)}
-              />
+              {hasEntered && (
+                <EntryViewer
+                  key={entry.path}
+                  variant="stage"
+                  snapshot={snapshot}
+                  source={source}
+                  entry={entry}
+                  onEnded={() => index < items.length - 1 && go(1)}
+                />
+              )}
               {items.length > 1 && (
                 <>
                   <NavButton side="left" onPress={() => go(-1)} />
@@ -195,147 +210,6 @@ function NavButton({
   );
 }
 
-type StageProps = {
-  snapshot: SnapshotType;
-  source: number;
-  entry: EnrichedChildEntryType;
-  onEnded: () => void;
-};
-
-function Stage({ snapshot, source, entry, onEnded }: StageProps) {
-  const contentType = entry.contentType;
-  if (contentType.startsWith("image/")) {
-    return <PhotoStage snapshot={snapshot} source={source} entry={entry} />;
-  }
-  if (contentType.startsWith("video/")) {
-    return (
-      <VideoStage
-        snapshot={snapshot}
-        source={source}
-        entry={entry}
-        onEnded={onEnded}
-      />
-    );
-  }
-  // Documents reuse the side panel preview: it knows how to render code,
-  // text, markdown and PDFs. It sits on a sheet, light in both themes.
-  return (
-    <div className="bg-primary text-primary flex h-[calc(100vh-11rem)] w-full max-w-5xl flex-col overflow-hidden rounded-lg">
-      <FilePreview snapshot={snapshot} source={source} entry={entry} />
-    </div>
-  );
-}
-
-function PhotoStage({ snapshot, source, entry }: Omit<StageProps, "onEnded">) {
-  const { url, isColdStorage } = useEntryURL({
-    snapshot: snapshot.identifier.Value,
-    source,
-    path: entry.path,
-  });
-  const [zoom, setZoom] = useState(false);
-  const [failed, setFailed] = useState(false);
-
-  if (isColdStorage || failed) {
-    return (
-      <StageNotice
-        title={
-          isColdStorage
-            ? "This file is in cold storage"
-            : "This browser cannot display this image format"
-        }
-        entry={entry}
-        snapshot={snapshot}
-        source={source}
-      />
-    );
-  }
-  if (!url) {
-    return <Icon type="spinner" size="2xl" className="animate-spin" />;
-  }
-  return (
-    <div className={clsx("max-h-full max-w-full", zoom && "overflow-auto")}>
-      <img
-        src={url}
-        alt={entry.file_info.name}
-        onClick={() => setZoom((v) => !v)}
-        onError={() => setFailed(true)}
-        className={clsx(
-          "rounded shadow-2xl motion-safe:animate-[modal-fade_200ms]",
-          zoom
-            ? "max-w-none cursor-zoom-out"
-            : "max-h-[calc(100vh-11rem)] max-w-full cursor-zoom-in object-contain"
-        )}
-      />
-    </div>
-  );
-}
-
-function VideoStage({ snapshot, source, entry, onEnded }: StageProps) {
-  const { url, isColdStorage } = useEntryURL({
-    snapshot: snapshot.identifier.Value,
-    source,
-    path: entry.path,
-  });
-  if (isColdStorage) {
-    return (
-      <StageNotice
-        title="This file is in cold storage"
-        entry={entry}
-        snapshot={snapshot}
-        source={source}
-      />
-    );
-  }
-  if (!url) {
-    return <Icon type="spinner" size="2xl" className="animate-spin" />;
-  }
-  return (
-    <video
-      src={url}
-      controls
-      autoPlay
-      playsInline
-      onEnded={onEnded}
-      className="max-h-[calc(100vh-11rem)] max-w-full rounded-md bg-black shadow-2xl"
-    />
-  );
-}
-
-function StageNotice({
-  title,
-  snapshot,
-  source,
-  entry,
-}: {
-  title: string;
-  snapshot: SnapshotType;
-  source: number;
-  entry: EnrichedChildEntryType;
-}) {
-  const { url } = useEntryURL({
-    snapshot: snapshot.identifier.Value,
-    source,
-    path: entry.path,
-    params: { download: true },
-  });
-  return (
-    <div className="flex max-w-sm flex-col items-center gap-3 text-center">
-      <FileIcon contentType={entry.contentType} size="3xl" />
-      <Typography weight="semibold" className="text-white">
-        {title}
-      </Typography>
-      <Typography size="sm" className="text-slate-400">
-        It is safely backed up: download it to open it.
-      </Typography>
-      {url && (
-        <Button href={url} download variant="secondary" leftIcon="download">
-          Download
-        </Button>
-      )}
-    </div>
-  );
-}
-
 function DownloadButton({
   snapshot,
   source,
@@ -345,11 +219,10 @@ function DownloadButton({
   source: number;
   entry: EnrichedChildEntryType;
 }) {
-  const { url } = useEntryURL({
+  const { getUrl } = useEntryURL({
     snapshot: snapshot.identifier.Value,
     source,
     path: entry.path,
-    params: { download: true },
   });
   return (
     <IconButton
@@ -357,9 +230,9 @@ function DownloadButton({
       aria-label="Download"
       variant="tertiary"
       className="text-white"
-      href={url}
+      href={getUrl?.({ download: true })}
       download
-      isDisabled={!url}
+      isDisabled={!getUrl}
     />
   );
 }
@@ -462,7 +335,7 @@ function FilmstripItem({
   onPress: () => void;
 }) {
   const [ref, inView] = useInView<HTMLButtonElement>("200px");
-  const isPhoto = entry.contentType.startsWith("image/");
+  const isPhoto = viewerKind(entry.contentType) === "photo";
   const { url } = useEntryURL({
     snapshot,
     source,
