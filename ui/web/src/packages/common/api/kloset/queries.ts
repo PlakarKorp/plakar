@@ -64,6 +64,22 @@ export const GetSnapshotQueryOptions = (
     staleTime: Infinity,
   });
 
+/**
+ * Adapts a name filter to how the search endpoint applies it. A recursive
+ * search with content types goes through kloset's content-type index, which
+ * matches names as globs only, not as the substrings the plain search finds:
+ * a bare word becomes *word* there so both searches find the same files.
+ */
+export function searchNameFilter(
+  filename: string | undefined,
+  { indexed }: { indexed: boolean }
+) {
+  if (!filename || !indexed || /[*?[\]]/.test(filename)) {
+    return filename;
+  }
+  return `*${filename}*`;
+}
+
 export const SnapshotVFSQueryOptions = (
   api: KlosetAPI,
   {
@@ -82,6 +98,8 @@ export const SnapshotVFSQueryOptions = (
     search?: {
       contentTypes?: (typeof MIME_FILTERS)[number]["contentTypes"];
       filename?: string;
+      // Defaults to true: the filters search the whole tree below the path.
+      recursive?: boolean;
     };
   } & PaginationParams
 ) =>
@@ -110,9 +128,13 @@ export const SnapshotVFSQueryOptions = (
             source,
             path: vfsEntry.path,
             pagination: { page, perPage },
-            recursive: true,
+            recursive: search.recursive ?? true,
             mimes: search.contentTypes,
-            filename: search.filename,
+            filename: searchNameFilter(search.filename, {
+              indexed:
+                (search.recursive ?? true) &&
+                (search.contentTypes?.length ?? 0) > 0,
+            }),
           }));
 
       return {
@@ -188,7 +210,7 @@ export class SnapshotReader {
       throw new Error("attempted to read a non-file entry");
     }
 
-    const contentType = respGetSnapshotPath.item.object?.content_type ?? "";
+    const contentType = respGetSnapshotPath.item.contentType;
     return ContentType(contentType);
   }
 
@@ -222,7 +244,11 @@ export class SnapshotReader {
   }
 }
 
-export const SnapshotReaderSignUrlQueryOptions = (
+/**
+ * Signs the URL to read one file. One signature serves every way of reading
+ * it, so the viewer, its download button and a gallery tile share the query.
+ */
+export const SnapshotReaderURLQueryOptions = (
   api: KlosetAPI,
   {
     repository,
@@ -237,7 +263,7 @@ export const SnapshotReaderSignUrlQueryOptions = (
   }
 ) =>
   queryOptions({
-    queryKey: klosetKeys.snapshotReaderSignUrl({
+    queryKey: klosetKeys.snapshotReaderURL({
       repository,
       snapshot,
       source,
@@ -251,23 +277,71 @@ export const SnapshotReaderSignUrlQueryOptions = (
         source,
         path
       );
-
-      const [type, signature] = await Promise.all([
-        reader.getType(),
-        reader.getSignature(),
-      ]);
-
+      const signature = await reader.getSignature();
       if (signature.status !== "ok") {
-        return { type, signature };
+        return { status: signature.status, getUrl: null };
       }
-
-      const downloadUrl = reader.getPublicUrl(signature.value, {
-        download: true,
-      });
-
-      return { type, signature, downloadUrl };
+      return {
+        status: signature.status,
+        getUrl: (params?: ReadFileParams) =>
+          reader.getPublicUrl(signature.value, params),
+      };
     },
-    // Files are immutable, so we don't need to refetch them.
+    // Signatures last two hours: refresh them well before that.
+    staleTime: 60 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+/**
+ * Reads the first bytes of a file as text, for the previews that only need
+ * its opening lines.
+ */
+export const SnapshotFileHeadQueryOptions = (
+  api: KlosetAPI,
+  {
+    repository,
+    snapshot,
+    source,
+    path,
+    bytes,
+  }: {
+    repository?: string;
+    snapshot: string;
+    source: number;
+    path: string;
+    bytes: number;
+  }
+) =>
+  queryOptions({
+    queryKey: klosetKeys.snapshotFileHead({
+      repository,
+      snapshot,
+      source,
+      path,
+      bytes,
+    }),
+    queryFn: async ({ signal }) => {
+      const reader = new SnapshotReader(
+        api,
+        repository,
+        snapshot,
+        source,
+        path
+      );
+      const signature = await reader.getSignature();
+      if (signature.status !== "ok") {
+        return null;
+      }
+      const res = await fetch(
+        reader.getPublicUrl(signature.value, { render: "text" }),
+        { headers: { Range: `bytes=0-${bytes - 1}` }, signal }
+      );
+      if (!res.ok) {
+        throw new Error(`reading ${path} failed with HTTP/${res.status}`);
+      }
+      return (await res.text()).slice(0, bytes);
+    },
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: false,

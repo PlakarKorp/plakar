@@ -80,7 +80,7 @@ export function SegmentedControl({
                 // basis-auto, not the default 0: segments still share any spare
                 // width, but a long label sets a floor instead of wrapping.
                 default: clsx(
-                  "flex-1 basis-auto gap-1.5 rounded-md px-2 py-1",
+                  "h-7 flex-1 basis-auto gap-1.5 rounded-md px-2",
                   "text-tertiary data-hovered:text-secondary",
                   "data-selected:bg-primary data-selected:text-primary data-selected:shadow-sm"
                 ),

@@ -3,6 +3,7 @@ export * from "./use-breakpoint";
 export * from "./use-current-route";
 export * from "./use-debounced-search";
 export * from "./use-form-read-only";
+export * from "./use-in-view";
 export * from "./use-local-storage";
 export * from "./use-preview";
 export * from "./local-storage-preview-provider";

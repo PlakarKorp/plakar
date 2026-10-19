@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import std_path from "path";
 import { useCallback } from "react";
 
-import { ContentType } from "@plakar-ui/common/api/enrich";
 import { FileIcon } from "@plakar-ui/common/components";
 
 import {
@@ -11,14 +10,7 @@ import {
   GetMountFileDownloadQueryOptions,
   KlosetAPI,
 } from "../../api/kloset";
-import {
-  FilePreviewAudio,
-  FilePreviewError,
-  FilePreviewImage,
-  FilePreviewPDF,
-  FilePreviewText,
-  FilePreviewVideo,
-} from "../kloset/snapshot-browser/file-preview";
+import { Viewer, ViewerNotice } from "../kloset/snapshot-browser/viewer";
 
 type MountDetailsPanelProps = {
   api: KlosetAPI;
@@ -57,8 +49,6 @@ export function MountDetailsPanel({
     URL.revokeObjectURL(blobUrl);
   }, [data, path]);
 
-  const type = data ? ContentType(data.content_type) : null;
-
   return (
     <div className="flex h-full flex-col gap-4">
       <div className="flex items-center justify-between px-4">
@@ -80,28 +70,28 @@ export function MountDetailsPanel({
       {isPending && !isNonRegular ? (
         <Spinner />
       ) : isNonRegular ? (
-        <FilePreviewError type="warning">
-          Cannot preview non-regular files.
-        </FilePreviewError>
-      ) : error ? (
-        <FilePreviewError type="error">{error.message}</FilePreviewError>
-      ) : type?.resolved === "text" || type?.resolved === "json" ? (
-        <FilePreviewText
-          getUrl={(render) => data!.getPublicURL({ render })}
-          contentType={data!.content_type}
+        <ViewerNotice
+          variant="panel"
+          title="Cannot preview non-regular files"
         />
-      ) : type?.resolved === "image" ? (
-        <FilePreviewImage url={data!.getPublicURL()} />
-      ) : type?.resolved === "pdf" ? (
-        <FilePreviewPDF url={data!.getPublicURL()} />
-      ) : type?.resolved === "video" ? (
-        <FilePreviewVideo url={data!.getPublicURL()} />
-      ) : type?.resolved === "audio" ? (
-        <FilePreviewAudio url={data!.getPublicURL()} />
+      ) : error ? (
+        <ViewerNotice
+          variant="panel"
+          tone="error"
+          title="Unable to preview file"
+        >
+          {error.message}
+        </ViewerNotice>
       ) : (
-        <FilePreviewError type="warning">
-          Unknown file type: {type?.raw}
-        </FilePreviewError>
+        data && (
+          <Viewer
+            key={path}
+            variant="panel"
+            name={fileName}
+            contentType={data.content_type}
+            getUrl={(params) => data.getPublicURL(params)}
+          />
+        )
       )}
     </div>
   );

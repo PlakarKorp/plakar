@@ -14,7 +14,6 @@ import { Number } from "@plakar-ui/common/api/enrich";
 import {
   GetSnapshotPathQueryOptions,
   RepositoryLocatePathnameQueryOptions,
-  SnapshotReaderSignUrlQueryOptions,
   SnapshotType,
   useKlosetAPI,
   VFSEntryType,
@@ -22,10 +21,12 @@ import {
 import {
   Details,
   FileIcon,
-  FilePreview,
   FileSummary,
   Timeline,
 } from "@plakar-ui/common/components";
+
+import { useEntryURL } from "./use-entry-url";
+import { EntryViewer } from "./viewer";
 
 type DetailsPanelProps = {
   snapshot: SnapshotType;
@@ -33,6 +34,7 @@ type DetailsPanelProps = {
   path: string;
   onSnapshotChange: (snapshotId: string) => void;
   onMount?: (mountId: string) => void;
+  onExpand?: () => void;
 };
 
 export function DetailsPanel({
@@ -41,6 +43,7 @@ export function DetailsPanel({
   path,
   onSnapshotChange,
   onMount,
+  onExpand,
 }: DetailsPanelProps) {
   const { api, repository } = useKlosetAPI();
   const query = useQuery(
@@ -73,6 +76,7 @@ export function DetailsPanel({
       vfsEntry={query.data.item}
       onSnapshotChange={onSnapshotChange}
       onMount={onMount}
+      onExpand={onExpand}
     />
   );
 }
@@ -83,6 +87,7 @@ type PanelContentProps = {
   vfsEntry: VFSEntryType;
   onSnapshotChange: (snapshotId: string) => void;
   onMount?: (mountId: string) => void;
+  onExpand?: () => void;
 };
 
 function PanelContent({
@@ -91,16 +96,15 @@ function PanelContent({
   vfsEntry,
   onSnapshotChange,
   onMount,
+  onExpand,
 }: PanelContentProps) {
   const { api, repository } = useKlosetAPI();
-  const { data, isPending, isError } = useQuery(
-    SnapshotReaderSignUrlQueryOptions(api, {
-      repository,
-      snapshot: snapshot.identifier.Value,
-      source,
-      path: vfsEntry.path,
-    })
-  );
+  const { getUrl } = useEntryURL({
+    snapshot: snapshot.identifier.Value,
+    source,
+    path: vfsEntry.path,
+    enabled: vfsEntry.file_info.mode.isRegular(),
+  });
   const query = useInfiniteQuery(
     RepositoryLocatePathnameQueryOptions(api, snapshot, source, vfsEntry, {
       repository,
@@ -118,11 +122,13 @@ function PanelContent({
       id: "preview",
       title: "Preview",
       content: (
-        <FilePreview
+        <EntryViewer
+          variant="panel"
           snapshot={snapshot}
           source={source}
           entry={vfsEntry}
           onMount={onMount}
+          onExpand={onExpand}
         />
       ),
     },
@@ -162,7 +168,7 @@ function PanelContent({
     <div className="flex h-full flex-col gap-4">
       <div className="flex items-center justify-between px-4">
         <Typography as="h2" className="text-primary flex items-center gap-2">
-          {isFile && <FileIcon contentType={vfsEntry.object?.content_type} />}
+          {isFile && <FileIcon contentType={vfsEntry.contentType} />}
           {isLink && <Icon type="md-link" size="xl" />}
           {std_path.basename(vfsEntry.path)}
         </Typography>
@@ -172,8 +178,8 @@ function PanelContent({
           icon="download"
           variant="tertiary"
           size="sm"
-          href={data?.downloadUrl}
-          isDisabled={isPending || !data?.downloadUrl || isError}
+          href={getUrl?.({ download: true })}
+          isDisabled={!getUrl}
           download
         />
       </div>

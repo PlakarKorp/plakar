@@ -11,6 +11,7 @@ type SnapshotVFSKeyParams = {
   search?: {
     contentTypes?: string[];
     filename?: string;
+    recursive?: boolean;
   };
 };
 
@@ -55,12 +56,20 @@ export const klosetKeys = {
     path: string;
   }) => [...klosetKeys.all(), "snapshot.path", params] as const,
 
-  snapshotReaderSignUrl: (params: {
+  snapshotReaderURL: (params: {
     repository?: string;
     snapshot: string;
     source: number;
     path: string;
-  }) => [...klosetKeys.all(), "snapshot.reader-sign-url", params] as const,
+  }) => [...klosetKeys.all(), "snapshot.reader-url", params] as const,
+
+  snapshotFileHead: (params: {
+    repository?: string;
+    snapshot: string;
+    source: number;
+    path: string;
+    bytes: number;
+  }) => [...klosetKeys.all(), "snapshot.file-head", params] as const,
 
   snapshotChunks: (params: {
     repository: string | undefined;

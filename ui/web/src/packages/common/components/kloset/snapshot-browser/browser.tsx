@@ -1,11 +1,17 @@
 import {
+  Alert,
+  Button as UIButton,
+  EmptyList,
   Icon,
   IconButton,
   Menu,
+  Pagination as UIPagination,
+  SegmentedControl,
+  Spinner,
   Tooltip,
   Typography,
 } from "@plakar-ui/ui/components";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { RowSelectionState } from "@tanstack/react-table";
 import {
   createColumnHelper,
@@ -43,9 +49,23 @@ import {
   SelectedList,
   SnapshotErrorsAlert,
 } from "@plakar-ui/common/components";
+import { useLocalStorage } from "@plakar-ui/common/hooks";
 import { Main, SidePanelLayout } from "@plakar-ui/common/layouts";
 
+import {
+  browseViewCounts,
+  BrowseViewId,
+  emptyBrowseViews,
+  getBrowseView,
+  viewerKind,
+  suggestBrowseView,
+  suggestBrowseViewForEntries,
+} from "./browse-views";
+import { Gallery, GalleryDensity } from "./gallery";
+import { Lightbox } from "./lightbox";
 import { MainTitle } from "./main-title";
+import { MusicPlayer, MusicView } from "./music";
+import { ViewSwitcher } from "./view-switcher";
 
 type FiltersProps = {
   mime?: (typeof MIME_FILTERS)[number];
@@ -75,6 +95,11 @@ type FilesBrowserProps = {
   // placed -- rather than as a prop per item and a second one to gate it.
   actions?: ReactNode;
   onMount?: (mountId: string) => void;
+  // The kind of content to browse. Left undefined, the browser picks the view
+  // matching what the directory mostly holds; without onViewChange, it keeps
+  // the choice to itself.
+  view?: BrowseViewId;
+  onViewChange?: (view: BrowseViewId) => void;
 };
 
 const columnHelper = createColumnHelper<
@@ -102,8 +127,62 @@ export function FilesBrowser({
   errorPageHref,
   actions,
   onMount,
+  view,
+  onViewChange,
 }: FilesBrowserProps) {
+  const [localView, setLocalView] = useState<BrowseViewId>();
+  const [playingPath, setPlayingPath] = useState<string | null>(null);
+  const listing = `${vfsEntry.path}:${page}`;
+  const [playingListing, setPlayingListing] = useState(listing);
+  if (playingListing !== listing) {
+    setPlayingListing(listing);
+    setPlayingPath(null);
+  }
+  const [lightbox, setLightbox] = useState<{
+    path: string;
+    followsPreview: boolean;
+  } | null>(null);
+  const explicitView = view ?? localView;
+  const changeView = (next: BrowseViewId) => {
+    setLightbox(null);
+    setPlayingPath(null);
+    if (onViewChange) onViewChange(next);
+    else setLocalView(next);
+  };
+
+  const [layout, setLayout] = useLocalStorage<"list" | "grid">(
+    "browserLayout",
+    "list"
+  );
+  const [density, setDensity] = useLocalStorage<GalleryDensity>(
+    "browserDensity",
+    "medium"
+  );
+
+  // Without a view picked, a directory opens in the view fitting what it holds
+  // and a search lists everything it finds, to be shown in the view fitting
+  // its results once they are in.
   const hasFilters = Object.values(filters).some((filter) => filter);
+  const queryView =
+    explicitView ?? (hasFilters ? "all" : suggestBrowseView(vfsEntry));
+  const queryDef = getBrowseView(queryView);
+  const isSearching =
+    Boolean(filters.filename) || (queryView === "all" && hasFilters);
+
+  const search = queryDef.mimes
+    ? {
+        contentTypes: queryDef.mimes,
+        filename: filters.filename,
+        // A view browses the directory itself, a search the whole tree.
+        recursive: Boolean(filters.filename),
+      }
+    : hasFilters
+      ? {
+          contentTypes: filters.mime?.contentTypes,
+          filename: filters.filename,
+        }
+      : undefined;
+
   const { api, repository } = useKlosetAPI();
   const query = useQuery({
     ...SnapshotVFSQueryOptions(api, {
@@ -113,15 +192,27 @@ export function FilesBrowser({
       vfsEntry,
       page,
       perPage,
-      search: hasFilters
-        ? {
-            contentTypes: filters.mime?.contentTypes,
-            filename: filters.filename,
-          }
-        : undefined,
+      search,
     }),
-    placeholderData: keepPreviousData,
+    // Keep showing the previous results while the next ones load, but not
+    // those of another kind of content: filtered by this view, they would
+    // read as an empty directory until the new results are in.
+    placeholderData: (previous, previousQuery) =>
+      previousQuery &&
+      String(previousQuery.queryKey[2].search?.contentTypes) ===
+        String(search?.contentTypes)
+        ? previous
+        : undefined,
   });
+
+  const activeView =
+    explicitView ??
+    (hasFilters
+      ? suggestBrowseViewForEntries(query.data?.items ?? [])
+      : queryView);
+  const isAutoView = explicitView === undefined;
+  const viewDef = getBrowseView(activeView);
+  const isListView = activeView === "all" && layout === "list";
 
   const columns = useMemo(
     () =>
@@ -164,9 +255,7 @@ export function FilesBrowser({
                       <Icon type="md-folder" size="xl" />
                     </>
                   )}
-                  {isFile && (
-                    <FileIcon contentType={child.object?.content_type} />
-                  )}
+                  {isFile && <FileIcon contentType={child.contentType} />}
                   {isLink && <Icon type="md-link" size="xl" />}
                 </div>
 
@@ -360,8 +449,15 @@ export function FilesBrowser({
     },
   });
 
-  const items = query.data?.items ?? [];
+  // The search endpoint matches content types loosely when it does not recurse
+  // (documents ask for all of application/), so views filter what comes back.
+  const items = (query.data?.items ?? []).filter(
+    (item) =>
+      activeView === "all" ||
+      (!item.file_info.mode.isDir() && viewDef.matches(item.contentType))
+  );
   const currentIndex = items.findIndex((item) => item.path === preview);
+  const previewEntry = currentIndex === -1 ? undefined : items[currentIndex];
 
   // if currentIndex is not found, rest contains all elements starting with the first
   const rest = items.slice(currentIndex + 1);
@@ -385,6 +481,78 @@ export function FilesBrowser({
     const prevItem = items[currentIndex - prevOffset - 1];
     if (prevItem) onPreviewChange(prevItem.path);
   };
+
+  const selectedPaths = new Set(selected.map((item) => item.path));
+  const toggleSelected = (entry: EnrichedChildEntryType) =>
+    setSelected((prev) =>
+      prev.some((item) => item.path === entry.path)
+        ? prev.filter((item) => item.path !== entry.path)
+        : [...prev, entry]
+    );
+
+  const lightboxEntry = lightbox
+    ? items.find((item) => item.path === lightbox.path)
+    : undefined;
+  const lightboxKind = lightboxEntry && viewerKind(lightboxEntry.contentType);
+  const lightboxItems = lightboxKind
+    ? items.filter(
+        (item) =>
+          !item.file_info.mode.isDir() &&
+          viewerKind(item.contentType) === lightboxKind
+      )
+    : [];
+  const lightboxIndex = lightboxItems.findIndex(
+    (item) => item.path === lightbox?.path
+  );
+  if (lightbox && lightboxIndex === -1) {
+    setLightbox(null);
+  }
+  const openEntry = (
+    entry: EnrichedChildEntryType,
+    { followPreview = false } = {}
+  ) => {
+    if (viewerKind(entry.contentType) === null) {
+      onPreviewChange(entry.path);
+      return;
+    }
+    setLightbox({ path: entry.path, followsPreview: followPreview });
+  };
+  const changeLightboxIndex = (index: number) => {
+    const { path } = lightboxItems[index];
+    setLightbox((current) => current && { ...current, path });
+    if (lightbox?.followsPreview) {
+      onPreviewChange(path);
+    }
+  };
+
+  // In a view, the view is the type filter: only the name search remains.
+  const filterBar = (
+    <FileFilters
+      mime={activeView === "all" ? filters.mime : undefined}
+      filename={filters.filename}
+      showTypeFilter={activeView === "all"}
+      searchPlaceholder={
+        activeView === "all"
+          ? undefined
+          : `Search ${viewDef.name.toLowerCase()} by name`
+      }
+      onSearch={onSearch}
+      onRemove={onRemoveFilter}
+      onApply={onApplyFilter}
+    />
+  );
+  // The results a view picked from a search leaves out.
+  const hiddenCount =
+    hasFilters && activeView !== "all"
+      ? (query.data?.items.length ?? 0) - items.length
+      : 0;
+
+  const hasNextPage = Boolean(
+    query.data &&
+    (isPaginationResponseWithTotal(query.data)
+      ? (page + 1) * perPage < query.data.total
+      : query.data.has_next)
+  );
 
   return (
     <SidePanelLayout
@@ -432,55 +600,232 @@ export function FilesBrowser({
                   />
                 )}
 
-                <PaginatedTable<EnrichedChildEntryType>
-                  query={query}
-                  table={table}
-                  softSelectionState={[
-                    items.find((item) => item.path === preview) ?? null,
-                    (entry) => {
-                      if (entry) {
-                        onPreviewChange(entry.path);
+                <div className="flex flex-col gap-3">
+                  <div className="border-secondary flex flex-col gap-2 md:flex-row md:items-end md:justify-between md:gap-3 md:border-b">
+                    <ViewSwitcher
+                      className="border-secondary border-b md:border-b-0"
+                      view={activeView}
+                      // The summary counts the directory, not what a search
+                      // finds: hide counts that would not match the results.
+                      counts={
+                        hasFilters ? undefined : browseViewCounts(vfsEntry)
                       }
-                    },
-                  ]}
-                  isSoftSelectionEnabledForRow={(row) =>
-                    !row.file_info.mode.isDir()
-                  }
-                  filters={
-                    <FileFilters
-                      mime={filters.mime}
-                      filename={filters.filename}
-                      onSearch={onSearch}
-                      onRemove={onRemoveFilter}
-                      onApply={onApplyFilter}
+                      emptyViews={
+                        hasFilters ? undefined : emptyBrowseViews(vfsEntry)
+                      }
+                      onChange={changeView}
                     />
-                  }
-                  ariaLabel="Restore point files table"
-                  isLoading={query.isFetching}
-                />
+                    <div className="flex items-center justify-between gap-2 md:justify-end md:pb-1">
+                      {!isListView && activeView !== "music" && (
+                        <SegmentedControl
+                          ariaLabel="Thumbnail size"
+                          items={[
+                            { id: "small", label: "Small" },
+                            { id: "medium", label: "Medium" },
+                            { id: "large", label: "Large" },
+                          ]}
+                          selectedId={density}
+                          onSelect={(id) => setDensity(id as GalleryDensity)}
+                        />
+                      )}
+                      {activeView === "all" && (
+                        <SegmentedControl
+                          ariaLabel="Layout"
+                          hideLabels
+                          items={[
+                            { id: "list", label: "List", icon: "list" },
+                            {
+                              id: "grid",
+                              label: "Grid",
+                              icon: "grid",
+                            },
+                          ]}
+                          selectedId={layout}
+                          onSelect={(id) =>
+                            setLayout(id === "grid" ? "grid" : "list")
+                          }
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {isAutoView && activeView !== "all" && (
+                    <Alert
+                      variant="brand"
+                      icon="wand-magic-sparkles"
+                      title={`Showing the ${viewDef.name} view`}
+                      actions={
+                        <UIButton
+                          size="sm"
+                          variant="accent-quaternary"
+                          onPress={() => changeView("all")}
+                        >
+                          {hasFilters ? "Show all results" : "Show all files"}
+                        </UIButton>
+                      }
+                    >
+                      {hasFilters
+                        ? `These results are mostly ${viewDef.name.toLowerCase()}.`
+                        : `This folder mostly holds ${viewDef.name.toLowerCase()}.`}
+                      {hiddenCount > 0 &&
+                        ` ${hiddenCount} other ${hiddenCount === 1 ? "result is" : "results are"} in All files.`}
+                    </Alert>
+                  )}
+
+                  {activeView !== "all" &&
+                    !hasFilters &&
+                    (vfsEntry.summary?.directory.directories ?? 0) > 0 && (
+                      <Typography size="xs" className="text-tertiary">
+                        This view shows the files of this folder only.{" "}
+                        {vfsEntry.summary?.directory.directories === 1
+                          ? "Its subfolder is"
+                          : `Its ${vfsEntry.summary?.directory.directories} subfolders are`}{" "}
+                        in All files, and a search covers them too.
+                      </Typography>
+                    )}
+                </div>
+
+                {!isListView && (
+                  <div className="flex flex-col gap-4">
+                    {filterBar}
+                    {query.isPending ? (
+                      <Spinner size="2xl" className="p-10" />
+                    ) : query.isError ? (
+                      <Alert variant="error" title="Unable to list this folder">
+                        {query.error.message}
+                      </Alert>
+                    ) : items.length === 0 ? (
+                      <EmptyList
+                        size="sm"
+                        title={
+                          isSearching
+                            ? `No ${viewDef.name.toLowerCase()} match this search`
+                            : `No ${viewDef.name.toLowerCase()} on this page`
+                        }
+                        description={
+                          isSearching
+                            ? "Try another name, or search from All files."
+                            : "Other pages, or All files, may hold some."
+                        }
+                      />
+                    ) : activeView === "music" ? (
+                      <MusicView
+                        snapshot={snapshot.identifier.Value}
+                        source={source}
+                        tracks={items}
+                        basePath={vfsEntry.path}
+                        selected={selectedPaths}
+                        onToggleSelected={toggleSelected}
+                        playingPath={playingPath}
+                        onPlay={setPlayingPath}
+                      />
+                    ) : (
+                      <Gallery
+                        snapshot={snapshot.identifier.Value}
+                        source={source}
+                        view={activeView}
+                        entries={items}
+                        basePath={vfsEntry.path}
+                        density={density}
+                        selected={selectedPaths}
+                        onToggleSelected={toggleSelected}
+                        onOpen={openEntry}
+                        onOpenDirectory={onPathChange}
+                      />
+                    )}
+                    <UIPagination
+                      currentPage={page}
+                      onPrev={
+                        page > 0
+                          ? () => onPageChange(page - 1, perPage)
+                          : undefined
+                      }
+                      onNext={
+                        hasNextPage
+                          ? () => onPageChange(page + 1, perPage)
+                          : undefined
+                      }
+                      onPageSizeChange={(size) => onPageChange(0, size)}
+                      total={{
+                        count:
+                          query.data &&
+                          isPaginationResponseWithTotal(query.data)
+                            ? query.data.total
+                            : undefined,
+                        perPage,
+                      }}
+                    />
+                  </div>
+                )}
+
+                {isListView && (
+                  <PaginatedTable<EnrichedChildEntryType>
+                    query={query}
+                    table={table}
+                    softSelectionState={[
+                      previewEntry ?? null,
+                      (entry) => {
+                        if (entry) {
+                          onPreviewChange(entry.path);
+                        }
+                      },
+                    ]}
+                    isSoftSelectionEnabledForRow={(row) =>
+                      !row.file_info.mode.isDir()
+                    }
+                    filters={filterBar}
+                    ariaLabel="Restore point files table"
+                    isLoading={query.isFetching}
+                  />
+                )}
               </div>
 
-              {selected.length > 0 && (
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 -translate-y-1/2">
+              <div className="pointer-events-none absolute inset-x-0 bottom-[calc(var(--pagination-height)+0.75rem)] flex flex-col items-center gap-2 px-3 *:pointer-events-auto">
+                {activeView === "music" && (
+                  <MusicPlayer
+                    snapshot={snapshot.identifier.Value}
+                    source={source}
+                    tracks={items}
+                    playingPath={playingPath}
+                    onPlay={setPlayingPath}
+                  />
+                )}
+                {selected.length > 0 && (
                   <SelectedList
                     snapshot={snapshot}
                     childEntries={selected}
                     removeSelection={() => setSelected([])}
                   />
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
+          {lightboxIndex >= 0 && (
+            <Lightbox
+              snapshot={snapshot}
+              source={source}
+              items={lightboxItems}
+              index={lightboxIndex}
+              onIndexChange={changeLightboxIndex}
+              onClose={() => setLightbox(null)}
+            />
+          )}
         </Main>
       }
       sidebar={
-        preview && (
+        preview &&
+        lightboxIndex < 0 && (
           <DetailsPanel
             snapshot={snapshot}
             source={source}
             path={preview}
             onSnapshotChange={onSnapshotChange}
             onMount={onMount}
+            onExpand={
+              previewEntry && viewerKind(previewEntry.contentType)
+                ? () => openEntry(previewEntry, { followPreview: true })
+                : undefined
+            }
           />
         )
       }
