@@ -118,6 +118,16 @@ or
 **https://**
 location, the following additional options are available:
 
+**allow\_cross\_host\_redirects**
+
+> Optional, set to
+> **true**
+> to follow a redirect to a different host.
+> By default only redirects to the same host are followed.
+> A redirect that changes the scheme,
+> such as from HTTPS to HTTP,
+> is always refused.
+
 **auth\_token**
 
 > Bearer token sent in the
