@@ -16,6 +16,7 @@ export * from "./charts/usage-bar";
 export * from "./checkbox/checkbox";
 export * from "./code-editor/code-editor";
 export * from "./combo-box/combo-box";
+export * from "./count-badge/count-badge";
 export * from "./date-picker/date-picker";
 export * from "./demo-banner/demo-banner";
 export * from "./description-list/description-list";

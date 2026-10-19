@@ -54,9 +54,9 @@ function CardRoot({
 
 type CardHeaderProps = {
   prefix?: React.ReactNode;
-  title: string;
+  title: React.ReactNode;
   titleSuffix?: React.ReactNode;
-  description?: string;
+  description?: React.ReactNode;
   suffix?: React.ReactNode;
   buttonProps?: ComponentProps<typeof Button>;
   className?: string;
@@ -171,6 +171,7 @@ type CardContentProps = PropsWithChildren<{
   padding?: "md" | "lg" | "xl";
   noPaddingX?: boolean;
   noPaddingY?: boolean;
+  className?: string;
 }>;
 
 function CardContent({
@@ -178,6 +179,7 @@ function CardContent({
   padding = "md",
   noPaddingX = false,
   noPaddingY = false,
+  className,
 }: CardContentProps) {
   const { isCollapsible, isCollapsed } = useContext(Context);
 
@@ -191,7 +193,7 @@ function CardContent({
     xl: clsx(!noPaddingX && "px-4 md:px-8", !noPaddingY && "py-4 md:py-8"),
   }[padding];
 
-  return <div className={classes}>{children}</div>;
+  return <div className={clsx(classes, className)}>{children}</div>;
 }
 
 function CardFooter({

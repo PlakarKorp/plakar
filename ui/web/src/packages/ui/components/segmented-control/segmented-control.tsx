@@ -1,12 +1,15 @@
 import clsx from "clsx";
 import { Key, ToggleButton, ToggleButtonGroup } from "react-aria-components";
 
-import { Icon, IconType, Tooltip, Typography } from "..";
+import { CountBadge, Icon, IconType, StatusDot, Tooltip, Typography } from "..";
+import { StatusDotVariant } from "../status-dot/status-dot.constants";
 
 export type SegmentedControlItem = {
   id: string;
   label: string;
   icon?: IconType;
+  count?: number;
+  dot?: (typeof StatusDotVariant)[number];
 };
 
 export type SegmentedControlProps = {
@@ -14,6 +17,7 @@ export type SegmentedControlProps = {
   selectedId: string;
   onSelect: (id: string) => void;
   ariaLabel: string;
+  variant?: "default" | "accent";
   hideLabels?: boolean;
   isDisabled?: boolean;
   className?: string;
@@ -30,6 +34,7 @@ export function SegmentedControl({
   selectedId,
   onSelect,
   ariaLabel,
+  variant = "default",
   hideLabels = false,
   isDisabled = false,
   className,
@@ -50,33 +55,64 @@ export function SegmentedControl({
       onSelectionChange={handleSelectionChange}
       isDisabled={isDisabled}
       className={clsx(
-        "bg-secondary border-secondary inline-flex flex-row gap-0.5 rounded-lg border p-0.5",
+        "inline-flex flex-row gap-0.5",
+        {
+          default: "bg-secondary border-secondary rounded-lg border p-0.5",
+          accent: "bg-tertiary max-w-full overflow-x-auto rounded-xl p-1",
+        }[variant],
         className
       )}
     >
       {items.map((item) => {
+        const isDimmed = item.count === 0 && item.id !== selectedId;
+
         const segment = (
           <ToggleButton
             key={item.id}
             id={item.id}
             aria-label={hideLabels ? item.label : undefined}
             className={clsx(
-              // basis-auto, not the default 0: segments still share any spare
-              // width, but a long label sets a floor instead of wrapping.
-              "flex flex-1 basis-auto cursor-pointer items-center justify-center gap-1.5 rounded-md px-2 py-1",
-              "whitespace-nowrap",
-              "text-tertiary data-hovered:text-secondary",
-              "data-selected:bg-primary data-selected:text-primary data-selected:shadow-sm",
+              "flex cursor-pointer items-center justify-center whitespace-nowrap",
               "data-focus-visible:outline-focus data-focus-visible:outline-2",
               "data-disabled:text-disable data-disabled:cursor-not-allowed",
-              "duration-150 motion-safe:transition-colors"
+              "duration-150 motion-safe:transition-colors",
+              {
+                // basis-auto, not the default 0: segments still share any spare
+                // width, but a long label sets a floor instead of wrapping.
+                default: clsx(
+                  "flex-1 basis-auto gap-1.5 rounded-md px-2 py-1",
+                  "text-tertiary data-hovered:text-secondary",
+                  "data-selected:bg-primary data-selected:text-primary data-selected:shadow-sm"
+                ),
+                accent: clsx(
+                  "shrink-0 gap-2 rounded-lg px-3 py-1.5",
+                  "text-primary data-hovered:bg-primary",
+                  "data-selected:bg-accent data-selected:text-on-brand data-selected:data-hovered:bg-accent-hover"
+                ),
+              }[variant],
+              isDimmed && "opacity-50"
             )}
           >
-            {item.icon && <Icon type={item.icon} size="sm" />}
-            {!hideLabels && (
-              <Typography as="span" size="sm" weight="medium">
-                {item.label}
-              </Typography>
+            {({ isSelected }) => (
+              <>
+                {item.dot && (
+                  <StatusDot
+                    variant={item.dot}
+                    isOnAccent={isSelected && variant === "accent"}
+                  />
+                )}
+                {item.icon && <Icon type={item.icon} size="sm" />}
+                {!hideLabels && (
+                  <Typography as="span" size="sm" weight="medium">
+                    {item.label}
+                  </Typography>
+                )}
+                {item.count !== undefined && (
+                  <CountBadge isOnAccent={isSelected && variant === "accent"}>
+                    {item.count}
+                  </CountBadge>
+                )}
+              </>
             )}
           </ToggleButton>
         );
