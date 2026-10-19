@@ -534,7 +534,7 @@ export function FilesBrowser({
       searchPlaceholder={
         activeView === "all"
           ? undefined
-          : `Search ${viewDef.name.toLowerCase()} in this folder and below`
+          : `Search ${viewDef.name.toLowerCase()} by name`
       }
       onSearch={onSearch}
       onRemove={onRemoveFilter}

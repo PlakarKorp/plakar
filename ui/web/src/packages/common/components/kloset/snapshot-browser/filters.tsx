@@ -20,7 +20,7 @@ export function FileFilters({
   onRemove,
   onApply,
   showTypeFilter = true,
-  searchPlaceholder = "Search filename: *.txt, tmp_*...",
+  searchPlaceholder = "Search by name or *.txt",
 }: FileFiltersProps) {
   return (
     <TableFilters
