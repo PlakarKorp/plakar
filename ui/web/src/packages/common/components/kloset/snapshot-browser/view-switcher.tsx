@@ -6,7 +6,8 @@ import { BROWSE_VIEWS, BrowseViewId } from "./browse-views";
 
 type ViewSwitcherProps = {
   view: BrowseViewId;
-  counts: Record<BrowseViewId, number>;
+  // Left out while searching: the summary does not count the results.
+  counts?: Record<BrowseViewId, number>;
   onChange: (view: BrowseViewId) => void;
 };
 
@@ -34,7 +35,7 @@ export function ViewSwitcher({ view, counts, onChange }: ViewSwitcherProps) {
       className="border-secondary flex flex-row gap-1 overflow-x-auto border-b [scrollbar-width:none]"
     >
       {BROWSE_VIEWS.map((item) => {
-        const count = counts[item.id];
+        const count = counts?.[item.id];
         const isDisabled =
           item.id !== "all" && item.id !== "documents" && count === 0;
         return (
@@ -55,13 +56,15 @@ export function ViewSwitcher({ view, counts, onChange }: ViewSwitcherProps) {
             <Typography as="span" size="sm" weight="medium">
               {item.name}
             </Typography>
-            <Typography
-              as="span"
-              size="xs"
-              className="bg-tertiary text-tertiary rounded-full px-1.5 tabular-nums"
-            >
-              {count}
-            </Typography>
+            {count !== undefined && (
+              <Typography
+                as="span"
+                size="xs"
+                className="bg-tertiary text-tertiary rounded-full px-1.5 tabular-nums"
+              >
+                {count}
+              </Typography>
+            )}
           </ToggleButton>
         );
       })}

@@ -18,6 +18,9 @@ type MusicViewProps = {
   snapshot: string;
   source: number;
   tracks: EnrichedChildEntryType[];
+  // The directory being browsed: tracks a search finds below it show the
+  // folder they come from.
+  basePath: string;
   selected: ReadonlySet<string>;
   onToggleSelected: (entry: EnrichedChildEntryType) => void;
 };
@@ -30,6 +33,7 @@ export function MusicView({
   snapshot,
   source,
   tracks,
+  basePath,
   selected,
   onToggleSelected,
 }: MusicViewProps) {
@@ -64,6 +68,7 @@ export function MusicView({
             snapshot={snapshot}
             source={source}
             track={track}
+            folder={std_path.relative(basePath, track.parent_path)}
             position={i + 1}
             isCurrent={playing?.path === track.path}
             isSelected={selected.has(track.path)}
@@ -120,6 +125,7 @@ type TrackRowProps = {
   snapshot: string;
   source: number;
   track: EnrichedChildEntryType;
+  folder: string;
   position: number;
   isCurrent: boolean;
   isSelected: boolean;
@@ -131,6 +137,7 @@ function TrackRow({
   snapshot,
   source,
   track,
+  folder,
   position,
   isCurrent,
   isSelected,
@@ -183,6 +190,7 @@ function TrackRow({
           <Typography size="xs" className="text-tertiary">
             {std_path.extname(track.file_info.name).slice(1).toUpperCase()} ·{" "}
             {track.file_info.size.Pretty}
+            {folder && ` · in ${folder}`}
           </Typography>
         </span>
         {tag && (

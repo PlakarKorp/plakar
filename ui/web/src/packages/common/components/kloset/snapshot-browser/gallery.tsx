@@ -30,6 +30,9 @@ type GalleryProps = {
   source: number;
   view: BrowseViewId;
   entries: EnrichedChildEntryType[];
+  // The directory being browsed: files found below it by a search show the
+  // folder they come from.
+  basePath: string;
   density: GalleryDensity;
   selected: ReadonlySet<string>;
   onToggleSelected: (entry: EnrichedChildEntryType) => void;
@@ -46,6 +49,7 @@ export function Gallery({
   source,
   view,
   entries,
+  basePath,
   density,
   selected,
   onToggleSelected,
@@ -88,6 +92,7 @@ export function Gallery({
                 source={source}
                 view={view}
                 entry={entry}
+                folder={std_path.relative(basePath, entry.parent_path)}
                 isSelected={selected.has(entry.path)}
                 onToggleSelected={() => onToggleSelected(entry)}
                 onPress={() => onOpen(entry)}
@@ -159,6 +164,7 @@ type FileTileProps = {
   source: number;
   view: BrowseViewId;
   entry: EnrichedChildEntryType;
+  folder: string;
   isSelected: boolean;
   onToggleSelected: () => void;
   onPress: () => void;
@@ -169,6 +175,7 @@ function FileTile({
   source,
   view,
   entry,
+  folder,
   isSelected,
   onToggleSelected,
   onPress,
@@ -265,6 +272,15 @@ function FileTile({
             {entry.file_info.size.Pretty}
           </Typography>
         </div>
+        {folder && (
+          <Typography
+            size="xs"
+            className="text-tertiary -mt-1.5 truncate px-2.5 pb-2"
+            title={folder}
+          >
+            in {folder}
+          </Typography>
+        )}
       </Button>
     </div>
   );

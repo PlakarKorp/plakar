@@ -56,6 +56,7 @@ import {
   getBrowseView,
   isDocumentContentType,
   suggestBrowseView,
+  suggestBrowseViewForEntries,
 } from "./browse-views";
 import { Gallery, GalleryDensity } from "./gallery";
 import { Lightbox } from "./lightbox";
@@ -128,10 +129,7 @@ export function FilesBrowser({
 }: FilesBrowserProps) {
   const [localView, setLocalView] = useState<BrowseViewId>();
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-  const suggestedView = suggestBrowseView(vfsEntry);
-  const activeView = view ?? localView ?? suggestedView;
-  const isAutoView = view === undefined && localView === undefined;
-  const viewDef = getBrowseView(activeView);
+  const explicitView = view ?? localView;
   const changeView = (next: BrowseViewId) => {
     setLightboxIndex(null);
     if (onViewChange) onViewChange(next);
@@ -147,16 +145,22 @@ export function FilesBrowser({
     "medium"
   );
 
-  const isListView = activeView === "all" && layout === "list";
-
+  // Without a view picked, a directory opens in the view fitting what it holds
+  // and a search lists everything it finds, to be shown in the view fitting
+  // its results once they are in.
   const hasFilters = Object.values(filters).some((filter) => filter);
+  const queryView =
+    explicitView ?? (hasFilters ? "all" : suggestBrowseView(vfsEntry));
+  const queryDef = getBrowseView(queryView);
+  const isSearching =
+    Boolean(filters.filename) || (queryView === "all" && hasFilters);
 
-  const search = viewDef.mimes
+  const search = queryDef.mimes
     ? {
-        // A view browses the directory itself, not the tree below it.
-        contentTypes: viewDef.mimes,
+        contentTypes: queryDef.mimes,
         filename: filters.filename,
-        recursive: false,
+        // A view browses the directory itself, a search the whole tree.
+        recursive: Boolean(filters.filename),
       }
     : hasFilters
       ? {
@@ -186,6 +190,15 @@ export function FilesBrowser({
         ? previous
         : undefined,
   });
+
+  const activeView =
+    explicitView ??
+    (hasFilters
+      ? suggestBrowseViewForEntries(query.data?.items ?? [])
+      : queryView);
+  const isAutoView = explicitView === undefined;
+  const viewDef = getBrowseView(activeView);
+  const isListView = activeView === "all" && layout === "list";
 
   const columns = useMemo(
     () =>
@@ -488,6 +501,28 @@ export function FilesBrowser({
     setLightboxIndex(pool.findIndex((item) => item.path === entry.path));
   };
 
+  // In a view, the view is the type filter: only the name search remains.
+  const filterBar = (
+    <FileFilters
+      mime={activeView === "all" ? filters.mime : undefined}
+      filename={filters.filename}
+      showTypeFilter={activeView === "all"}
+      searchPlaceholder={
+        activeView === "all"
+          ? undefined
+          : `Search ${viewDef.name.toLowerCase()} in this folder and below`
+      }
+      onSearch={onSearch}
+      onRemove={onRemoveFilter}
+      onApply={onApplyFilter}
+    />
+  );
+  // The results a view picked from a search leaves out.
+  const hiddenCount =
+    hasFilters && activeView !== "all"
+      ? (query.data?.items.length ?? 0) - items.length
+      : 0;
+
   const hasNextPage = Boolean(
     query.data &&
     (isPaginationResponseWithTotal(query.data)
@@ -545,7 +580,11 @@ export function FilesBrowser({
                   <div className="flex flex-wrap items-end justify-between gap-3">
                     <ViewSwitcher
                       view={activeView}
-                      counts={browseViewCounts(vfsEntry)}
+                      // The summary counts the directory, not what a search
+                      // finds: hide counts that would not match the results.
+                      counts={
+                        hasFilters ? undefined : browseViewCounts(vfsEntry)
+                      }
                       onChange={changeView}
                     />
                     <div className="flex items-center gap-2 pb-1">
@@ -603,33 +642,38 @@ export function FilesBrowser({
                         className="text-accent"
                       />
                       <Typography size="sm" className="text-secondary flex-1">
-                        This folder mostly holds {viewDef.name.toLowerCase()},
-                        so it opens in the {viewDef.name} view.
+                        {hasFilters
+                          ? `These results are mostly ${viewDef.name.toLowerCase()}, so they show in the ${viewDef.name} view.`
+                          : `This folder mostly holds ${viewDef.name.toLowerCase()}, so it opens in the ${viewDef.name} view.`}
+                        {hiddenCount > 0 &&
+                          ` ${hiddenCount} other ${hiddenCount === 1 ? "result is" : "results are"} in All files.`}
                       </Typography>
                       <UIButton
                         size="sm"
                         variant="accent-quaternary"
                         onPress={() => changeView("all")}
                       >
-                        Show all files
+                        {hasFilters ? "Show all results" : "Show all files"}
                       </UIButton>
                     </div>
                   )}
 
                   {activeView !== "all" &&
+                    !hasFilters &&
                     (vfsEntry.summary?.directory.directories ?? 0) > 0 && (
                       <Typography size="xs" className="text-tertiary">
                         This view shows the files of this folder only.{" "}
                         {vfsEntry.summary?.directory.directories === 1
                           ? "Its subfolder is"
                           : `Its ${vfsEntry.summary?.directory.directories} subfolders are`}{" "}
-                        in All files.
+                        in All files, and a search covers them too.
                       </Typography>
                     )}
                 </div>
 
                 {!isListView && (
                   <div className="flex flex-col gap-4">
+                    {filterBar}
                     {query.isPending ? (
                       <div className="grid place-items-center p-10">
                         <Icon
@@ -644,13 +688,16 @@ export function FilesBrowser({
                       </Alert>
                     ) : items.length === 0 ? (
                       <Typography className="text-tertiary p-10 text-center">
-                        No {viewDef.name.toLowerCase()} on this page.
+                        {isSearching
+                          ? `No ${viewDef.name.toLowerCase()} match this search.`
+                          : `No ${viewDef.name.toLowerCase()} on this page.`}
                       </Typography>
                     ) : activeView === "music" ? (
                       <MusicView
                         snapshot={snapshot.identifier.Value}
                         source={source}
                         tracks={items}
+                        basePath={vfsEntry.path}
                         selected={selectedPaths}
                         onToggleSelected={toggleSelected}
                       />
@@ -660,6 +707,7 @@ export function FilesBrowser({
                         source={source}
                         view={activeView}
                         entries={items}
+                        basePath={vfsEntry.path}
                         density={density}
                         selected={selectedPaths}
                         onToggleSelected={toggleSelected}
@@ -707,15 +755,7 @@ export function FilesBrowser({
                     isSoftSelectionEnabledForRow={(row) =>
                       !row.file_info.mode.isDir()
                     }
-                    filters={
-                      <FileFilters
-                        mime={filters.mime}
-                        filename={filters.filename}
-                        onSearch={onSearch}
-                        onRemove={onRemoveFilter}
-                        onApply={onApplyFilter}
-                      />
-                    }
+                    filters={filterBar}
                     ariaLabel="Restore point files table"
                     isLoading={query.isFetching}
                   />
