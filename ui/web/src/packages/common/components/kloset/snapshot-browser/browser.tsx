@@ -577,7 +577,7 @@ export function FilesBrowser({
                 )}
 
                 <div className="flex flex-col gap-3">
-                  <div className="flex flex-wrap items-end justify-between gap-3">
+                  <div className="border-secondary flex flex-wrap items-end justify-between gap-3 border-b">
                     <ViewSwitcher
                       view={activeView}
                       // The summary counts the directory, not what a search
