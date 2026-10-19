@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const DEFAULT_PER_PAGE = 50;
-const MAX_PER_PAGE = 500;
+const MAX_PER_PAGE = 100;
 
 /**
  * Builds the schema validating the `page` and `per_page` URL search params of a
