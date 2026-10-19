@@ -66,6 +66,7 @@ export * from "./segmented-control/segmented-control";
 export * from "./select/select";
 export * from "./selection-controls/selection-controls";
 export * from "./skeleton/skeleton";
+export * from "./slider/slider";
 export * from "./spinner/spinner";
 export * from "./step-badge/step-badge";
 export * from "./stepper/stepper";
