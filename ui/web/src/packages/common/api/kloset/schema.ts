@@ -365,7 +365,12 @@ export const VFSEntrySchema = z
     summary: SummarySchema.optional(),
 
     symlink_target: z.string().optional(),
+    // Only set when the entry is fetched on its own: listings and searches
+    // leave it out and carry content_type, entropy and chunks at the top level.
     object: ObjectSchema.optional(),
+    content_type: z.string().optional(),
+    entropy: z.number().optional(),
+    chunks: z.number().optional(),
 
     alternate_data_streams: z.array(z.string()).optional(),
     security_descriptor: z.string().optional(),
@@ -385,6 +390,7 @@ export const VFSEntrySchema = z
         (data.parent_path.endsWith("/") ? "" : "/") +
         data.file_info.name
     ),
+    contentType: data.object?.content_type ?? data.content_type ?? "",
   }));
 
 export type VFSEntryType = z.infer<typeof VFSEntrySchema>;

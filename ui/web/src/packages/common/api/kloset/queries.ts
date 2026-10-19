@@ -188,7 +188,7 @@ export class SnapshotReader {
       throw new Error("attempted to read a non-file entry");
     }
 
-    const contentType = respGetSnapshotPath.item.object?.content_type ?? "";
+    const contentType = respGetSnapshotPath.item.contentType;
     return ContentType(contentType);
   }
 

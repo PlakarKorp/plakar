@@ -141,8 +141,8 @@ function FilePreviewRegular({ snapshot, source, entry }: FilePreviewProps) {
         // Text or JSON
         <FilePreviewText
           getUrl={(render) => reader.getPublicUrl(signature.value, { render })}
-          entropy={entry.object?.entropy}
-          contentType={entry.object?.content_type}
+          entropy={entry.object?.entropy ?? entry.entropy}
+          contentType={entry.contentType}
           contentMAC={entry.object?.contentMAC}
         />
       ) : data.type.resolved === "image" ? (

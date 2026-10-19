@@ -164,9 +164,7 @@ export function FilesBrowser({
                       <Icon type="md-folder" size="xl" />
                     </>
                   )}
-                  {isFile && (
-                    <FileIcon contentType={child.object?.content_type} />
-                  )}
+                  {isFile && <FileIcon contentType={child.contentType} />}
                   {isLink && <Icon type="md-link" size="xl" />}
                 </div>
 

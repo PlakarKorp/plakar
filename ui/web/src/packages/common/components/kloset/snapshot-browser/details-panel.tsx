@@ -162,7 +162,7 @@ function PanelContent({
     <div className="flex h-full flex-col gap-4">
       <div className="flex items-center justify-between px-4">
         <Typography as="h2" className="text-primary flex items-center gap-2">
-          {isFile && <FileIcon contentType={vfsEntry.object?.content_type} />}
+          {isFile && <FileIcon contentType={vfsEntry.contentType} />}
           {isLink && <Icon type="md-link" size="xl" />}
           {std_path.basename(vfsEntry.path)}
         </Typography>
