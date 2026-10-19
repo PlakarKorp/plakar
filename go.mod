@@ -11,7 +11,7 @@ require (
 	github.com/PlakarKorp/integrations/ptar v1.1.1
 	github.com/PlakarKorp/integrations/stdio v1.1.0
 	github.com/PlakarKorp/integrations/tar v1.1.1
-	github.com/PlakarKorp/kloset v1.2.0-alpha.2.0.20261015225801-4937477bbf69
+	github.com/PlakarKorp/kloset v1.2.0-alpha.2.0.20261019121718-103dedcd9ea9
 	github.com/PlakarKorp/pkg v1.1.9
 	github.com/alecthomas/chroma v0.10.0
 	github.com/anacrolix/fuse v0.3.3-0.20260723023734-9e1272bc0085
@@ -94,7 +94,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/jstemmer/go-junit-report/v2 v2.1.0 // indirect
-	github.com/klauspost/compress v1.20.1 // indirect
+	github.com/klauspost/compress v1.20.3 // indirect
 	github.com/klauspost/cpuid/v2 v2.4.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
