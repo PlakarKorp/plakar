@@ -1,7 +1,6 @@
 import {
   Alert,
   Button,
-  Icon,
   Id,
   Select,
   Spinner,
@@ -137,9 +136,7 @@ export function Viewer({
           {variant === "stage" && (
             <>
               <FileIcon contentType={contentType} size="3xl" />
-              <Typography weight="semibold" className="text-white">
-                {name}
-              </Typography>
+              <Typography weight="semibold">{name}</Typography>
             </>
           )}
           <audio
@@ -303,7 +300,7 @@ export function EntryViewer({
   }
   if (!getUrl) {
     return variant === "stage" ? (
-      <Icon type="spinner" size="2xl" className="animate-spin" />
+      <Spinner size="2xl" inheritColor />
     ) : (
       <Spinner />
     );
@@ -424,7 +421,7 @@ function TextViewer({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {showSpinner && <Spinner className="bg-[#282a36]" />}
+      {showSpinner && <Spinner className="bg-terminal" />}
       <iframe
         key={url}
         title="File preview"

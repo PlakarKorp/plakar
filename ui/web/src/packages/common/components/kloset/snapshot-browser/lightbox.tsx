@@ -1,7 +1,7 @@
 import { IconButton, Typography } from "@plakar-ui/ui/components";
 import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
-import { Dialog, Modal, ModalOverlay } from "react-aria-components";
+import { Button, Dialog, Modal, ModalOverlay } from "react-aria-components";
 
 import {
   EnrichedChildEntryType,
@@ -100,26 +100,25 @@ export function Lightbox({
       isOpen
       isDismissable
       onOpenChange={(open) => !open && onClose()}
-      className="fixed inset-0 z-50 bg-zinc-950 data-[entering]:animate-[modal-fade_200ms]"
+      className="dark bg-secondary text-primary fixed inset-0 z-50 data-[entering]:animate-[modal-fade_200ms]"
     >
       <Modal className="h-full w-full">
         <Dialog
           aria-label={`Viewer: ${entry.file_info.name}`}
-          className="grid h-full w-full grid-rows-[auto_1fr_auto] text-white outline-none"
+          className="grid h-full w-full grid-rows-[auto_1fr_auto] outline-none"
         >
           <header className="flex items-center gap-3 px-3 py-2">
             <IconButton
               icon="close"
               aria-label="Close"
               variant="tertiary"
-              className="text-white"
               onPress={onClose}
             />
             <div className="min-w-0 flex-1">
-              <Typography weight="semibold" className="truncate text-white">
+              <Typography weight="semibold" className="truncate">
                 {entry.file_info.name}
               </Typography>
-              <Typography size="xs" className="text-slate-400 tabular-nums">
+              <Typography size="xs" className="text-tertiary tabular-nums">
                 {index + 1} / {items.length} · {entry.file_info.size.Pretty}
               </Typography>
             </div>
@@ -128,7 +127,6 @@ export function Lightbox({
                 icon={playing ? "pause" : "play"}
                 aria-label={playing ? "Stop the slideshow" : "Play a slideshow"}
                 variant="tertiary"
-                className="text-white"
                 onPress={() => setPlaying((v) => !v)}
               />
             )}
@@ -137,7 +135,7 @@ export function Lightbox({
               icon="info-circle"
               aria-label="Details"
               variant="tertiary"
-              className={clsx("text-white", showDetails && "bg-white/15")}
+              className={clsx(showDetails && "bg-primary-hover")}
               onPress={() => setShowDetails((v) => !v)}
             />
           </header>
@@ -204,7 +202,7 @@ function NavButton({
         aria-label={side === "left" ? "Previous" : "Next"}
         variant="tertiary"
         onPress={onPress}
-        className="rounded-full bg-white/10 text-white"
+        className="bg-primary rounded-full"
       />
     </div>
   );
@@ -229,7 +227,6 @@ function DownloadButton({
       icon="download"
       aria-label="Download"
       variant="tertiary"
-      className="text-white"
       href={getUrl?.({ download: true })}
       download
       isDisabled={!getUrl}
@@ -257,17 +254,17 @@ function DetailsAside({ entry }: { entry: EnrichedChildEntryType }) {
     rows.splice(3, 0, ["Entropy", `${entry.entropy.toFixed(2)} bits/byte`]);
   }
   return (
-    <aside className="hidden overflow-y-auto border-l border-white/10 px-5 py-2 md:block">
-      <Typography weight="semibold" className="mb-3 text-white">
+    <aside className="border-secondary hidden overflow-y-auto border-l px-5 py-2 md:block">
+      <Typography weight="semibold" className="mb-3">
         Details
       </Typography>
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
         {rows.map(([label, value]) => (
           <div key={label} className="contents">
-            <Typography as="dt" size="sm" className="text-slate-400">
+            <Typography as="dt" size="sm" className="text-tertiary">
               {label}
             </Typography>
-            <Typography as="dd" size="sm" className="break-all text-white">
+            <Typography as="dd" size="sm" className="break-all">
               {value}
             </Typography>
           </div>
@@ -344,14 +341,13 @@ function FilmstripItem({
   });
 
   return (
-    <button
+    <Button
       ref={ref}
-      type="button"
-      onClick={onPress}
+      onPress={onPress}
       aria-label={entry.file_info.name}
       aria-current={isCurrent}
       className={clsx(
-        "flex h-12 flex-none cursor-pointer items-center justify-center gap-1 overflow-hidden rounded-md border-2 bg-white/10 text-xs text-slate-300",
+        "bg-primary text-tertiary flex h-12 flex-none cursor-pointer items-center justify-center gap-1 overflow-hidden rounded-md border-2 text-xs",
         "motion-safe:transition-opacity",
         isPhoto ? "w-16" : "w-32 justify-start px-2",
         isCurrent
@@ -364,9 +360,13 @@ function FilmstripItem({
       ) : (
         <>
           <FileIcon contentType={entry.contentType} size="sm" />
-          {!isPhoto && <span className="truncate">{entry.file_info.name}</span>}
+          {!isPhoto && (
+            <Typography as="span" size="xs" className="truncate">
+              {entry.file_info.name}
+            </Typography>
+          )}
         </>
       )}
-    </button>
+    </Button>
   );
 }
