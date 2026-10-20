@@ -5,7 +5,7 @@ import {
   SnapshotType,
   useKlosetAPI,
 } from "@plakar-ui/common/api/kloset";
-import { DiffModal, FileIcon } from "@plakar-ui/common/components";
+import { Breadcrumbs, DiffModal, FileIcon } from "@plakar-ui/common/components";
 import {
   diffDirectories,
   DirectoryDiffEntry,
@@ -14,19 +14,35 @@ import {
 import {
   Alert,
   Checkbox,
+  EmptyList,
   Icon,
-  Spinner,
+  Skeleton,
   Tag,
   Typography,
 } from "@plakar-ui/ui/components";
-import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import { useState } from "react";
-import { Button } from "react-aria-components";
+import {
+  Cell,
+  Column,
+  Row as TableRow,
+  RowProps,
+  Table,
+  TableBody,
+  TableHeader,
+  TableLayout,
+  Virtualizer,
+} from "react-aria-components";
+
+import { Delta } from "./delta";
 
 // Past this many entries, a directory is compared on its first ones only.
 const MAX_ENTRIES = 5000;
+
+// Only the rows in view of the page are rendered.
+const ROW_HEIGHT = 41;
+const HEADING_HEIGHT = 40;
 
 type Row = DirectoryDiffEntry<EnrichedChildEntryType>;
 
@@ -53,7 +69,6 @@ type DirectoryComparisonProps = {
   // Where the two restore points overlap: the breadcrumb starts there.
   root: string;
   path: string;
-  onPathChange: (path: string) => void;
 };
 
 /**
@@ -65,10 +80,8 @@ export function DirectoryComparison({
   after,
   root,
   path,
-  onPathChange,
 }: DirectoryComparisonProps) {
   const { api, repository } = useKlosetAPI();
-  const navigate = useNavigate();
   const [showUnchanged, setShowUnchanged] = useState(false);
   const [diffing, setDiffing] = useState<Row | null>(null);
 
@@ -80,11 +93,11 @@ export function DirectoryComparison({
       path,
       max: MAX_ENTRIES,
     });
-  const a = useQuery(list(before));
-  const b = useQuery(list(after));
+  const a = useQuery({ ...list(before), placeholderData: keepPreviousData });
+  const b = useQuery({ ...list(after), placeholderData: keepPreviousData });
 
   if (a.isPending || b.isPending) {
-    return <Spinner />;
+    return <DirectoryComparisonSkeleton root={root} path={path} />;
   }
   if (a.isError || b.isError) {
     return (
@@ -93,19 +106,35 @@ export function DirectoryComparison({
       </Alert>
     );
   }
+  if (!a.data && !b.data) {
+    return (
+      <Alert variant="default" title="Folder not found">
+        {path} is in neither restore point.
+      </Alert>
+    );
+  }
 
+  // A truncated listing stops at its last name: past it, an entry of the
+  // other side cannot be told apart from one that was cut off.
+  const cutoff = [a.data, b.data]
+    .filter((listing) => listing?.isTruncated)
+    .map((listing) => listing?.children.at(-1)?.file_info.name ?? "")
+    .sort()[0];
   const named = (children: EnrichedChildEntryType[] = []) =>
-    children.map((child) => ({ ...child, name: child.file_info.name }));
+    children
+      .map((child) => ({ ...child, name: child.file_info.name }))
+      .filter((child) => cutoff === undefined || child.name <= cutoff);
   const rows = diffDirectories(
     named(a.data?.children),
     named(b.data?.children)
   );
-  const counts = Object.fromEntries(
-    ORDER.map((status) => [
-      status,
-      rows.filter((r) => r.status === status).length,
-    ])
-  ) as Record<DirectoryDiffStatus, number>;
+  const counts: Record<DirectoryDiffStatus, number> = {
+    added: 0,
+    removed: 0,
+    changed: 0,
+    unchanged: 0,
+  };
+  for (const row of rows) counts[row.status]++;
   const visible = rows
     .filter((row) => showUnchanged || row.status !== "unchanged")
     .sort((x, y) => {
@@ -118,29 +147,34 @@ export function DirectoryComparison({
       );
     });
 
-  const open = (row: Row) => {
+  const target = (row: Row): Pick<RowProps<Row>, "href" | "onAction"> => {
     const entry = row.after ?? row.before;
-    if (!entry) return;
+    if (!entry) return {};
     if (isDir(row)) {
-      onPathChange(entry.path);
-    } else if (row.status === "changed" && row.before && row.after) {
-      setDiffing(row);
-    } else {
-      // Added or removed files open where they exist, in the browser.
-      const snapshot = row.after ? after : before;
-      void navigate({
-        to: "/snapshots/$snapshotId/$source/browse",
-        params: { snapshotId: snapshot.identifier.Value, source: 0 },
-        search: { path: entry.parent_path, preview: entry.path },
-      });
+      return {
+        href: {
+          to: "/compare",
+          search: (prev) => ({ ...prev, path: entry.path }),
+        },
+      };
     }
+    if (row.status === "changed" && row.before && row.after) {
+      return { onAction: () => setDiffing(row) };
+    }
+    // Other files open where they exist, in the browser.
+    return { href: browseHref(row.after ? after : before, entry) };
   };
 
   return (
-    <section className="border-secondary flex flex-col rounded-xl border">
-      <PathBar root={root} path={path} onPathChange={onPathChange} />
+    <section
+      className={clsx(
+        "border-secondary bg-primary flex flex-col overflow-clip rounded-xl border transition-opacity",
+        (a.isPlaceholderData || b.isPlaceholderData) && "opacity-60"
+      )}
+    >
+      <PathBar root={root} path={path} />
 
-      <div className="border-secondary flex flex-wrap items-center gap-2 border-b px-4 py-3">
+      <div className="border-secondary bg-secondary flex flex-wrap items-center gap-2 border-b px-4 py-2">
         {ORDER.filter((s) => s !== "unchanged").map((status) => (
           <Tag key={status} variant={STATUS[status].variant} size="sm">
             {counts[status]} {STATUS[status].label.toLowerCase()}
@@ -155,52 +189,53 @@ export function DirectoryComparison({
         />
       </div>
 
-      {!a.data && !b.data && (
-        <div className="p-4">
-          <Alert variant="default" title="Folder not found">
-            {path} is in neither restore point.
-          </Alert>
-        </div>
-      )}
-      {(a.data?.isTruncated || b.data?.isTruncated) && (
+      {cutoff !== undefined && (
         <div className="p-4">
           <Alert variant="warning" title="Large folder">
-            Only its first {MAX_ENTRIES.toLocaleString()} entries are compared.
+            Only entries up to “{cutoff}” are compared.
           </Alert>
         </div>
       )}
 
       {visible.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 p-10 text-center">
-          <Icon type="success-circle" size="2xl" className="text-success" />
-          <Typography weight="medium">No differences here</Typography>
-          <Typography size="sm" className="text-tertiary">
-            This folder is identical in both restore points.
-          </Typography>
-        </div>
+        <EmptyList
+          size="sm"
+          title="No differences here"
+          description="This folder is identical in both restore points."
+        />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-secondary text-tertiary border-b text-left text-xs">
-                <th className="px-4 py-2 font-medium">Name</th>
-                <th className="px-4 py-2 font-medium">Change</th>
-                <th className="px-4 py-2 text-right font-medium">Before</th>
-                <th className="px-4 py-2 text-right font-medium">After</th>
-                <th className="px-4 py-2 text-right font-medium">Difference</th>
-              </tr>
-            </thead>
-            <tbody>
+        <Virtualizer
+          layout={TableLayout}
+          layoutOptions={{
+            estimatedRowHeight: ROW_HEIGHT,
+            headingHeight: HEADING_HEIGHT,
+          }}
+        >
+          <Table aria-label="Folder entries" className="-mb-px w-full">
+            <TableHeader className="border-secondary bg-primary h-full border-b">
+              <Column isRowHeader className="h-full" width="3fr" minWidth={200}>
+                <HeaderLabel>Name</HeaderLabel>
+              </Column>
+              <Column className="h-full" width={120}>
+                <HeaderLabel>Change</HeaderLabel>
+              </Column>
+              <Column className="h-full" width={110}>
+                <HeaderLabel align="right">Before</HeaderLabel>
+              </Column>
+              <Column className="h-full" width={110}>
+                <HeaderLabel align="right">After</HeaderLabel>
+              </Column>
+              <Column className="h-full" width={120}>
+                <HeaderLabel align="right">Difference</HeaderLabel>
+              </Column>
+            </TableHeader>
+            <TableBody>
               {visible.map((row) => (
-                <ComparisonRow
-                  key={row.name}
-                  row={row}
-                  onOpen={() => open(row)}
-                />
+                <ComparisonRow key={row.name} row={row} {...target(row)} />
               ))}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </Virtualizer>
       )}
 
       {diffing?.before && diffing.after && (
@@ -213,17 +248,30 @@ export function DirectoryComparison({
             path: diffing.before.path,
             size: diffing.before.file_info.size.Value,
             label: before.identifier.toHumanString(),
+            href: browseHref(before, diffing.before),
           }}
           after={{
             snapshot: after.identifier.Value,
             path: diffing.after.path,
             size: diffing.after.file_info.size.Value,
             label: after.identifier.toHumanString(),
+            href: browseHref(after, diffing.after),
           }}
         />
       )}
     </section>
   );
+}
+
+function browseHref(
+  snapshot: SnapshotType,
+  entry: EnrichedChildEntryType
+): RowProps<Row>["href"] {
+  return {
+    to: "/snapshots/$snapshotId/$source/browse",
+    params: { snapshotId: snapshot.identifier.Value, source: 0 },
+    search: { path: entry.parent_path, preview: entry.path },
+  };
 }
 
 function isDir(row: Row) {
@@ -237,16 +285,43 @@ function sizeOf(entry?: EnrichedChildEntryType) {
     : entry.file_info.size.Value;
 }
 
-function ComparisonRow({ row, onOpen }: { row: Row; onOpen: () => void }) {
+function HeaderLabel({
+  children,
+  align = "left",
+}: {
+  children: string;
+  align?: "left" | "right";
+}) {
+  return (
+    <Typography
+      size="xs"
+      weight="medium"
+      className={clsx(
+        "text-tertiary flex h-full items-center px-4",
+        align === "right" && "justify-end"
+      )}
+    >
+      {children}
+    </Typography>
+  );
+}
+
+function ComparisonRow({
+  row,
+  href,
+  onAction,
+}: { row: Row } & Pick<RowProps<Row>, "href" | "onAction">) {
   const entry = row.after ?? row.before;
   const before = sizeOf(row.before);
   const after = sizeOf(row.after);
-  const delta = (after ?? 0) - (before ?? 0);
   const dir = isDir(row);
   return (
-    <tr
+    <TableRow
+      id={row.name}
+      href={href}
+      onAction={onAction}
       className={clsx(
-        "border-secondary hover:bg-secondary border-b last:border-0",
+        "border-secondary hover:bg-primary-hover data-focus-visible:outline-focus h-full cursor-pointer border-b outline-none data-focus-visible:outline-2 data-focus-visible:-outline-offset-2",
         row.status === "added" &&
           "shadow-[inset_3px_0_0_var(--border-color-success)]",
         row.status === "removed" &&
@@ -255,97 +330,109 @@ function ComparisonRow({ row, onOpen }: { row: Row; onOpen: () => void }) {
           "shadow-[inset_3px_0_0_var(--border-color-warning)]"
       )}
     >
-      <td className="px-4 py-2">
-        <Button
-          onPress={onOpen}
-          className="data-focus-visible:outline-focus flex cursor-pointer items-center gap-2 text-left hover:underline data-focus-visible:outline-2"
-        >
+      <Cell className="flex items-center px-4 py-2">
+        <div className="flex min-w-0 items-center gap-2">
           {dir ? (
             <Icon type="md-folder" size="lg" className="text-accent" />
           ) : (
             <FileIcon contentType={entry?.object?.content_type} />
           )}
-          <span className="break-all">{row.name}</span>
+          <Typography as="span" size="sm" className="break-all">
+            {row.name}
+          </Typography>
           {row.status === "changed" && !dir && (
-            <Typography as="span" size="xs" className="text-tertiary">
+            <Typography as="span" size="xs" className="text-accent">
               view diff
             </Typography>
           )}
-        </Button>
-      </td>
-      <td className="px-4 py-2">
+        </div>
+      </Cell>
+      <Cell className="flex h-full items-center px-4">
         <Tag variant={STATUS[row.status].variant} size="sm">
           {STATUS[row.status].label}
         </Tag>
-      </td>
-      <td className="text-tertiary px-4 py-2 text-right tabular-nums">
-        {before !== undefined ? Size(before).Pretty : "—"}
-      </td>
-      <td className="px-4 py-2 text-right tabular-nums">
-        {after !== undefined ? Size(after).Pretty : "—"}
-      </td>
-      <td
-        className={clsx(
-          "px-4 py-2 text-right tabular-nums",
-          delta > 0
-            ? "text-success"
-            : delta < 0
-              ? "text-error"
-              : "text-tertiary"
-        )}
-      >
-        {delta === 0
-          ? "="
-          : `${delta > 0 ? "+" : "−"}${Size(Math.abs(delta)).Pretty}`}
-      </td>
-    </tr>
+      </Cell>
+      <Cell className="flex h-full items-center justify-end px-4 whitespace-nowrap">
+        <Typography as="span" size="sm" className="text-tertiary tabular-nums">
+          {before !== undefined ? Size(before).Pretty : "—"}
+        </Typography>
+      </Cell>
+      <Cell className="flex h-full items-center justify-end px-4 whitespace-nowrap">
+        <Typography as="span" size="sm" className="tabular-nums">
+          {after !== undefined ? Size(after).Pretty : "—"}
+        </Typography>
+      </Cell>
+      <Cell className="flex h-full items-center justify-end px-4 whitespace-nowrap">
+        <Delta
+          before={before ?? 0}
+          after={after ?? 0}
+          format={(n) => Size(n).Pretty}
+        />
+      </Cell>
+    </TableRow>
   );
 }
 
-function PathBar({
+/**
+ * Holds the place of a folder comparison while its listings load.
+ */
+export function DirectoryComparisonSkeleton({
   root,
   path,
-  onPathChange,
 }: {
-  root: string;
-  path: string;
-  onPathChange: (path: string) => void;
+  root?: string;
+  path?: string;
 }) {
+  return (
+    <section className="border-secondary bg-primary flex flex-col rounded-xl border">
+      {root && path ? (
+        <PathBar root={root} path={path} />
+      ) : (
+        <div className="border-secondary border-b px-4 py-4">
+          <Skeleton variant="text" size="md" width={280} />
+        </div>
+      )}
+      <div className="border-secondary bg-secondary border-b px-4 py-2.5">
+        <Skeleton variant="text" size="sm" width={240} />
+      </div>
+      <div className="flex flex-col gap-4 p-4">
+        {Array.from({ length: 6 }, (_, i) => (
+          <Skeleton key={i} variant="text" size="sm" width="100%" />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function PathBar({ root, path }: { root: string; path: string }) {
   // Breadcrumbs from where the restore points overlap down to this folder.
-  const relative = path.startsWith(root) ? path.slice(root.length) : path;
-  const parts = relative.split("/").filter(Boolean);
+  const base = root.replace(/\/$/, "");
+  const inRoot = path === root || path.startsWith(`${base}/`);
+  const parts = (inRoot ? path.slice(base.length) : path)
+    .split("/")
+    .filter(Boolean);
+  const start = inRoot ? root : "/";
   const crumbs = [
-    { label: root, path: root },
+    { label: start, path: start },
     ...parts.map((part, i) => ({
       label: part,
-      path: [root.replace(/\/$/, ""), ...parts.slice(0, i + 1)].join("/"),
+      path: [inRoot ? base : "", ...parts.slice(0, i + 1)].join("/"),
     })),
   ];
   return (
-    <nav
-      aria-label="Folder"
-      className="border-secondary flex flex-wrap items-center gap-1 border-b px-4 py-3 text-sm"
-    >
+    <div className="border-secondary flex items-center gap-2 border-b px-4 py-3">
       <Icon type="hard-drive" size="sm" className="text-tertiary" />
-      {crumbs.map((crumb, i) => (
-        <span key={crumb.path} className="flex items-center gap-1">
-          {i > 0 && (
-            <Icon type="chevron-right" size="xs" className="text-tertiary" />
-          )}
-          {i === crumbs.length - 1 ? (
-            <span className="text-primary font-medium break-all">
-              {crumb.label}
-            </span>
-          ) : (
-            <Button
-              onPress={() => onPathChange(crumb.path)}
-              className="text-secondary cursor-pointer break-all hover:underline"
-            >
-              {crumb.label}
-            </Button>
-          )}
-        </span>
-      ))}
-    </nav>
+      <Breadcrumbs>
+        {crumbs.map((crumb) => (
+          <Breadcrumbs.Crumb
+            key={crumb.path}
+            to="/compare"
+            search={(prev) => ({ ...prev, path: crumb.path })}
+          >
+            {crumb.label}
+          </Breadcrumbs.Crumb>
+        ))}
+      </Breadcrumbs>
+    </div>
   );
 }

@@ -144,6 +144,7 @@ export const IconTypes = [
   "proxmox",
   "puzzle-piece",
   "recycle",
+  "right-left",
   "right-to-bracket",
   "robot",
   "routeros",

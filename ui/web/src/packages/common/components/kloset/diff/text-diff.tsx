@@ -2,6 +2,7 @@ import { Alert, Icon, Spinner, Typography } from "@plakar-ui/ui/components";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import { useMemo } from "react";
+import { LinkProps } from "react-aria-components";
 
 import {
   SnapshotFileHeadQueryOptions,
@@ -19,6 +20,8 @@ export type DiffSide = {
   path: string;
   size: number;
   label: string;
+  // Where this version can be opened, when the diff is shown away from it.
+  href?: LinkProps["href"];
 };
 
 type TextDiffProps = {

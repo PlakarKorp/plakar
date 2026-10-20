@@ -63,6 +63,7 @@ export * from "./progress-bar/progress-bar";
 export * from "./radio-group/radio-group";
 export * from "./removable-tags/removable-tags";
 export * from "./segmented-control/segmented-control";
+export * from "./select/async-select";
 export * from "./select/select";
 export * from "./selection-controls/selection-controls";
 export * from "./skeleton/skeleton";

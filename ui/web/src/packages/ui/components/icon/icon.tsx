@@ -140,6 +140,7 @@ import {
   FaWrench,
   FaFolderOpen,
   FaRobot,
+  FaRightLeft,
 } from "react-icons/fa6";
 import {
   MdOutlineViewSidebar,
@@ -344,6 +345,7 @@ const ICONS: Record<IconType, ComponentType<IconGlyphProps>> = {
   plus: FaPlus,
   "puzzle-piece": FaPuzzlePiece,
   recycle: FaRecycle,
+  "right-left": FaRightLeft,
   "right-to-bracket": FaArrowRightToBracket,
   robot: FaRobot,
   "scale-balanced": FaScaleBalanced,
