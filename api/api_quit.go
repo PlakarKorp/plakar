@@ -1,11 +1,6 @@
 package api
 
-import (
-	"errors"
-	"net/http"
-)
-
-var errQuit = errors.New("quit from the ui")
+import "net/http"
 
 // With -no-auth, any page could POST here: refuse cross-site requests.
 func (ui *uiserver) quit(w http.ResponseWriter, r *http.Request) error {
@@ -16,6 +11,6 @@ func (ui *uiserver) quit(w http.ResponseWriter, r *http.Request) error {
 			Message:  "quit is refused to other sites",
 		}
 	}
-	ui.ctx.Cancel(errQuit)
+	ui.ctx.Cancel(ErrQuit)
 	return nil
 }

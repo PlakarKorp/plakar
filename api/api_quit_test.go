@@ -56,7 +56,7 @@ func TestQuit(t *testing.T) {
 		case <-time.After(time.Second):
 			t.Fatal("the context was not cancelled")
 		}
-		require.ErrorIs(t, context.Cause(ctx.Context), errQuit)
+		require.ErrorIs(t, context.Cause(ctx.Context), ErrQuit)
 	})
 }
 

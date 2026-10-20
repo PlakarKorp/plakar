@@ -10,6 +10,7 @@ var (
 	ErrMissingField     = errors.New("missing field")
 	ErrInvalidID        = errors.New("invalid ID")
 	ErrInvalidSortKey   = errors.New("invalid sort key")
+	ErrQuit             = errors.New("quit from the ui")
 )
 
 type ParamErrorType string
