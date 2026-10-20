@@ -1,6 +1,6 @@
 module github.com/PlakarKorp/plakar
 
-go 1.26.0
+go 1.26.10
 
 require (
 	github.com/PlakarKorp/go-human2duration v0.1.6
