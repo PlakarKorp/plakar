@@ -1,5 +1,4 @@
 import { Tab } from "@plakar-ui/ui/components";
-import clsx from "clsx";
 
 import { BROWSE_VIEWS, BrowseViewId } from "./browse-views";
 
@@ -38,7 +37,7 @@ export function ViewSwitcher({
     <Tab
       variant="underlined"
       ariaLabel="Browse by kind of content"
-      className={clsx("max-w-full min-w-0", className)}
+      className={className}
       items={items}
       selected={view}
       onSelectionChange={(key) => {

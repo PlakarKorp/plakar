@@ -55,16 +55,15 @@ function TabRoot<const T extends readonly TabItem[]>({
     <RATabs
       selectedKey={selected === null ? NO_TAB_SELECTED : selected}
       onSelectionChange={onSelectionChange}
-      className={className}
+      className={clsx("max-w-full min-w-0", className)}
     >
       <div className="flex items-center gap-2">
         <RATabList
           aria-label={ariaLabel}
           items={items}
-          className={clsx({
-            "scrollbar-hide flex max-w-fit min-w-0 gap-2 overflow-auto":
-              variant === "underlined",
-            "border-secondary bg-tertiary flex gap-1 rounded-lg border p-0.5":
+          className={clsx("scrollbar-hide flex min-w-0 overflow-auto", {
+            "max-w-fit gap-2": variant === "underlined",
+            "border-secondary bg-tertiary gap-1 rounded-lg border p-0.5":
               variant === "pill",
             "flex-1": fullWidth,
           })}
