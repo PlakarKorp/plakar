@@ -44,6 +44,7 @@ export function CardLatestSnapshots() {
               <Snapshots.RowSkeleton
                 key={i}
                 withSources={isMdUp}
+                withDuration={isMdUp}
                 withSize={isMdUp}
               />
             ))}
@@ -85,6 +86,9 @@ export function CardLatestSnapshots() {
                   }
                   timeSince={snapshot.timestamp.relativeToNow()}
                   dateModified={snapshot.timestamp.toHumanString()}
+                  duration={
+                    isMdUp ? snapshot.duration.toShortString() : undefined
+                  }
                   size={isMdUp ? snapshot.total.size.Pretty : undefined}
                   itemsLength={isMdUp ? snapshot.total.files : undefined}
                   errorsLength={snapshot.total.errors}

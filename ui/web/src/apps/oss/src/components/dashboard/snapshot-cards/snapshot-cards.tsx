@@ -35,6 +35,7 @@ function SnapshotsTable({ children, className }: SnapshotTableProps) {
         <Column isRowHeader>ID</Column>
         <Column>Source</Column>
         <Column>Date modified</Column>
+        <Column>Duration</Column>
         <Column>Size</Column>
         <Column />
       </TableHeader>
@@ -53,6 +54,7 @@ type SnapshotRowProps = {
   id: string;
   dateModified?: string;
   timeSince?: string;
+  duration?: string;
   sources?: Source[];
   size?: string;
   itemsLength?: number;
@@ -64,6 +66,7 @@ function SnapshotsRow({
   id,
   dateModified,
   timeSince,
+  duration,
   sources,
   size,
   itemsLength,
@@ -106,6 +109,13 @@ function SnapshotsRow({
 
       <Cell className={clsx("align-top", timeSince && "px-2 py-4")}>
         <LabeledText value={timeSince} subValue={dateModified} />
+      </Cell>
+
+      <Cell className={clsx("align-top", duration && "px-2 py-4")}>
+        <LabeledText
+          value={duration}
+          subValue={duration ? "Duration" : undefined}
+        />
       </Cell>
 
       <Cell className={clsx("align-top", size && "px-2 py-4")}>
@@ -168,6 +178,7 @@ function LabeledText({
 type SnapshotsRowSkeletonProps = {
   withSources?: boolean;
   withTimeSince?: boolean;
+  withDuration?: boolean;
   withSize?: boolean;
   withSnapshotLink?: boolean;
 };
@@ -175,6 +186,7 @@ type SnapshotsRowSkeletonProps = {
 function SnapshotsRowSkeleton({
   withSources = true,
   withTimeSince = true,
+  withDuration = true,
   withSize = true,
   withSnapshotLink = true,
 }: SnapshotsRowSkeletonProps) {
@@ -195,6 +207,15 @@ function SnapshotsRowSkeleton({
 
       <Cell className={clsx(withTimeSince && "px-2 py-4")}>
         {withTimeSince && (
+          <div className="flex flex-col gap-1">
+            <Skeleton variant="text" size="md" />
+            <Skeleton variant="text" size="sm" />
+          </div>
+        )}
+      </Cell>
+
+      <Cell className={clsx(withDuration && "px-2 py-4")}>
+        {withDuration && (
           <div className="flex flex-col gap-1">
             <Skeleton variant="text" size="md" />
             <Skeleton variant="text" size="sm" />
