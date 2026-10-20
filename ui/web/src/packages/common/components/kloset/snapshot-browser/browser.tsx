@@ -42,8 +42,8 @@ import {
   DetailsPanel,
   DirectoryPreview,
   DownloadMenuItem,
-  FileFilters,
   FileIcon,
+  FilterPanel,
   MIME_FILTERS,
   PaginatedTable,
   SelectedList,
@@ -529,19 +529,42 @@ export function FilesBrowser({
 
   // In a view, the view is the type filter: only the name search remains.
   const filterBar = (
-    <FileFilters
-      mime={activeView === "all" ? filters.mime : undefined}
-      filename={filters.filename}
-      showTypeFilter={activeView === "all"}
-      searchPlaceholder={
-        activeView === "all"
-          ? undefined
-          : `Search ${viewDef.name.toLowerCase()} by name`
-      }
-      onSearch={onSearch}
-      onRemove={onRemoveFilter}
-      onApply={onApplyFilter}
-    />
+    <FilterPanel>
+      <FilterPanel.Search
+        value={filters.filename}
+        onSearch={onSearch}
+        aria-label="Search files"
+        placeholder={
+          activeView === "all"
+            ? "Search by name or *.txt"
+            : `Search ${viewDef.name.toLowerCase()} by name`
+        }
+      />
+      {activeView === "all" && (
+        <FilterPanel.Groups>
+          <FilterPanel.Group label="File type">
+            <SegmentedControl
+              variant="accent"
+              ariaLabel="File type"
+              items={[
+                { id: "all", label: "All" },
+                ...MIME_FILTERS.map(({ id, name, icon }) => ({
+                  id,
+                  label: name,
+                  icon,
+                })),
+              ]}
+              selectedId={filters.mime?.id ?? "all"}
+              onSelect={(id) =>
+                id === "all"
+                  ? onRemoveFilter(new Set(["mime"]))
+                  : onApplyFilter({ mime: [id] })
+              }
+            />
+          </FilterPanel.Group>
+        </FilterPanel.Groups>
+      )}
+    </FilterPanel>
   );
   // The results a view picked from a search leaves out.
   const hiddenCount =
