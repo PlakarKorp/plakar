@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { diffHunks, diffLines } from "./diff";
+import { diffDirectories, diffHunks, diffLines } from "./diff";
 
 describe("diffLines", () => {
   it("returns only equal lines for identical inputs", () => {
@@ -38,5 +38,28 @@ describe("diffHunks", () => {
     expect(hunks[0]).toEqual({ op: "skip", count: 8 });
     expect(hunks.at(-1)).toEqual({ op: "skip", count: 7 });
     expect(hunks.filter((h) => h.op !== "skip")).toHaveLength(6);
+  });
+});
+
+describe("diffDirectories", () => {
+  it("classifies entries by name and MAC", () => {
+    const result = diffDirectories(
+      [
+        { name: "kept", mac: "1" },
+        { name: "edited", mac: "2" },
+        { name: "gone", mac: "3" },
+      ],
+      [
+        { name: "kept", mac: "1" },
+        { name: "edited", mac: "9" },
+        { name: "new", mac: "4" },
+      ]
+    );
+    expect(result.map((e) => [e.name, e.status])).toEqual([
+      ["edited", "changed"],
+      ["gone", "removed"],
+      ["kept", "unchanged"],
+      ["new", "added"],
+    ]);
   });
 });

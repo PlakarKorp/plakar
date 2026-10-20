@@ -180,6 +180,14 @@ function Component() {
                   snapshotId={snapshot.identifier.Value}
                   paths={[snapshot.sources[0].importer.directory.Value]}
                 />
+                <Menu.Item
+                  leftIcon="not-equal"
+                  label="Compare with previous"
+                  href={{
+                    to: "/compare",
+                    search: { b: snapshot.identifier.Value },
+                  }}
+                />
               </Menu>
             </Popover>
           </MenuTrigger>

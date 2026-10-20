@@ -13,6 +13,7 @@ import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as LayoutAlertingRouteImport } from './routes/_layout/alerting'
 import { Route as LayoutAnalyticsRouteImport } from './routes/_layout/analytics'
+import { Route as LayoutCompareRouteImport } from './routes/_layout/compare'
 import { Route as LayoutLoginRouteImport } from './routes/_layout/login'
 import { Route as LayoutLogoutRouteImport } from './routes/_layout/logout'
 import { Route as LayoutOauth_callbackRouteImport } from './routes/_layout/oauth_callback'
@@ -40,6 +41,11 @@ const LayoutAlertingRoute = LayoutAlertingRouteImport.update({
 const LayoutAnalyticsRoute = LayoutAnalyticsRouteImport.update({
   id: '/analytics',
   path: '/analytics',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutCompareRoute = LayoutCompareRouteImport.update({
+  id: '/compare',
+  path: '/compare',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutLoginRoute = LayoutLoginRouteImport.update({
@@ -99,6 +105,7 @@ export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
   '/alerting': typeof LayoutAlertingRoute
   '/analytics': typeof LayoutAnalyticsRoute
+  '/compare': typeof LayoutCompareRoute
   '/login': typeof LayoutLoginRoute
   '/logout': typeof LayoutLogoutRoute
   '/oauth_callback': typeof LayoutOauth_callbackRoute
@@ -112,6 +119,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/alerting': typeof LayoutAlertingRoute
   '/analytics': typeof LayoutAnalyticsRoute
+  '/compare': typeof LayoutCompareRoute
   '/login': typeof LayoutLoginRoute
   '/logout': typeof LayoutLogoutRoute
   '/oauth_callback': typeof LayoutOauth_callbackRoute
@@ -128,6 +136,7 @@ export interface FileRoutesById {
   '/_layout': typeof LayoutRouteWithChildren
   '/_layout/alerting': typeof LayoutAlertingRoute
   '/_layout/analytics': typeof LayoutAnalyticsRoute
+  '/_layout/compare': typeof LayoutCompareRoute
   '/_layout/login': typeof LayoutLoginRoute
   '/_layout/logout': typeof LayoutLogoutRoute
   '/_layout/oauth_callback': typeof LayoutOauth_callbackRoute
@@ -145,6 +154,7 @@ export interface FileRouteTypes {
     | '/'
     | '/alerting'
     | '/analytics'
+    | '/compare'
     | '/login'
     | '/logout'
     | '/oauth_callback'
@@ -158,6 +168,7 @@ export interface FileRouteTypes {
   to:
     | '/alerting'
     | '/analytics'
+    | '/compare'
     | '/login'
     | '/logout'
     | '/oauth_callback'
@@ -173,6 +184,7 @@ export interface FileRouteTypes {
     | '/_layout'
     | '/_layout/alerting'
     | '/_layout/analytics'
+    | '/_layout/compare'
     | '/_layout/login'
     | '/_layout/logout'
     | '/_layout/oauth_callback'
@@ -217,6 +229,13 @@ declare module '@tanstack/react-router' {
       path: '/analytics'
       fullPath: '/analytics'
       preLoaderRoute: typeof LayoutAnalyticsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/compare': {
+      id: '/_layout/compare'
+      path: '/compare'
+      fullPath: '/compare'
+      preLoaderRoute: typeof LayoutCompareRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/login': {
@@ -288,6 +307,7 @@ declare module '@tanstack/react-router' {
 interface LayoutRouteChildren {
   LayoutAlertingRoute: typeof LayoutAlertingRoute
   LayoutAnalyticsRoute: typeof LayoutAnalyticsRoute
+  LayoutCompareRoute: typeof LayoutCompareRoute
   LayoutLoginRoute: typeof LayoutLoginRoute
   LayoutLogoutRoute: typeof LayoutLogoutRoute
   LayoutOauth_callbackRoute: typeof LayoutOauth_callbackRoute
@@ -303,6 +323,7 @@ interface LayoutRouteChildren {
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAlertingRoute: LayoutAlertingRoute,
   LayoutAnalyticsRoute: LayoutAnalyticsRoute,
+  LayoutCompareRoute: LayoutCompareRoute,
   LayoutLoginRoute: LayoutLoginRoute,
   LayoutLogoutRoute: LayoutLogoutRoute,
   LayoutOauth_callbackRoute: LayoutOauth_callbackRoute,

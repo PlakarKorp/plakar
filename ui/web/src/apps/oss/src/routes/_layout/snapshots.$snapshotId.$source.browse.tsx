@@ -10,6 +10,7 @@ import {
   MIME_FILTERS,
 } from "@plakar-ui/common/components";
 import { createPaginationSearchSchema } from "@plakar-ui/common/utils";
+import { Menu } from "@plakar-ui/ui/components";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import std_path from "path";
 import { useCallback } from "react";
@@ -244,6 +245,16 @@ function Component() {
       onPreviewChange={onPreviewChange}
       view={search.view}
       onViewChange={onViewChange}
+      actions={
+        <Menu.Item
+          leftIcon="not-equal"
+          label="Compare with previous"
+          href={{
+            to: "/compare",
+            search: { b: snapshot.identifier.Value, path: vfsEntry.path },
+          }}
+        />
+      }
       breadcrumb={
         <Breadcrumbs>
           {breadcrumbsForSource(

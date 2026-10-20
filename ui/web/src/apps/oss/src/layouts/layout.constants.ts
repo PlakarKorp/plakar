@@ -16,6 +16,13 @@ export const NAV_ITEMS: NavListItemProps[] = [
     icon: "folder-tree",
   },
   {
+    label: "Compare",
+    href: {
+      to: "/compare",
+    },
+    icon: "not-equal",
+  },
+  {
     label: "Alerting",
     href: {
       to: "/alerting",
