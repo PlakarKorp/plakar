@@ -11,18 +11,63 @@ import { NAV_ITEMS, SUB_NAV_ITEMS } from "./layout.constants";
 
 import { getAccountMeQueryOptions } from "~/api/account/queries";
 import { getApiInfoQueryOptions } from "~/api/info/queries";
+import { useQuit } from "~/api/quit/mutations";
 import { KlosetDescription } from "~/components/kloset-description/kloset-description";
 import { NotificationsDrawer } from "~/components/notifications/drawer";
 import { NotificationsIcon } from "~/components/notifications/icon";
+import { QuitDialog } from "~/components/quit/quit-dialog";
+import { StoppedScreen } from "~/components/quit/stopped-screen";
 import { useApi } from "~/hooks/use-api";
 import { useNotificationToast } from "~/hooks/use-notification-toast";
 
 type LayoutProps = PropsWithChildren<{
   repository: string;
   version: EnrichedVersion;
+  canQuit?: boolean;
 }>;
 
-export function Layout({ repository, version, children }: LayoutProps) {
+export function Layout({
+  repository,
+  version,
+  canQuit = false,
+  children,
+}: LayoutProps) {
+  const quit = useQuit();
+  const [isQuitDialogOpen, setIsQuitDialogOpen] = useState(false);
+
+  // Unmount everything: the queries would poll a dead server.
+  if (quit.isSuccess) {
+    return <StoppedScreen />;
+  }
+
+  return (
+    <>
+      <Shell
+        repository={repository}
+        version={version}
+        onQuit={canQuit ? () => setIsQuitDialogOpen(true) : undefined}
+      >
+        {children}
+      </Shell>
+
+      <QuitDialog
+        isOpen={isQuitDialogOpen}
+        onOpenChange={setIsQuitDialogOpen}
+        onConfirm={() => quit.mutate()}
+        isPending={quit.isPending}
+        error={quit.error?.message}
+      />
+    </>
+  );
+}
+
+type ShellProps = PropsWithChildren<{
+  repository: string;
+  version: EnrichedVersion;
+  onQuit?: () => void;
+}>;
+
+function Shell({ repository, version, onQuit, children }: ShellProps) {
   const [open, setOpen] = useState(false);
 
   useApi();
@@ -71,6 +116,7 @@ export function Layout({ repository, version, children }: LayoutProps) {
         }
         footer={<KlosetDescription />}
         isDemo={demo_mode}
+        onQuit={onQuit}
       >
         {children}
       </CommonLayout>

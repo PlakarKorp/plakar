@@ -19,6 +19,7 @@ type HeaderProps = Pick<
   | "footer"
   | "logo"
   | "isOffline"
+  | "onQuit"
 >;
 
 export function Header(contentProps: HeaderProps) {

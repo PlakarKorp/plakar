@@ -141,6 +141,7 @@ export const IconTypes = [
   "plug-circle-xmark",
   "plus",
   "postgresql",
+  "power-off",
   "proxmox",
   "puzzle-piece",
   "recycle",

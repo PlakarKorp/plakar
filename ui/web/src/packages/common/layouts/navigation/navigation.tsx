@@ -19,6 +19,7 @@ export type NavigationProps = Pick<
   | "footer"
   | "logo"
   | "isOffline"
+  | "onQuit"
 >;
 
 export function Navigation(contentProps: NavigationProps) {
