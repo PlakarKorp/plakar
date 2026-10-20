@@ -626,7 +626,7 @@ export function FilesBrowser({
                 )}
 
                 <div className="flex flex-col gap-3">
-                  <div className="border-secondary flex flex-col gap-2 md:flex-row md:items-end md:justify-between md:gap-3 md:border-b">
+                  <div className="border-secondary flex flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-3 md:border-b">
                     <ViewSwitcher
                       className="border-secondary border-b md:border-b-0"
                       view={activeView}
@@ -640,7 +640,7 @@ export function FilesBrowser({
                       }
                       onChange={changeView}
                     />
-                    <div className="flex items-center justify-between gap-2 md:justify-end md:pb-1">
+                    <div className="flex items-center justify-between gap-2 md:justify-end">
                       {!isListView && activeView !== "music" && (
                         <SegmentedControl
                           ariaLabel="Thumbnail size"
