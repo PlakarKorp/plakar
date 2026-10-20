@@ -112,6 +112,27 @@ export const DisabledTab: Story = {
   },
 };
 
+// Laid out in a narrow flex row, as on mobile: the tabs must scroll inside it.
+export const Overflowing: Story = {
+  args: {
+    ariaLabel: "List of items",
+    variant: "underlined",
+    items: Array.from({ length: 10 }, (_, index) => ({
+      id: `label-${index + 1}`,
+      title: `Label ${index + 1}`,
+      icon: "bars",
+      tag: String(index * 4),
+    })),
+  },
+  decorators: [
+    (Story) => (
+      <div className="flex w-80 outline outline-dashed">
+        <Story />
+      </div>
+    ),
+  ],
+};
+
 const FIXED_TABS: TabItem[] = [
   { id: "manual", title: "Manual scheduler" },
   { id: "policy", title: "Policy scheduler" },
