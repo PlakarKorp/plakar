@@ -221,7 +221,8 @@ export function Timeline({
             altText={item.alt}
             onAction={item.onAction}
             className={clsx(
-              variant === "default" && "mb-2 rounded-xl border p-4",
+              variant === "default" &&
+                "mb-2 rounded-xl border p-4 has-[button:hover]:bg-transparent",
               item.className
             )}
             // @ts-expect-error: closeOnSelect isn't a valid prop for Menu.Item

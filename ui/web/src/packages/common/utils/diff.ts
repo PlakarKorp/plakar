@@ -5,28 +5,38 @@ export type DiffLine =
 
 /**
  * Diffs two lists of lines with Myers' algorithm, returning every line with
- * its 1-based line number in the old (a) and new (b) version.
+ * its 1-based line number in the old (a) and new (b) version, or null past
+ * `maxEdits` inserted and deleted lines.
  */
-export function diffLines(a: string[], b: string[]): DiffLine[] {
+export function diffLines(
+  a: string[],
+  b: string[],
+  maxEdits = 2000
+): DiffLine[] | null {
   const n = a.length;
   const m = b.length;
   const max = n + m;
-  const v = new Int32Array(2 * max + 2);
+  // Diagonals -max-1 to max+1, with diagonal k at index o + k.
+  const o = max + 1;
+  const v = new Int32Array(2 * max + 3);
+  // Step d only reads diagonals -d-1 to d+1 of the step before: keeping just
+  // those makes the trace grow with the edits, not with the file sizes.
   const trace: Int32Array[] = [];
 
   search: for (let d = 0; d <= max; d++) {
-    trace.push(v.slice());
+    if (d > maxEdits) return null;
+    trace.push(v.slice(o - d - 1, o + d + 2));
     for (let k = -d; k <= d; k += 2) {
       let x =
-        k === -d || (k !== d && v[max + k - 1] < v[max + k + 1])
-          ? v[max + k + 1]
-          : v[max + k - 1] + 1;
+        k === -d || (k !== d && v[o + k - 1] < v[o + k + 1])
+          ? v[o + k + 1]
+          : v[o + k - 1] + 1;
       let y = x - k;
       while (x < n && y < m && a[x] === b[y]) {
         x++;
         y++;
       }
-      v[max + k] = x;
+      v[o + k] = x;
       if (x >= n && y >= m) break search;
     }
   }
@@ -37,12 +47,11 @@ export function diffLines(a: string[], b: string[]): DiffLine[] {
   let y = m;
   for (let d = trace.length - 1; d >= 0; d--) {
     const vd = trace[d];
+    const at = (diagonal: number) => vd[diagonal + d + 1];
     const k = x - y;
     const prevK =
-      k === -d || (k !== d && vd[max + k - 1] < vd[max + k + 1])
-        ? k + 1
-        : k - 1;
-    const prevX = vd[max + prevK];
+      k === -d || (k !== d && at(k - 1) < at(k + 1)) ? k + 1 : k - 1;
+    const prevX = at(prevK);
     const prevY = prevX - prevK;
     while (x > prevX && y > prevY) {
       out.push({ op: "equal", text: a[x - 1], a: x, b: y });

@@ -12,6 +12,7 @@ import { diffHunks, diffLines } from "@plakar-ui/common/utils";
 // Diffs run in the browser: past these, the side-by-side cost stops paying.
 const MAX_BYTES = 1024 * 1024;
 const MAX_LINES = 5000;
+const MAX_CHANGES = 2000;
 
 export type DiffSide = {
   snapshot: string;
@@ -55,7 +56,10 @@ export function TextDiff({ source, before, after }: TextDiffProps) {
     if (linesA.length > MAX_LINES || linesB.length > MAX_LINES) {
       return { kind: "too-long" as const };
     }
-    const lines = diffLines(linesA, linesB);
+    const lines = diffLines(linesA, linesB, MAX_CHANGES);
+    if (!lines) {
+      return { kind: "too-many-changes" as const };
+    }
     return {
       kind: "diff" as const,
       added: lines.filter((l) => l.op === "insert").length,
@@ -99,6 +103,13 @@ export function TextDiff({ source, before, after }: TextDiffProps) {
     return (
       <Alert variant="default" title="Too many lines to diff here">
         Diffs are limited to {MAX_LINES} lines per version.
+      </Alert>
+    );
+  }
+  if (result.kind === "too-many-changes") {
+    return (
+      <Alert variant="default" title="Too many changes to diff here">
+        Diffs are limited to {MAX_CHANGES} added and removed lines.
       </Alert>
     );
   }

@@ -5,7 +5,7 @@ import { diffHunks, diffLines } from "./diff";
 describe("diffLines", () => {
   it("returns only equal lines for identical inputs", () => {
     const lines = diffLines(["a", "b"], ["a", "b"]);
-    expect(lines.map((l) => l.op)).toEqual(["equal", "equal"]);
+    expect(lines?.map((l) => l.op)).toEqual(["equal", "equal"]);
   });
 
   it("finds insertions and deletions with their line numbers", () => {
@@ -16,6 +16,11 @@ describe("diffLines", () => {
       { op: "equal", text: "c", a: 3, b: 3 },
       { op: "insert", text: "d", b: 4 },
     ]);
+  });
+
+  it("gives up past the edit limit", () => {
+    expect(diffLines(["a", "b", "c"], ["x", "y", "z"], 5)).toBeNull();
+    expect(diffLines(["a", "b", "c"], ["x", "y", "z"], 6)).toHaveLength(6);
   });
 
   it("handles empty sides", () => {
@@ -29,7 +34,7 @@ describe("diffHunks", () => {
     const a = Array.from({ length: 20 }, (_, i) => `line ${i}`);
     const b = [...a];
     b[10] = "changed";
-    const hunks = diffHunks(diffLines(a, b), 2);
+    const hunks = diffHunks(diffLines(a, b) ?? [], 2);
     expect(hunks[0]).toEqual({ op: "skip", count: 8 });
     expect(hunks.at(-1)).toEqual({ op: "skip", count: 7 });
     expect(hunks.filter((h) => h.op !== "skip")).toHaveLength(6);
