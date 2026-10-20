@@ -126,6 +126,8 @@ function Component() {
           path,
           page: 0,
           view: undefined,
+          filename: undefined,
+          mime: undefined,
         }),
       }),
     [navigate, params.snapshotId]
@@ -178,6 +180,7 @@ function Component() {
           view,
           page: 0,
           preview: "",
+          mime: undefined,
         }),
       }),
     [navigate]

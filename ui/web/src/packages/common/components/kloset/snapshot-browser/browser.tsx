@@ -207,9 +207,11 @@ export function FilesBrowser({
 
   const activeView =
     explicitView ??
-    (hasFilters
-      ? suggestBrowseViewForEntries(query.data?.items ?? [])
-      : queryView);
+    (filters.mime
+      ? "all"
+      : hasFilters
+        ? suggestBrowseViewForEntries(query.data?.items ?? [])
+        : queryView);
   const isAutoView = explicitView === undefined;
   const viewDef = getBrowseView(activeView);
   const isListView = activeView === "all" && layout === "list";

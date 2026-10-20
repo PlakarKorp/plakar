@@ -2,6 +2,18 @@ import { Checksum, Path } from "@plakar-ui/common/api/enrich";
 import { Breadcrumbs } from "@plakar-ui/common/components";
 import { CopyButton } from "@plakar-ui/ui/components";
 
+function browseSearchFor(path: string) {
+  return <T extends object>(prev: T) => ({
+    ...prev,
+    path,
+    page: 0,
+    preview: undefined,
+    view: undefined,
+    filename: undefined,
+    mime: undefined,
+  });
+}
+
 export function breadcrumbsForSource(
   identifier: ReturnType<typeof Checksum>,
   source: number,
@@ -17,12 +29,7 @@ export function breadcrumbsForSource(
       key="identifier"
       to="/snapshots/$snapshotId/$source/browse"
       params={{ snapshotId: identifier.Value, source }}
-      search={(prev) => ({
-        ...prev,
-        preview: undefined,
-        path: `${scannedDirectory.Value}/`,
-        page: 0,
-      })}
+      search={browseSearchFor(`${scannedDirectory.Value}/`)}
       monospace
     >
       <div className="flex items-center gap-1">
@@ -56,12 +63,7 @@ export function breadcrumbsForPath(
         key="scannedDirectory"
         to="/snapshots/$snapshotId/$source/browse"
         params={{ snapshotId: identifier.Value, source }}
-        search={(prev) => ({
-          ...prev,
-          preview: undefined,
-          path: `${scannedDirectory.Value}/`,
-          page: 0,
-        })}
+        search={browseSearchFor(`${scannedDirectory.Value}/`)}
       >
         {scannedDirectory.toHumanString()}
       </Breadcrumbs.Crumb>
@@ -72,12 +74,7 @@ export function breadcrumbsForPath(
         key="scannedDirectory"
         to="/snapshots/$snapshotId/$source/browse"
         params={{ snapshotId: identifier.Value, source }}
-        search={(prev) => ({
-          ...prev,
-          preview: undefined,
-          path: "/",
-          page: 0,
-        })}
+        search={browseSearchFor("/")}
       >
         /
       </Breadcrumbs.Crumb>
@@ -92,12 +89,9 @@ export function breadcrumbsForPath(
         key={`path-part-${idx}`}
         to="/snapshots/$snapshotId/$source/browse"
         params={{ snapshotId: identifier.Value, source }}
-        search={(prev) => ({
-          ...prev,
-          preview: undefined,
-          path: `${scannedDirectory.Value}/${rest.slice(0, idx + 1).join("/")}`,
-          page: 0,
-        })}
+        search={browseSearchFor(
+          `${scannedDirectory.Value}/${rest.slice(0, idx + 1).join("/")}`
+        )}
       >
         {part}
       </Breadcrumbs.Crumb>
