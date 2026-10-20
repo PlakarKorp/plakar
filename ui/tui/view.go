@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/dustin/go-humanize"
 	"github.com/muesli/termenv"
 )
@@ -384,12 +385,16 @@ func (m appModel) termWidth() int {
 // narrow reports terminals below 80 columns, where labels and suffixes shrink.
 func (m appModel) narrow() bool { return m.termWidth() < 80 }
 
-// clampLine truncates a line so its visible width never exceeds w.
+// clampLine truncates a line from the left so it fits in w columns, without
+// cutting an escape sequence in half.
 func clampLine(s string, w int) string {
 	if w <= 0 || lipgloss.Width(s) <= w {
 		return s
 	}
-	return truncateLeft(s, w)
+	if w <= 3 {
+		return strings.Repeat(".", w)
+	}
+	return ansi.TruncateLeft(s, lipgloss.Width(s)-w+3, "...")
 }
 
 func (m appModel) View() string {
