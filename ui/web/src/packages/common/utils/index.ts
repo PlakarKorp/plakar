@@ -5,3 +5,4 @@ export * from "./localstorage";
 export * from "./pagination";
 export * from "./size";
 export * from "./slug";
+export * from "./diff";
