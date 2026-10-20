@@ -1,7 +1,7 @@
 import std_path from "path";
 import z from "zod";
 
-import { Checksum, Date, Mode, Path, Size } from "../enrich";
+import { Checksum, Date, Duration, Mode, Path, Size } from "../enrich";
 import { PaginationParams } from "../pagination";
 
 export const ReadFileParamsSchema = z.object({
@@ -222,20 +222,12 @@ const SourceSchema = z.object({
   summary: SummarySchema,
 });
 
-const DurationSchema = z.number().transform((duration) => ({
-  ns: duration,
-  ms: Math.floor(duration / 1e6),
-  seconds: Math.floor(duration / 1e9),
-  minutes: Math.floor(duration / (60 * 1e9)),
-  hours: Math.floor(duration / (60 * 60 * 1e9)),
-}));
-
 export const SnapshotSchema = z
   .object({
     version: VersionSchema,
     identifier: z.string().transform(Checksum),
     timestamp: z.string().transform(Date),
-    duration: DurationSchema,
+    duration: z.number().transform(Duration),
     identity: IdentitySchema,
     name: z.string(),
     category: z.string(),

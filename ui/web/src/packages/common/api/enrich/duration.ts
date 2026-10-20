@@ -26,7 +26,7 @@ export function Duration(value: number) {
       if (duration.hours) parts.push(`${duration.hours}h`);
       if (duration.minutes) parts.push(`${duration.minutes}m`);
       if (duration.seconds) parts.push(`${duration.seconds}s`);
-      return parts.length > 0 ? parts.join("") : "<1s";
+      return parts.length > 0 ? parts.join(" ") : "<1s";
     },
     // Called by JSON.stringify to convert the object back to a string
     toJSON() {

@@ -106,6 +106,22 @@ function Component() {
         );
       },
     }),
+    columnHelper.accessor("duration", {
+      header: () => "Duration",
+      cell: (info) => {
+        const duration = info.getValue();
+        return (
+          <div className="flex flex-col gap-1 whitespace-nowrap">
+            <Typography variant="body" size="md" className="text-primary">
+              {duration.toShortString()}
+            </Typography>
+            <Typography variant="body" size="sm" className="text-secondary">
+              Duration
+            </Typography>
+          </div>
+        );
+      },
+    }),
     columnHelper.display({
       id: "importer-type",
       header: () => "Source",
