@@ -33,7 +33,13 @@ const SORTS = [
   { id: "name", label: "Name" },
 ];
 
-function FilterPanelDemo({ withFooter }: { withFooter: boolean }) {
+function FilterPanelDemo({
+  withFooter,
+  searchOnly,
+}: {
+  withFooter: boolean;
+  searchOnly?: boolean;
+}) {
   const [search, setSearch] = useState("");
   const [protection, setProtection] = useState("all");
   const [resourceClass, setResourceClass] = useState("all");
@@ -42,14 +48,22 @@ function FilterPanelDemo({ withFooter }: { withFooter: boolean }) {
   const isFiltered =
     !!search || protection !== "all" || resourceClass !== "all";
 
+  const searchField = (
+    <FilterPanel.Search
+      value={search}
+      onSearch={setSearch}
+      placeholder="Search by name or URN…"
+      aria-label="Search resources"
+    />
+  );
+
+  if (searchOnly) {
+    return <FilterPanel>{searchField}</FilterPanel>;
+  }
+
   return (
     <FilterPanel>
-      <FilterPanel.Search
-        value={search}
-        onSearch={setSearch}
-        placeholder="Search by name or URN…"
-        aria-label="Search resources"
-      />
+      {searchField}
       <FilterPanel.Groups>
         <FilterPanel.Group label="Protection">
           <SegmentedControl
@@ -126,5 +140,12 @@ export const Default: Story = {};
 export const WithoutFooter: Story = {
   args: {
     withFooter: false,
+  },
+};
+
+export const SearchOnly: Story = {
+  args: {
+    withFooter: false,
+    searchOnly: true,
   },
 };

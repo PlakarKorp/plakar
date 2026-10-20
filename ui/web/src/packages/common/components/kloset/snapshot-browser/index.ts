@@ -4,7 +4,6 @@ export * from "./details";
 export * from "./details-panel";
 export * from "./directory-preview";
 export * from "./file-summary";
-export * from "./filters";
 export * from "./main-title";
 export * from "./mime-filters";
 export * from "./selected-list";

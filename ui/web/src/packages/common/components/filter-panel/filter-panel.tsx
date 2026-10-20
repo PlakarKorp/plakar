@@ -71,7 +71,7 @@ function FilterPanelSearch({
       value={search.value}
       onChange={search.change}
       onClear={search.clear}
-      className="border-secondary flex items-center gap-3 border-b px-4 has-data-focused:shadow-[inset_0_-2px_0_var(--border-color-accent)]"
+      className="border-secondary flex items-center gap-3 border-b px-4 last:rounded-b-xl last:border-b-0 has-data-focused:shadow-[inset_0_-2px_0_var(--border-color-accent)]"
     >
       <Icon type="magnifying-glass" size="md" className="text-tertiary" />
       <Input
