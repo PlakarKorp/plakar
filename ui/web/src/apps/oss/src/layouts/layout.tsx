@@ -35,6 +35,13 @@ export function Layout({
   const quit = useQuit();
   const [isQuitDialogOpen, setIsQuitDialogOpen] = useState(false);
 
+  const handleQuitDialogOpenChange = (isOpen: boolean) => {
+    setIsQuitDialogOpen(isOpen);
+    if (!isOpen) {
+      quit.reset();
+    }
+  };
+
   // Unmount everything: the queries would poll a dead server.
   if (quit.isSuccess) {
     return <StoppedScreen />;
@@ -52,7 +59,7 @@ export function Layout({
 
       <QuitDialog
         isOpen={isQuitDialogOpen}
-        onOpenChange={setIsQuitDialogOpen}
+        onOpenChange={handleQuitDialogOpenChange}
         onConfirm={() => quit.mutate()}
         isPending={quit.isPending}
         error={quit.error?.message}

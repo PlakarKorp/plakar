@@ -17,7 +17,7 @@ export function QuitDialog({
 }: QuitDialogProps) {
   return (
     <Modal
-      isDismissable
+      isDismissable={!isPending}
       isOpen={isOpen}
       onOpenChange={onOpenChange}
       aria-label="Quit Plakar?"
@@ -25,12 +25,12 @@ export function QuitDialog({
       <Modal.Dialog className="max-w-md">
         <Modal.Header
           title="Quit Plakar?"
-          description="This stops the plakar process serving this page."
+          description="This stops the Plakar process serving this page."
         />
         <Modal.Content className="flex flex-col gap-4">
           <Typography size="sm" className="text-secondary">
-            This page stops working for everyone using it. Your repository is
-            not affected: run <code>plakar ui</code> again to come back.
+            Anyone using this page loses access until Plakar is started again.
+            Your repository and restore points are not affected.
           </Typography>
 
           {error && (
@@ -45,10 +45,10 @@ export function QuitDialog({
             onPress={() => onOpenChange(false)}
             isDisabled={isPending}
           >
-            Stay
+            Cancel
           </Button>
           <Button
-            variant="primary"
+            variant="error"
             leftIcon="power-off"
             onPress={onConfirm}
             isPending={isPending}

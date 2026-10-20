@@ -11,8 +11,12 @@ export function StoppedScreen() {
         />
         <Card.Content padding="lg">
           <Typography size="sm" className="text-secondary">
-            You can close this tab. To open the UI again, run{" "}
-            <code>plakar ui</code> or start it the way you did before.
+            You can close this tab. To open the UI again, start Plakar the way
+            you did before, for example with{" "}
+            <Typography as="code" size="sm" monospace>
+              plakar ui
+            </Typography>
+            .
           </Typography>
         </Card.Content>
       </Card>
