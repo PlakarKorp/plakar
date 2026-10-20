@@ -19,6 +19,8 @@ export function breadcrumbsForSource(
   source: number,
   scannedDirectory: ReturnType<typeof Path>
 ) {
+  // A source scanned from "/" would otherwise link to "//".
+  const base = scannedDirectory.Value.replace(/\/+$/, "");
   const crumbs = [
     // Link to snapshots list
     <Breadcrumbs.Crumb key="snapshots" to="/snapshots">
@@ -29,7 +31,7 @@ export function breadcrumbsForSource(
       key="identifier"
       to="/snapshots/$snapshotId/$source/browse"
       params={{ snapshotId: identifier.Value, source }}
-      search={browseSearchFor(`${scannedDirectory.Value}/`)}
+      search={browseSearchFor(`${base}/`)}
       monospace
     >
       <div className="flex items-center gap-1">
@@ -54,6 +56,8 @@ export function breadcrumbsForPath(
 ) {
   let breadcrumbPath = path;
   const crumbs = [];
+  // A source scanned from "/" would otherwise link to "//".
+  const base = scannedDirectory.Value.replace(/\/+$/, "");
 
   if (scannedDirectory.Value && path.startsWith(scannedDirectory.Value)) {
     breadcrumbPath = breadcrumbPath.slice(scannedDirectory.Value.length);
@@ -63,7 +67,7 @@ export function breadcrumbsForPath(
         key="scannedDirectory"
         to="/snapshots/$snapshotId/$source/browse"
         params={{ snapshotId: identifier.Value, source }}
-        search={browseSearchFor(`${scannedDirectory.Value}/`)}
+        search={browseSearchFor(`${base}/`)}
       >
         {scannedDirectory.toHumanString()}
       </Breadcrumbs.Crumb>
@@ -89,9 +93,7 @@ export function breadcrumbsForPath(
         key={`path-part-${idx}`}
         to="/snapshots/$snapshotId/$source/browse"
         params={{ snapshotId: identifier.Value, source }}
-        search={browseSearchFor(
-          `${scannedDirectory.Value}/${rest.slice(0, idx + 1).join("/")}`
-        )}
+        search={browseSearchFor(`${base}/${rest.slice(0, idx + 1).join("/")}`)}
       >
         {part}
       </Breadcrumbs.Crumb>
