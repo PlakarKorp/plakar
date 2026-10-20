@@ -1,0 +1,5 @@
+# Used in place of the repository's .dockerignore when Docker builds .oss-scanner/Dockerfile: the
+# scanner's image needs testing/ and unittests/, which the release image leaves out.
+.git
+/plakar
+dist/
