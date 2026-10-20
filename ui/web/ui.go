@@ -17,6 +17,7 @@
 package web
 
 import (
+	"context"
 	"embed"
 	"errors"
 	"fmt"
@@ -25,6 +26,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"time"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/api"
@@ -41,6 +43,9 @@ type UiOptions struct {
 	Key            string
 	NoRefresh      bool
 }
+
+// Short: browsers hold unused connections, counted as in flight for 5s.
+const shutdownTimeout = time.Second
 
 //go:embed all:build/*
 var content embed.FS
@@ -99,15 +104,28 @@ func Ui(repo *repository.Repository, ctx *appcontext.AppContext, addr string, op
 	}
 
 	s := &http.Server{Addr: addr, Handler: handler}
+	errc := make(chan error, 1)
 	go func() {
-		<-repo.AppContext().Done()
-		s.Shutdown(repo.AppContext().Context)
+		if protocol == "https" {
+			errc <- s.ListenAndServeTLS(opts.Cert, opts.Key)
+		} else {
+			errc <- s.ListenAndServe()
+		}
 	}()
 
-	if protocol == "https" {
-		return s.ListenAndServeTLS(opts.Cert, opts.Key)
+	select {
+	case err := <-errc:
+		return err
+	case <-repo.AppContext().Done():
 	}
-	return s.ListenAndServe()
+
+	sctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancel()
+	if err := s.Shutdown(sctx); err != nil {
+		_ = s.Close()
+	}
+	<-errc
+	return nil
 }
 
 // staticHandler serves the UI built in content's build/ directory, or the

@@ -38,6 +38,7 @@ export type ContentProps = {
   /** Logo of the product, defaults to the Plakar logo. */
   logo?: ComponentType<{ variant: LogoVariant; className?: string }>;
   isOffline?: boolean;
+  onQuit?: () => void;
   onCloseMenu?: () => void;
   handleToggle?: () => void;
   onPopoverOpenChange?: (isOpen: boolean) => void;
@@ -63,6 +64,7 @@ export function Content({
   footer,
   logo: ProductLogo = Logo,
   isOffline = false,
+  onQuit,
   handleToggle,
   onCloseMenu,
   onPopoverOpenChange,
@@ -158,6 +160,16 @@ export function Content({
                   href={login?.href}
                   onAction={onCloseMenu}
                   isSelected={login?.isSelected}
+                />
+              )}
+              {onQuit && (
+                <NavList.Item
+                  icon="power-off"
+                  label="Quit"
+                  onAction={() => {
+                    onCloseMenu?.();
+                    onQuit();
+                  }}
                 />
               )}
             </NavList>

@@ -18,7 +18,11 @@ function LayoutRoute() {
   const apiInfo = Route.useLoaderData();
 
   return (
-    <Layout repository={apiInfo.repository_id} version={apiInfo.version}>
+    <Layout
+      repository={apiInfo.repository_id}
+      version={apiInfo.version}
+      canQuit={!apiInfo.demo_mode}
+    >
       <Outlet />
     </Layout>
   );

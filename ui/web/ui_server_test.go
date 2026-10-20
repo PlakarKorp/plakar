@@ -86,3 +86,41 @@ func TestUiCorsAndRandomPort(t *testing.T) {
 		t.Fatal("Ui did not return after cancellation")
 	}
 }
+
+func TestUiQuitStopsServer(t *testing.T) {
+	repo, ctx := ptesting.GenerateRepository(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil), nil)
+
+	addr := freePort(t)
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- Ui(repo, ctx, addr, &UiOptions{NoSpawn: true, NoRefresh: true, Token: "tok"})
+	}()
+
+	base := "http://" + addr
+	var reached bool
+	for waited := time.Duration(0); waited < 3*time.Second; waited += 25 * time.Millisecond {
+		if resp, err := http.Get(base + "/"); err == nil {
+			_ = resp.Body.Close()
+			reached = true
+			break
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
+	require.True(t, reached, "server never became reachable")
+
+	req, err := http.NewRequest("POST", base+"/api/quit", nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer tok")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	_ = resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	select {
+	case err := <-errCh:
+		require.NoError(t, err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("Ui did not return after /api/quit")
+	}
+	require.Error(t, ctx.Err())
+}
