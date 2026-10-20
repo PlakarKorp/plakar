@@ -199,10 +199,19 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 	peerCtx.SetSecret(cmd.PeerRepositorySecret)
 	peerCtx.StoreConfig = storeConfig
 
-	// The peer context owns a separate events bus, so its progress would never
-	// reach the renderer listening on ctx. Forward it onto ctx's bus for a
-	// unified stream; the pump ends when the peer bus closes.
-	go peerCtx.Events().Forward(ctx.Events())
+	// The peer context has its own events bus, forward its events to the bus
+	// the renderer listens on. Listen before starting the goroutine so no
+	// early event is lost, and keep ctx's bus now because ctx is replaced
+	// below for the "from" direction. Closing the peer context stops the
+	// goroutine.
+	defer peerCtx.Close()
+	peerEvents := peerCtx.Events().Listen()
+	primaryEvents := ctx.Events()
+	go func() {
+		for e := range peerEvents {
+			primaryEvents.Publish(e)
+		}
+	}()
 
 	peerRepository, err := repository.NewNoRebuild(peerCtx.GetInner(), peerCtx.GetSecret(), peerStore, peerStoreSerializedConfig, true)
 	if err != nil {
@@ -306,7 +315,6 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 		}
 	}
 
-	srcSynced := 0
 	failed := 0
 	for _, snapshotID := range srcSyncList {
 		if err := ctx.Err(); err != nil {
@@ -317,8 +325,6 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 			ctx.GetLogger().Error("failed to synchronize snapshot %x from store %s: %s",
 				snapshotID[:4], srcLocation, err)
 			failed++
-		} else {
-			srcSynced++
 		}
 	}
 
@@ -344,7 +350,6 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 			}
 		}
 
-		dstSynced := 0
 		for _, snapshotID := range dstSyncList {
 			if err := ctx.Err(); err != nil {
 				return 1, err
@@ -354,8 +359,6 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 				ctx.GetLogger().Error("failed to synchronize snapshot %x from peer store %s: %s",
 					snapshotID[:4], dstLocation, err)
 				failed++
-			} else {
-				dstSynced++
 			}
 		}
 	}

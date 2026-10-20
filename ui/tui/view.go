@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/dustin/go-humanize"
 	"github.com/muesli/termenv"
 )
@@ -337,12 +338,10 @@ func (m appModel) ioSummary() (ioSummary, bool) {
 			readTotal: m.repo.IOStats().Read.TotalBytes(), writeTotal: w,
 		}, true
 	case "synchronize":
-		// The TUI holds only one repository; totals come from the sampled
-		// scopes: "source-storage" (reads) and "storage" (peer writes).
-		st := m.application.state.scopeTotals
+		st := m.application.state
 		return ioSummary{
 			readLabel: "source", writeLabel: "peer",
-			readTotal: st["source-storage"].read, writeTotal: st["storage"].write,
+			readTotal: st.sourceRead, writeTotal: st.storeWrite,
 		}, true
 	case "check":
 		return ioSummary{
@@ -386,12 +385,16 @@ func (m appModel) termWidth() int {
 // narrow reports terminals below 80 columns, where labels and suffixes shrink.
 func (m appModel) narrow() bool { return m.termWidth() < 80 }
 
-// clampLine truncates a line so its visible width never exceeds w.
+// clampLine truncates a line from the left so it fits in w columns, without
+// cutting an escape sequence in half.
 func clampLine(s string, w int) string {
 	if w <= 0 || lipgloss.Width(s) <= w {
 		return s
 	}
-	return truncateLeft(s, w)
+	if w <= 3 {
+		return strings.Repeat(".", w)
+	}
+	return ansi.TruncateLeft(s, lipgloss.Width(s)-w+3, "...")
 }
 
 func (m appModel) View() string {
