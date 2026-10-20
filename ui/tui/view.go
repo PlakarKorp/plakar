@@ -337,12 +337,10 @@ func (m appModel) ioSummary() (ioSummary, bool) {
 			readTotal: m.repo.IOStats().Read.TotalBytes(), writeTotal: w,
 		}, true
 	case "synchronize":
-		// The TUI holds only one repository; totals come from the sampled
-		// scopes: "source-storage" (reads) and "storage" (peer writes).
-		st := m.application.state.scopeTotals
+		st := m.application.state
 		return ioSummary{
 			readLabel: "source", writeLabel: "peer",
-			readTotal: st["source-storage"].read, writeTotal: st["storage"].write,
+			readTotal: st.sourceRead, writeTotal: st.storeWrite,
 		}, true
 	case "check":
 		return ioSummary{

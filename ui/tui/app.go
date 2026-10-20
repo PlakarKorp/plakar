@@ -106,18 +106,16 @@ type State struct {
 	readRates  rateSampler
 	writeRates rateSampler
 
-	// scopeTotals holds cumulative read/write bytes per iostat scope. Sync copies
-	// store→store but the TUI holds only one repository, so it reads both sides'
-	// totals from these sampled scopes ("source-storage" read, "storage" write).
-	scopeTotals map[string]ioTotals
+	// Sync I/O totals, taken from the "source-storage" and "storage" iostat
+	// scopes. Plain fields rather than a map, because the events goroutine
+	// writes them while View() reads them.
+	sourceRead int64
+	storeWrite int64
 
 	lastItem string
 	errors   []string
 	logs     []string
 }
-
-// ioTotals is the cumulative read/write bytes reported for one iostat scope.
-type ioTotals struct{ read, write int64 }
 
 // rateSampler keeps a bounded history of wall-clock throughput samples
 // (bytes/sec), one per fixed interval, from successive cumulative totals.
@@ -235,12 +233,9 @@ func (s *State) sampleIO(readTotal, writeTotal int64, now time.Time) (read, writ
 	return activity(s.hasRead, s.readMovedAt), activity(s.hasWrite, s.writeMovedAt)
 }
 
-// recordIOStats stores the cumulative totals for a sampled iostat scope.
+// recordIOStats stores the I/O totals shown by sync.
 func (s *State) recordIOStats(e Event) {
 	scope, _ := e.Data["scope"].(string)
-	if scope == "" {
-		return
-	}
 	total := func(dir string) int64 {
 		m, ok := e.Data[dir].(map[string]any)
 		if !ok {
@@ -256,10 +251,12 @@ func (s *State) recordIOStats(e Event) {
 		}
 		return 0
 	}
-	if s.scopeTotals == nil {
-		s.scopeTotals = make(map[string]ioTotals)
+	switch scope {
+	case "source-storage":
+		s.sourceRead = total("r")
+	case "storage":
+		s.storeWrite = total("w")
 	}
-	s.scopeTotals[scope] = ioTotals{read: total("r"), write: total("w")}
 }
 
 // processedBytes returns the logical payload handled so far, measured against
