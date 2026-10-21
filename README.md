@@ -109,7 +109,7 @@ plakar pkg add <integration>
 plakar at /var/backups sync to @s3
 ```
 
-**Scheduled backups.** Plakar runs only when you call it. To back up on a schedule, call it from a systemd timer or cron. See [Scheduling backups](https://www.plakar.io/docs/community/v1.1.0/guides/setup-scheduler-daily-backups/).
+**Scheduled backups.** Plakar does not run as a daemon. To back up on a schedule, run `plakar backup` from a systemd timer or cron. See [Scheduling backups](https://www.plakar.io/docs/community/v1.1.0/guides/setup-scheduler-daily-backups/).
 
 ```sh
 0 2 * * * /usr/local/bin/plakar at /var/backups backup /etc
