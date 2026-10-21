@@ -16,3 +16,10 @@ updates:
     # Matches minimumReleaseAge in ui/web/src/pnpm-workspace.yaml.
     cooldown:
       default-days: 7
+    groups:
+      codemirror:
+        patterns:
+          - "@codemirror/*"
+          - "@lezer/*"
+          - "@uiw/*codemirror*"
+          - "codemirror"
