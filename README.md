@@ -46,8 +46,8 @@ Plakar can be used from the command line or through its built-in web UI.
 ## Quickstart
 
 ```sh
-# Install
-go install github.com/PlakarKorp/plakar@latest
+# Install (macOS, Linux)
+brew install plakar
 
 # Create a local repository
 plakar at /var/backups create
@@ -65,9 +65,19 @@ plakar at /var/backups restore -to /tmp/restore <snapshot-id>
 plakar at /var/backups ui
 ```
 
-Prebuilt binaries are available at https://www.plakar.io/download. For a full walkthrough, see the [quickstart guide](https://www.plakar.io/docs/community/v1.1.0/quickstart/first-backup).
+Prebuilt binaries and a Debian/Ubuntu apt repository are also available: see [Installation](https://www.plakar.io/docs/community/v1.1.0/quickstart/installation/). For a full walkthrough, see the [quickstart guide](https://www.plakar.io/docs/community/v1.1.0/quickstart/first-backup).
 
 ## Installation
+
+### Homebrew
+
+```sh
+brew install plakar
+```
+
+### Debian and Ubuntu
+
+Plakar publishes an apt repository. See the [installation guide](https://www.plakar.io/docs/community/v1.1.0/quickstart/installation/) for the setup commands.
 
 ### Prebuilt binaries
 
@@ -98,6 +108,14 @@ plakar pkg add <integration>
 ```sh
 plakar at /var/backups sync to @s3
 ```
+
+**Scheduled backups.** Plakar runs only when you call it. To back up on a schedule, call it from a systemd timer or cron. See [Scheduling backups](https://www.plakar.io/docs/community/v1.1.0/guides/setup-scheduler-daily-backups/).
+
+```sh
+0 2 * * * /usr/local/bin/plakar at /var/backups backup /etc
+```
+
+**Where restored files land.** `restore -to` writes the contents of the backed-up path directly into the target directory. If the snapshot was taken from `/etc`, `plakar at /var/backups restore -to /tmp/restore <id>` gives `/tmp/restore/hosts`, not `/tmp/restore/etc/hosts`. To restore one directory or file, add its path to the snapshot ID: `<id>:/etc/ssh`.
 
 See the [documentation](https://www.plakar.io/docs/community) for the full list of supported workflows.
 
