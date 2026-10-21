@@ -161,7 +161,9 @@ function SelectRoot({
                     >
                       <SelectValue>
                         {({ selectedText }) =>
-                          selectedText || selectedFallbackOption?.item
+                          selectedText ||
+                          (selectedFallbackOption?.item ??
+                            selectedFallbackOption?.name)
                         }
                       </SelectValue>
                     </Typography>
@@ -207,7 +209,8 @@ function SelectRoot({
                     {({ defaultChildren, selectedText }) =>
                       selectedText
                         ? defaultChildren
-                        : selectedFallbackOption?.item
+                        : (selectedFallbackOption?.item ??
+                          selectedFallbackOption?.name)
                     }
                   </SelectValue>
                 </Typography>
