@@ -12,7 +12,8 @@
   "packageManager": "pnpm@10.17.1",
   "scripts": {
     "dev": "turbo run dev --ui=tui",
-    "check": "turbo run lint check-ts check-format test",
+    "check": "pnpm run check-dedupe && turbo run lint check-ts check-format test",
+    "check-dedupe": "pnpm dedupe --check",
     "check-format": "prettier --check .",
     "format": "prettier --write \"**/*.{html,ts,tsx,md,json}\"",
     "check-knip": "knip",
