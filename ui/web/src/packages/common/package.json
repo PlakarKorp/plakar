@@ -51,7 +51,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
-    "storybook": "^10.5.9",
+    "storybook": "^10.6.2",
     "vitest": "^5.0.4"
   }
 }

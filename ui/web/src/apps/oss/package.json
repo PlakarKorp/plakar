@@ -39,7 +39,7 @@
     "react-aria-components": "^1.20.0",
     "react-dom": "^19.2.8",
     "rollup-plugin-visualizer": "^7.1.1",
-    "storybook": "^10.5.9",
+    "storybook": "^10.6.2",
     "tailwindcss-react-aria-components": "^2.2.0",
     "typescript": "^5.9.3",
     "vite": "^8.3.4",

@@ -45,7 +45,7 @@
     "react-syntax-highlighter": "^16.1.1",
     "recharts": "^3.10.1",
     "remark-gfm": "^4.0.1",
-    "storybook": "^10.5.9",
+    "storybook": "^10.6.2",
     "tailwindcss": "^4.3.3",
     "tailwindcss-react-aria-components": "^2.2.0",
     "typescript": "^5.9.3",
