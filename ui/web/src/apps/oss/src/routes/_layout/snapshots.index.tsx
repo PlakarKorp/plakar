@@ -17,11 +17,10 @@ import {
   Alert,
   Errors,
   ExpandableList,
-  Filters,
   IconButton,
   Id,
   Menu,
-  RemovableTags,
+  Select,
   Tag,
   Typography,
 } from "@plakar-ui/ui/components";
@@ -277,68 +276,46 @@ function ImporterTypeFilter() {
   const navigate = Route.useNavigate();
   const { api } = useKlosetAPI();
 
-  const { data, isPending, isError } = useQuery(
+  const { data, isPending } = useQuery(
     RepositoryImporterTypesQueryOptions(api, { repository: undefined })
   );
 
   const options =
     data?.items.map((entry) => ({ id: entry.name, name: entry.name })) || [];
 
-  const filters = [{ key: "importer", value: search.importer }];
-
   return (
-    <div className="flex w-full items-center justify-end gap-2">
-      <RemovableTags
-        label="Applied filters"
-        onRemove={(keys) => {
-          navigate({
-            search: (prev) => ({
-              ...prev,
-              importer: keys.has("importer") ? "" : prev.importer,
-              page: 0,
-            }),
-          });
-        }}
-      >
-        {filters.map(({ key, value }) => {
-          if (!value) return null;
-          return (
-            <RemovableTags.Item
-              key={key}
-              id={key}
-              value={
-                filters.find(({ key }) => key === search.importer)?.value ||
-                search.importer
-              }
-            />
-          );
-        })}
-      </RemovableTags>
-      <Filters
-        items={[
-          {
-            id: "importer",
-            label: "Source type",
-            options: options,
-            isInvalid:
-              !!search.importer &&
-              !options.some((o) => o.id === search.importer),
-            isDisabled: isPending || isError || options.length === 0,
-          },
-        ]}
-        defaultSelected={{
-          importer: search.importer ? [search.importer] : null,
-        }}
-        onApply={(selected) => {
-          navigate({
-            search: (prev) => ({
-              ...prev,
-              importer: selected.importer ? selected.importer[0] : "",
-              page: 0,
-            }),
-          });
-        }}
-      />
-    </div>
+    <Select
+      aria-label="Filter by source type"
+      placeholder="All source types"
+      value={search.importer || null}
+      onChange={(key) =>
+        navigate({
+          search: (prev) => ({
+            ...prev,
+            importer: key ? String(key) : "",
+            page: 0,
+          }),
+        })
+      }
+      isClearable
+      isPending={isPending}
+      // A type from the URL stays clearable even when none can be listed.
+      isDisabled={!search.importer && options.length === 0}
+      isInvalid={
+        !!search.importer &&
+        !isPending &&
+        !options.some((o) => o.id === search.importer)
+      }
+      selectedFallbackOption={
+        search.importer
+          ? { id: search.importer, name: search.importer }
+          : undefined
+      }
+      className="ml-auto min-w-60 max-sm:w-full"
+    >
+      <Select.ListBox items={options}>
+        {(item) => <Select.Item {...item} />}
+      </Select.ListBox>
+    </Select>
   );
 }
