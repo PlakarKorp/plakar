@@ -65,22 +65,6 @@ export const GetSnapshotQueryOptions = (
     staleTime: Infinity,
   });
 
-/**
- * Adapts a name filter to how the search endpoint applies it. A recursive
- * search with content types goes through kloset's content-type index, which
- * matches names as globs only, not as the substrings the plain search finds:
- * a bare word becomes *word* there so both searches find the same files.
- */
-export function searchNameFilter(
-  filename: string | undefined,
-  { indexed }: { indexed: boolean }
-) {
-  if (!filename || !indexed || /[*?[\]]/.test(filename)) {
-    return filename;
-  }
-  return `*${filename}*`;
-}
-
 export const SnapshotVFSQueryOptions = (
   api: KlosetAPI,
   {
@@ -131,11 +115,7 @@ export const SnapshotVFSQueryOptions = (
             pagination: { page, perPage },
             recursive: search.recursive ?? true,
             mimes: search.contentTypes,
-            filename: searchNameFilter(search.filename, {
-              indexed:
-                (search.recursive ?? true) &&
-                (search.contentTypes?.length ?? 0) > 0,
-            }),
+            filename: search.filename,
           }));
 
       return {
