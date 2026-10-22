@@ -11,6 +11,10 @@ type DirPreviewProps = {
   onSnapshotChange: (snapshotId: string) => void;
 };
 
+function countOf(count: number, noun: string) {
+  return `${count.toLocaleString("en-US")} ${noun}${count === 1 ? "" : "s"}`;
+}
+
 export function DirectoryPreview({
   snapshot,
   source,
@@ -21,7 +25,21 @@ export function DirectoryPreview({
     file_info: { mod_time, mode, uid, username, gid, groupname },
   } = childEntry;
 
+  const total = childEntry.summary?.Total;
+
   const items = [
+    ...(total
+      ? [
+          {
+            title: "Contents",
+            description: [
+              countOf(total.files, "file"),
+              countOf(total.directories, "folder"),
+              total.size.Pretty,
+            ].join(" · "),
+          },
+        ]
+      : []),
     {
       title: "Last modified",
       description: (

@@ -126,14 +126,14 @@ describe("browse views", () => {
     ).toEqual(new Set(["photos", "videos", "music"]));
   });
 
-  it("counts the files of the whole tree below a directory", () => {
+  it("counts media over the whole tree, and the folder's own files for all", () => {
     const counts = browseViewCounts(
       directory(
         { files: 2, MIME_audio: 2 },
         { files: 40, MIME_audio: 38, MIME_image: 2 }
       )
     );
-    expect(counts).toMatchObject({ all: 42, music: 40, photos: 2 });
+    expect(counts).toMatchObject({ all: 2, music: 40, photos: 2 });
   });
 
   it("counts the files a directory holds directly", () => {

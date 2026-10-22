@@ -85,33 +85,22 @@ export function getBrowseView(id: BrowseViewId) {
   return BROWSE_VIEWS.find((view) => view.id === id) ?? BROWSE_VIEWS[0];
 }
 
-type SummaryCount =
-  | "files"
-  | "MIME_image"
-  | "MIME_video"
-  | "MIME_audio"
-  | "MIME_text"
-  | "MIME_application";
-
-function treeCount(entry: VFSEntryType, key: SummaryCount) {
-  const summary = entry.summary;
-  return (summary?.directory[key] ?? 0) + (summary?.below[key] ?? 0);
-}
-
 /**
- * Counts the files of a directory and all its subfolders, per view, from its
- * summary. Documents are counted from text files only: the summary does not
- * tell PDFs apart from the rest of application/.
+ * Counts what each view shows: the files of the directory itself for "all",
+ * the files of the whole tree below it for the others. Documents are counted
+ * from text files only: the summary does not tell PDFs apart from the rest of
+ * application/.
  */
 export function browseViewCounts(
   entry: VFSEntryType
 ): Record<BrowseViewId, number> {
+  const summary = entry.summary;
   return {
-    all: treeCount(entry, "files"),
-    photos: treeCount(entry, "MIME_image"),
-    videos: treeCount(entry, "MIME_video"),
-    music: treeCount(entry, "MIME_audio"),
-    documents: treeCount(entry, "MIME_text"),
+    all: summary?.directory.files ?? 0,
+    photos: summary?.Total.MIME_image ?? 0,
+    videos: summary?.Total.MIME_video ?? 0,
+    music: summary?.Total.MIME_audio ?? 0,
+    documents: summary?.Total.MIME_text ?? 0,
   };
 }
 
@@ -122,8 +111,9 @@ export function browseViewCounts(
  */
 export function emptyBrowseViews(entry: VFSEntryType): Set<BrowseViewId> {
   const counts = browseViewCounts(entry);
+  const total = entry.summary?.Total;
   const mayHoldDocuments =
-    treeCount(entry, "MIME_text") + treeCount(entry, "MIME_application") > 0;
+    (total?.MIME_text ?? 0) + (total?.MIME_application ?? 0) > 0;
   return new Set(
     BROWSE_VIEW_IDS.filter((id) =>
       id === "all"
