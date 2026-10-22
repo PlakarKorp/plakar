@@ -1,6 +1,5 @@
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 
-import { MIME_FILTERS } from "../../components";
 import { APIResponseNotFoundError } from "../errors";
 import { PaginationParams } from "../pagination";
 import { KlosetAPI } from "./api";
@@ -81,7 +80,7 @@ export const SnapshotVFSQueryOptions = (
     source: number;
     vfsEntry: VFSEntryType;
     search?: {
-      contentTypes?: (typeof MIME_FILTERS)[number]["contentTypes"];
+      contentTypes?: string[];
       filename?: string;
       // Defaults to true: the filters search the whole tree below the path.
       recursive?: boolean;

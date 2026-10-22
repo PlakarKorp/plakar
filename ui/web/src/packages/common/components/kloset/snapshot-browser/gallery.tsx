@@ -1,4 +1,9 @@
-import { Checkbox, Icon, Typography } from "@plakar-ui/ui/components";
+import {
+  Checkbox,
+  Icon,
+  SegmentedControl,
+  Typography,
+} from "@plakar-ui/ui/components";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import std_path from "path";
@@ -34,6 +39,7 @@ type GalleryProps = {
   // folder they come from.
   basePath: string;
   density: GalleryDensity;
+  onDensityChange: (density: GalleryDensity) => void;
   selected: ReadonlySet<string>;
   onToggleSelected: (entry: EnrichedChildEntryType) => void;
   onOpen: (entry: EnrichedChildEntryType) => void;
@@ -51,6 +57,7 @@ export function Gallery({
   entries,
   basePath,
   density,
+  onDensityChange,
   selected,
   onToggleSelected,
   onOpen,
@@ -78,7 +85,22 @@ export function Gallery({
       )}
 
       {files.length > 0 && (
-        <GallerySection title="Files" count={files.length}>
+        <GallerySection
+          title="Files"
+          count={files.length}
+          action={
+            <SegmentedControl
+              ariaLabel="Thumbnail size"
+              items={[
+                { id: "small", label: "Small" },
+                { id: "medium", label: "Medium" },
+                { id: "large", label: "Large" },
+              ]}
+              selectedId={density}
+              onSelect={(id) => onDensityChange(id as GalleryDensity)}
+            />
+          }
+        >
           <div
             className="grid gap-3"
             style={{
@@ -108,22 +130,27 @@ export function Gallery({
 function GallerySection({
   title,
   count,
+  action,
   children,
 }: {
   title: string;
   count: number;
+  action?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <section className="flex flex-col gap-2">
-      <Typography
-        as="h3"
-        size="xs"
-        weight="semibold"
-        className="text-tertiary tracking-wide uppercase"
-      >
-        {title} · {count}
-      </Typography>
+      <div className="flex items-center justify-between gap-3">
+        <Typography
+          as="h3"
+          size="xs"
+          weight="semibold"
+          className="text-tertiary tracking-wide uppercase"
+        >
+          {title} · {count}
+        </Typography>
+        {action}
+      </div>
       {children}
     </section>
   );
