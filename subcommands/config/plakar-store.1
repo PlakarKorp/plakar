@@ -101,6 +101,14 @@ or
 .Cm https://
 location, the following additional options are available:
 .Bl -tag -width tls_no_verify
+.It Cm allow_cross_host_redirects
+Optional, set to
+.Cm true
+to follow a redirect to a different host.
+By default only redirects to the same host are followed.
+A redirect that changes the scheme,
+such as from HTTPS to HTTP,
+is always refused.
 .It Cm auth_token
 Bearer token sent in the
 .Dq Authorization
