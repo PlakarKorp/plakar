@@ -335,7 +335,7 @@ function ComparisonRow({
           {dir ? (
             <Icon type="md-folder" size="lg" className="text-accent" />
           ) : (
-            <FileIcon contentType={entry?.object?.content_type} />
+            <FileIcon contentType={entry?.contentType} />
           )}
           <Typography as="span" size="sm" className="break-all">
             {row.name}
