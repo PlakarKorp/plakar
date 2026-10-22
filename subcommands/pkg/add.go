@@ -19,6 +19,7 @@ package pkg
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -26,6 +27,7 @@ import (
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/pkg"
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/signify"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/spf13/cobra"
 )
@@ -123,11 +125,7 @@ func (cmd *PkgAdd) Execute(ctx *appcontext.AppContext, _ *repository.Repository)
 			if cmd.upgrade && errors.Is(err, pkg.ErrAlreadyInstalled) {
 				continue
 			}
-			if errors.Is(err, pkg.ErrAuthorizationRequired) {
-				return 1, fmt.Errorf("failed to install %s: authentication required. Run `plakar login` and try again", filepath.Base(plugin))
-			}
-			return 1, fmt.Errorf("failed to install %s: %w",
-				filepath.Base(plugin), err)
+			return 1, addFailure(ctx, "install", filepath.Base(plugin), err)
 		}
 	}
 
@@ -150,11 +148,54 @@ func (cmd *PkgAdd) Execute(ctx *appcontext.AppContext, _ *repository.Repository)
 				if errors.Is(err, pkg.ErrAlreadyInstalled) {
 					continue
 				}
-				return 1, fmt.Errorf("failed to update %s: %w",
-					plugin.Name, err)
+				return 1, addFailure(ctx, "update", plugin.Name, err)
 			}
 		}
 	}
 
 	return 0, nil
+}
+
+// addFailure turns an error from the package manager into a message for the
+// user. The full error, URLs included, only goes to the pkg trace.
+func addFailure(ctx *appcontext.AppContext, verb, name string, err error) error {
+	ctx.GetLogger().Trace("pkg", "add %s: %v", name, err)
+
+	if errors.Is(err, pkg.ErrAuthorizationRequired) {
+		return fmt.Errorf("failed to %s %s: authentication required. Run `plakar login` and try again", verb, name)
+	}
+
+	var ie *pkg.InstallError
+	if !errors.As(err, &ie) {
+		return fmt.Errorf("failed to %s %s: %w", verb, name, err)
+	}
+
+	what := ie.Name
+	if ie.Package != nil {
+		what += "@" + ie.Package.Version
+	}
+
+	var reason string
+	switch {
+	case errors.Is(err, pkg.ErrForbidden):
+		reason = "access denied by the package repository"
+	case errors.Is(err, pkg.ErrNotFound) && ie.Artifact == pkg.ArtifactRecipe:
+		reason = "no such package in the " + ie.Edition + " edition"
+	case errors.Is(err, pkg.ErrNotFound) && ie.Artifact == pkg.ArtifactPackage:
+		reason = fmt.Sprintf("not available for %s/%s",
+			ie.Package.OperatingSystem, ie.Package.Architecture)
+	case errors.Is(err, signify.ErrUnsigned):
+		reason = "the " + ie.Artifact.String() + " is not signed"
+	case errors.Is(err, pkg.ErrUnverified):
+		reason = "the " + ie.Artifact.String() + " does not match its signature"
+	case errors.Is(err, pkg.ErrRecipeMismatch):
+		reason = "the repository served the recipe of another package"
+	case ie.StatusCode != 0:
+		reason = fmt.Sprintf("the package repository answered %d %s while fetching the %s",
+			ie.StatusCode, http.StatusText(ie.StatusCode), ie.Artifact)
+	default:
+		reason = "could not fetch the " + ie.Artifact.String()
+	}
+
+	return fmt.Errorf("failed to %s %s: %s", verb, what, reason)
 }

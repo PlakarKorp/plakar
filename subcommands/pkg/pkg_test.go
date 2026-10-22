@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"bytes"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/PlakarKorp/kloset/logging"
 	ppkg "github.com/PlakarKorp/pkg"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
@@ -26,6 +28,7 @@ func newCtx(t *testing.T) *appcontext.AppContext {
 	ctx.Stdout = bytes.NewBuffer(nil)
 	ctx.Stderr = bytes.NewBuffer(nil)
 	ctx.CWD = t.TempDir()
+	ctx.SetLogger(logging.NewLogger(io.Discard, io.Discard))
 	return ctx
 }
 
