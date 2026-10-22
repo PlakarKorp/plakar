@@ -85,33 +85,45 @@ export function getBrowseView(id: BrowseViewId) {
   return BROWSE_VIEWS.find((view) => view.id === id) ?? BROWSE_VIEWS[0];
 }
 
+type SummaryCount =
+  | "files"
+  | "MIME_image"
+  | "MIME_video"
+  | "MIME_audio"
+  | "MIME_text"
+  | "MIME_application";
+
+function treeCount(entry: VFSEntryType, key: SummaryCount) {
+  const summary = entry.summary;
+  return (summary?.directory[key] ?? 0) + (summary?.below[key] ?? 0);
+}
+
 /**
- * Counts the files a directory holds directly, per view, from its summary.
- * Documents are counted from text files only: the summary does not tell PDFs
- * apart from the rest of application/.
+ * Counts the files of a directory and all its subfolders, per view, from its
+ * summary. Documents are counted from text files only: the summary does not
+ * tell PDFs apart from the rest of application/.
  */
 export function browseViewCounts(
   entry: VFSEntryType
 ): Record<BrowseViewId, number> {
-  const directory = entry.summary?.directory;
   return {
-    all: directory?.files ?? 0,
-    photos: directory?.MIME_image ?? 0,
-    videos: directory?.MIME_video ?? 0,
-    music: directory?.MIME_audio ?? 0,
-    documents: directory?.MIME_text ?? 0,
+    all: treeCount(entry, "files"),
+    photos: treeCount(entry, "MIME_image"),
+    videos: treeCount(entry, "MIME_video"),
+    music: treeCount(entry, "MIME_audio"),
+    documents: treeCount(entry, "MIME_text"),
   };
 }
 
 /**
- * Lists the views a directory surely has nothing for. Documents only count as
- * empty without any text or application/ file, where PDFs and JSON live.
+ * Lists the views a directory and its subfolders surely have nothing for.
+ * Documents only count as empty without any text or application/ file, where
+ * PDFs and JSON live.
  */
 export function emptyBrowseViews(entry: VFSEntryType): Set<BrowseViewId> {
-  const directory = entry.summary?.directory;
   const counts = browseViewCounts(entry);
   const mayHoldDocuments =
-    (directory?.MIME_text ?? 0) + (directory?.MIME_application ?? 0) > 0;
+    treeCount(entry, "MIME_text") + treeCount(entry, "MIME_application") > 0;
   return new Set(
     BROWSE_VIEW_IDS.filter((id) =>
       id === "all"

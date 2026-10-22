@@ -42,7 +42,10 @@ const emptyCounts = {
   errors: 0,
 };
 
-function directory(counts: Partial<typeof emptyCounts>) {
+function directory(
+  counts: Partial<typeof emptyCounts>,
+  below: Partial<typeof emptyCounts> = {}
+) {
   return VFSEntrySchema.parse({
     version: 65536,
     parent_path: "/",
@@ -67,7 +70,7 @@ function directory(counts: Partial<typeof emptyCounts>) {
         sum_entropy: 0,
         avg_entropy: 0,
       },
-      below: emptyCounts,
+      below: { ...emptyCounts, ...below },
     },
     mac: "00",
   });
@@ -121,6 +124,16 @@ describe("browse views", () => {
     expect(
       emptyBrowseViews(directory({ files: 2, MIME_application: 2 }))
     ).toEqual(new Set(["photos", "videos", "music"]));
+  });
+
+  it("counts the files of the whole tree below a directory", () => {
+    const counts = browseViewCounts(
+      directory(
+        { files: 2, MIME_audio: 2 },
+        { files: 40, MIME_audio: 38, MIME_image: 2 }
+      )
+    );
+    expect(counts).toMatchObject({ all: 42, music: 40, photos: 2 });
   });
 
   it("counts the files a directory holds directly", () => {
