@@ -1,0 +1,62 @@
+name: Dependabot dedupe
+
+# Dependabot never runs pnpm dedupe, so its lockfile updates can leave
+# duplicates that fail the dedupe check in `pnpm run check`. Run it for it.
+on:
+  pull_request:
+    paths:
+      - "ui/web/src/pnpm-lock.yaml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependabot-dedupe-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  dedupe:
+    name: Dedupe lockfile
+    # Match the PR author, not the actor: "Update branch" on a Dependabot PR
+    # needs a dedupe too.
+    if: >-
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # push the dedupe commit
+      actions: write # dispatch the Web workflow
+    defaults:
+      run:
+        working-directory: ui/web/src
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          # Keep the write token off disk while pnpm runs.
+          persist-credentials: false
+      # 41ff72655975bd51cab0327fa583b6e92b6d3061 == v4.2.0
+      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061
+        with:
+          run_install: false
+          package_json_file: ui/web/src/package.json
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+
+      # --lockfile-only: rewrite the lockfile without downloading packages.
+      - run: pnpm dedupe --lockfile-only --ignore-scripts
+
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          git diff --quiet pnpm-lock.yaml && exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "ui(deps): dedupe the lockfile" pnpm-lock.yaml
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/${HEAD_REF}"
+          # A push made with GITHUB_TOKEN starts no workflow: run the checks
+          # on the new head ourselves.
+          gh workflow run web.yml --ref "$HEAD_REF"

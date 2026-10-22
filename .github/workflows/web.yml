@@ -10,6 +10,8 @@ on:
     paths:
       - "ui/web/src/**"
       - ".github/workflows/web.yml"
+  # Dispatched by dependabot-dedupe.yml after it pushes.
+  workflow_dispatch:
 
 permissions:
   contents: read
