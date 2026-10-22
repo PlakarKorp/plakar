@@ -222,6 +222,10 @@ export function FilesBrowser({
   const layout = layouts[activeView] ?? DEFAULT_LAYOUTS[activeView];
   const isListView = layout === "list";
   const showsTable = isListView && activeView !== "music";
+  const changeLayout = (next: BrowseLayout) => {
+    setPlayingPath(null);
+    setLayouts((previous) => ({ ...previous, [activeView]: next }));
+  };
 
   const columns = useMemo(
     () =>
@@ -528,6 +532,7 @@ export function FilesBrowser({
   };
   const changeLightboxIndex = (index: number) => {
     const { path } = lightboxItems[index];
+    setPlayingPath(null);
     setLightbox((current) => current && { ...current, path });
     if (lightbox?.followsPreview) {
       onPreviewChange(path);
@@ -655,10 +660,7 @@ export function FilesBrowser({
                         ]}
                         selectedId={layout}
                         onSelect={(id) =>
-                          setLayouts((previous) => ({
-                            ...previous,
-                            [activeView]: id === "grid" ? "grid" : "list",
-                          }))
+                          changeLayout(id === "grid" ? "grid" : "list")
                         }
                       />
                     </div>
@@ -793,7 +795,7 @@ export function FilesBrowser({
               </div>
 
               <div className="pointer-events-none absolute inset-x-0 bottom-[calc(var(--pagination-height)+0.75rem)] flex flex-col items-center gap-2 px-3 *:pointer-events-auto">
-                {activeView === "music" && (
+                {activeView === "music" && isListView && (
                   <MusicPlayer
                     snapshot={snapshot.identifier.Value}
                     source={source}
