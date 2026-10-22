@@ -12,8 +12,8 @@ type ViewSwitcherProps = {
 
 /**
  * Tabs to browse a directory by kind of content, each with the number of files
- * of that kind in the directory and its subfolders. Kinds the tree surely has
- * none of are disabled.
+ * of that kind in the directory and its subfolders. Browse lists the directory
+ * itself and carries no count. Kinds the tree surely has none of are disabled.
  */
 export function ViewSwitcher({
   view,
@@ -27,7 +27,7 @@ export function ViewSwitcher({
       id: item.id,
       title: item.name,
       icon: item.icon,
-      tag: counts[item.id],
+      tag: item.id === "all" ? undefined : counts[item.id],
       isDisabled: emptyViews.has(item.id),
     };
   });

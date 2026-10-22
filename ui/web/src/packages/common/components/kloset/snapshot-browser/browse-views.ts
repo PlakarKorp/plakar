@@ -36,7 +36,7 @@ export type ViewerKind = "photo" | "video" | "audio" | "document";
 export const BROWSE_VIEWS: BrowseView[] = [
   {
     id: "all",
-    name: "All files",
+    name: "Browse",
     icon: "folder",
     matches: () => true,
   },

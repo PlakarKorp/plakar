@@ -675,7 +675,9 @@ export function FilesBrowser({
                           variant="accent-quaternary"
                           onPress={() => changeView("all")}
                         >
-                          {hasFilters ? "Show all results" : "Show all files"}
+                          {hasFilters
+                            ? "Show all results"
+                            : "Browse this folder"}
                         </UIButton>
                       }
                     >
@@ -683,7 +685,7 @@ export function FilesBrowser({
                         ? `These results are mostly ${viewDef.name.toLowerCase()}.`
                         : `This folder mostly holds ${viewDef.name.toLowerCase()}.`}
                       {hiddenCount > 0 &&
-                        ` ${hiddenCount} other ${hiddenCount === 1 ? "result is" : "results are"} in All files.`}
+                        ` ${hiddenCount} other ${hiddenCount === 1 ? "result is" : "results are"} in Browse.`}
                     </Alert>
                   )}
                 </div>
@@ -701,15 +703,19 @@ export function FilesBrowser({
                       <EmptyList
                         size="sm"
                         title={
-                          isSearching
-                            ? `No ${viewDef.name.toLowerCase()} match this search`
-                            : `No ${viewDef.name.toLowerCase()} here`
+                          activeView === "all"
+                            ? isSearching
+                              ? "Nothing matches this search"
+                              : "This folder is empty"
+                            : isSearching
+                              ? `No ${viewDef.name.toLowerCase()} match this search`
+                              : `No ${viewDef.name.toLowerCase()} here`
                         }
                         description={
                           isSearching
                             ? "Try another name."
                             : activeView === "all"
-                              ? "This folder is empty."
+                              ? "It holds no files or folders."
                               : `Neither this folder nor its subfolders hold any ${viewDef.name.toLowerCase()}.`
                         }
                       />
