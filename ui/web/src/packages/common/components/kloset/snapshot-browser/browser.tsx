@@ -184,7 +184,7 @@ export function FilesBrowser({
             ? filters.mime.contentTypes
             : queryDef.mimes,
         filename: filters.filename,
-        recursive: true,
+        recursive: (vfsEntry.summary?.directory.directories ?? 0) > 0,
       }
     : isSearching
       ? { filename: filters.filename }
