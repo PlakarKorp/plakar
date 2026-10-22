@@ -216,9 +216,18 @@ export function FilesBrowser({
   const layout = layouts[activeView] ?? DEFAULT_LAYOUTS[activeView];
   const isListView = layout === "list";
   const showsTable = isListView && activeView !== "music";
+  const showsSuggestion =
+    suggestedView !== "all" && (suggestedView === "music" || isListView);
   const changeLayout = (next: BrowseLayout) => {
     setPlayingPath(null);
     setLayouts((previous) => ({ ...previous, [activeView]: next }));
+  };
+  const openSuggestedView = () => {
+    setLayouts((previous) => ({
+      ...previous,
+      [suggestedView]: suggestedView === "music" ? "list" : "grid",
+    }));
+    changeView(suggestedView);
   };
   const shownNoun =
     activeView === "documents" && filters.mime
@@ -580,7 +589,7 @@ export function FilesBrowser({
           </FilterPanel.Groups>
         )}
       </FilterPanel>
-      {suggestedView !== "all" && (
+      {showsSuggestion && (
         <div className="flex flex-wrap items-center gap-x-2">
           <Typography size="xs" className="text-tertiary">
             This folder mostly holds {suggestedViewDef.name.toLowerCase()}.
@@ -589,7 +598,7 @@ export function FilesBrowser({
             size="sm"
             variant="accent-quaternary"
             leftIcon={suggestedViewDef.icon}
-            onPress={() => changeView(suggestedView)}
+            onPress={openSuggestedView}
           >
             View as {suggestedViewDef.name}
           </UIButton>
