@@ -226,6 +226,10 @@ export function FilesBrowser({
     setPlayingPath(null);
     setLayouts((previous) => ({ ...previous, [activeView]: next }));
   };
+  const shownNoun =
+    activeView === "documents" && filters.mime
+      ? filters.mime.noun
+      : viewDef.name.toLowerCase();
 
   const columns = useMemo(
     () =>
@@ -528,11 +532,11 @@ export function FilesBrowser({
       onPreviewChange(entry.path);
       return;
     }
+    setPlayingPath(null);
     setLightbox({ path: entry.path, followsPreview: followPreview });
   };
   const changeLightboxIndex = (index: number) => {
     const { path } = lightboxItems[index];
-    setPlayingPath(null);
     setLightbox((current) => current && { ...current, path });
     if (lightbox?.followsPreview) {
       onPreviewChange(path);
@@ -710,15 +714,15 @@ export function FilesBrowser({
                               ? "Nothing matches this search"
                               : "This folder is empty"
                             : isSearching
-                              ? `No ${viewDef.name.toLowerCase()} match this search`
-                              : `No ${viewDef.name.toLowerCase()} here`
+                              ? `No ${shownNoun} match this search`
+                              : `No ${shownNoun} here`
                         }
                         description={
                           isSearching
                             ? "Try another name."
                             : activeView === "all"
                               ? "It holds no files or folders."
-                              : `Neither this folder nor its subfolders hold any ${viewDef.name.toLowerCase()}.`
+                              : `Neither this folder nor its subfolders hold any ${shownNoun}.`
                         }
                       />
                     ) : activeView === "music" && isListView ? (
