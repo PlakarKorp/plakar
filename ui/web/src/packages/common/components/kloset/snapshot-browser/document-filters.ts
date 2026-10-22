@@ -38,3 +38,17 @@ export const DOCUMENT_FILTERS: DocumentFilter[] = [
     ],
   },
 ];
+
+/**
+ * Tells whether a content type belongs to a format, as the search endpoint
+ * only compares the part before the slash when it does not recurse.
+ */
+export function matchesDocumentFilter(
+  filter: DocumentFilter,
+  contentType: string
+) {
+  const [type] = contentType.split(";");
+  return filter.contentTypes.some(
+    (match) => type === match || type.startsWith(`${match}/`)
+  );
+}

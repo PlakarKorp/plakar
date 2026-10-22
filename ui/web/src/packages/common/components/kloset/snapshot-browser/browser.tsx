@@ -58,9 +58,12 @@ import {
   getBrowseView,
   viewerKind,
   suggestBrowseView,
-  suggestBrowseViewForEntries,
 } from "./browse-views";
-import { DOCUMENT_FILTERS, DocumentFilter } from "./document-filters";
+import {
+  DOCUMENT_FILTERS,
+  DocumentFilter,
+  matchesDocumentFilter,
+} from "./document-filters";
 import { Gallery, GalleryDensity } from "./gallery";
 import { Lightbox } from "./lightbox";
 import { MainTitle } from "./main-title";
@@ -168,23 +171,21 @@ export function FilesBrowser({
     "medium"
   );
 
-  // Without a view picked, a directory opens in the view fitting what it holds
-  // and a search lists everything it finds, to be shown in the view fitting
-  // its results once they are in.
-  const hasFilters = Object.values(filters).some((filter) => filter);
-  const queryView =
-    explicitView ?? (hasFilters ? "all" : suggestBrowseView(vfsEntry));
-  const queryDef = getBrowseView(queryView);
+  const activeView = explicitView ?? "all";
+  const viewDef = getBrowseView(activeView);
   const isSearching = Boolean(filters.filename);
+  const suggestedView =
+    activeView === "all" && !isSearching ? suggestBrowseView(vfsEntry) : "all";
 
-  const search = queryDef.mimes
+  const search = viewDef.mimes
     ? {
         contentTypes:
-          queryView === "documents" && filters.mime
+          activeView === "documents" && filters.mime
             ? filters.mime.contentTypes
-            : queryDef.mimes,
+            : viewDef.mimes,
         filename: filters.filename,
-        recursive: (vfsEntry.summary?.directory.directories ?? 0) > 0,
+        // A view browses the directory itself, a search the whole tree.
+        recursive: isSearching,
       }
     : isSearching
       ? { filename: filters.filename }
@@ -212,13 +213,6 @@ export function FilesBrowser({
         : undefined,
   });
 
-  const activeView =
-    explicitView ??
-    (isSearching
-      ? suggestBrowseViewForEntries(query.data?.items ?? [])
-      : queryView);
-  const isAutoView = explicitView === undefined;
-  const viewDef = getBrowseView(activeView);
   const layout = layouts[activeView] ?? DEFAULT_LAYOUTS[activeView];
   const isListView = layout === "list";
   const showsTable = isListView && activeView !== "music";
@@ -417,7 +411,10 @@ export function FilesBrowser({
   const items = (query.data?.items ?? []).filter(
     (item) =>
       activeView === "all" ||
-      (!item.file_info.mode.isDir() && viewDef.matches(item.contentType))
+      (!item.file_info.mode.isDir() &&
+        viewDef.matches(item.contentType) &&
+        (!filters.mime ||
+          matchesDocumentFilter(filters.mime, item.contentType)))
   );
   const table = useReactTable({
     features: appTableFeatures,
@@ -543,50 +540,63 @@ export function FilesBrowser({
     }
   };
 
+  const suggestedViewDef = getBrowseView(suggestedView);
   // In a view, the view is the type filter: only the name search remains.
   const filterBar = (
-    <FilterPanel>
-      <FilterPanel.Search
-        value={filters.filename}
-        onSearch={onSearch}
-        aria-label="Search files"
-        placeholder={
-          activeView === "all"
-            ? "Search by name or *.txt"
-            : `Search ${viewDef.name.toLowerCase()} by name`
-        }
-      />
-      {activeView === "documents" && (
-        <FilterPanel.Groups>
-          <FilterPanel.Group label="Format">
-            <SegmentedControl
-              variant="accent"
-              ariaLabel="Document format"
-              items={[
-                { id: "all", label: "All" },
-                ...DOCUMENT_FILTERS.map(({ id, name, icon }) => ({
-                  id,
-                  label: name,
-                  icon,
-                })),
-              ]}
-              selectedId={filters.mime?.id ?? "all"}
-              onSelect={(id) =>
-                id === "all"
-                  ? onRemoveFilter(new Set(["mime"]))
-                  : onApplyFilter({ mime: [id] })
-              }
-            />
-          </FilterPanel.Group>
-        </FilterPanel.Groups>
+    <div className="flex w-full flex-col gap-2">
+      <FilterPanel>
+        <FilterPanel.Search
+          value={filters.filename}
+          onSearch={onSearch}
+          aria-label="Search files"
+          placeholder={
+            activeView === "all"
+              ? "Search by name or *.txt"
+              : `Search ${viewDef.name.toLowerCase()} by name`
+          }
+        />
+        {activeView === "documents" && (
+          <FilterPanel.Groups>
+            <FilterPanel.Group label="Format">
+              <SegmentedControl
+                variant="accent"
+                ariaLabel="Document format"
+                items={[
+                  { id: "all", label: "All" },
+                  ...DOCUMENT_FILTERS.map(({ id, name, icon }) => ({
+                    id,
+                    label: name,
+                    icon,
+                  })),
+                ]}
+                selectedId={filters.mime?.id ?? "all"}
+                onSelect={(id) =>
+                  id === "all"
+                    ? onRemoveFilter(new Set(["mime"]))
+                    : onApplyFilter({ mime: [id] })
+                }
+              />
+            </FilterPanel.Group>
+          </FilterPanel.Groups>
+        )}
+      </FilterPanel>
+      {suggestedView !== "all" && (
+        <div className="flex flex-wrap items-center gap-x-2">
+          <Typography size="xs" className="text-tertiary">
+            This folder mostly holds {suggestedViewDef.name.toLowerCase()}.
+          </Typography>
+          <UIButton
+            size="sm"
+            variant="accent-quaternary"
+            leftIcon={suggestedViewDef.icon}
+            onPress={() => changeView(suggestedView)}
+          >
+            View as {suggestedViewDef.name}
+          </UIButton>
+        </div>
       )}
-    </FilterPanel>
+    </div>
   );
-  // The results a view picked from a search leaves out.
-  const hiddenCount =
-    hasFilters && activeView !== "all"
-      ? (query.data?.items.length ?? 0) - items.length
-      : 0;
 
   const hasNextPage = Boolean(
     query.data &&
@@ -646,8 +656,14 @@ export function FilesBrowser({
                     <ViewSwitcher
                       className="border-secondary border-b md:border-b-0"
                       view={activeView}
-                      counts={browseViewCounts(vfsEntry)}
-                      emptyViews={emptyBrowseViews(vfsEntry)}
+                      // The summary counts the directory, not what a search
+                      // finds: hide counts that would not match the results.
+                      counts={
+                        isSearching ? undefined : browseViewCounts(vfsEntry)
+                      }
+                      emptyViews={
+                        isSearching ? undefined : emptyBrowseViews(vfsEntry)
+                      }
                       onChange={changeView}
                     />
                     <div className="flex items-center justify-between gap-2 md:justify-end">
@@ -670,30 +686,17 @@ export function FilesBrowser({
                     </div>
                   </div>
 
-                  {isAutoView && activeView !== "all" && (
-                    <Alert
-                      variant="brand"
-                      icon="wand-magic-sparkles"
-                      title={`Showing the ${viewDef.name} view`}
-                      actions={
-                        <UIButton
-                          size="sm"
-                          variant="accent-quaternary"
-                          onPress={() => changeView("all")}
-                        >
-                          {hasFilters
-                            ? "Show all results"
-                            : "Browse this folder"}
-                        </UIButton>
-                      }
-                    >
-                      {hasFilters
-                        ? `These results are mostly ${viewDef.name.toLowerCase()}.`
-                        : `This folder mostly holds ${viewDef.name.toLowerCase()}.`}
-                      {hiddenCount > 0 &&
-                        ` ${hiddenCount} other ${hiddenCount === 1 ? "result is" : "results are"} in Browse.`}
-                    </Alert>
-                  )}
+                  {activeView !== "all" &&
+                    !isSearching &&
+                    (vfsEntry.summary?.directory.directories ?? 0) > 0 && (
+                      <Typography size="xs" className="text-tertiary">
+                        This view shows the files of this folder only.{" "}
+                        {vfsEntry.summary?.directory.directories === 1
+                          ? "Its subfolder is"
+                          : `Its ${vfsEntry.summary?.directory.directories} subfolders are`}{" "}
+                        in All files, and a search covers them too.
+                      </Typography>
+                    )}
                 </div>
 
                 {!showsTable && (
@@ -722,7 +725,7 @@ export function FilesBrowser({
                             ? "Try another name."
                             : activeView === "all"
                               ? "It holds no files or folders."
-                              : `Neither this folder nor its subfolders hold any ${shownNoun}.`
+                              : `This folder holds no ${shownNoun}.`
                         }
                       />
                     ) : activeView === "music" && isListView ? (

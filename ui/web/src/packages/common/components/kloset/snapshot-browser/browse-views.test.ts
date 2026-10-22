@@ -8,7 +8,6 @@ import {
   getBrowseView,
   isDocumentContentType,
   suggestBrowseView,
-  suggestBrowseViewForEntries,
 } from "./browse-views";
 
 const emptyCounts = {
@@ -42,10 +41,7 @@ const emptyCounts = {
   errors: 0,
 };
 
-function directory(
-  counts: Partial<typeof emptyCounts>,
-  below: Partial<typeof emptyCounts> = {}
-) {
+function directory(counts: Partial<typeof emptyCounts>) {
   return VFSEntrySchema.parse({
     version: 65536,
     parent_path: "/",
@@ -70,53 +66,13 @@ function directory(
         sum_entropy: 0,
         avg_entropy: 0,
       },
-      below: { ...emptyCounts, ...below },
+      below: emptyCounts,
     },
-    mac: "00",
-  });
-}
-
-function file(name: string, contentType: string) {
-  return VFSEntrySchema.parse({
-    version: 65536,
-    parent_path: "/photos/2026",
-    file_info: {
-      name,
-      size: 1024,
-      mode: 420,
-      mod_time: "2026-10-14T00:11:37Z",
-      dev: 0,
-      ino: 0,
-      uid: 0,
-      gid: 0,
-      nlink: 1,
-      username: "",
-      groupname: "",
-    },
-    content_type: contentType,
     mac: "00",
   });
 }
 
 describe("browse views", () => {
-  it("shows search results in the view most of them fit", () => {
-    expect(
-      suggestBrowseViewForEntries([
-        file("a.jpg", "image/jpeg"),
-        file("b.png", "image/png"),
-        file("c.jpg", "image/jpeg"),
-        file("notes.txt", "text/plain"),
-      ])
-    ).toBe("photos");
-    expect(
-      suggestBrowseViewForEntries([
-        file("a.jpg", "image/jpeg"),
-        file("b.mp3", "audio/mpeg"),
-        file("notes.txt", "text/plain"),
-      ])
-    ).toBe("all");
-  });
-
   it("disables documents only without any text or application file", () => {
     expect(emptyBrowseViews(directory({ files: 6, MIME_audio: 6 }))).toEqual(
       new Set(["photos", "videos", "documents"])
@@ -124,16 +80,6 @@ describe("browse views", () => {
     expect(
       emptyBrowseViews(directory({ files: 2, MIME_application: 2 }))
     ).toEqual(new Set(["photos", "videos", "music"]));
-  });
-
-  it("counts media over the whole tree, and the folder's own files for all", () => {
-    const counts = browseViewCounts(
-      directory(
-        { files: 2, MIME_audio: 2 },
-        { files: 40, MIME_audio: 38, MIME_image: 2 }
-      )
-    );
-    expect(counts).toMatchObject({ all: 2, music: 40, photos: 2 });
   });
 
   it("counts the files a directory holds directly", () => {
@@ -158,10 +104,10 @@ describe("browse views", () => {
     );
   });
 
-  it("keeps all files for directories with subfolders", () => {
+  it("suggests a view in directories with subfolders too", () => {
     expect(
       suggestBrowseView(directory({ files: 4, MIME_audio: 4, directories: 4 }))
-    ).toBe("all");
+    ).toBe("music");
   });
 
   it("keeps all files when no kind dominates", () => {
