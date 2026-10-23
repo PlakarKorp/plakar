@@ -16,7 +16,7 @@
     "eslint-plugin-jsdoc": "^64.2.1",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.4",
-    "eslint-plugin-storybook": "^10.5.9",
+    "eslint-plugin-storybook": "^10.6.2",
     "eslint-plugin-unused-imports": "^4.4.1",
     "globals": "^17.12.0",
     "typescript": "^5.9.3",
