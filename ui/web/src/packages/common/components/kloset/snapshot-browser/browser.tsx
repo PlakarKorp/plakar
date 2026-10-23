@@ -556,6 +556,7 @@ export function FilesBrowser({
         <FilterPanel.Search
           value={filters.filename}
           onSearch={onSearch}
+          isLoading={query.isFetching}
           aria-label="Search files"
           placeholder={
             activeView === "all"
@@ -804,7 +805,6 @@ export function FilesBrowser({
                     }
                     filters={filterBar}
                     ariaLabel="Restore point files table"
-                    isLoading={query.isFetching}
                   />
                 )}
               </div>
