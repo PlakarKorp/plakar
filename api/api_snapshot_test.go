@@ -61,10 +61,14 @@ func TestSnapshot(t *testing.T) {
 		w := get(t, mux, "/api/snapshot/vfs/search/"+id+":/subdir?recursive=true&limit=1&pattern=txt")
 		require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
 
-		var page ItemsPage[json.RawMessage]
+		var page SearchPage
 		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &page))
 		require.True(t, page.HasNext)
 		require.Len(t, page.Items, 1)
+
+		// The counts cover the whole result set, not the page.
+		require.Equal(t, 3, page.Total)
+		require.Equal(t, map[string]int{"text/plain": 3}, page.ContentTypes)
 	})
 
 	t.Run("vfs search mime filter", func(t *testing.T) {
@@ -72,6 +76,20 @@ func TestSnapshot(t *testing.T) {
 		w := get(t, mux, "/api/snapshot/vfs/search/"+id+":/subdir?recursive=true&mime=text/plain")
 		require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
 		require.Contains(t, w.Body.String(), "has_next")
+
+		var page SearchPage
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &page))
+		require.Equal(t, 4, page.Total)
+		require.Equal(t, map[string]int{"text/plain": 4}, page.ContentTypes)
+
+		// The content-type counts ignore the mime filter, so that a tab
+		// keeps its count while another one is searched.
+		w = get(t, mux, "/api/snapshot/vfs/search/"+id+":/subdir?recursive=true&mime=application")
+		require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &page))
+		require.Empty(t, page.Items)
+		require.Equal(t, 0, page.Total)
+		require.Equal(t, map[string]int{"text/plain": 4}, page.ContentTypes)
 	})
 
 	t.Run("vfs search non recursive", func(t *testing.T) {
@@ -79,6 +97,13 @@ func TestSnapshot(t *testing.T) {
 		w := get(t, mux, "/api/snapshot/vfs/search/"+id+":/subdir?limit=10")
 		require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
 		require.Contains(t, w.Body.String(), "has_next")
+
+		// The nested directory counts toward the total but has no content type.
+		var page SearchPage
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &page))
+		require.Len(t, page.Items, 4)
+		require.Equal(t, 4, page.Total)
+		require.Equal(t, map[string]int{"text/plain": 3}, page.ContentTypes)
 
 		// limit<=0 is normalized to 50 (covers that branch).
 		w = get(t, mux, "/api/snapshot/vfs/search/"+id+":/subdir?limit=0")
