@@ -95,9 +95,9 @@ func TestIntegrationMatchesSearch(t *testing.T) {
 // TestIntegrationMatchesInstallationStatus pins the installation_status
 // filter used by servicesGetIntegration: empty filter matches
 // everything; "installed"/"not-installed" match on Installation.Status;
-// "upgradable" requires installed AND Installation.Version !=
-// LatestVersion (plain string inequality, matches plakman); any unknown
-// value matches nothing.
+// "upgradable" requires installed AND a known LatestVersion AND
+// Installation.Version != LatestVersion (plain string inequality, matches
+// plakman); any unknown value matches nothing.
 func TestIntegrationMatchesInstallationStatus(t *testing.T) {
 	installed := func(ver, latest string) pkg.Integration {
 		return pkg.Integration{
@@ -131,6 +131,7 @@ func TestIntegrationMatchesInstallationStatus(t *testing.T) {
 		{"upgradable rejects not-installed row", "upgradable", notInstalled("1.1.0"), false},
 		{"upgradable with empty installed version", "upgradable", installed("", "1.0.0"), true},
 		{"upgradable with both versions empty", "upgradable", installed("", ""), false},
+		{"upgradable rejects a package missing from the index", "upgradable", installed("1.0.0", ""), false},
 
 		{"unknown filter rejects installed", "garbage", installed("1.0.0", "1.0.0"), false},
 		{"unknown filter rejects not-installed", "garbage", notInstalled("1.0.0"), false},
@@ -232,4 +233,29 @@ func TestIntegrationMatchesTag(t *testing.T) {
 			require.Equal(t, tc.want, got)
 		})
 	}
+}
+
+func TestSortIntegrationsByState(t *testing.T) {
+	integration := func(name, status, version string) *pkg.Integration {
+		return &pkg.Integration{
+			Name:          name,
+			Installation:  pkg.IntegrationInstallation{Status: status, Version: version},
+			LatestVersion: "v2.0.0",
+		}
+	}
+	integrations := []*pkg.Integration{
+		integration("a", "not-installed", ""),
+		integration("b", "installed", "v1.0.0"),
+		integration("c", "installed", "v2.0.0"),
+		integration("d", "installed", "v1.0.0"),
+		integration("e", "not-installed", ""),
+	}
+
+	sortIntegrationsByState(integrations)
+
+	var names []string
+	for _, it := range integrations {
+		names = append(names, it.Name)
+	}
+	require.Equal(t, []string{"b", "d", "c", "a", "e"}, names, "upgradable, then installed, then the rest, each group in its original order")
 }

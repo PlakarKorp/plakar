@@ -1,6 +1,7 @@
 package api
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -171,6 +172,7 @@ func integrationMatchesInstallationStatus(it *pkg.Integration, filter string) bo
 		return it.Installation.Status == "not-installed"
 	case "upgradable":
 		return it.Installation.Status == "installed" &&
+			it.LatestVersion != "" &&
 			it.Installation.Version != it.LatestVersion
 	default:
 		return false
@@ -211,6 +213,24 @@ func integrationMatchesTypes(it *pkg.Integration, filter []string) bool {
 	return false
 }
 
+// sortIntegrationsByState puts upgradable integrations first, then installed
+// ones, then the rest, keeping the order within each group.
+func sortIntegrationsByState(integrations []*pkg.Integration) {
+	rank := func(it *pkg.Integration) int {
+		switch {
+		case integrationMatchesInstallationStatus(it, "upgradable"):
+			return 0
+		case integrationMatchesInstallationStatus(it, "installed"):
+			return 1
+		default:
+			return 2
+		}
+	}
+	slices.SortStableFunc(integrations, func(a, b *pkg.Integration) int {
+		return cmp.Compare(rank(a), rank(b))
+	})
+}
+
 func (ui *uiserver) cachedIntegrations() ([]*pkg.Integration, error) {
 	if cached, ok := ui.integrationsCache.Get(integrationsCacheKey); ok {
 		return cached, nil
@@ -219,6 +239,7 @@ func (ui *uiserver) cachedIntegrations() ([]*pkg.Integration, error) {
 	if err != nil {
 		return nil, err
 	}
+	sortIntegrationsByState(integrations)
 	ui.integrationsCache.Add(integrationsCacheKey, integrations)
 	return integrations, nil
 }
