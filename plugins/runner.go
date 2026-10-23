@@ -3,6 +3,7 @@ package plugins
 import (
 	"context"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"os/exec"
@@ -15,15 +16,20 @@ type Runner interface {
 }
 
 // NativeRunner executes the plugin binary directly and talks gRPC over its
-// stdin/stdout.
+// stdin/stdout. Whatever the plugin writes to stderr goes to Stderr, or to
+// the process stderr when nil.
 type NativeRunner struct {
-	Path string
-	Args []string
+	Path   string
+	Args   []string
+	Stderr io.Writer
 }
 
 func (r *NativeRunner) Run(ctx context.Context) (net.Conn, error) {
 	cmd := exec.CommandContext(ctx, r.Path, r.Args...)
-	cmd.Stderr = os.Stderr
+	cmd.Stderr = r.Stderr
+	if cmd.Stderr == nil {
+		cmd.Stderr = os.Stderr
+	}
 
 	wr, err := cmd.StdinPipe()
 	if err != nil {

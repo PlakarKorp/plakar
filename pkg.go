@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -16,7 +17,7 @@ import (
 	"github.com/PlakarKorp/plakar/utils"
 )
 
-func setupPkgManager(ctx *appcontext.AppContext, configDir, dataDir, cacheDir string) error {
+func setupPkgManager(ctx *appcontext.AppContext, configDir, dataDir, cacheDir string, stderr io.Writer) error {
 	plugdir := filepath.Join(dataDir, "plugins", pkg.PLUGIN_API_VERSION)
 	cachedir := filepath.Join(cacheDir, "plugins", pkg.PLUGIN_API_VERSION)
 
@@ -25,7 +26,9 @@ func setupPkgManager(ctx *appcontext.AppContext, configDir, dataDir, cacheDir st
 		InstallHook: func(m *pkg.Manifest) error {
 			return plugins.EnsureImages(ctx, m, ctx.Stdout, ctx.Stderr)
 		},
-		LoadHook:   pkgloadhook,
+		LoadHook: func(m *pkg.Manifest, p *pkg.Package, pkgdir string) {
+			pkgloadhook(m, p, pkgdir, stderr)
+		},
 		UnloadHook: pkgunloadhook,
 	})
 	if err != nil {
@@ -97,8 +100,8 @@ func pkgpreloadhook(m *pkg.Manifest) error {
 	return nil
 }
 
-func pkgloadhook(m *pkg.Manifest, p *pkg.Package, pkgdir string) {
-	if err := plugins.Load(m, pkgdir); err != nil {
+func pkgloadhook(m *pkg.Manifest, p *pkg.Package, pkgdir string, stderr io.Writer) {
+	if err := plugins.Load(m, pkgdir, stderr); err != nil {
 		fmt.Fprintf(os.Stderr, "%s: failed to load %s@%s: %s\n",
 			progName(), m.Name, p.Version, err)
 	}
