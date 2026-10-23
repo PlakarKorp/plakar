@@ -36,7 +36,7 @@
     "eslint": "^10.8.1",
     "pretty-bytes": "^7.2.0",
     "react": "^19.2.8",
-    "react-aria-components": "^1.20.0",
+    "react-aria-components": "^1.22.1",
     "react-dom": "^19.2.8",
     "react-icons": "^5.7.0",
     "react-markdown": "^10.1.0",
