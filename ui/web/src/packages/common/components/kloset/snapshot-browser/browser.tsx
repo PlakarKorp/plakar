@@ -81,7 +81,7 @@ const DEFAULT_LAYOUTS: Record<BrowseViewId, BrowseLayout> = {
   all: "list",
   photos: "grid",
   videos: "grid",
-  music: "list",
+  music: "grid",
   documents: "grid",
 };
 
@@ -215,9 +215,8 @@ export function FilesBrowser({
 
   const layout = layouts[activeView] ?? DEFAULT_LAYOUTS[activeView];
   const isListView = layout === "list";
-  const showsTable = isListView && activeView !== "music";
-  const showsSuggestion =
-    suggestedView !== "all" && (suggestedView === "music" || isListView);
+  const showsTable = isListView;
+  const showsSuggestion = suggestedView !== "all" && isListView;
   const changeLayout = (next: BrowseLayout) => {
     setPlayingPath(null);
     setLayouts((previous) => ({ ...previous, [activeView]: next }));
@@ -225,7 +224,7 @@ export function FilesBrowser({
   const openSuggestedView = () => {
     setLayouts((previous) => ({
       ...previous,
-      [suggestedView]: suggestedView === "music" ? "list" : "grid",
+      [suggestedView]: "grid",
     }));
     changeView(suggestedView);
   };
@@ -737,7 +736,7 @@ export function FilesBrowser({
                               : `This folder holds no ${shownNoun}.`
                         }
                       />
-                    ) : activeView === "music" && isListView ? (
+                    ) : activeView === "music" && !isListView ? (
                       <MusicView
                         snapshot={snapshot.identifier.Value}
                         source={source}
@@ -811,7 +810,7 @@ export function FilesBrowser({
               </div>
 
               <div className="pointer-events-none absolute inset-x-0 bottom-[calc(var(--pagination-height)+0.75rem)] flex flex-col items-center gap-2 px-3 *:pointer-events-auto">
-                {activeView === "music" && isListView && (
+                {activeView === "music" && !isListView && (
                   <MusicPlayer
                     snapshot={snapshot.identifier.Value}
                     source={source}
