@@ -10,6 +10,7 @@ import (
 	"github.com/PlakarKorp/kloset/connectors/exporter"
 	"github.com/PlakarKorp/kloset/connectors/importer"
 	"github.com/PlakarKorp/kloset/connectors/storage"
+	"github.com/PlakarKorp/kloset/kcontext"
 	"github.com/PlakarKorp/pkg"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/plugins"
@@ -21,7 +22,12 @@ func setupPkgManager(ctx *appcontext.AppContext, configDir, dataDir, cacheDir st
 	plugdir := filepath.Join(dataDir, "plugins", pkg.PLUGIN_API_VERSION)
 	cachedir := filepath.Join(cacheDir, "plugins", pkg.PLUGIN_API_VERSION)
 
-	backend, err := pkg.NewFlatBackend(ctx.GetInner(), plugdir, cachedir, &pkg.FlatBackendOptions{
+	// Packages are extracted through a kloset export, at install time and
+	// again at load time whenever the cache is gone. That is the manager's
+	// business, not a workflow to render, so it gets a context whose events
+	// nobody listens to.
+	kctx := kcontext.NewKContextFrom(ctx.GetInner())
+	backend, err := pkg.NewFlatBackend(kctx, plugdir, cachedir, &pkg.FlatBackendOptions{
 		PreLoadHook: pkgpreloadhook,
 		InstallHook: func(m *pkg.Manifest) error {
 			return plugins.EnsureImages(ctx, m, ctx.Stdout, ctx.Stderr)
