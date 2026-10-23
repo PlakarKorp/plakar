@@ -44,7 +44,6 @@ import {
   DownloadMenuItem,
   FileIcon,
   FilterPanel,
-  MIME_FILTERS,
   PaginatedTable,
   SelectedList,
   SnapshotErrorsAlert,
@@ -59,8 +58,12 @@ import {
   getBrowseView,
   viewerKind,
   suggestBrowseView,
-  suggestBrowseViewForEntries,
 } from "./browse-views";
+import {
+  DOCUMENT_FILTERS,
+  DocumentFilter,
+  matchesDocumentFilter,
+} from "./document-filters";
 import { Gallery, GalleryDensity } from "./gallery";
 import { Lightbox } from "./lightbox";
 import { MainTitle } from "./main-title";
@@ -68,8 +71,18 @@ import { MusicPlayer, MusicView } from "./music";
 import { ViewSwitcher } from "./view-switcher";
 
 type FiltersProps = {
-  mime?: (typeof MIME_FILTERS)[number];
+  mime?: DocumentFilter;
   filename: string;
+};
+
+type BrowseLayout = "list" | "grid";
+
+const DEFAULT_LAYOUTS: Record<BrowseViewId, BrowseLayout> = {
+  all: "list",
+  photos: "grid",
+  videos: "grid",
+  music: "list",
+  documents: "grid",
 };
 
 type FilesBrowserProps = {
@@ -150,37 +163,32 @@ export function FilesBrowser({
     else setLocalView(next);
   };
 
-  const [layout, setLayout] = useLocalStorage<"list" | "grid">(
-    "browserLayout",
-    "list"
-  );
+  const [layouts, setLayouts] = useLocalStorage<
+    Partial<Record<BrowseViewId, BrowseLayout>>
+  >("browserLayouts", {});
   const [density, setDensity] = useLocalStorage<GalleryDensity>(
     "browserDensity",
     "medium"
   );
 
-  // Without a view picked, a directory opens in the view fitting what it holds
-  // and a search lists everything it finds, to be shown in the view fitting
-  // its results once they are in.
-  const hasFilters = Object.values(filters).some((filter) => filter);
-  const queryView =
-    explicitView ?? (hasFilters ? "all" : suggestBrowseView(vfsEntry));
-  const queryDef = getBrowseView(queryView);
-  const isSearching =
-    Boolean(filters.filename) || (queryView === "all" && hasFilters);
+  const activeView = explicitView ?? "all";
+  const viewDef = getBrowseView(activeView);
+  const isSearching = Boolean(filters.filename);
+  const suggestedView =
+    activeView === "all" && !isSearching ? suggestBrowseView(vfsEntry) : "all";
 
-  const search = queryDef.mimes
+  const search = viewDef.mimes
     ? {
-        contentTypes: queryDef.mimes,
+        contentTypes:
+          activeView === "documents" && filters.mime
+            ? filters.mime.contentTypes
+            : viewDef.mimes,
         filename: filters.filename,
         // A view browses the directory itself, a search the whole tree.
-        recursive: Boolean(filters.filename),
+        recursive: isSearching,
       }
-    : hasFilters
-      ? {
-          contentTypes: filters.mime?.contentTypes,
-          filename: filters.filename,
-        }
+    : isSearching
+      ? { filename: filters.filename }
       : undefined;
 
   const { api, repository } = useKlosetAPI();
@@ -205,16 +213,26 @@ export function FilesBrowser({
         : undefined,
   });
 
-  const activeView =
-    explicitView ??
-    (filters.mime
-      ? "all"
-      : hasFilters
-        ? suggestBrowseViewForEntries(query.data?.items ?? [])
-        : queryView);
-  const isAutoView = explicitView === undefined;
-  const viewDef = getBrowseView(activeView);
-  const isListView = activeView === "all" && layout === "list";
+  const layout = layouts[activeView] ?? DEFAULT_LAYOUTS[activeView];
+  const isListView = layout === "list";
+  const showsTable = isListView && activeView !== "music";
+  const showsSuggestion =
+    suggestedView !== "all" && (suggestedView === "music" || isListView);
+  const changeLayout = (next: BrowseLayout) => {
+    setPlayingPath(null);
+    setLayouts((previous) => ({ ...previous, [activeView]: next }));
+  };
+  const openSuggestedView = () => {
+    setLayouts((previous) => ({
+      ...previous,
+      [suggestedView]: suggestedView === "music" ? "list" : "grid",
+    }));
+    changeView(suggestedView);
+  };
+  const shownNoun =
+    activeView === "documents" && filters.mime
+      ? filters.mime.noun
+      : viewDef.name.toLowerCase();
 
   const columns = useMemo(
     () =>
@@ -397,9 +415,19 @@ export function FilesBrowser({
     return acc;
   }, {} as RowSelectionState);
 
+  // The search endpoint matches content types loosely when it does not recurse
+  // (documents ask for all of application/), so views filter what comes back.
+  const items = (query.data?.items ?? []).filter(
+    (item) =>
+      activeView === "all" ||
+      (!item.file_info.mode.isDir() &&
+        viewDef.matches(item.contentType) &&
+        (!filters.mime ||
+          matchesDocumentFilter(filters.mime, item.contentType)))
+  );
   const table = useReactTable({
     features: appTableFeatures,
-    data: query.data?.items ?? [],
+    data: activeView === "all" ? (query.data?.items ?? []) : items,
     rowCount:
       query.data && isPaginationResponseWithTotal(query.data)
         ? query.data.total
@@ -451,13 +479,6 @@ export function FilesBrowser({
     },
   });
 
-  // The search endpoint matches content types loosely when it does not recurse
-  // (documents ask for all of application/), so views filter what comes back.
-  const items = (query.data?.items ?? []).filter(
-    (item) =>
-      activeView === "all" ||
-      (!item.file_info.mode.isDir() && viewDef.matches(item.contentType))
-  );
   const currentIndex = items.findIndex((item) => item.path === preview);
   const previewEntry = currentIndex === -1 ? undefined : items[currentIndex];
 
@@ -517,6 +538,7 @@ export function FilesBrowser({
       onPreviewChange(entry.path);
       return;
     }
+    setPlayingPath(null);
     setLightbox({ path: entry.path, followsPreview: followPreview });
   };
   const changeLightboxIndex = (index: number) => {
@@ -527,50 +549,63 @@ export function FilesBrowser({
     }
   };
 
+  const suggestedViewDef = getBrowseView(suggestedView);
   // In a view, the view is the type filter: only the name search remains.
   const filterBar = (
-    <FilterPanel>
-      <FilterPanel.Search
-        value={filters.filename}
-        onSearch={onSearch}
-        aria-label="Search files"
-        placeholder={
-          activeView === "all"
-            ? "Search by name or *.txt"
-            : `Search ${viewDef.name.toLowerCase()} by name`
-        }
-      />
-      {activeView === "all" && (
-        <FilterPanel.Groups>
-          <FilterPanel.Group label="File type">
-            <SegmentedControl
-              variant="accent"
-              ariaLabel="File type"
-              items={[
-                { id: "all", label: "All" },
-                ...MIME_FILTERS.map(({ id, name, icon }) => ({
-                  id,
-                  label: name,
-                  icon,
-                })),
-              ]}
-              selectedId={filters.mime?.id ?? "all"}
-              onSelect={(id) =>
-                id === "all"
-                  ? onRemoveFilter(new Set(["mime"]))
-                  : onApplyFilter({ mime: [id] })
-              }
-            />
-          </FilterPanel.Group>
-        </FilterPanel.Groups>
+    <div className="flex w-full flex-col gap-2">
+      <FilterPanel>
+        <FilterPanel.Search
+          value={filters.filename}
+          onSearch={onSearch}
+          aria-label="Search files"
+          placeholder={
+            activeView === "all"
+              ? "Search by name or *.txt"
+              : `Search ${viewDef.name.toLowerCase()} by name`
+          }
+        />
+        {activeView === "documents" && (
+          <FilterPanel.Groups>
+            <FilterPanel.Group label="Format">
+              <SegmentedControl
+                variant="accent"
+                ariaLabel="Document format"
+                items={[
+                  { id: "all", label: "All" },
+                  ...DOCUMENT_FILTERS.map(({ id, name, icon }) => ({
+                    id,
+                    label: name,
+                    icon,
+                  })),
+                ]}
+                selectedId={filters.mime?.id ?? "all"}
+                onSelect={(id) =>
+                  id === "all"
+                    ? onRemoveFilter(new Set(["mime"]))
+                    : onApplyFilter({ mime: [id] })
+                }
+              />
+            </FilterPanel.Group>
+          </FilterPanel.Groups>
+        )}
+      </FilterPanel>
+      {showsSuggestion && (
+        <div className="flex flex-wrap items-center gap-x-2">
+          <Typography size="xs" className="text-tertiary">
+            This folder mostly holds {suggestedViewDef.name.toLowerCase()}.
+          </Typography>
+          <UIButton
+            size="sm"
+            variant="accent-quaternary"
+            leftIcon={suggestedViewDef.icon}
+            onPress={openSuggestedView}
+          >
+            View as {suggestedViewDef.name}
+          </UIButton>
+        </div>
       )}
-    </FilterPanel>
+    </div>
   );
-  // The results a view picked from a search leaves out.
-  const hiddenCount =
-    hasFilters && activeView !== "all"
-      ? (query.data?.items.length ?? 0) - items.length
-      : 0;
 
   const hasNextPage = Boolean(
     query.data &&
@@ -633,72 +668,35 @@ export function FilesBrowser({
                       // The summary counts the directory, not what a search
                       // finds: hide counts that would not match the results.
                       counts={
-                        hasFilters ? undefined : browseViewCounts(vfsEntry)
+                        isSearching ? undefined : browseViewCounts(vfsEntry)
                       }
                       emptyViews={
-                        hasFilters ? undefined : emptyBrowseViews(vfsEntry)
+                        isSearching ? undefined : emptyBrowseViews(vfsEntry)
                       }
                       onChange={changeView}
                     />
                     <div className="flex items-center justify-between gap-2 md:justify-end">
-                      {!isListView && activeView !== "music" && (
-                        <SegmentedControl
-                          ariaLabel="Thumbnail size"
-                          items={[
-                            { id: "small", label: "Small" },
-                            { id: "medium", label: "Medium" },
-                            { id: "large", label: "Large" },
-                          ]}
-                          selectedId={density}
-                          onSelect={(id) => setDensity(id as GalleryDensity)}
-                        />
-                      )}
-                      {activeView === "all" && (
-                        <SegmentedControl
-                          ariaLabel="Layout"
-                          hideLabels
-                          items={[
-                            { id: "list", label: "List", icon: "list" },
-                            {
-                              id: "grid",
-                              label: "Grid",
-                              icon: "grid",
-                            },
-                          ]}
-                          selectedId={layout}
-                          onSelect={(id) =>
-                            setLayout(id === "grid" ? "grid" : "list")
-                          }
-                        />
-                      )}
+                      <SegmentedControl
+                        ariaLabel="Layout"
+                        hideLabels
+                        items={[
+                          { id: "list", label: "List", icon: "list" },
+                          {
+                            id: "grid",
+                            label: "Grid",
+                            icon: "grid",
+                          },
+                        ]}
+                        selectedId={layout}
+                        onSelect={(id) =>
+                          changeLayout(id === "grid" ? "grid" : "list")
+                        }
+                      />
                     </div>
                   </div>
 
-                  {isAutoView && activeView !== "all" && (
-                    <Alert
-                      variant="brand"
-                      icon="wand-magic-sparkles"
-                      title={`Showing the ${viewDef.name} view`}
-                      actions={
-                        <UIButton
-                          size="sm"
-                          variant="accent-quaternary"
-                          onPress={() => changeView("all")}
-                        >
-                          {hasFilters ? "Show all results" : "Show all files"}
-                        </UIButton>
-                      }
-                    >
-                      {hasFilters
-                        ? `These results are mostly ${viewDef.name.toLowerCase()}.`
-                        : `This folder mostly holds ${viewDef.name.toLowerCase()}.`}
-                      {hiddenCount > 0 &&
-                        ` ${hiddenCount} other ${hiddenCount === 1 ? "result is" : "results are"} in All files.`}
-                    </Alert>
-                  )}
-
                   {activeView !== "all" &&
-                    !hasFilters &&
+                    !isSearching &&
                     (vfsEntry.summary?.directory.directories ?? 0) > 0 && (
                       <Typography size="xs" className="text-tertiary">
                         This view shows the files of this folder only.{" "}
@@ -710,7 +708,7 @@ export function FilesBrowser({
                     )}
                 </div>
 
-                {!isListView && (
+                {!showsTable && (
                   <div className="flex flex-col gap-4">
                     {filterBar}
                     {query.isPending ? (
@@ -723,17 +721,23 @@ export function FilesBrowser({
                       <EmptyList
                         size="sm"
                         title={
-                          isSearching
-                            ? `No ${viewDef.name.toLowerCase()} match this search`
-                            : `No ${viewDef.name.toLowerCase()} on this page`
+                          activeView === "all"
+                            ? isSearching
+                              ? "Nothing matches this search"
+                              : "This folder is empty"
+                            : isSearching
+                              ? `No ${shownNoun} match this search`
+                              : `No ${shownNoun} here`
                         }
                         description={
                           isSearching
-                            ? "Try another name, or search from All files."
-                            : "Other pages, or All files, may hold some."
+                            ? "Try another name."
+                            : activeView === "all"
+                              ? "It holds no files or folders."
+                              : `This folder holds no ${shownNoun}.`
                         }
                       />
-                    ) : activeView === "music" ? (
+                    ) : activeView === "music" && isListView ? (
                       <MusicView
                         snapshot={snapshot.identifier.Value}
                         source={source}
@@ -752,6 +756,7 @@ export function FilesBrowser({
                         entries={items}
                         basePath={vfsEntry.path}
                         density={density}
+                        onDensityChange={setDensity}
                         selected={selectedPaths}
                         onToggleSelected={toggleSelected}
                         onOpen={openEntry}
@@ -783,7 +788,7 @@ export function FilesBrowser({
                   </div>
                 )}
 
-                {isListView && (
+                {showsTable && (
                   <PaginatedTable<EnrichedChildEntryType>
                     query={query}
                     table={table}
@@ -806,7 +811,7 @@ export function FilesBrowser({
               </div>
 
               <div className="pointer-events-none absolute inset-x-0 bottom-[calc(var(--pagination-height)+0.75rem)] flex flex-col items-center gap-2 px-3 *:pointer-events-auto">
-                {activeView === "music" && (
+                {activeView === "music" && isListView && (
                   <MusicPlayer
                     snapshot={snapshot.identifier.Value}
                     source={source}

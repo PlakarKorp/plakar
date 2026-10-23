@@ -5,7 +5,7 @@ export * from "./details-panel";
 export * from "./directory-preview";
 export * from "./file-summary";
 export * from "./main-title";
-export * from "./mime-filters";
+export * from "./document-filters";
 export * from "./selected-list";
 export * from "./viewer";
 export * from "./mount-file-button";

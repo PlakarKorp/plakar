@@ -123,42 +123,21 @@ export function emptyBrowseViews(entry: VFSEntryType): Set<BrowseViewId> {
   );
 }
 
-// The share of a directory's files one kind must reach to become its default
-// view, and the number of files below which "all" always wins.
+// The share of a directory's files one kind must reach to be suggested, and the
+// number of files below which nothing is.
 const SUGGEST_SHARE = 0.6;
 const SUGGEST_MIN_FILES = 3;
 
 /**
- * Picks the view a directory opens in: the one matching most of its files when
- * one kind clearly dominates, "all" otherwise. A directory with subfolders is
- * being browsed through, so it stays on "all" where they are listed.
+ * Suggests the view matching most of a directory's files when one kind clearly
+ * dominates, "all" otherwise.
  */
 export function suggestBrowseView(entry: VFSEntryType): BrowseViewId {
   const counts = browseViewCounts(entry);
-  const hasSubfolders = (entry.summary?.directory.directories ?? 0) > 0;
-  if (hasSubfolders || counts.all < SUGGEST_MIN_FILES) {
+  if (counts.all < SUGGEST_MIN_FILES) {
     return "all";
   }
   const candidates: BrowseViewId[] = ["photos", "videos", "music"];
   const best = candidates.reduce((a, b) => (counts[b] > counts[a] ? b : a));
   return counts[best] / counts.all >= SUGGEST_SHARE ? best : "all";
-}
-
-/**
- * Picks the view to show search results in: the one matching most of the
- * files found, as for a directory, but counted from the results themselves.
- */
-export function suggestBrowseViewForEntries(
-  entries: VFSEntryType[]
-): BrowseViewId {
-  const files = entries.filter((entry) => !entry.file_info.mode.isDir());
-  if (files.length < SUGGEST_MIN_FILES) {
-    return "all";
-  }
-  const candidates: BrowseViewId[] = ["photos", "videos", "music"];
-  const count = (id: BrowseViewId) =>
-    files.filter((entry) => getBrowseView(id).matches(entry.contentType))
-      .length;
-  const best = candidates.reduce((a, b) => (count(b) > count(a) ? b : a));
-  return count(best) / files.length >= SUGGEST_SHARE ? best : "all";
 }
