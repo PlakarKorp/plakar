@@ -234,3 +234,28 @@ func TestIntegrationMatchesTag(t *testing.T) {
 		})
 	}
 }
+
+func TestSortIntegrationsByState(t *testing.T) {
+	integration := func(name, status, version string) *pkg.Integration {
+		return &pkg.Integration{
+			Name:          name,
+			Installation:  pkg.IntegrationInstallation{Status: status, Version: version},
+			LatestVersion: "v2.0.0",
+		}
+	}
+	integrations := []*pkg.Integration{
+		integration("a", "not-installed", ""),
+		integration("b", "installed", "v1.0.0"),
+		integration("c", "installed", "v2.0.0"),
+		integration("d", "installed", "v1.0.0"),
+		integration("e", "not-installed", ""),
+	}
+
+	sortIntegrationsByState(integrations)
+
+	var names []string
+	for _, it := range integrations {
+		names = append(names, it.Name)
+	}
+	require.Equal(t, []string{"b", "d", "c", "a", "e"}, names, "upgradable, then installed, then the rest, each group in its original order")
+}
