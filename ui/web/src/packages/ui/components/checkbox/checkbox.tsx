@@ -25,7 +25,7 @@ export function Checkbox({
       {...props}
       className={clsx(
         props.className,
-        "group/cb inline-flex items-baseline gap-2"
+        "group/cb relative inline-flex items-baseline gap-2"
       )}
     >
       {({ isSelected, isIndeterminate, isDisabled, isFocusVisible }) => {

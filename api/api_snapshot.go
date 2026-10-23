@@ -118,6 +118,9 @@ func (ui *uiserver) snapshotReader(w http.ResponseWriter, r *http.Request) error
 		return nil
 	}
 
+	w.Header().Set("Content-Security-Policy", "sandbox")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+
 	if do_download {
 		w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(path.Base(entrypath)))
 	}

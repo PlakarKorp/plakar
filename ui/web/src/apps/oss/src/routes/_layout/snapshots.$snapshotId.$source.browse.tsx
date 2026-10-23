@@ -7,7 +7,7 @@ import {
   BrowseViewId,
   Breadcrumbs,
   FilesBrowser,
-  MIME_FILTERS,
+  DOCUMENT_FILTERS,
 } from "@plakar-ui/common/components";
 import { createPaginationSearchSchema } from "@plakar-ui/common/utils";
 import { Menu } from "@plakar-ui/ui/components";
@@ -45,7 +45,9 @@ export const Route = createFileRoute(
     path: z.string().min(1).catch("/").default("/"),
     mime: z
       .string()
-      .transform((value) => MIME_FILTERS.find((m) => m.id === value)?.id ?? "")
+      .transform(
+        (value) => DOCUMENT_FILTERS.find((m) => m.id === value)?.id ?? ""
+      )
       .catch("")
       .default(""),
     filename: z.string().catch("").default(""),
@@ -112,7 +114,7 @@ function Component() {
   const search = Route.useSearch();
   const data = Route.useLoaderData();
   const navigate = Route.useNavigate();
-  const selectedMimeFilter = MIME_FILTERS.find(
+  const selectedMimeFilter = DOCUMENT_FILTERS.find(
     (mime) => mime.id === search.mime
   );
   const snapshot = data.getSnapshotResponse.item;
