@@ -18,9 +18,7 @@ describe("ContentType", () => {
     expect(
       ContentType("application/vnd.oasis.opendocument.text").resolved
     ).toBe("unknown");
-    expect(ContentType("application/x-iso9660-image").resolved).toBe(
-      "unknown"
-    );
+    expect(ContentType("application/x-iso9660-image").resolved).toBe("unknown");
     expect(ContentType("application/x-videomail").resolved).toBe("unknown");
     expect(ContentType("application/jsonl-ish").resolved).toBe("unknown");
     expect(ContentType("application/octet-stream").resolved).toBe("unknown");
