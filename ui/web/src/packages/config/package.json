@@ -19,7 +19,7 @@
     "eslint-plugin-storybook": "^10.6.2",
     "eslint-plugin-unused-imports": "^4.4.1",
     "globals": "^17.12.0",
-    "typescript": "^5.9.3",
+    "typescript": "^7.0.2",
     "typescript-eslint": "^8.67.0"
   }
 }
