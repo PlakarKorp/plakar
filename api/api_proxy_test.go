@@ -95,9 +95,9 @@ func TestIntegrationMatchesSearch(t *testing.T) {
 // TestIntegrationMatchesInstallationStatus pins the installation_status
 // filter used by servicesGetIntegration: empty filter matches
 // everything; "installed"/"not-installed" match on Installation.Status;
-// "upgradable" requires installed AND Installation.Version !=
-// LatestVersion (plain string inequality, matches plakman); any unknown
-// value matches nothing.
+// "upgradable" requires installed AND a known LatestVersion AND
+// Installation.Version != LatestVersion (plain string inequality, matches
+// plakman); any unknown value matches nothing.
 func TestIntegrationMatchesInstallationStatus(t *testing.T) {
 	installed := func(ver, latest string) pkg.Integration {
 		return pkg.Integration{
@@ -131,6 +131,7 @@ func TestIntegrationMatchesInstallationStatus(t *testing.T) {
 		{"upgradable rejects not-installed row", "upgradable", notInstalled("1.1.0"), false},
 		{"upgradable with empty installed version", "upgradable", installed("", "1.0.0"), true},
 		{"upgradable with both versions empty", "upgradable", installed("", ""), false},
+		{"upgradable rejects a package missing from the index", "upgradable", installed("1.0.0", ""), false},
 
 		{"unknown filter rejects installed", "garbage", installed("1.0.0", "1.0.0"), false},
 		{"unknown filter rejects not-installed", "garbage", notInstalled("1.0.0"), false},

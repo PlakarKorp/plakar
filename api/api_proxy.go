@@ -171,6 +171,7 @@ func integrationMatchesInstallationStatus(it *pkg.Integration, filter string) bo
 		return it.Installation.Status == "not-installed"
 	case "upgradable":
 		return it.Installation.Status == "installed" &&
+			it.LatestVersion != "" &&
 			it.Installation.Version != it.LatestVersion
 	default:
 		return false
