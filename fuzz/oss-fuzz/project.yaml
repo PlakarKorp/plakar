@@ -1,0 +1,10 @@
+homepage: "https://plakar.io"
+language: go
+primary_contact: "gilles@poolp.org"
+auto_ccs:
+  - "security@plakar.io"
+main_repo: "https://github.com/PlakarKorp/plakar"
+fuzzing_engines:
+  - libfuzzer
+sanitizers:
+  - address
