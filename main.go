@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"runtime/pprof"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -80,6 +81,36 @@ import (
 
 var ErrCantUnlock = errors.New("failed to unlock repository")
 
+// currentUser falls back to the environment when the cgo-less lookup
+// fails, as it does for an LDAP account under cron (no /etc/passwd entry, no $USER).
+func currentUser() (*user.User, error) {
+	if u, err := user.Current(); err == nil {
+		return u, nil
+	}
+	return userFromEnv()
+}
+
+func userFromEnv() (*user.User, error) {
+	u := &user.User{
+		Uid: strconv.Itoa(os.Getuid()),
+		Gid: strconv.Itoa(os.Getgid()),
+	}
+	for _, name := range []string{"LOGNAME", "USER"} {
+		if u.Username = os.Getenv(name); u.Username != "" {
+			break
+		}
+	}
+	if u.Username == "" {
+		u.Username = u.Uid
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("could not determine current user: %w", err)
+	}
+	u.HomeDir = home
+	return u, nil
+}
+
 // progName replaces the old flag.CommandLine.Name() in diagnostics.
 func progName() string {
 	if len(os.Args) == 0 {
@@ -101,9 +132,9 @@ func entryPoint() int {
 		opt_cpuDefault = opt_cpuDefault - 1
 	}
 
-	userDefault, err := user.Current()
+	userDefault, err := currentUser()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: go away casper !\n", progName())
+		fmt.Fprintf(os.Stderr, "%s: go away casper ! %s\n", progName(), err)
 		return 1
 	}
 
