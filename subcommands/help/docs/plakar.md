@@ -287,6 +287,11 @@ The following options are available:
 > Package a plugin, refer to
 > plakar-pkg-create(1).
 
+**pkg registry**
+
+> Manage additional plugin registries, refer to
+> plakar-pkg-registry(1).
+
 **pkg rm**
 
 > Uninstall a plugin, refer to
@@ -414,4 +419,4 @@ Remove snapshots older than 30 days:
 
 	$ plakar rm -before 30d
 
-Plakar - May 5, 2026 - PLAKAR(1)
+Plakar - September 26, 2026 - PLAKAR(1)
