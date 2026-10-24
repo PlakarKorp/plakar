@@ -1,4 +1,4 @@
-.Dd November 28, 2025
+.Dd October 24, 2026
 .Dt PLAKAR-QUERY 7
 .Os
 .Sh NAME
@@ -134,6 +134,13 @@ Select only the latest snapshot.
 .It Fl name Ar name
 Select snapshots whose name is
 .Ar name .
+.It Fl origin Ar name
+Select snapshots whose origin is
+.Ar name ,
+the host the backup was taken from.
+May be specified multiple times, and multiple origins may be given at the
+same time if comma-separated: snapshots are selected if any of them
+matches.
 .It Fl perimeter Ar name
 Select snapshots whose perimeter is
 .Ar name .
@@ -156,4 +163,14 @@ If a tag name is prefixed with an exclamation mark
 .Sq \&! ,
 the matching is inverted and the snapshot is ignored if it contains
 said tag.
+.It Fl type Ar name
+Select snapshots whose importer type is
+.Ar name ,
+e.g.\&
+.Cm fs
+or
+.Cm s3 .
+May be specified multiple times, and multiple types may be given at the
+same time if comma-separated: snapshots are selected if any of them
+matches.
 .El
