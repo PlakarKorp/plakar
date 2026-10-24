@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"strings"
 	"testing"
@@ -276,7 +277,7 @@ func TestPkgLoadAndUnloadHook_EmptyManifestNoOp(t *testing.T) {
 	// Both hooks are wrappers around plugins.Load / plugins.Unload that
 	// print to stderr on error. An empty manifest is a no-op — the hooks
 	// just shouldn't panic.
-	pkgloadhook(&pkg.Manifest{}, &pkg.Package{}, t.TempDir())
+	pkgloadhook(&pkg.Manifest{}, &pkg.Package{}, t.TempDir(), io.Discard)
 	pkgunloadhook(&pkg.Manifest{}, &pkg.Package{})
 }
 

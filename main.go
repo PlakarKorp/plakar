@@ -370,7 +370,7 @@ func entryPoint() int {
 
 	ctx.SetLogger(logger)
 
-	if err := setupPkgManager(ctx, opt_configdir, opt_datadir, opt_cachedir); err != nil {
+	if err := setupPkgManager(ctx, opt_configdir, opt_datadir, opt_cachedir, renderer.Stderr()); err != nil {
 		log.Fatalln(err.Error())
 	}
 
