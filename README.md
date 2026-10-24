@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="./docs/assets/Plakar_Logo_Simple_Primary.png" alt="Plakar: open source backup engine" width="200"/>
+<img src="./docs/banner.png" alt="Plakar: open source backup engine" width="200"/>
 
 # Plakar: open source backup engine
 

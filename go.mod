@@ -11,7 +11,7 @@ require (
 	github.com/PlakarKorp/integrations/ptar v1.1.1
 	github.com/PlakarKorp/integrations/stdio v1.1.0
 	github.com/PlakarKorp/integrations/tar v1.1.1
-	github.com/PlakarKorp/kloset v1.2.0-alpha.2.0.20261019121718-103dedcd9ea9
+	github.com/PlakarKorp/kloset v1.2.0-alpha.2.0.20261023093046-b081414f0c58
 	github.com/PlakarKorp/pkg v1.1.9
 	github.com/alecthomas/chroma v0.10.0
 	github.com/anacrolix/fuse v0.3.3-0.20260723023734-9e1272bc0085
