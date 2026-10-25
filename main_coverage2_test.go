@@ -144,17 +144,15 @@ func TestGetPassphraseFromEnv_PassphraseCmdFails(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// checkUpdate: second-run, security check enabled, no cached update info.
+// checkUpdate: security check enabled, no cached update info.
 // utils.CheckUpdate fails (or finds nothing) so checkUpdate returns silently.
 // ---------------------------------------------------------------------------
 
-func TestCheckUpdate_SecondRunEnabledNoUpdateInfo(t *testing.T) {
+func TestCheckUpdate_EnabledNoUpdateInfo(t *testing.T) {
 	ctx := newTestCtx(t)
-	// Mark not-first-run.
-	require.NoError(t, ctx.GetCookies().SetFirstRun())
 	// CacheDir is an empty temp dir, so CheckUpdate has nothing to read and
 	// returns an error -> checkUpdate returns without printing anything.
-	checkUpdate(ctx, false)
+	checkUpdate(ctx)
 	out := ctx.Stdout.(interface{ String() string }).String()
 	require.Empty(t, strings.TrimSpace(out))
 }

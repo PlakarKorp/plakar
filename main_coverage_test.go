@@ -139,22 +139,6 @@ func TestEntryPoint_UnknownCommand(t *testing.T) {
 	require.Contains(t, stderr, "command not found")
 }
 
-// ---------- entryPoint: security-check toggle branches ----------
-
-func TestEntryPoint_DisableSecurityCheck(t *testing.T) {
-	status, stdout, _ := runEntryPoint(t, "-disable-security-check", "version")
-	require.Equal(t, 0, status)
-	require.Contains(t, stdout, "security check disabled")
-}
-
-func TestEntryPoint_EnableSecurityCheck(t *testing.T) {
-	// First disable, then enable, reusing the same temp HOME so the cookie
-	// state carries over within the single entryPoint call's lifecycle.
-	status, stdout, _ := runEntryPoint(t, "-enable-security-check", "version")
-	require.Equal(t, 0, status)
-	require.Contains(t, stdout, "security check enabled")
-}
-
 // ---------- entryPoint: keyfile error branch ----------
 
 func TestEntryPoint_MissingKeyfile(t *testing.T) {

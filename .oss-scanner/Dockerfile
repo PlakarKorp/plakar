@@ -40,9 +40,9 @@ RUN (timeout 1500 go test -p 4 -timeout 2m ./... || echo "WARNING: go test repor
 # so `plakar at /srv/encrypted ...` and `plakar at /srv/plaintext ...` just work. The periodic check of
 # the releases feed is turned off: there is no network.
 ENV PLAKAR_PASSPHRASE=oss-scanner-throwaway-passphrase-for-the-demo-repository \
-    PLAKAR_INSECURE_PLAINTEXT=1
-RUN plakar -disable-security-check \
-    && plakar at /srv/encrypted create \
+    PLAKAR_INSECURE_PLAINTEXT=1 \
+    NO_SECURITY_CHECK=1
+RUN plakar at /srv/encrypted create \
     && plakar at /srv/encrypted backup /src/docs \
     && plakar at /srv/encrypted ls \
     && plakar at /srv/plaintext create -plaintext \

@@ -108,24 +108,3 @@ func (c *Manager) IsFirstRun() bool {
 func (c *Manager) SetFirstRun() error {
 	return os.WriteFile(filepath.Join(c.cookiesDir, ".first-run"), []byte{}, 0600)
 }
-
-func (c *Manager) IsDisabledSecurityCheck() bool {
-	_, err := os.Stat(filepath.Join(c.cookiesDir, ".disabled-security-check"))
-	if os.IsNotExist(err) {
-		return false
-	} else {
-		return true
-	}
-}
-
-func (c *Manager) SetDisabledSecurityCheck() error {
-	return os.WriteFile(filepath.Join(c.cookiesDir, ".disabled-security-check"), []byte{}, 0600)
-}
-
-func (c *Manager) RemoveDisabledSecurityCheck() error {
-	err := os.Remove(filepath.Join(c.cookiesDir, ".disabled-security-check"))
-	if !errors.Is(err, os.ErrNotExist) {
-		return err
-	}
-	return nil
-}
