@@ -99,6 +99,16 @@ export const NotPermitted: Story = {
   },
 };
 
+export const WithQuickActions: Story = {
+  args: {
+    ...Default.args,
+    quickActions: [
+      { label: "Add inventory", href: "#" },
+      { label: "Add secret provider", href: "#" },
+    ],
+  },
+};
+
 export const Loading = {
   argTypes: {},
   render: () => <IntegrationCardSkeleton />,
