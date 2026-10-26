@@ -1,5 +1,7 @@
 import { NavListItemProps } from "@plakar-ui/ui/components";
 
+import { UpgradableIntegrations } from "~/components/integration-card/upgradable-integrations";
+
 export const NAV_ITEMS: NavListItemProps[] = [
   {
     label: "Dashboard",
@@ -38,6 +40,7 @@ export const NAV_ITEMS: NavListItemProps[] = [
   },
   {
     label: "Integrations",
+    iconNotification: <UpgradableIntegrations />,
     href: {
       to: "/integrations",
     },
