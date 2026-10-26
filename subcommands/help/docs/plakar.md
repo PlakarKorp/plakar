@@ -299,7 +299,7 @@ The following options are available:
 
 # ENVIRONMENT
 
-`NO_SECURITY_CHECK`
+`DISABLE_SECURITY_CHECK`
 
 > If set,
 > **plakar**

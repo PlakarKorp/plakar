@@ -566,7 +566,7 @@ func entryPoint() int {
 }
 
 func checkUpdate(ctx *appcontext.AppContext) {
-	if _, ok := os.LookupEnv("NO_SECURITY_CHECK"); ok {
+	if _, ok := os.LookupEnv("DISABLE_SECURITY_CHECK"); ok {
 		return
 	}
 

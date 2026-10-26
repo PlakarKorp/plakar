@@ -106,7 +106,7 @@ func TestSetupEncryption_NilConfigIsNoOp(t *testing.T) {
 
 func TestCheckUpdate_DisabledByEnvIsSilent(t *testing.T) {
 	ctx := newTestCtx(t)
-	t.Setenv("NO_SECURITY_CHECK", "")
+	t.Setenv("DISABLE_SECURITY_CHECK", "")
 
 	checkUpdate(ctx)
 

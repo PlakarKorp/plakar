@@ -41,7 +41,7 @@ RUN (timeout 1500 go test -p 4 -timeout 2m ./... || echo "WARNING: go test repor
 # the releases feed is turned off: there is no network.
 ENV PLAKAR_PASSPHRASE=oss-scanner-throwaway-passphrase-for-the-demo-repository \
     PLAKAR_INSECURE_PLAINTEXT=1 \
-    NO_SECURITY_CHECK=1
+    DISABLE_SECURITY_CHECK=1
 RUN plakar at /srv/encrypted create \
     && plakar at /srv/encrypted backup /src/docs \
     && plakar at /srv/encrypted ls \
