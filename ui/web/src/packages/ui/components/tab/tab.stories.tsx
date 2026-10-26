@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { Tab, TabItem } from "./tab";
 import { DropdownListItem } from "../dropdown-list/dropdown-list";
+import { UpgradeIndicator } from "../upgrade-indicator/upgrade-indicator";
 
 const meta = {
   title: "design-system/Tab",
@@ -42,6 +43,7 @@ export const Underlined: Story = {
         id: "label-2",
         title: "Label 2",
         icon: "bars",
+        iconNotification: <UpgradeIndicator label="Update available" />,
         tag: "5",
       },
       {
