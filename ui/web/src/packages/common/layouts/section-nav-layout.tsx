@@ -26,6 +26,7 @@ export function SectionNavLayout({
           <NavList.Item
             key={item.id}
             icon={item.icon}
+            iconNotification={item.iconNotification}
             label={item.title}
             href={item.href}
             onAction={onSelect && (() => onSelect(item.id))}
