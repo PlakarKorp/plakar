@@ -7,6 +7,7 @@ describe("ContentType", () => {
     expect(ContentType("text/plain; charset=utf-8").resolved).toBe("text");
     expect(ContentType("application/json").resolved).toBe("json");
     expect(ContentType("application/ld+json").resolved).toBe("json");
+    expect(ContentType("application/x-ndjson").resolved).toBe("json");
     expect(ContentType("image/png").resolved).toBe("image");
     expect(ContentType("application/pdf").resolved).toBe("pdf");
     expect(ContentType("video/mp4").resolved).toBe("video");

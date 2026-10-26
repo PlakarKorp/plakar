@@ -8,12 +8,16 @@ const TEXT_APPLICATION_TYPES = [
 
 export function ContentType(value: string) {
   // Drop the parameters ("; charset=utf-8") and match on the media type
-  // alone: a substring match sent application/vnd.oasis.opendocument.text to
-  // the text viewer and application/x-iso9660-image to the image viewer.
+  // alone: a substring match sent application/x-iso9660-image to the image
+  // viewer.
   const mime = value.split(";")[0].trim();
   if (mime.startsWith("text/")) {
     return { resolved: "text", raw: value } as const;
-  } else if (mime === "application/json" || mime.endsWith("+json")) {
+  } else if (
+    mime === "application/json" ||
+    mime === "application/x-ndjson" ||
+    mime.endsWith("+json")
+  ) {
     return { resolved: "json", raw: value } as const;
   } else if (mime.startsWith("image/")) {
     return { resolved: "image", raw: value } as const;
