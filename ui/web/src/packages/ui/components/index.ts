@@ -88,4 +88,5 @@ export * from "./tooltip/tooltip";
 export * from "./tree/tree";
 export * from "./typography/typography";
 export * from "./typography/typography.constants";
+export * from "./upgrade-indicator/upgrade-indicator";
 export * from "./typography/utils";
