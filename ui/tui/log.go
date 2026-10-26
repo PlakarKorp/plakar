@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"sync"
 )
 
 type switchWriter struct {
@@ -11,10 +12,16 @@ type switchWriter struct {
 	stream   string // stdout / stderr
 	fallback io.Writer
 
+	// mu serializes writers sharing one switchWriter, such as the plugin
+	// processes whose stderr is copied here from their own goroutines.
+	mu  sync.Mutex
 	buf []byte
 }
 
 func (w *switchWriter) Write(p []byte) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
 	w.buf = append(w.buf, p...)
 	for {
 		i := bytes.IndexByte(w.buf, '\n')
