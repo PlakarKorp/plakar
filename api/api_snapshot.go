@@ -756,12 +756,14 @@ func (ui *uiserver) snapshotVFSErrors(w http.ResponseWriter, r *http.Request) er
 		return err
 	}
 
+	// GetEntry follows symlinks: list the errors beneath the directory
+	// the total was computed for, not beneath the path that led to it.
 	var i int64
 	items := Items[*vfs.ErrorItem]{
 		Items: []*vfs.ErrorItem{},
 		Total: int(dir.Summary.Directory.Errors + dir.Summary.Below.Errors),
 	}
-	for errorEntry, err := range fs.Errors(path) {
+	for errorEntry, err := range fs.Errors(dir.Path()) {
 		if err != nil {
 			return err
 		}
