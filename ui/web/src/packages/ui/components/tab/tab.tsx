@@ -23,6 +23,7 @@ export type TabItem = Pick<LinkProps, "href"> & {
   id: string;
   title: string;
   icon?: IconType;
+  iconNotification?: ReactNode;
   tag?: ReactNode;
   content?: React.ReactNode;
   isDisabled?: boolean;
@@ -113,7 +114,20 @@ function TabRoot<const T extends readonly TabItem[]>({
 function TabLabel({ item, variant }: { item: TabItem; variant: TabVariant }) {
   const label = (
     <>
-      {item.icon && <Icon type={item.icon} size="md" />}
+      {item.icon && (
+        <span
+          className={clsx("relative flex items-center justify-center", {
+            "mr-1.5": item.iconNotification,
+          })}
+        >
+          <Icon type={item.icon} size="md" />
+          {item.iconNotification && (
+            <div className="absolute -top-1.5 -right-2.5 flex">
+              {item.iconNotification}
+            </div>
+          )}
+        </span>
+      )}
 
       <Typography
         as="span"
