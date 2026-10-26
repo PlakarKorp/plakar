@@ -7,3 +7,4 @@
 .idea
 /ui/web/build/*
 !/ui/web/build/.gitkeep
+/.turbo
