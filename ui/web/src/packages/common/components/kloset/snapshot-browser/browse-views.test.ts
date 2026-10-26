@@ -7,6 +7,7 @@ import {
   emptyBrowseViews,
   getBrowseView,
   isDocumentContentType,
+  searchViewCounts,
   suggestBrowseView,
 } from "./browse-views";
 
@@ -140,5 +141,18 @@ describe("browse views", () => {
     const documents = getBrowseView("documents");
     expect(documents.matches("application/octet-stream")).toBe(false);
     expect(documents.matches("text/csv")).toBe(true);
+  });
+
+  it("counts each view of a search from its matches per content type", () => {
+    expect(
+      searchViewCounts({
+        "image/png": 3,
+        "image/jpeg": 2,
+        "audio/flac": 1,
+        "text/plain": 4,
+        "application/pdf": 2,
+        "application/zip": 5,
+      })
+    ).toEqual({ all: 17, photos: 5, videos: 0, music: 1, documents: 6 });
   });
 });
