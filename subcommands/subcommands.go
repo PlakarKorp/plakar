@@ -18,6 +18,11 @@ const (
 	NeedRepositoryKey CommandFlags = 1 << iota
 	BeforeRepositoryWithStorage
 	BeforeRepositoryOpen
+
+	// Quiet runs the command as if -quiet was given: its workflows are
+	// internal and would otherwise show up as a TUI progress screen or as
+	// a line per path.
+	Quiet
 )
 
 // Subcommand is the contract every plakar command implements.  Parse must not
