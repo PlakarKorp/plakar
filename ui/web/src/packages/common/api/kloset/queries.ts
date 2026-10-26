@@ -98,29 +98,37 @@ export const SnapshotVFSQueryOptions = (
       search,
     }),
     queryFn: async () => {
-      const resp = await (search === undefined
-        ? api.getSnapshotPathChildren({
-            repository,
-            snapshot,
-            source,
-            path: vfsEntry.path,
-            pagination: { page, perPage },
-          })
-        : api.getSnapshotPathSearch({
-            repository,
-            snapshot,
-            source,
-            path: vfsEntry.path,
-            pagination: { page, perPage },
-            recursive: search.recursive ?? true,
-            mimes: search.contentTypes,
-            filename: search.filename,
-          }));
+      if (search === undefined) {
+        const resp = await api.getSnapshotPathChildren({
+          repository,
+          snapshot,
+          source,
+          path: vfsEntry.path,
+          pagination: { page, perPage },
+        });
+        return {
+          total: resp.total,
+          items: enrichGetSnapshotPathChildren(vfsEntry, resp.items),
+          isSearching: false,
+          contentTypes: undefined,
+        };
+      }
 
+      const resp = await api.getSnapshotPathSearch({
+        repository,
+        snapshot,
+        source,
+        path: vfsEntry.path,
+        pagination: { page, perPage },
+        recursive: search.recursive ?? true,
+        mimes: search.contentTypes,
+        filename: search.filename,
+      });
       return {
-        ...resp,
-        isSearching: search !== undefined,
+        total: resp.total,
         items: enrichGetSnapshotPathChildren(vfsEntry, resp.items),
+        isSearching: true,
+        contentTypes: resp.content_types,
       };
     },
     // Snapshots content is immutable, so we don't need to refetch it.
