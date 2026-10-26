@@ -299,6 +299,12 @@ The following options are available:
 
 # ENVIRONMENT
 
+`DISABLE_SECURITY_CHECK`
+
+> If set,
+> **plakar**
+> does not check the releases feed for security and reliability updates.
+
 `PLAKAR_INSECURE_PLAINTEXT`
 
 > Must be set to work with a Kloset store that is not encrypted.

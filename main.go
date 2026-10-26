@@ -218,8 +218,6 @@ func entryPoint() int {
 	opt_quiet := opts.quiet
 	opt_silent := opts.silent
 	opt_keyfile := opts.keyfile
-	opt_enableSecurityCheck := opts.enableSecurityCheck
-	opt_disableSecurityCheck := opts.disableSecurityCheck
 
 	var interrupted bool
 
@@ -324,27 +322,7 @@ func entryPoint() int {
 		return 1
 	}
 
-	if opt_disableSecurityCheck {
-		if err := ctx.GetCookies().SetDisabledSecurityCheck(); err != nil {
-			fmt.Fprintln(ctx.Stderr, "failed to disable security checks:", err)
-			return 1
-		}
-		fmt.Fprintln(ctx.Stdout, "security check disabled")
-		return 0
-	} else {
-		opt_disableSecurityCheck = ctx.GetCookies().IsDisabledSecurityCheck()
-	}
-
-	if opt_enableSecurityCheck {
-		if err := ctx.GetCookies().RemoveDisabledSecurityCheck(); err != nil {
-			fmt.Fprintln(ctx.Stderr, "failed to enable security checks:", err)
-			return 1
-		}
-		fmt.Fprintln(ctx.Stdout, "security check enabled")
-		return 0
-	}
-
-	checkUpdate(ctx, opt_disableSecurityCheck)
+	checkUpdate(ctx)
 
 	// setup from default + override
 	if opt_cpuCount <= 0 {
@@ -586,31 +564,8 @@ func entryPoint() int {
 	return status
 }
 
-func checkUpdate(ctx *appcontext.AppContext, disableSecurityCheck bool) {
-	if ctx.GetCookies().IsFirstRun() {
-		ctx.GetCookies().SetFirstRun()
-		if disableSecurityCheck {
-			return
-		}
-
-		fmt.Fprintln(ctx.Stdout, "Welcome to plakar !")
-		fmt.Fprintln(ctx.Stdout, "")
-		fmt.Fprintln(ctx.Stdout, "By default, plakar checks for security updates on the releases feed once every 24h.")
-		fmt.Fprintln(ctx.Stdout, "It will notify you if there are important updates that you need to install.")
-		fmt.Fprintln(ctx.Stdout, "")
-		fmt.Fprintln(ctx.Stdout, "If you prefer to watch yourself, you can disable this permanently by running:")
-		fmt.Fprintln(ctx.Stdout, "")
-		fmt.Fprintln(ctx.Stdout, "\tplakar -disable-security-check")
-		fmt.Fprintln(ctx.Stdout, "")
-		fmt.Fprintln(ctx.Stdout, "If you change your mind, run:")
-		fmt.Fprintln(ctx.Stdout, "")
-		fmt.Fprintln(ctx.Stdout, "\tplakar -enable-security-check")
-		fmt.Fprintln(ctx.Stdout, "")
-		fmt.Fprintln(ctx.Stdout, "EOT")
-		return
-	}
-
-	if disableSecurityCheck {
+func checkUpdate(ctx *appcontext.AppContext) {
+	if _, ok := os.LookupEnv("DISABLE_SECURITY_CHECK"); ok {
 		return
 	}
 
