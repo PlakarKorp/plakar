@@ -226,6 +226,29 @@ func entryPoint() int {
 	ctx := appcontext.NewAppContext()
 	defer ctx.Close()
 
+	if hadAt {
+		if atRepository == "" {
+			fmt.Fprintf(os.Stderr, "%s: missing plakar repository\n", progName())
+			return 1
+		}
+	}
+
+	if len(cmdArgs) == 0 {
+		fmt.Fprintf(os.Stderr, "%s: a subcommand must be provided\n", progName())
+		listCmds(os.Stderr, "  ")
+		return 1
+	}
+
+	// The command is resolved before the renderer, which it gets a say in.
+	cmd, _, args := subcommands.Resolve(root, cmdArgs)
+	if cmd == nil {
+		fmt.Fprintf(os.Stderr, "%s: command not found: %s\n", progName(), cmdArgs[0])
+		return 1
+	}
+	if cmd.GetFlags()&subcommands.Quiet != 0 {
+		opt_quiet = true
+	}
+
 	plainOutput := opt_silent || opt_stdio || opt_quiet || opt_trace != "" || !isTerminal()
 	ctx.ProgressSummary = !plainOutput
 
@@ -376,19 +399,6 @@ func entryPoint() int {
 	ctx.ProcessID = os.Getpid()
 	ctx.MaxConcurrency = opt_maxConcurrency
 
-	if hadAt {
-		if atRepository == "" {
-			fmt.Fprintf(os.Stderr, "%s: missing plakar repository\n", progName())
-			return 1
-		}
-	}
-
-	if len(cmdArgs) == 0 {
-		fmt.Fprintf(os.Stderr, "%s: a subcommand must be provided\n", progName())
-		listCmds(os.Stderr, "  ")
-		return 1
-	}
-
 	logger := logging.NewLogger(renderer.Stdout(), renderer.Stderr())
 
 	// start logging
@@ -406,11 +416,8 @@ func entryPoint() int {
 	}
 
 	var repositoryPath string
-
-	var args []string
 	if hadAt {
 		repositoryPath = atRepository
-		args = cmdArgs
 	} else {
 		repositoryPath = os.Getenv("PLAKAR_REPOSITORY")
 		if repositoryPath == "" {
@@ -421,19 +428,11 @@ func entryPoint() int {
 				repositoryPath = "fs:" + filepath.Join(userDefault.HomeDir, ".plakar")
 			}
 		}
-
-		args = cmdArgs
 	}
 
 	storeConfig, err := ctx.Config.GetRepository(repositoryPath)
 	if err != nil {
 		logger.Stderr("%s: %s\n", progName(), err)
-		return 1
-	}
-
-	cmd, _, args := subcommands.Resolve(root, args)
-	if cmd == nil {
-		logger.Stderr("command not found: %s\n", args[0])
 		return 1
 	}
 
