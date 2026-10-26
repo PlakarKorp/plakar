@@ -166,6 +166,15 @@ The filters are:
 > Select snapshots whose name is
 > *name*.
 
+**-origin** *name*
+
+> Select snapshots whose origin is
+> *name*,
+> the host the backup was taken from.
+> May be specified multiple times, and multiple origins may be given at the
+> same time if comma-separated: snapshots are selected if any of them
+> matches.
+
 **-perimeter** *name*
 
 > Select snapshots whose perimeter is
@@ -196,4 +205,16 @@ The filters are:
 > the matching is inverted and the snapshot is ignored if it contains
 > said tag.
 
-Plakar - November 28, 2025 - PLAKAR-QUERY(7)
+**-type** *name*
+
+> Select snapshots whose importer type is
+> *name*,
+> e.g.
+> **fs**
+> or
+> **s3**.
+> May be specified multiple times, and multiple types may be given at the
+> same time if comma-separated: snapshots are selected if any of them
+> matches.
+
+Plakar - October 24, 2026 - PLAKAR-QUERY(7)
