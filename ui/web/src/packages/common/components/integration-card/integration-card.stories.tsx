@@ -103,8 +103,8 @@ export const WithQuickActions: Story = {
   args: {
     ...Default.args,
     quickActions: [
-      { label: "Add inventory", href: "#" },
-      { label: "Add secret provider", href: "#" },
+      { label: "Add store", href: "#" },
+      { label: "Add source", href: "#" },
     ],
   },
 };
