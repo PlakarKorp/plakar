@@ -123,6 +123,33 @@ export function emptyBrowseViews(entry: VFSEntryType): Set<BrowseViewId> {
   );
 }
 
+export function searchViewCounts(
+  contentTypes: Record<string, number>
+): Record<BrowseViewId, number> {
+  const matches = Object.entries(contentTypes);
+  const count = (id: BrowseViewId) =>
+    matches.reduce(
+      (sum, [contentType, n]) =>
+        getBrowseView(id).matches(contentType) ? sum + n : sum,
+      0
+    );
+  return {
+    all: count("all"),
+    photos: count("photos"),
+    videos: count("videos"),
+    music: count("music"),
+    documents: count("documents"),
+  };
+}
+
+export function emptySearchViews(
+  counts: Record<BrowseViewId, number>
+): Set<BrowseViewId> {
+  return new Set(
+    BROWSE_VIEW_IDS.filter((id) => id !== "all" && counts[id] === 0)
+  );
+}
+
 // The share of a directory's files one kind must reach to be suggested, and the
 // number of files below which nothing is.
 const SUGGEST_SHARE = 0.6;

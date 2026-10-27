@@ -20,7 +20,14 @@ func (cmd *Info) executeErrors(ctx *appcontext.AppContext, repo *repository.Repo
 		return 1, err
 	}
 
-	for item, err := range fs.Errors(pathname) {
+	// GetEntry follows symlinks, so errors beneath a linked directory are
+	// listed when the snapshot is addressed through the link.
+	entry, err := fs.GetEntry(pathname)
+	if err != nil {
+		return 1, fmt.Errorf("%s: %w", pathname, err)
+	}
+
+	for item, err := range fs.Errors(entry.Path()) {
 		if err != nil {
 			return 1, fmt.Errorf("failed to scan errors: %w", err)
 		}

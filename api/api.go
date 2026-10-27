@@ -14,6 +14,7 @@ import (
 	"github.com/PlakarKorp/kloset/connectors/storage"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
+	"github.com/PlakarKorp/kloset/snapshot/vfs"
 	"github.com/PlakarKorp/pkg"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/login"
@@ -55,6 +56,18 @@ type Items[T any] struct {
 type ItemsPage[T any] struct {
 	HasNext bool `json:"has_next"`
 	Items   []T  `json:"items"`
+}
+
+// SearchPage is a page of VFS search results along with the size of the
+// result set: Total counts the matches of the whole query across every
+// page, ContentTypes counts the matches of the name filter alone per
+// content type, so that each content type keeps its count while one of
+// them is searched.
+type SearchPage struct {
+	HasNext      bool           `json:"has_next"`
+	Items        []*vfs.Entry   `json:"items"`
+	Total        int            `json:"total"`
+	ContentTypes map[string]int `json:"content_types"`
 }
 
 type ApiErrorRes struct {
