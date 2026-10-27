@@ -30,19 +30,20 @@ export function DownloadButton({
 type DownloadMenuItemProps = {
   snapshotId: string;
   paths: string[];
+  label?: string;
 };
 
-export function DownloadMenuItem({ snapshotId, paths }: DownloadMenuItemProps) {
+export function DownloadMenuItem({
+  snapshotId,
+  paths,
+  label = "Download",
+}: DownloadMenuItemProps) {
   const { downloadSnapshot } = useDownloadSnapshot({
     snapshotId,
     paths,
   });
 
   return (
-    <Menu.Item
-      label="Download"
-      onPress={downloadSnapshot}
-      leftIcon="download"
-    />
+    <Menu.Item label={label} onPress={downloadSnapshot} leftIcon="download" />
   );
 }
