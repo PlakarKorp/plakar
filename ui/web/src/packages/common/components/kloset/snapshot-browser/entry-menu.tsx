@@ -32,6 +32,7 @@ export function EntryMenu({
 }: EntryMenuProps) {
   const { isOpen, onOpenChange } = useEntryMenu(entry.path);
   const isDirectory = entry.file_info.mode.isDir();
+  const isFile = entry.file_info.mode.isRegular();
 
   return (
     <MenuTrigger isOpen={isOpen} onOpenChange={onOpenChange}>
@@ -53,9 +54,10 @@ export function EntryMenu({
             leftIcon={isDirectory ? "folder-open" : "eye"}
             onAction={onOpen}
           />
-          {isDirectory ? (
+          {isDirectory && (
             <DownloadMenuItem snapshotId={snapshot} paths={[entry.path]} />
-          ) : (
+          )}
+          {isFile && (
             <FileDownloadMenuItem
               snapshot={snapshot}
               source={source}
