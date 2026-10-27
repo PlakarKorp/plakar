@@ -1,5 +1,6 @@
 import { IconButton, Menu } from "@plakar-ui/ui/components";
 import clsx from "clsx";
+import { ComponentProps } from "react";
 import { MenuTrigger, Popover } from "react-aria-components";
 
 import { EnrichedChildEntryType } from "@plakar-ui/common/api/kloset";
@@ -15,6 +16,8 @@ type EntryMenuProps = {
   isSelected: boolean;
   onToggleSelected: () => void;
   onOpen: () => void;
+  revealOnHover?: boolean;
+  size?: ComponentProps<typeof IconButton>["size"];
   className?: string;
 };
 
@@ -25,6 +28,8 @@ export function EntryMenu({
   isSelected,
   onToggleSelected,
   onOpen,
+  revealOnHover = true,
+  size = "sm",
   className,
 }: EntryMenuProps) {
   const { isOpen, onOpenChange } = useEntryMenu(entry.path);
@@ -36,10 +41,11 @@ export function EntryMenu({
         icon="ellipsis-vertical"
         aria-label={`Actions for ${entry.file_info.name}`}
         variant="tertiary"
-        size="sm"
+        size={size}
         className={clsx(
-          "group-hover:opacity-100 data-focus-visible:opacity-100 pointer-coarse:opacity-100",
-          isOpen ? "opacity-100" : "opacity-0",
+          revealOnHover &&
+            !isOpen &&
+            "opacity-0 group-hover:opacity-100 data-focus-visible:opacity-100 pointer-coarse:opacity-100",
           className
         )}
       />

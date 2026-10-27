@@ -193,22 +193,12 @@ function FolderTile({
           : "border-secondary"
       )}
     >
-      <div
-        className={clsx(
-          "flex",
-          isSelected || isOpen
-            ? "opacity-100"
-            : "opacity-0 group-hover:opacity-100",
-          "has-data-focus-visible:opacity-100 motion-safe:transition-opacity pointer-coarse:opacity-100"
-        )}
-      >
-        <Checkbox
-          size="sm"
-          aria-label={`Select ${entry.file_info.name}`}
-          isSelected={isSelected}
-          onChange={onToggleSelected}
-        />
-      </div>
+      <Checkbox
+        size="sm"
+        aria-label={`Select ${entry.file_info.name}`}
+        isSelected={isSelected}
+        onChange={onToggleSelected}
+      />
       <Button
         onPress={onPress}
         className="data-focus-visible:outline-focus flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-md py-2.5 text-left outline-none data-focus-visible:outline-2"
@@ -231,6 +221,7 @@ function FolderTile({
         isSelected={isSelected}
         onToggleSelected={onToggleSelected}
         onOpen={onPress}
+        revealOnHover={false}
       />
     </div>
   );
@@ -290,7 +281,7 @@ function FileTile({
     >
       <div
         className={clsx(
-          "absolute top-2 left-2 z-10 flex rounded-md bg-black/40 p-1 backdrop-blur-sm",
+          "absolute top-2 left-2 z-10 grid size-9 place-items-center rounded-lg bg-black/40 backdrop-blur-sm",
           isSelected || menu.isOpen
             ? "opacity-100"
             : "opacity-0 group-hover:opacity-100",
@@ -298,7 +289,7 @@ function FileTile({
         )}
       >
         <Checkbox
-          size="sm"
+          size="md"
           aria-label={`Select ${entry.file_info.name}`}
           isSelected={isSelected}
           onChange={onToggleSelected}
@@ -307,7 +298,7 @@ function FileTile({
 
       <div
         className={clsx(
-          "absolute top-2 right-2 z-10 flex rounded-md bg-black/40 backdrop-blur-sm",
+          "absolute top-2 right-2 z-10 flex rounded-lg bg-black/40 backdrop-blur-sm",
           menu.isOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100",
           "has-data-focus-visible:opacity-100 motion-safe:transition-opacity pointer-coarse:opacity-100"
         )}
@@ -319,7 +310,8 @@ function FileTile({
           isSelected={isSelected}
           onToggleSelected={onToggleSelected}
           onOpen={onPress}
-          className="text-white"
+          size="md"
+          className="text-white data-hovered:!bg-white/20 data-hovered:!text-white"
         />
       </div>
 
