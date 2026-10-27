@@ -1,9 +1,17 @@
-import { Button, Icon, Link, Tag, Typography } from "@plakar-ui/ui/components";
-import { ComponentProps } from "react";
+import {
+  Button,
+  Icon,
+  IconButton,
+  Link,
+  Tag,
+  Typography,
+} from "@plakar-ui/ui/components";
+import { ComponentProps, useState } from "react";
 import { LinkProps } from "react-aria-components";
 
 import { IntegrationInstallationStatuses } from "./integration-card.constants";
 import { IntegrationStageTag } from "./integration-version-tag";
+import { RemoveIntegrationModal } from "./remove-integration-modal";
 import { getIntegrationIcon, hasIntegrationIcon } from "../../api/enrich";
 
 type IntegrationInstallationStatus =
@@ -177,19 +185,56 @@ export function IntegrationCard({
         )}
 
         {installationStatus === "installed" && onRemove && (
-          <Button
-            variant="tertiary"
-            className="ml-auto"
-            leftIcon="trash"
-            onPress={onRemove}
-            isDisabled={pending || isDisabled}
-            isPending={pending}
-          >
-            Remove
-          </Button>
+          <RemoveIntegrationButton
+            displayName={displayName}
+            version={version}
+            onRemove={onRemove}
+            pending={pending}
+            isDisabled={isDisabled}
+          />
         )}
       </div>
     </div>
+  );
+}
+
+type RemoveIntegrationButtonProps = {
+  displayName: string;
+  version: string;
+  onRemove: () => void;
+  pending: boolean;
+  isDisabled: boolean;
+};
+
+function RemoveIntegrationButton({
+  displayName,
+  version,
+  onRemove,
+  pending,
+  isDisabled,
+}: RemoveIntegrationButtonProps) {
+  const [isConfirming, setIsConfirming] = useState(false);
+
+  return (
+    <>
+      <IconButton
+        aria-label="Remove"
+        tooltip="Remove"
+        variant="tertiary"
+        className="ml-auto"
+        icon="trash"
+        onPress={() => setIsConfirming(true)}
+        isDisabled={pending || isDisabled}
+        isPending={pending}
+      />
+      <RemoveIntegrationModal
+        displayName={displayName}
+        version={version}
+        isOpen={isConfirming}
+        onOpenChange={setIsConfirming}
+        onConfirm={onRemove}
+      />
+    </>
   );
 }
 
