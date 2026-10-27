@@ -221,7 +221,6 @@ function FolderTile({
         isSelected={isSelected}
         onToggleSelected={onToggleSelected}
         onOpen={onPress}
-        revealOnHover={false}
       />
     </div>
   );
@@ -281,7 +280,7 @@ function FileTile({
     >
       <div
         className={clsx(
-          "absolute top-2 left-2 z-10 grid size-9 place-items-center rounded-lg bg-black/40 backdrop-blur-sm",
+          "bg-primary/90 absolute top-2 left-2 z-10 grid size-9 place-items-center rounded-lg shadow-md backdrop-blur-sm",
           isSelected || menu.isOpen
             ? "opacity-100"
             : "opacity-0 group-hover:opacity-100",
@@ -298,7 +297,7 @@ function FileTile({
 
       <div
         className={clsx(
-          "absolute top-2 right-2 z-10 flex rounded-lg bg-black/40 backdrop-blur-sm",
+          "bg-primary/90 absolute top-2 right-2 z-10 flex rounded-lg shadow-md backdrop-blur-sm",
           menu.isOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100",
           "has-data-focus-visible:opacity-100 motion-safe:transition-opacity pointer-coarse:opacity-100"
         )}
@@ -311,7 +310,6 @@ function FileTile({
           onToggleSelected={onToggleSelected}
           onOpen={onPress}
           size="md"
-          className="text-white data-hovered:!bg-white/20 data-hovered:!text-white"
         />
       </div>
 

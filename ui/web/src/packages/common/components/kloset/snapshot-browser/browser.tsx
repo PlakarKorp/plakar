@@ -678,6 +678,7 @@ export function FilesBrowser({
                     <DownloadMenuItem
                       snapshotId={snapshot.identifier.Value}
                       paths={[vfsEntry.path]}
+                      label="Download this folder"
                     />
                     {actions}
                   </Menu>
