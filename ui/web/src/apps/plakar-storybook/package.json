@@ -22,7 +22,7 @@
     "eslint": "^10.8.1",
     "react": "^19.3.1",
     "storybook": "^10.6.2",
-    "typescript": "^5.9.3",
+    "typescript": "^7.0.2",
     "vite": "^8.3.4"
   }
 }
