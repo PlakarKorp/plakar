@@ -1,12 +1,7 @@
 import React, { PropsWithChildren } from "react";
-import {
-  Button as RAButton,
-  Group,
-  Toolbar,
-  Separator,
-} from "react-aria-components";
+import { Group, Toolbar, Separator } from "react-aria-components";
 
-import { Typography } from "..";
+import { IconButton, Typography } from "..";
 
 type SelectionProps = PropsWithChildren<{
   text: string;
@@ -25,39 +20,35 @@ export function SelectionControls({
   return (
     <Toolbar
       aria-label="Selection controls"
-      className="bg-foreground-black m-4 flex w-fit items-center rounded-lg shadow-lg drop-shadow-lg"
+      className="bg-primary border-primary m-4 flex w-fit items-center gap-2 rounded-xl border p-1.5 shadow-lg"
     >
-      <Group
-        aria-label="Items selected"
-        className="flex flex-col px-4 py-2 text-center"
-      >
-        <div className="flex items-baseline gap-1 whitespace-nowrap">
-          <Typography className="text-on-brand" weight="medium" size="sm">
-            {text}
-          </Typography>
-          {altText && (
-            <Typography className="text-on-brand" size="xs">
-              {altText}
-            </Typography>
-          )}
-        </div>
-        <Typography
-          as={(props) => <RAButton onPress={onUnselect} {...props} />}
-          size="xs"
-          className="text-tertiary cursor-pointer underline"
-        >
-          Unselect all
+      <IconButton
+        icon="close"
+        aria-label="Unselect all"
+        tooltip="Unselect all"
+        variant="tertiary"
+        size="sm"
+        onPress={onUnselect}
+      />
+      <div className="flex items-baseline gap-1.5 pr-1 whitespace-nowrap">
+        <Typography weight="medium" size="sm">
+          {text}
         </Typography>
-      </Group>
+        {altText && (
+          <Typography size="sm" className="text-tertiary">
+            {altText}
+          </Typography>
+        )}
+      </div>
 
       {hasChildren && (
         <>
           <Separator
             orientation="vertical"
-            className="bg-border-primary w-[1px] shrink-0 self-stretch"
+            className="bg-border-secondary h-6 w-px shrink-0"
           />
 
-          <Group aria-label="Actions" className="flex gap-2 p-2">
+          <Group aria-label="Actions" className="flex gap-1.5">
             {children}
           </Group>
         </>

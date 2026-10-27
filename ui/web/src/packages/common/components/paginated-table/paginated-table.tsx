@@ -13,7 +13,7 @@ import {
   TableFeatures,
 } from "@tanstack/react-table";
 import clsx from "clsx";
-import { Dispatch, memo, ReactNode } from "react";
+import { Dispatch, memo, MouseEvent, ReactNode } from "react";
 import {
   Cell,
   Column,
@@ -68,6 +68,7 @@ type PaginatedTableProps<T extends RowData> = {
   disablePagination?: boolean;
   getExpandedContent?: (row: T) => ReactNode;
   getEmptyContent?: () => React.ReactNode;
+  onRowContextMenu?: (row: T, event: MouseEvent) => void;
 };
 
 export function PaginatedTable<T extends RowData>({
@@ -84,6 +85,7 @@ export function PaginatedTable<T extends RowData>({
   disablePagination = false,
   getExpandedContent,
   getEmptyContent,
+  onRowContextMenu,
 }: PaginatedTableProps<T>) {
   const handleRetry = () => {
     query.refetch();
@@ -251,6 +253,7 @@ export function PaginatedTable<T extends RowData>({
                     getExpandedContent={getExpandedContent}
                     hasExpandColumn={hasExpandColumn}
                     isTree={isTree}
+                    onContextMenu={onRowContextMenu}
                   />
                 );
               })
@@ -275,6 +278,7 @@ type InteractiveRowProps<T extends RowData> = {
   getExpandedContent?: (row: T) => ReactNode;
   hasExpandColumn: boolean;
   isTree: boolean;
+  onContextMenu?: (row: T, event: MouseEvent) => void;
 };
 
 function InteractiveRowInner<T extends RowData>({
@@ -288,6 +292,7 @@ function InteractiveRowInner<T extends RowData>({
   getExpandedContent,
   hasExpandColumn,
   isTree,
+  onContextMenu,
 }: InteractiveRowProps<T>) {
   const withSoftSelection = onSoftSelect !== undefined;
   const canExpand = row.getCanExpand() || !!getExpandedContent;
@@ -300,13 +305,6 @@ function InteractiveRowInner<T extends RowData>({
       onSoftSelect(isSoftSelected ? null : row.original);
     }
   };
-  const handleCheckboxChange = () => {
-    if (withSoftSelection) {
-      onSoftSelect(row.original);
-    }
-    row.toggleSelected();
-  };
-
   const hidesBottomBorder =
     isExpanded || (row.depth > 0 && row.subRows.length > 0);
 
@@ -330,7 +328,7 @@ function InteractiveRowInner<T extends RowData>({
               isSoftSelected
                 ? "outline-accent bg-accent-tertiary outline-2 -outline-offset-2"
                 : getLink || withSoftSelection || canExpand
-                  ? "hover:bg-primary-hover has-[button:hover]:bg-primary has-[a:hover]:bg-primary"
+                  ? "hover:bg-primary-hover has-[button:hover]:bg-primary has-[a:hover]:bg-primary has-[[aria-expanded=true]]:bg-primary-hover"
                   : ""
             ),
             cards:
@@ -339,6 +337,9 @@ function InteractiveRowInner<T extends RowData>({
           (getLink || withSoftSelection || canExpand) && "cursor-pointer"
         )}
         onAction={handleRowClick}
+        onContextMenu={
+          onContextMenu && ((event) => onContextMenu(row.original, event))
+        }
       >
         {table.options.enableMultiRowSelection && (
           <Cell className="relative w-4 p-2">
@@ -346,7 +347,7 @@ function InteractiveRowInner<T extends RowData>({
               slot="selection"
               isDisabled={!row.getCanSelect()}
               isSelected={row.getIsSelected()}
-              onChange={handleCheckboxChange}
+              onChange={() => row.toggleSelected()}
             />
           </Cell>
         )}

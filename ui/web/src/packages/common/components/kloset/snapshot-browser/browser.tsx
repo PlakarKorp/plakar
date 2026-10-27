@@ -65,10 +65,12 @@ import {
   DocumentFilter,
   matchesDocumentFilter,
 } from "./document-filters";
+import { EntryMenu } from "./entry-menu";
 import { Gallery, GalleryDensity } from "./gallery";
 import { Lightbox } from "./lightbox";
 import { MainTitle } from "./main-title";
 import { MusicPlayer, MusicView } from "./music";
+import { EntryMenuContext } from "./use-entry-menu";
 import { ViewSwitcher } from "./view-switcher";
 
 type FiltersProps = {
@@ -145,12 +147,14 @@ export function FilesBrowser({
   onViewChange,
 }: FilesBrowserProps) {
   const [localView, setLocalView] = useState<BrowseViewId>();
+  const [menuPath, setMenuPath] = useState<string | null>(null);
   const [playingPath, setPlayingPath] = useState<string | null>(null);
   const listing = `${vfsEntry.path}:${page}`;
   const [playingListing, setPlayingListing] = useState(listing);
   if (playingListing !== listing) {
     setPlayingListing(listing);
     setPlayingPath(null);
+    setMenuPath(null);
   }
   const [lightbox, setLightbox] = useState<{
     path: string;
@@ -396,8 +400,44 @@ export function FilesBrowser({
             );
           },
         }),
+
+        columnHelper.display({
+          id: "actions",
+          meta: {
+            cellClassName: "w-px",
+          },
+          header: () => <span className="sr-only">Actions</span>,
+          cell: ({ row }) => {
+            const child = row.original;
+            if (child.file_info.name === "..") {
+              return;
+            }
+
+            return (
+              <EntryMenu
+                snapshot={snapshot.identifier.Value}
+                source={source}
+                entry={child}
+                isSelected={row.getIsSelected()}
+                onToggleSelected={() => row.toggleSelected()}
+                onOpen={() =>
+                  child.file_info.mode.isDir()
+                    ? onPathChange(child.path)
+                    : onPreviewChange(child.path)
+                }
+              />
+            );
+          },
+        }),
       ]),
-    [onPathChange, query.data?.isSearching, vfsEntry.path]
+    [
+      onPathChange,
+      onPreviewChange,
+      query.data?.isSearching,
+      snapshot.identifier.Value,
+      source,
+      vfsEntry.path,
+    ]
   );
 
   const paginationState = {
@@ -435,6 +475,7 @@ export function FilesBrowser({
       rowSelection,
     },
 
+    enableMultiRowSelection: true,
     // Disable row selection for the ".." entry.
     enableRowSelection: (row) => {
       return row.original.file_info.name !== "..";
@@ -618,254 +659,265 @@ export function FilesBrowser({
     : false;
 
   return (
-    <SidePanelLayout
-      main={
-        <Main
-          title={<MainTitle snapshot={snapshot} source={source} />}
-          isLoading={query.isFetching}
-          breadcrumb={breadcrumb}
-          controls={
-            <MenuTrigger>
-              <IconButton
-                icon="ellipsis"
-                aria-label="More"
-                variant="tertiary"
-                className="cursor-pointer"
-              />
-              <Popover placement="bottom end" offset={4}>
-                <Menu>
-                  <DownloadMenuItem
-                    snapshotId={snapshot.identifier.Value}
-                    paths={[vfsEntry.path]}
-                  />
-                  {actions}
-                </Menu>
-              </Popover>
-            </MenuTrigger>
-          }
-        >
-          <div className="flex flex-col gap-4">
-            {fileBreadcrumb}
-
-            <div className={clsx(selected.length > 0 && "mb-18")}>
-              <div className="flex flex-col gap-4">
-                <DirectoryPreview
-                  snapshot={snapshot}
-                  source={source}
-                  childEntry={vfsEntry}
-                  onSnapshotChange={onSnapshotChange}
+    <EntryMenuContext value={{ openPath: menuPath, setOpenPath: setMenuPath }}>
+      <SidePanelLayout
+        main={
+          <Main
+            title={<MainTitle snapshot={snapshot} source={source} />}
+            isLoading={query.isFetching}
+            breadcrumb={breadcrumb}
+            controls={
+              <MenuTrigger>
+                <IconButton
+                  icon="ellipsis"
+                  aria-label="More"
+                  variant="tertiary"
+                  className="cursor-pointer"
                 />
-
-                {vfsEntry.summary && vfsEntry.summary.Total.errors > 0 && (
-                  <SnapshotErrorsAlert
-                    href={errorPageHref}
-                    vfsEntry={vfsEntry}
-                  />
-                )}
-
-                <div className="flex flex-col gap-3">
-                  <div className="border-secondary flex flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-3 md:border-b">
-                    <ViewSwitcher
-                      className="border-secondary border-b md:border-b-0"
-                      view={activeView}
-                      counts={viewCounts}
-                      emptyViews={emptyViews}
-                      onChange={changeView}
+                <Popover placement="bottom end" offset={4}>
+                  <Menu>
+                    <DownloadMenuItem
+                      snapshotId={snapshot.identifier.Value}
+                      paths={[vfsEntry.path]}
+                      label="Download this folder"
                     />
-                    <div className="flex items-center justify-between gap-2 md:justify-end">
-                      <SegmentedControl
-                        ariaLabel="Layout"
-                        hideLabels
-                        items={[
-                          { id: "list", label: "List", icon: "list" },
-                          {
-                            id: "grid",
-                            label: "Grid",
-                            icon: "grid",
-                          },
-                        ]}
-                        selectedId={layout}
-                        onSelect={(id) =>
-                          changeLayout(id === "grid" ? "grid" : "list")
+                    {actions}
+                  </Menu>
+                </Popover>
+              </MenuTrigger>
+            }
+          >
+            <div className="flex flex-col gap-4">
+              {fileBreadcrumb}
+
+              <div className={clsx(selected.length > 0 && "mb-18")}>
+                <div className="flex flex-col gap-4">
+                  <DirectoryPreview
+                    snapshot={snapshot}
+                    source={source}
+                    childEntry={vfsEntry}
+                    onSnapshotChange={onSnapshotChange}
+                  />
+
+                  {vfsEntry.summary && vfsEntry.summary.Total.errors > 0 && (
+                    <SnapshotErrorsAlert
+                      href={errorPageHref}
+                      vfsEntry={vfsEntry}
+                    />
+                  )}
+
+                  <div className="flex flex-col gap-3">
+                    <div className="border-secondary flex flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-3 md:border-b">
+                      <ViewSwitcher
+                        className="border-secondary border-b md:border-b-0"
+                        view={activeView}
+                        counts={viewCounts}
+                        emptyViews={emptyViews}
+                        onChange={changeView}
+                      />
+                      <div className="flex items-center justify-between gap-2 md:justify-end">
+                        <SegmentedControl
+                          ariaLabel="Layout"
+                          hideLabels
+                          items={[
+                            { id: "list", label: "List", icon: "list" },
+                            {
+                              id: "grid",
+                              label: "Grid",
+                              icon: "grid",
+                            },
+                          ]}
+                          selectedId={layout}
+                          onSelect={(id) =>
+                            changeLayout(id === "grid" ? "grid" : "list")
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    {activeView !== "all" &&
+                      !isSearching &&
+                      (vfsEntry.summary?.directory.directories ?? 0) > 0 && (
+                        <Typography size="xs" className="text-tertiary">
+                          This view shows the files of this folder only.{" "}
+                          {vfsEntry.summary?.directory.directories === 1
+                            ? "Its subfolder is"
+                            : `Its ${vfsEntry.summary?.directory.directories} subfolders are`}{" "}
+                          in All files, and a search covers them too.
+                        </Typography>
+                      )}
+                  </div>
+
+                  {!showsTable && (
+                    <div className="flex flex-col gap-4">
+                      {filterBar}
+                      {query.isPending ? (
+                        <Spinner size="2xl" className="p-10" />
+                      ) : query.isError ? (
+                        <Alert
+                          variant="error"
+                          title="Unable to list this folder"
+                        >
+                          {query.error.message}
+                        </Alert>
+                      ) : items.length === 0 ? (
+                        <EmptyList
+                          size="sm"
+                          title={
+                            activeView === "all"
+                              ? isSearching
+                                ? "Nothing matches this search"
+                                : "This folder is empty"
+                              : isSearching
+                                ? `No ${shownNoun} match this search`
+                                : `No ${shownNoun} here`
+                          }
+                          description={
+                            isSearching
+                              ? "Try another name."
+                              : activeView === "all"
+                                ? "It holds no files or folders."
+                                : `This folder holds no ${shownNoun}.`
+                          }
+                        />
+                      ) : activeView === "music" && !isListView ? (
+                        <MusicView
+                          snapshot={snapshot.identifier.Value}
+                          source={source}
+                          tracks={items}
+                          basePath={vfsEntry.path}
+                          selected={selectedPaths}
+                          onToggleSelected={toggleSelected}
+                          playingPath={playingPath}
+                          onPlay={setPlayingPath}
+                        />
+                      ) : (
+                        <Gallery
+                          snapshot={snapshot.identifier.Value}
+                          source={source}
+                          view={activeView}
+                          entries={items}
+                          basePath={vfsEntry.path}
+                          density={density}
+                          onDensityChange={setDensity}
+                          selected={selectedPaths}
+                          onToggleSelected={toggleSelected}
+                          onOpen={openEntry}
+                          onOpenDirectory={onPathChange}
+                        />
+                      )}
+                      <UIPagination
+                        currentPage={page}
+                        onPrev={
+                          page > 0
+                            ? () => onPageChange(page - 1, perPage)
+                            : undefined
                         }
+                        onNext={
+                          hasNextPage
+                            ? () => onPageChange(page + 1, perPage)
+                            : undefined
+                        }
+                        onPageSizeChange={(size) => onPageChange(0, size)}
+                        total={{
+                          count: query.data?.total,
+                          perPage,
+                        }}
                       />
                     </div>
-                  </div>
+                  )}
 
-                  {activeView !== "all" &&
-                    !isSearching &&
-                    (vfsEntry.summary?.directory.directories ?? 0) > 0 && (
-                      <Typography size="xs" className="text-tertiary">
-                        This view shows the files of this folder only.{" "}
-                        {vfsEntry.summary?.directory.directories === 1
-                          ? "Its subfolder is"
-                          : `Its ${vfsEntry.summary?.directory.directories} subfolders are`}{" "}
-                        in All files, and a search covers them too.
-                      </Typography>
-                    )}
-                </div>
-
-                {!showsTable && (
-                  <div className="flex flex-col gap-4">
-                    {filterBar}
-                    {query.isPending ? (
-                      <Spinner size="2xl" className="p-10" />
-                    ) : query.isError ? (
-                      <Alert variant="error" title="Unable to list this folder">
-                        {query.error.message}
-                      </Alert>
-                    ) : items.length === 0 ? (
-                      <EmptyList
-                        size="sm"
-                        title={
-                          activeView === "all"
-                            ? isSearching
-                              ? "Nothing matches this search"
-                              : "This folder is empty"
-                            : isSearching
-                              ? `No ${shownNoun} match this search`
-                              : `No ${shownNoun} here`
-                        }
-                        description={
-                          isSearching
-                            ? "Try another name."
-                            : activeView === "all"
-                              ? "It holds no files or folders."
-                              : `This folder holds no ${shownNoun}.`
-                        }
-                      />
-                    ) : activeView === "music" && !isListView ? (
-                      <MusicView
-                        snapshot={snapshot.identifier.Value}
-                        source={source}
-                        tracks={items}
-                        basePath={vfsEntry.path}
-                        selected={selectedPaths}
-                        onToggleSelected={toggleSelected}
-                        playingPath={playingPath}
-                        onPlay={setPlayingPath}
-                      />
-                    ) : (
-                      <Gallery
-                        snapshot={snapshot.identifier.Value}
-                        source={source}
-                        view={activeView}
-                        entries={items}
-                        basePath={vfsEntry.path}
-                        density={density}
-                        onDensityChange={setDensity}
-                        selected={selectedPaths}
-                        onToggleSelected={toggleSelected}
-                        onOpen={openEntry}
-                        onOpenDirectory={onPathChange}
-                      />
-                    )}
-                    <UIPagination
-                      currentPage={page}
-                      onPrev={
-                        page > 0
-                          ? () => onPageChange(page - 1, perPage)
-                          : undefined
+                  {showsTable && (
+                    <PaginatedTable<EnrichedChildEntryType>
+                      query={query}
+                      table={table}
+                      softSelectionState={[
+                        previewEntry ?? null,
+                        (entry) => {
+                          if (entry) {
+                            onPreviewChange(entry.path);
+                          }
+                        },
+                      ]}
+                      isSoftSelectionEnabledForRow={(row) =>
+                        !row.file_info.mode.isDir()
                       }
-                      onNext={
-                        hasNextPage
-                          ? () => onPageChange(page + 1, perPage)
-                          : undefined
-                      }
-                      onPageSizeChange={(size) => onPageChange(0, size)}
-                      total={{
-                        count: query.data?.total,
-                        perPage,
+                      filters={filterBar}
+                      ariaLabel="Restore point files table"
+                      onRowContextMenu={(entry, event) => {
+                        if (entry.file_info.name === "..") return;
+                        event.preventDefault();
+                        setMenuPath(entry.path);
                       }}
                     />
-                  </div>
-                )}
+                  )}
+                </div>
 
-                {showsTable && (
-                  <PaginatedTable<EnrichedChildEntryType>
-                    query={query}
-                    table={table}
-                    softSelectionState={[
-                      previewEntry ?? null,
-                      (entry) => {
-                        if (entry) {
-                          onPreviewChange(entry.path);
-                        }
-                      },
-                    ]}
-                    isSoftSelectionEnabledForRow={(row) =>
-                      !row.file_info.mode.isDir()
-                    }
-                    filters={filterBar}
-                    ariaLabel="Restore point files table"
-                  />
-                )}
-              </div>
-
-              <div className="pointer-events-none absolute inset-x-0 bottom-[calc(var(--pagination-height)+0.75rem)] flex flex-col items-center gap-2 px-3 *:pointer-events-auto">
-                {activeView === "music" && !isListView && (
-                  <MusicPlayer
-                    snapshot={snapshot.identifier.Value}
-                    source={source}
-                    tracks={items}
-                    playingPath={playingPath}
-                    onPlay={setPlayingPath}
-                  />
-                )}
-                {selected.length > 0 && (
-                  <SelectedList
-                    snapshot={snapshot}
-                    childEntries={selected}
-                    removeSelection={() => setSelected([])}
-                  />
-                )}
+                <div className="pointer-events-none absolute inset-x-0 bottom-[calc(var(--pagination-height)+0.75rem)] flex flex-col items-center gap-2 px-3 *:pointer-events-auto">
+                  {activeView === "music" && !isListView && (
+                    <MusicPlayer
+                      snapshot={snapshot.identifier.Value}
+                      source={source}
+                      tracks={items}
+                      playingPath={playingPath}
+                      onPlay={setPlayingPath}
+                    />
+                  )}
+                  {selected.length > 0 && (
+                    <SelectedList
+                      snapshot={snapshot}
+                      childEntries={selected}
+                      removeSelection={() => setSelected([])}
+                    />
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-          {lightboxIndex >= 0 && (
-            <Lightbox
+            {lightboxIndex >= 0 && (
+              <Lightbox
+                snapshot={snapshot}
+                source={source}
+                items={lightboxItems}
+                index={lightboxIndex}
+                onIndexChange={changeLightboxIndex}
+                onClose={() => setLightbox(null)}
+              />
+            )}
+          </Main>
+        }
+        sidebar={
+          preview &&
+          lightboxIndex < 0 && (
+            <DetailsPanel
               snapshot={snapshot}
               source={source}
-              items={lightboxItems}
-              index={lightboxIndex}
-              onIndexChange={changeLightboxIndex}
-              onClose={() => setLightbox(null)}
+              path={preview}
+              onSnapshotChange={onSnapshotChange}
+              onMount={onMount}
+              onExpand={
+                previewEntry && viewerKind(previewEntry.contentType)
+                  ? () => openEntry(previewEntry, { followPreview: true })
+                  : undefined
+              }
             />
-          )}
-        </Main>
-      }
-      sidebar={
-        preview &&
-        lightboxIndex < 0 && (
-          <DetailsPanel
-            snapshot={snapshot}
-            source={source}
-            path={preview}
-            onSnapshotChange={onSnapshotChange}
-            onMount={onMount}
-            onExpand={
-              previewEntry && viewerKind(previewEntry.contentType)
-                ? () => openEntry(previewEntry, { followPreview: true })
-                : undefined
-            }
-          />
-        )
-      }
-      controls={[
-        {
-          icon: "chevron-down",
-          tooltip: "Next file",
-          isDisabled: isNextDisabled,
-          onPress: handleNextFile,
-        },
-        {
-          icon: "chevron-up",
-          tooltip: "Previous file",
-          isDisabled: isPreviousDisabled,
-          onPress: handlePreviousFile,
-        },
-      ]}
-      onCollapse={() => onPreviewChange(undefined)}
-    />
+          )
+        }
+        controls={[
+          {
+            icon: "chevron-down",
+            tooltip: "Next file",
+            isDisabled: isNextDisabled,
+            onPress: handleNextFile,
+          },
+          {
+            icon: "chevron-up",
+            tooltip: "Previous file",
+            isDisabled: isPreviousDisabled,
+            onPress: handlePreviousFile,
+          },
+        ]}
+        onCollapse={() => onPreviewChange(undefined)}
+      />
+    </EntryMenuContext>
   );
 }

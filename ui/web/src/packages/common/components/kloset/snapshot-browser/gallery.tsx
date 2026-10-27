@@ -19,7 +19,9 @@ import { FileIcon } from "@plakar-ui/common/components";
 import { useInView } from "@plakar-ui/common/hooks";
 
 import { BrowseViewId, viewerKind } from "./browse-views";
+import { EntryMenu } from "./entry-menu";
 import { formatClock } from "./media-utils";
+import { useEntryMenu } from "./use-entry-menu";
 import { useEntryURL } from "./use-entry-url";
 
 export type GalleryDensity = "small" | "medium" | "large";
@@ -76,7 +78,11 @@ export function Gallery({
             {directories.map((entry) => (
               <FolderTile
                 key={entry.path}
+                snapshot={snapshot}
+                source={source}
                 entry={entry}
+                isSelected={selected.has(entry.path)}
+                onToggleSelected={() => onToggleSelected(entry)}
                 onPress={() => onOpenDirectory(entry.path)}
               />
             ))}
@@ -156,33 +162,69 @@ function GallerySection({
   );
 }
 
-function FolderTile({
-  entry,
-  onPress,
-}: {
+type FolderTileProps = {
+  snapshot: string;
+  source: number;
   entry: EnrichedChildEntryType;
+  isSelected: boolean;
+  onToggleSelected: () => void;
   onPress: () => void;
-}) {
+};
+
+function FolderTile({
+  snapshot,
+  source,
+  entry,
+  isSelected,
+  onToggleSelected,
+  onPress,
+}: FolderTileProps) {
+  const { isOpen, onContextMenu } = useEntryMenu(entry.path);
+
   return (
-    <Button
-      onPress={onPress}
+    <div
+      onContextMenu={onContextMenu}
       className={clsx(
-        "border-secondary bg-secondary flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 text-left",
-        "data-hovered:bg-tertiary data-focus-visible:outline-focus data-focus-visible:outline-2",
-        "duration-150 motion-safe:transition-colors"
+        "group flex items-center gap-2 rounded-lg border pr-1 pl-3",
+        isOpen ? "bg-primary-hover" : "bg-primary hover:bg-primary-hover",
+        "duration-150 motion-safe:transition-colors",
+        isSelected
+          ? "border-accent outline-accent-secondary outline-2"
+          : "border-secondary"
       )}
     >
-      <Icon type="md-folder" size="xl" className="text-accent" />
-      <span className="flex min-w-0 flex-col">
-        <Typography size="sm" weight="medium" className="truncate">
-          {entry.file_info.name}
-        </Typography>
-        <Typography size="xs" className="text-tertiary">
-          {entry.summary?.directory.children ?? 0} items ·{" "}
-          {entry.summary?.Total.size.Pretty}
-        </Typography>
-      </span>
-    </Button>
+      <Checkbox
+        size="md"
+        aria-label={`Select ${entry.file_info.name}`}
+        isSelected={isSelected}
+        onChange={onToggleSelected}
+      />
+      <Button
+        onPress={onPress}
+        className="data-focus-visible:outline-focus flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-md py-2.5 text-left outline-none data-focus-visible:outline-2"
+      >
+        <Icon type="md-folder" size="xl" className="text-accent" />
+        <span className="flex min-w-0 flex-col">
+          <Typography size="sm" weight="medium" className="truncate">
+            {entry.file_info.name}
+          </Typography>
+          <Typography size="xs" className="text-tertiary">
+            {entry.summary?.directory.children ?? 0} items ·{" "}
+            {entry.summary?.Total.size.Pretty}
+          </Typography>
+        </span>
+      </Button>
+      <EntryMenu
+        snapshot={snapshot}
+        source={source}
+        entry={entry}
+        isSelected={isSelected}
+        onToggleSelected={onToggleSelected}
+        onOpen={onPress}
+        size="md"
+        className="!rounded-md !p-0.5"
+      />
+    </div>
   );
 }
 
@@ -208,6 +250,7 @@ function FileTile({
   onPress,
 }: FileTileProps) {
   const [ref, inView] = useInView<HTMLDivElement>();
+  const menu = useEntryMenu(entry.path);
   const contentType = entry.contentType;
   const kind = viewerKind(contentType);
 
@@ -225,26 +268,50 @@ function FileTile({
   return (
     <div
       ref={ref}
+      onContextMenu={menu.onContextMenu}
       className={clsx(
         "group bg-secondary relative flex flex-col overflow-hidden rounded-xl border",
-        "duration-150 hover:-translate-y-0.5 motion-safe:transition-[border-color,box-shadow,transform]",
+        "duration-150 motion-safe:transition-[border-color,box-shadow,transform]",
+        menu.isOpen ? "-translate-y-0.5" : "hover:-translate-y-0.5",
         isSelected
           ? "border-accent outline-accent-secondary outline-2"
-          : "border-secondary hover:border-primary"
+          : menu.isOpen
+            ? "border-primary"
+            : "border-secondary hover:border-primary"
       )}
     >
       <div
         className={clsx(
-          "absolute top-2 left-2 z-10 flex rounded-md bg-black/40 p-1 backdrop-blur-sm",
-          isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+          "bg-primary/90 absolute top-2 left-2 z-10 grid size-9 place-items-center rounded-lg shadow-md backdrop-blur-sm",
+          isSelected || menu.isOpen
+            ? "opacity-100"
+            : "opacity-0 group-hover:opacity-100",
           "has-data-focus-visible:opacity-100 motion-safe:transition-opacity"
         )}
       >
         <Checkbox
-          size="sm"
+          size="md"
           aria-label={`Select ${entry.file_info.name}`}
           isSelected={isSelected}
           onChange={onToggleSelected}
+        />
+      </div>
+
+      <div
+        className={clsx(
+          "bg-primary/90 absolute top-2 right-2 z-10 flex rounded-lg shadow-md backdrop-blur-sm",
+          menu.isOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+          "has-data-focus-visible:opacity-100 motion-safe:transition-opacity pointer-coarse:opacity-100"
+        )}
+      >
+        <EntryMenu
+          snapshot={snapshot}
+          source={source}
+          entry={entry}
+          isSelected={isSelected}
+          onToggleSelected={onToggleSelected}
+          onOpen={onPress}
+          size="md"
         />
       </div>
 
@@ -351,7 +418,7 @@ function PhotoThumbnail({ snapshot, source, entry, enabled }: ThumbnailProps) {
           onError={() => setState("unsupported")}
           className={clsx(
             "absolute inset-0 h-full w-full object-cover motion-safe:transition-[opacity,transform] motion-safe:duration-300",
-            "group-hover:scale-[1.03]",
+            "group-hover:scale-[1.03] group-has-[[aria-expanded=true]]:scale-[1.03]",
             state === "loaded" ? "opacity-100" : "opacity-0"
           )}
         />
