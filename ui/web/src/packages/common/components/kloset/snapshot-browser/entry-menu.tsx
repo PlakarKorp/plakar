@@ -17,6 +17,7 @@ type EntryMenuProps = {
   onToggleSelected: () => void;
   onOpen: () => void;
   size?: ComponentProps<typeof IconButton>["size"];
+  className?: string;
 };
 
 export function EntryMenu({
@@ -27,6 +28,7 @@ export function EntryMenu({
   onToggleSelected,
   onOpen,
   size = "sm",
+  className,
 }: EntryMenuProps) {
   const { isOpen, onOpenChange } = useEntryMenu(entry.path);
   const isDirectory = entry.file_info.mode.isDir();
@@ -40,7 +42,8 @@ export function EntryMenu({
         size={size}
         className={clsx(
           !isOpen &&
-            "opacity-0 group-hover:opacity-100 data-focus-visible:opacity-100 pointer-coarse:opacity-100"
+            "opacity-0 group-hover:opacity-100 data-focus-visible:opacity-100 pointer-coarse:opacity-100",
+          className
         )}
       />
       <Popover placement="bottom end" offset={4}>

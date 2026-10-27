@@ -221,6 +221,8 @@ function FolderTile({
         isSelected={isSelected}
         onToggleSelected={onToggleSelected}
         onOpen={onPress}
+        size="md"
+        className="!rounded-md !p-0.5"
       />
     </div>
   );
