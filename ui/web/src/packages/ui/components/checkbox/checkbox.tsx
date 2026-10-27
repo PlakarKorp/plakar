@@ -45,7 +45,7 @@ export function Checkbox({
                       : "border-accent bg-accent group-hover/cb:border-background-accent-hover group-hover/cb:bg-accent-hover"
                     : isDisabled
                       ? "border-background-disable bg-disable"
-                      : "border-primary bg-primary group-hover/cb:bg-primary-hover",
+                      : "bg-primary group-hover/cb:bg-primary-hover border-(--text-color-quaternary)",
 
                   isFocusVisible && "outline-focus outline-2 outline-offset-2"
                 )}
