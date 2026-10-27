@@ -40,16 +40,12 @@ export function Checkbox({
                   size === "md" ? "rounded-md p-0.5" : "rounded-sm p-0.25",
 
                   isActive
-                    ? "border-accent bg-accent group-hover/cb:border-background-accent-hover group-hover/cb:bg-accent-hover"
-                    : "border-primary bg-primary group-hover/cb:bg-primary-hover",
-
-                  isDisabled &&
-                    !isActive &&
-                    "border-background-disable bg-disable",
-
-                  isDisabled &&
-                    isActive &&
-                    "border-background-accent-tertiary bg-accent-tertiary",
+                    ? isDisabled
+                      ? "border-background-accent-tertiary bg-accent-tertiary"
+                      : "border-accent bg-accent group-hover/cb:border-background-accent-hover group-hover/cb:bg-accent-hover"
+                    : isDisabled
+                      ? "border-background-disable bg-disable"
+                      : "border-primary bg-primary group-hover/cb:bg-primary-hover",
 
                   isFocusVisible && "outline-focus outline-2 outline-offset-2"
                 )}
