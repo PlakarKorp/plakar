@@ -194,7 +194,7 @@ function FolderTile({
       )}
     >
       <Checkbox
-        size="sm"
+        size="md"
         aria-label={`Select ${entry.file_info.name}`}
         isSelected={isSelected}
         onChange={onToggleSelected}
