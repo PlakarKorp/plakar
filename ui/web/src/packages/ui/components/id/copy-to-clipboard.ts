@@ -1,6 +1,6 @@
 export async function copyToClipboard(
   text: string,
-  anchor: Element
+  anchor?: Element
 ): Promise<boolean> {
   if (window.isSecureContext && !!navigator.clipboard?.writeText) {
     try {
@@ -13,8 +13,11 @@ export async function copyToClipboard(
     }
   }
 
-  // Preferring parentElement because modals block any focus outside
-  const container = anchor.parentElement ?? document.body;
+  // Preferring parentElement because modals block any focus outside. Without
+  // an anchor still in the page, the focused element stands in for it.
+  const near = anchor?.isConnected ? anchor : document.activeElement;
+  const container =
+    (near !== document.body && near?.parentElement) || document.body;
 
   // Saving focus so that keyboard users don't lose it
   const previouslyFocused =
