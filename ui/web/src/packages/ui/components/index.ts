@@ -38,6 +38,7 @@ export * from "./icon/icon";
 export * from "./icon/icon.constants";
 export * from "./icon/utils";
 export * from "./id/copy-button";
+export * from "./id/copy-to-clipboard";
 export * from "./id/copyable-value";
 export * from "./id/id";
 export * from "./illustration/illustration";
