@@ -154,6 +154,7 @@ export function FilesBrowser({
   if (playingListing !== listing) {
     setPlayingListing(listing);
     setPlayingPath(null);
+    setMenuPath(null);
   }
   const [lightbox, setLightbox] = useState<{
     path: string;
