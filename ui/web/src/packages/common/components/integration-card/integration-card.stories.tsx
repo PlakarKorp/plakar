@@ -99,6 +99,15 @@ export const NotPermitted: Story = {
   },
 };
 
+export const Upgradable: Story = {
+  args: {
+    ...Default.args,
+    version: "v1.0.2",
+    latestVersion: "v1.1.0-beta.6",
+    onUpgrade: fn(),
+  },
+};
+
 export const WithQuickActions: Story = {
   args: {
     ...Default.args,
