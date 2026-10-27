@@ -65,7 +65,7 @@ export function MusicView({
         </IconButton>
       </div>
 
-      <ol className="border-secondary divide-secondary flex flex-col divide-y overflow-hidden rounded-lg border">
+      <ol className="border-secondary divide-secondary bg-primary flex flex-col divide-y overflow-hidden rounded-lg border">
         {tracks.map((track, i) => (
           <TrackRow
             key={track.path}
@@ -171,7 +171,7 @@ function TrackRow({
     <li
       className={clsx(
         "group flex items-center gap-3 px-3 py-2",
-        isCurrent ? "bg-accent-tertiary" : "hover:bg-secondary"
+        isCurrent ? "bg-accent-tertiary" : "hover:bg-primary-hover"
       )}
     >
       <Checkbox
