@@ -20,6 +20,17 @@ var SERVICES_ENDPOINT = "https://api.plakar.io"
 const integrationsCacheKey = "all"
 
 func (ui *uiserver) servicesProxy(w http.ResponseWriter, r *http.Request) error {
+	// Every proxied endpoint needs an account, so a logged-out UI must not
+	// reach out to the service at all.
+	authToken, _ := ui.ctx.GetCookies().GetAuthToken()
+	if authToken == "" {
+		w.WriteHeader(http.StatusUnauthorized)
+		return json.NewEncoder(w).Encode(map[string]string{
+			"error":   "authorization_error",
+			"message": "Authorization required",
+		})
+	}
+
 	// Define target service base URL
 	serviceEndpoint := os.Getenv("PLAKAR_SERVICE_ENDPOINT")
 	if serviceEndpoint == "" {
@@ -49,10 +60,7 @@ func (ui *uiserver) servicesProxy(w http.ResponseWriter, r *http.Request) error 
 		ui.ctx.OperatingSystem,
 		ui.ctx.Architecture)
 
-	authToken, _ := ui.ctx.GetCookies().GetAuthToken()
-	if authToken != "" {
-		req.Header.Add("Authorization", "Bearer "+authToken)
-	}
+	req.Header.Add("Authorization", "Bearer "+authToken)
 	req.Header.Add("User-Agent", client)
 	req.Header.Add("X-Real-IP", r.RemoteAddr)
 

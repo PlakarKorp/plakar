@@ -46,7 +46,7 @@ export async function getAccountNotifications({
   const qs = new URLSearchParams({
     ...getPaginationParams(pagination),
     repository_id: repository,
-    reverse: "1",
+    reverse: "true",
   });
 
   if (status) {

@@ -35,7 +35,6 @@ import {
   useKlosetAPI,
   VFSEntryType,
 } from "@plakar-ui/common/api/kloset";
-import { isPaginationResponseWithTotal } from "@plakar-ui/common/api/pagination";
 import {
   appTableFeatures,
   AppTableFeatures,
@@ -55,6 +54,8 @@ import {
   browseViewCounts,
   BrowseViewId,
   emptyBrowseViews,
+  emptySearchViews,
+  searchViewCounts,
   getBrowseView,
   viewerKind,
   suggestBrowseView,
@@ -427,10 +428,7 @@ export function FilesBrowser({
   const table = useReactTable({
     features: appTableFeatures,
     data: activeView === "all" ? (query.data?.items ?? []) : items,
-    rowCount:
-      query.data && isPaginationResponseWithTotal(query.data)
-        ? query.data.total
-        : undefined,
+    rowCount: query.data?.total,
     columns,
     state: {
       pagination: paginationState,
@@ -556,6 +554,7 @@ export function FilesBrowser({
         <FilterPanel.Search
           value={filters.filename}
           onSearch={onSearch}
+          isLoading={query.isFetching}
           aria-label="Search files"
           placeholder={
             activeView === "all"
@@ -606,12 +605,17 @@ export function FilesBrowser({
     </div>
   );
 
-  const hasNextPage = Boolean(
-    query.data &&
-    (isPaginationResponseWithTotal(query.data)
-      ? (page + 1) * perPage < query.data.total
-      : query.data.has_next)
-  );
+  const viewCounts = isSearching
+    ? query.data?.contentTypes && searchViewCounts(query.data.contentTypes)
+    : browseViewCounts(vfsEntry);
+  const emptyViews = isSearching
+    ? viewCounts && emptySearchViews(viewCounts)
+    : emptyBrowseViews(vfsEntry);
+  emptyViews?.delete(activeView);
+
+  const hasNextPage = query.data
+    ? (page + 1) * perPage < query.data.total
+    : false;
 
   return (
     <SidePanelLayout
@@ -664,14 +668,8 @@ export function FilesBrowser({
                     <ViewSwitcher
                       className="border-secondary border-b md:border-b-0"
                       view={activeView}
-                      // The summary counts the directory, not what a search
-                      // finds: hide counts that would not match the results.
-                      counts={
-                        isSearching ? undefined : browseViewCounts(vfsEntry)
-                      }
-                      emptyViews={
-                        isSearching ? undefined : emptyBrowseViews(vfsEntry)
-                      }
+                      counts={viewCounts}
+                      emptyViews={emptyViews}
                       onChange={changeView}
                     />
                     <div className="flex items-center justify-between gap-2 md:justify-end">
@@ -776,11 +774,7 @@ export function FilesBrowser({
                       }
                       onPageSizeChange={(size) => onPageChange(0, size)}
                       total={{
-                        count:
-                          query.data &&
-                          isPaginationResponseWithTotal(query.data)
-                            ? query.data.total
-                            : undefined,
+                        count: query.data?.total,
                         perPage,
                       }}
                     />
@@ -804,7 +798,6 @@ export function FilesBrowser({
                     }
                     filters={filterBar}
                     ariaLabel="Restore point files table"
-                    isLoading={query.isFetching}
                   />
                 )}
               </div>

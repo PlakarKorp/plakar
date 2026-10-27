@@ -27,7 +27,7 @@ import (
 
 func init() {
 	subcommands.Register(func() subcommands.Subcommand { return &PkgAdd{} },
-		subcommands.BeforeRepositoryOpen,
+		subcommands.BeforeRepositoryOpen|subcommands.Quiet,
 		"pkg", "add")
 
 	subcommands.Register(func() subcommands.Subcommand { return &PkgRm{} },
@@ -35,7 +35,7 @@ func init() {
 		"pkg", "rm")
 
 	subcommands.Register(func() subcommands.Subcommand { return &PkgCreate{} },
-		subcommands.BeforeRepositoryOpen,
+		subcommands.BeforeRepositoryOpen|subcommands.Quiet,
 		"pkg", "create")
 
 	subcommands.Register(func() subcommands.Subcommand { return &PkgBuild{} },

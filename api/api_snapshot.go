@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/PlakarKorp/kloset/caching/lru"
@@ -577,6 +578,31 @@ func (ui *uiserver) snapshotVFSChunks(w http.ResponseWriter, r *http.Request) er
 	return json.NewEncoder(w).Encode(items)
 }
 
+// countSearch walks every match of opts, pagination aside, and returns how
+// many there are and how many carry each content type, keyed by the bare
+// media type as the content-type index is. Directories have none and only
+// count toward the total.
+func countSearch(ctx context.Context, snap *snapshot.Snapshot, opts snapshot.SearchOpts) (int, map[string]int, error) {
+	opts.Offset, opts.Limit = 0, 0
+	it, err := snap.Search(ctx, &opts)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	total := 0
+	types := map[string]int{}
+	for entry, err := range it {
+		if err != nil {
+			return 0, nil, err
+		}
+		total++
+		if ct, _, _ := strings.Cut(entry.GetContentType(), ";"); ct != "" {
+			types[ct]++
+		}
+	}
+	return total, types, nil
+}
+
 func (ui *uiserver) snapshotVFSSearch(w http.ResponseWriter, r *http.Request) error {
 	snapshotID32, path, err := SnapshotPathParam(r, ui.repository, "snapshot_path")
 	if err != nil {
@@ -634,7 +660,7 @@ func (ui *uiserver) snapshotVFSSearch(w http.ResponseWriter, r *http.Request) er
 		Limit:  limit,
 	}
 
-	items := ItemsPage[*vfs.Entry]{
+	items := SearchPage{
 		Items: []*vfs.Entry{},
 	}
 
@@ -657,6 +683,22 @@ func (ui *uiserver) snapshotVFSSearch(w http.ResponseWriter, r *http.Request) er
 	if limit == len(items.Items) {
 		items.HasNext = true
 		items.Items = items.Items[:len(items.Items)-1]
+	}
+
+	// The page says nothing about the size of the result set: walk it
+	// again without the content-type filter to count per content type,
+	// and once more with the filter, when there is one, for the total.
+	countOpts := searchOpts
+	countOpts.Mimes = nil
+	items.Total, items.ContentTypes, err = countSearch(r.Context(), snap, countOpts)
+	if err == nil && len(searchOpts.Mimes) > 0 {
+		items.Total, _, err = countSearch(r.Context(), snap, searchOpts)
+	}
+	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			return nil
+		}
+		return err
 	}
 
 	return json.NewEncoder(w).Encode(items)
@@ -714,12 +756,14 @@ func (ui *uiserver) snapshotVFSErrors(w http.ResponseWriter, r *http.Request) er
 		return err
 	}
 
+	// GetEntry follows symlinks: list the errors beneath the directory
+	// the total was computed for, not beneath the path that led to it.
 	var i int64
 	items := Items[*vfs.ErrorItem]{
 		Items: []*vfs.ErrorItem{},
 		Total: int(dir.Summary.Directory.Errors + dir.Summary.Below.Errors),
 	}
-	for errorEntry, err := range fs.Errors(path) {
+	for errorEntry, err := range fs.Errors(dir.Path()) {
 		if err != nil {
 			return err
 		}

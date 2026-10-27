@@ -249,31 +249,3 @@ func TestIsFirstRunStatError(t *testing.T) {
 
 	require.False(t, manager.IsFirstRun())
 }
-
-func TestSecurityCheckOperations(t *testing.T) {
-	// Create a temporary directory for testing
-	tmpDir, err := os.MkdirTemp("", "cookies_test")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
-
-	manager, err := NewManager(tmpDir)
-	require.NoError(t, err)
-
-	// Test initial state
-	isDisabled := manager.IsDisabledSecurityCheck()
-	require.False(t, isDisabled)
-
-	// Test setting disabled security check
-	err = manager.SetDisabledSecurityCheck()
-	require.NoError(t, err)
-
-	isDisabled = manager.IsDisabledSecurityCheck()
-	require.True(t, isDisabled)
-
-	// Test removing disabled security check
-	err = manager.RemoveDisabledSecurityCheck()
-	require.NoError(t, err)
-
-	isDisabled = manager.IsDisabledSecurityCheck()
-	require.False(t, isDisabled)
-}

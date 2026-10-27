@@ -3,6 +3,7 @@ package plugins
 import (
 	"context"
 	"fmt"
+	"io"
 	"path/filepath"
 
 	grpc_exporter "github.com/PlakarKorp/integration-grpc/exporter"
@@ -61,7 +62,10 @@ func RegisterExporter(proto string, flags location.Flags, runner Runner) error {
 	return nil
 }
 
-func Load(m *pkg.Manifest, pkgdir string) error {
+// Load registers the connectors of a package. Native plugins get stderr as
+// their stderr, so a renderer that owns the terminal can keep their logs
+// off it.
+func Load(m *pkg.Manifest, pkgdir string, stderr io.Writer) error {
 	for _, conn := range m.Connectors {
 		if err := conn.Validate(); err != nil {
 			return err
@@ -75,8 +79,9 @@ func Load(m *pkg.Manifest, pkgdir string) error {
 			}
 		} else {
 			runner = &NativeRunner{
-				Path: filepath.Join(pkgdir, conn.Executable),
-				Args: conn.Args,
+				Path:   filepath.Join(pkgdir, conn.Executable),
+				Args:   conn.Args,
+				Stderr: stderr,
 			}
 		}
 

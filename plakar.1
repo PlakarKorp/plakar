@@ -208,6 +208,10 @@ List installed plugins, refer to
 .El
 .Sh ENVIRONMENT
 .Bl -tag -width Ds
+.It Ev DISABLE_SECURITY_CHECK
+If set,
+.Nm
+does not check the releases feed for security and reliability updates.
 .It Ev PLAKAR_INSECURE_PLAINTEXT
 Must be set to work with a Kloset store that is not encrypted.
 Without it, every command that would read from or write to an unencrypted
