@@ -31,7 +31,7 @@
     "@storybook/react-vite": "^10.6.2",
     "@tanstack/react-form": "^1.33.5",
     "@tanstack/react-pacer": "^0.23.0",
-    "@tanstack/react-query": "^5.101.4",
+    "@tanstack/react-query": "^5.104.3",
     "@tanstack/react-router": "^1.170.38",
     "@tanstack/react-table": "^9.2.4",
     "@types/node": "^26.2.0",
