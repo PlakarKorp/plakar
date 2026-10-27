@@ -1,6 +1,8 @@
 package plugins
 
 import (
+	"bytes"
+	"context"
 	"io"
 	"net"
 	"os"
@@ -86,7 +88,7 @@ func TestLoad_RegistersAllConnectorTypes(t *testing.T) {
 		},
 	}
 
-	if err := Load(m, "/tmp"); err != nil {
+	if err := Load(m, "/tmp", io.Discard); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
 
@@ -106,7 +108,7 @@ func TestLoad_ImageConnector(t *testing.T) {
 		},
 	}
 
-	if err := Load(m, "/tmp"); err != nil {
+	if err := Load(m, "/tmp", io.Discard); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
 	if !contains(storage.Backends(), stg) {
@@ -124,7 +126,7 @@ func TestLoad_RejectsInvalidConnectors(t *testing.T) {
 		{Type: "importer", Protocols: []string{"never-registered"}, ImageID: testImageID, LocationFlags: []string{"localfs"}},
 	} {
 		m := &pkg.Manifest{Connectors: []pkg.ManifestConnector{conn}}
-		if err := Load(m, "/tmp"); err == nil {
+		if err := Load(m, "/tmp", io.Discard); err == nil {
 			t.Errorf("Load should reject connector %+v", conn)
 		}
 	}
@@ -144,7 +146,7 @@ func TestLoad_PropagatesDuplicateError(t *testing.T) {
 			{Type: "storage", Protocols: []string{stg}, Executable: "noop"},
 		},
 	}
-	if err := Load(m, "/tmp"); err == nil {
+	if err := Load(m, "/tmp", io.Discard); err == nil {
 		t.Fatal("Load should propagate duplicate-registration error")
 	}
 }
@@ -160,7 +162,7 @@ func TestLoad_BadFlagPropagates(t *testing.T) {
 			},
 		},
 	}
-	if err := Load(m, "/tmp"); err == nil {
+	if err := Load(m, "/tmp", io.Discard); err == nil {
 		t.Fatal("Load should propagate Flags() error")
 	}
 }
@@ -177,7 +179,7 @@ func TestUnload_Symmetric(t *testing.T) {
 			{Type: "storage", Protocols: []string{stg}, Executable: "noop"},
 		},
 	}
-	if err := Load(m, "/tmp"); err != nil {
+	if err := Load(m, "/tmp", io.Discard); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
 	if err := Unload(m); err != nil {
@@ -203,7 +205,7 @@ func TestUnload_ReturnsLastError(t *testing.T) {
 }
 
 func TestLoad_NilConnectors(t *testing.T) {
-	if err := Load(&pkg.Manifest{}, "/tmp"); err != nil {
+	if err := Load(&pkg.Manifest{}, "/tmp", io.Discard); err != nil {
 		t.Fatalf("Load on empty manifest = %v, want nil", err)
 	}
 	if err := Unload(&pkg.Manifest{}); err != nil {
@@ -371,3 +373,28 @@ var _ net.Conn = (*StdioConn)(nil)
 // Keep an unused-import sentinel for the location package (used indirectly
 // via importer.Unregister signature when nil flag value is sufficient).
 var _ = location.Flags(0)
+
+// ---------- NativeRunner ----------
+
+func TestNativeRunner_StderrGoesToWriter(t *testing.T) {
+	if _, err := exec.LookPath("sh"); err != nil {
+		t.Skipf("no sh: %v", err)
+	}
+
+	var stderr bytes.Buffer
+	r := &NativeRunner{
+		Path:   "sh",
+		Args:   []string{"-c", "echo plugin log >&2"},
+		Stderr: &stderr,
+	}
+	conn, err := r.Run(context.Background())
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if err := conn.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+	if got := stderr.String(); got != "plugin log\n" {
+		t.Fatalf("stderr = %q, want %q", got, "plugin log\n")
+	}
+}

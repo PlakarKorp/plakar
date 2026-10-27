@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"strings"
 	"testing"
@@ -13,9 +14,8 @@ import (
 )
 
 // newTestCtx builds an AppContext with a temp CacheDir and a real
-// cookies.Manager rooted at a temp dir, so the first-run / disabled-check
-// branches can be exercised without touching the user's actual cookie
-// store.
+// cookies.Manager rooted at a temp dir, so checkUpdate can be exercised
+// without touching the user's actual cookie store.
 func newTestCtx(t *testing.T) *appcontext.AppContext {
 	t.Helper()
 	ctx := appcontext.NewAppContext()
@@ -105,46 +105,11 @@ func TestSetupEncryption_NilConfigIsNoOp(t *testing.T) {
 
 // ---------- checkUpdate ----------
 
-func TestCheckUpdate_FirstRunWithSecurityCheckDisabledIsSilent(t *testing.T) {
+func TestCheckUpdate_DisabledByEnvIsSilent(t *testing.T) {
 	ctx := newTestCtx(t)
-	// First-run + disableSecurityCheck=true: function should mark first-run
-	// and return without printing the welcome banner.
-	checkUpdate(ctx, true)
+	t.Setenv("DISABLE_SECURITY_CHECK", "")
 
-	out := ctx.Stdout.(*bytes.Buffer).String()
-	if out != "" {
-		t.Fatalf("expected silent output, got %q", out)
-	}
-	if ctx.GetCookies().IsFirstRun() {
-		t.Fatal("first-run flag should have been cleared")
-	}
-}
-
-func TestCheckUpdate_FirstRunPrintsWelcome(t *testing.T) {
-	ctx := newTestCtx(t)
-	// First-run + disableSecurityCheck=false: prints the welcome banner.
-	checkUpdate(ctx, false)
-
-	out := ctx.Stdout.(*bytes.Buffer).String()
-	if !strings.Contains(out, "Welcome to plakar") {
-		t.Fatalf("expected welcome message in stdout, got %q", out)
-	}
-	if !strings.Contains(out, "-disable-security-check") {
-		t.Fatalf("expected -disable-security-check guidance in stdout, got %q", out)
-	}
-	if ctx.GetCookies().IsFirstRun() {
-		t.Fatal("first-run flag should have been cleared")
-	}
-}
-
-func TestCheckUpdate_SecondRunWithDisableFlagReturnsEarly(t *testing.T) {
-	ctx := newTestCtx(t)
-	// Simulate not-first-run by flipping the cookie ourselves.
-	if err := ctx.GetCookies().SetFirstRun(); err != nil {
-		t.Fatalf("SetFirstRun: %v", err)
-	}
-
-	checkUpdate(ctx, true)
+	checkUpdate(ctx)
 
 	out := ctx.Stdout.(*bytes.Buffer).String()
 	if out != "" {
@@ -276,7 +241,7 @@ func TestPkgLoadAndUnloadHook_EmptyManifestNoOp(t *testing.T) {
 	// Both hooks are wrappers around plugins.Load / plugins.Unload that
 	// print to stderr on error. An empty manifest is a no-op — the hooks
 	// just shouldn't panic.
-	pkgloadhook(&pkg.Manifest{}, &pkg.Package{}, t.TempDir())
+	pkgloadhook(&pkg.Manifest{}, &pkg.Package{}, t.TempDir(), io.Discard)
 	pkgunloadhook(&pkg.Manifest{}, &pkg.Package{})
 }
 

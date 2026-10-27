@@ -32,9 +32,6 @@ type globalOpts struct {
 	quiet      bool
 	silent     bool
 	keyfile    string
-
-	enableSecurityCheck  bool
-	disableSecurityCheck bool
 }
 
 // singleDashNormalize keeps -cachedir and --cachedir resolving to the same
@@ -196,8 +193,6 @@ func newRootCmd(opts *globalOpts, def defaults) *cobra.Command {
 	f.BoolVar(&opts.quiet, "quiet", false, "no output except errors")
 	f.BoolVar(&opts.silent, "silent", false, "no output at all")
 	f.StringVar(&opts.keyfile, "keyfile", "", "use passphrase from key file when prompted")
-	f.BoolVar(&opts.enableSecurityCheck, "enable-security-check", false, "enable update check")
-	f.BoolVar(&opts.disableSecurityCheck, "disable-security-check", false, "disable update check")
 
 	subcommands.Tree(root)
 	installSnapshotCompletion(root)

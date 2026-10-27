@@ -19,7 +19,7 @@ export async function getReportingReportsList({
 }: GetReportingReportsParams) {
   const qs = new URLSearchParams({
     repository_id: repository,
-    reverse: "1",
+    reverse: "true",
     ...getPaginationParams(pagination),
   });
   const url = `/api/proxy/v1/reporting/reports?${qs}`;

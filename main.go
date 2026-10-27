@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"runtime/pprof"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -80,6 +81,36 @@ import (
 
 var ErrCantUnlock = errors.New("failed to unlock repository")
 
+// currentUser falls back to the environment when the cgo-less lookup
+// fails, as it does for an LDAP account under cron (no /etc/passwd entry, no $USER).
+func currentUser() (*user.User, error) {
+	if u, err := user.Current(); err == nil {
+		return u, nil
+	}
+	return userFromEnv()
+}
+
+func userFromEnv() (*user.User, error) {
+	u := &user.User{
+		Uid: strconv.Itoa(os.Getuid()),
+		Gid: strconv.Itoa(os.Getgid()),
+	}
+	for _, name := range []string{"LOGNAME", "USER"} {
+		if u.Username = os.Getenv(name); u.Username != "" {
+			break
+		}
+	}
+	if u.Username == "" {
+		u.Username = u.Uid
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("could not determine current user: %w", err)
+	}
+	u.HomeDir = home
+	return u, nil
+}
+
 // progName replaces the old flag.CommandLine.Name() in diagnostics.
 func progName() string {
 	if len(os.Args) == 0 {
@@ -101,9 +132,9 @@ func entryPoint() int {
 		opt_cpuDefault = opt_cpuDefault - 1
 	}
 
-	userDefault, err := user.Current()
+	userDefault, err := currentUser()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: go away casper !\n", progName())
+		fmt.Fprintf(os.Stderr, "%s: go away casper ! %s\n", progName(), err)
 		return 1
 	}
 
@@ -187,13 +218,34 @@ func entryPoint() int {
 	opt_quiet := opts.quiet
 	opt_silent := opts.silent
 	opt_keyfile := opts.keyfile
-	opt_enableSecurityCheck := opts.enableSecurityCheck
-	opt_disableSecurityCheck := opts.disableSecurityCheck
 
 	var interrupted bool
 
 	ctx := appcontext.NewAppContext()
 	defer ctx.Close()
+
+	if hadAt {
+		if atRepository == "" {
+			fmt.Fprintf(os.Stderr, "%s: missing plakar repository\n", progName())
+			return 1
+		}
+	}
+
+	if len(cmdArgs) == 0 {
+		fmt.Fprintf(os.Stderr, "%s: a subcommand must be provided\n", progName())
+		listCmds(os.Stderr, "  ")
+		return 1
+	}
+
+	// The command is resolved before the renderer, which it gets a say in.
+	cmd, _, args := subcommands.Resolve(root, cmdArgs)
+	if cmd == nil {
+		fmt.Fprintf(os.Stderr, "%s: command not found: %s\n", progName(), cmdArgs[0])
+		return 1
+	}
+	if cmd.GetFlags()&subcommands.Quiet != 0 {
+		opt_quiet = true
+	}
 
 	plainOutput := opt_silent || opt_stdio || opt_quiet || opt_trace != "" || !isTerminal()
 	ctx.ProgressSummary = !plainOutput
@@ -270,27 +322,7 @@ func entryPoint() int {
 		return 1
 	}
 
-	if opt_disableSecurityCheck {
-		if err := ctx.GetCookies().SetDisabledSecurityCheck(); err != nil {
-			fmt.Fprintln(ctx.Stderr, "failed to disable security checks:", err)
-			return 1
-		}
-		fmt.Fprintln(ctx.Stdout, "security check disabled")
-		return 0
-	} else {
-		opt_disableSecurityCheck = ctx.GetCookies().IsDisabledSecurityCheck()
-	}
-
-	if opt_enableSecurityCheck {
-		if err := ctx.GetCookies().RemoveDisabledSecurityCheck(); err != nil {
-			fmt.Fprintln(ctx.Stderr, "failed to enable security checks:", err)
-			return 1
-		}
-		fmt.Fprintln(ctx.Stdout, "security check enabled")
-		return 0
-	}
-
-	checkUpdate(ctx, opt_disableSecurityCheck)
+	checkUpdate(ctx)
 
 	// setup from default + override
 	if opt_cpuCount <= 0 {
@@ -345,19 +377,6 @@ func entryPoint() int {
 	ctx.ProcessID = os.Getpid()
 	ctx.MaxConcurrency = opt_maxConcurrency
 
-	if hadAt {
-		if atRepository == "" {
-			fmt.Fprintf(os.Stderr, "%s: missing plakar repository\n", progName())
-			return 1
-		}
-	}
-
-	if len(cmdArgs) == 0 {
-		fmt.Fprintf(os.Stderr, "%s: a subcommand must be provided\n", progName())
-		listCmds(os.Stderr, "  ")
-		return 1
-	}
-
 	logger := logging.NewLogger(renderer.Stdout(), renderer.Stderr())
 
 	// start logging
@@ -370,16 +389,13 @@ func entryPoint() int {
 
 	ctx.SetLogger(logger)
 
-	if err := setupPkgManager(ctx, opt_configdir, opt_datadir, opt_cachedir); err != nil {
+	if err := setupPkgManager(ctx, opt_configdir, opt_datadir, opt_cachedir, renderer.Stderr()); err != nil {
 		log.Fatalln(err.Error())
 	}
 
 	var repositoryPath string
-
-	var args []string
 	if hadAt {
 		repositoryPath = atRepository
-		args = cmdArgs
 	} else {
 		repositoryPath = os.Getenv("PLAKAR_REPOSITORY")
 		if repositoryPath == "" {
@@ -390,19 +406,11 @@ func entryPoint() int {
 				repositoryPath = "fs:" + filepath.Join(userDefault.HomeDir, ".plakar")
 			}
 		}
-
-		args = cmdArgs
 	}
 
 	storeConfig, err := ctx.Config.GetRepository(repositoryPath)
 	if err != nil {
 		logger.Stderr("%s: %s\n", progName(), err)
-		return 1
-	}
-
-	cmd, _, args := subcommands.Resolve(root, args)
-	if cmd == nil {
-		logger.Stderr("command not found: %s\n", args[0])
 		return 1
 	}
 
@@ -556,31 +564,8 @@ func entryPoint() int {
 	return status
 }
 
-func checkUpdate(ctx *appcontext.AppContext, disableSecurityCheck bool) {
-	if ctx.GetCookies().IsFirstRun() {
-		ctx.GetCookies().SetFirstRun()
-		if disableSecurityCheck {
-			return
-		}
-
-		fmt.Fprintln(ctx.Stdout, "Welcome to plakar !")
-		fmt.Fprintln(ctx.Stdout, "")
-		fmt.Fprintln(ctx.Stdout, "By default, plakar checks for security updates on the releases feed once every 24h.")
-		fmt.Fprintln(ctx.Stdout, "It will notify you if there are important updates that you need to install.")
-		fmt.Fprintln(ctx.Stdout, "")
-		fmt.Fprintln(ctx.Stdout, "If you prefer to watch yourself, you can disable this permanently by running:")
-		fmt.Fprintln(ctx.Stdout, "")
-		fmt.Fprintln(ctx.Stdout, "\tplakar -disable-security-check")
-		fmt.Fprintln(ctx.Stdout, "")
-		fmt.Fprintln(ctx.Stdout, "If you change your mind, run:")
-		fmt.Fprintln(ctx.Stdout, "")
-		fmt.Fprintln(ctx.Stdout, "\tplakar -enable-security-check")
-		fmt.Fprintln(ctx.Stdout, "")
-		fmt.Fprintln(ctx.Stdout, "EOT")
-		return
-	}
-
-	if disableSecurityCheck {
+func checkUpdate(ctx *appcontext.AppContext) {
+	if _, ok := os.LookupEnv("DISABLE_SECURITY_CHECK"); ok {
 		return
 	}
 

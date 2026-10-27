@@ -403,6 +403,8 @@ export type getSnapshotPathChildrenFn = (props: {
 export const getSnapshotPathSearchSchema = z.object({
   has_next: z.boolean(),
   items: z.array(VFSEntrySchema),
+  total: z.number(),
+  content_types: z.record(z.string(), z.number()),
 });
 
 export type getSnapshotPathSearchFn = (props: {

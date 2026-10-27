@@ -4,6 +4,7 @@ import {
   Link,
   SegmentedControl,
   SegmentedControlProps,
+  Spinner,
   Typography,
 } from "@plakar-ui/ui/components";
 import { ReactNode, useEffect, useRef } from "react";
@@ -35,6 +36,8 @@ type FilterPanelSearchProps = {
   placeholder: string;
   "aria-label": string;
   onSearch: (value: string) => void;
+  /** Shows a spinner in place of the search icon while the results load. */
+  isLoading?: boolean;
 };
 
 function FilterPanelSearch({
@@ -42,6 +45,7 @@ function FilterPanelSearch({
   placeholder,
   "aria-label": ariaLabel,
   onSearch,
+  isLoading = false,
 }: FilterPanelSearchProps) {
   const search = useDebouncedSearch(value, onSearch);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -73,7 +77,11 @@ function FilterPanelSearch({
       onClear={search.clear}
       className="border-secondary flex items-center gap-3 border-b px-4 last:rounded-b-xl last:border-b-0 has-data-focused:shadow-[inset_0_-2px_0_var(--border-color-accent)]"
     >
-      <Icon type="magnifying-glass" size="md" className="text-tertiary" />
+      {isLoading ? (
+        <Spinner size="md" inheritColor className="text-tertiary" />
+      ) : (
+        <Icon type="magnifying-glass" size="md" className="text-tertiary" />
+      )}
       <Input
         ref={inputRef}
         placeholder={placeholder}

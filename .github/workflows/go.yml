@@ -16,7 +16,7 @@ jobs:
     outputs:
       go: ${{ steps.filter.outputs.go }}
     steps:
-    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         fetch-depth: 2
 
@@ -35,13 +35,15 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+      # The kortex coverage upload authenticates with the job's OIDC token.
+      id-token: write
     steps:
-    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         fetch-depth: 2
 
     - name: Set up Go
-      uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
         go-version-file: 'go.mod'
 
@@ -92,6 +94,20 @@ jobs:
         files: ./junit.xml
         report_type: test_results
         fail_ci_if_error: false
+
+    # kortex gets the same reports, sent by the uploader it serves (a public
+    # repository cannot use its action) with the job's OIDC token: no secret.
+    # A pull request from a fork gets no token and uploads nothing. Failing
+    # here is a warning, never a failed build.
+    - name: Upload coverage and test results to kortex
+      if: ${{ !cancelled() }}
+      run: |
+        if ! curl -fsSL --retry 3 https://kortex.plakar.io/dl/kortex-linux-amd64 -o "$RUNNER_TEMP/kortex"; then
+          echo "::warning title=kortex coverage upload::could not fetch the uploader"
+          exit 0
+        fi
+        chmod +x "$RUNNER_TEMP/kortex"
+        "$RUNNER_TEMP/kortex" coverage upload --url https://kortex.plakar.io coverage.out junit.xml
 
     - name: Fail if tests failed
       if: ${{ steps.gotest.outputs.test_exit != '0' }}

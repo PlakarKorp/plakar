@@ -99,6 +99,16 @@ export const NotPermitted: Story = {
   },
 };
 
+export const WithQuickActions: Story = {
+  args: {
+    ...Default.args,
+    quickActions: [
+      { label: "Add store", href: "#" },
+      { label: "Add source", href: "#" },
+    ],
+  },
+};
+
 export const Loading = {
   argTypes: {},
   render: () => <IntegrationCardSkeleton />,

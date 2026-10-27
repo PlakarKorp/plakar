@@ -1,4 +1,4 @@
-import { Button, Icon, Tag, Typography } from "@plakar-ui/ui/components";
+import { Button, Icon, Link, Tag, Typography } from "@plakar-ui/ui/components";
 import { ComponentProps } from "react";
 import { LinkProps } from "react-aria-components";
 
@@ -47,6 +47,7 @@ export type IntegrationCardProps = {
     typeKey: IntegrationCardTypeKey
   ) => LinkProps["href"] | undefined;
   highlightedTypes?: Array<IntegrationCardTypeKey>;
+  quickActions?: Array<{ label: string; href: LinkProps["href"] }>;
 };
 
 export function IntegrationCard({
@@ -68,6 +69,7 @@ export function IntegrationCard({
   isDisabled = false,
   getTypeHref,
   highlightedTypes,
+  quickActions,
 }: IntegrationCardProps) {
   return (
     <div className="border-secondary bg-primary flex flex-col gap-4 rounded-xl border p-4">
@@ -133,6 +135,20 @@ export function IntegrationCard({
         <Typography className="text-secondary overflow-auto" size="sm">
           {description}
         </Typography>
+        {quickActions && quickActions.length > 0 && (
+          <div className="flex flex-wrap gap-x-4 gap-y-1">
+            {quickActions.map(({ label, href }) => (
+              <Link
+                key={label}
+                href={href}
+                className="inline-flex items-center gap-1 text-sm font-medium"
+              >
+                <Icon type="plus" size="sm" />
+                {label}
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Actions */}

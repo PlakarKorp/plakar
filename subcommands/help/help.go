@@ -80,6 +80,16 @@ func (cmd *Help) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 		disableColors = true
 	} else if !term.IsTerminal(int(os.Stdout.Fd())) {
 		disableColors = true
+	} else {
+		// Legacy Windows consoles print escape sequences literally
+		// until virtual terminal processing is enabled; a no-op on
+		// other platforms.
+		restore, err := termenv.EnableVirtualTerminalProcessing(termenv.DefaultOutput())
+		if err != nil {
+			disableColors = true
+		} else {
+			defer func() { _ = restore() }()
+		}
 	}
 
 	var options []glamour.TermRendererOption

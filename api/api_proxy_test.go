@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 
 	"github.com/PlakarKorp/pkg"
@@ -15,8 +16,13 @@ import (
 // PLAKAR_SERVICE_ENDPOINT per request, so the endpoint-error cases can use
 // t.Setenv against the shared mux instead of rebuilding it.
 func TestProxy(t *testing.T) {
-	mux, _, snap, _ := server(t, "")
+	mux, _, snap, ctx := server(t, "")
 	defer snap.Close()
+
+	withAuthToken := func(t *testing.T, token string) {
+		require.NoError(t, ctx.GetCookies().PutAuthToken(token))
+		t.Cleanup(func() { _ = ctx.GetCookies().DeleteAuthToken() })
+	}
 
 	t.Run("alerting get unauthorized", func(t *testing.T) {
 		// No auth token in the cookie jar -> handler returns a 401 JSON body.
@@ -46,10 +52,52 @@ func TestProxy(t *testing.T) {
 		require.Equal(t, http.StatusInternalServerError, w.Code, "body=%s", w.Body.String())
 	})
 
+	t.Run("proxy unauthorized", func(t *testing.T) {
+		// Without an auth token the proxy answers 401 itself and never
+		// contacts the service: the upstream must see no request.
+		var calls atomic.Int32
+		upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			calls.Add(1)
+		}))
+		defer upstream.Close()
+		t.Setenv("PLAKAR_SERVICE_ENDPOINT", upstream.URL)
+
+		for _, path := range []string{
+			"/api/proxy/v1/account/me",
+			"/api/proxy/v1/account/notifications",
+			"/api/proxy/v1/reporting/reports",
+		} {
+			w := get(t, mux, path)
+			require.Equal(t, http.StatusUnauthorized, w.Code, "path=%s body=%s", path, w.Body.String())
+
+			var resp map[string]string
+			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+			require.Equal(t, "authorization_error", resp["error"])
+		}
+		require.Equal(t, int32(0), calls.Load(), "logged-out proxy must not call the service")
+	})
+
+	t.Run("proxy forwards with token", func(t *testing.T) {
+		upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			require.Equal(t, "/v1/account/me", r.URL.Path)
+			require.Equal(t, "Bearer secret", r.Header.Get("Authorization"))
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"ok":true}`))
+		}))
+		defer upstream.Close()
+		t.Setenv("PLAKAR_SERVICE_ENDPOINT", upstream.URL)
+		withAuthToken(t, "secret")
+
+		w := get(t, mux, "/api/proxy/v1/account/me")
+		require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
+		require.JSONEq(t, `{"ok":true}`, w.Body.String())
+	})
+
 	t.Run("bad endpoint", func(t *testing.T) {
 		// An unparseable endpoint URL exercises the
 		// `targetBase, err := url.Parse(...); if err != nil` branch.
 		t.Setenv("PLAKAR_SERVICE_ENDPOINT", "://this is not a url")
+		withAuthToken(t, "secret")
 
 		w := get(t, mux, "/api/proxy/v1/account/me")
 		require.Equal(t, http.StatusInternalServerError, w.Code, "body=%s", w.Body.String())
@@ -60,6 +108,7 @@ func TestProxy(t *testing.T) {
 		// connection-refused, exercising the `if err != nil` branch after it.
 		// Hermetic: nothing listens on port 1.
 		t.Setenv("PLAKAR_SERVICE_ENDPOINT", "http://127.0.0.1:1")
+		withAuthToken(t, "secret")
 
 		w := get(t, mux, "/api/proxy/v1/account/me")
 		require.Equal(t, http.StatusInternalServerError, w.Code, "body=%s", w.Body.String())
