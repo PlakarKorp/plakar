@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	_ "github.com/PlakarKorp/integrations/fs/exporter"
@@ -117,4 +118,27 @@ func TestExecuteCmdArchiveDefault(t *testing.T) {
 
 	_, err = os.Stat(outputDir)
 	require.NoError(t, err)
+}
+
+func TestArchiveExecuteOutputMode(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("file modes are not enforced on windows")
+	}
+	repo, ctx := ptesting.GenerateRepository(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil), nil)
+	snap := ptesting.GenerateSnapshot(t, repo, []ptesting.MockFile{
+		ptesting.NewMockFile("a.txt", 0644, "a"),
+	})
+	defer snap.Close()
+
+	out := filepath.Join(t.TempDir(), "new.tar.gz")
+	indexId := snap.Header.GetIndexID()
+	cmd := &Archive{}
+	require.NoError(t, cmd.Parse(ctx, []string{"-output", out, hex.EncodeToString(indexId[:])}))
+	status, err := cmd.Execute(ctx, repo)
+	require.NoError(t, err)
+	require.Equal(t, 0, status)
+
+	info, err := os.Stat(out)
+	require.NoError(t, err)
+	require.Equal(t, os.FileMode(0600), info.Mode().Perm())
 }
