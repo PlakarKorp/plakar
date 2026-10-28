@@ -111,6 +111,7 @@ func (cmd *Sync) Parse(ctx *appcontext.AppContext, args []string) error {
 	if err != nil {
 		return err
 	}
+	defer peerStore.Close(ctx)
 
 	peerStoreConfig, err := storage.NewConfigurationFromWrappedBytes(peerStoreSerializedConfig)
 	if err != nil {
@@ -194,6 +195,7 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 	if err != nil {
 		return 1, fmt.Errorf("could not open peer store %s: %w", cmd.PeerRepositoryLocation, err)
 	}
+	defer peerStore.Close(ctx)
 
 	peerCtx := appcontext.NewAppContextFrom(ctx)
 	peerCtx.SetSecret(cmd.PeerRepositorySecret)
