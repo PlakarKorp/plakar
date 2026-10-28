@@ -120,3 +120,28 @@ func TestExecuteCmdServerDefault(t *testing.T) {
 	// we dont test all the field from configuration
 	require.Equal(t, versioning.FromString(storage.VERSION), configInstance.Version)
 }
+
+func TestServerParseToken(t *testing.T) {
+	_, ctx := ptesting.GenerateRepository(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil), nil)
+	defer ctx.Close()
+
+	tests := []struct {
+		name    string
+		args    []string
+		wantErr bool
+	}{
+		{"omitted keeps today's behaviour", []string{}, false},
+		{"set", []string{"-token", "secret"}, false},
+		{"explicitly empty", []string{"-token", ""}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := (&Server{}).Parse(ctx, tt.args)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
