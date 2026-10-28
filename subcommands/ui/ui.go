@@ -71,6 +71,10 @@ func (cmd *Ui) Parse(ctx *appcontext.AppContext, args []string) error {
 		return fmt.Errorf("too many arguments")
 	}
 
+	if cmd.Cors && cmd.NoAuth {
+		return fmt.Errorf("-cors cannot be used with -no-auth: any website could read the repository")
+	}
+
 	cmd.RepositorySecret = ctx.GetSecret()
 
 	return nil

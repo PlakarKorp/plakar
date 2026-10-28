@@ -29,13 +29,37 @@ func TestUiParse(t *testing.T) {
 	cmd := &Ui{}
 	require.NoError(t, cmd.Parse(ctx, []string{
 		"-addr", "127.0.0.1:9999",
-		"-cors", "-no-auth", "-no-spawn", "-no-refresh",
+		"-cors", "-no-spawn", "-no-refresh",
 	}))
 	require.Equal(t, "127.0.0.1:9999", cmd.Addr)
 	require.True(t, cmd.Cors)
-	require.True(t, cmd.NoAuth)
+	require.False(t, cmd.NoAuth)
 	require.True(t, cmd.NoSpawn)
 	require.True(t, cmd.NoRefresh)
+}
+
+func TestUiParseCorsNoAuth(t *testing.T) {
+	_, ctx := ptesting.GenerateRepository(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil), nil)
+
+	tests := []struct {
+		name    string
+		args    []string
+		wantErr bool
+	}{
+		{"cors with auth", []string{"-cors"}, false},
+		{"no-auth without cors", []string{"-no-auth"}, false},
+		{"cors with no-auth", []string{"-cors", "-no-auth"}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := (&Ui{}).Parse(ctx, tt.args)
+			if tt.wantErr {
+				require.ErrorContains(t, err, "-cors cannot be used with -no-auth")
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
 }
 
 func TestUiParseTooManyArgs(t *testing.T) {
