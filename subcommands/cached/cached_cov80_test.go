@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -200,4 +201,39 @@ func TestListenAndServeSocketMode(t *testing.T) {
 		info, err := os.Stat(sock)
 		return err == nil && info.Mode().Perm() == 0600
 	}, 3*time.Second, 10*time.Millisecond)
+}
+
+func TestListenAndServeWarnsOnOpenSocketDir(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("file modes are not enforced on windows")
+	}
+	ctx := newCov80Ctx(t)
+	sock := shortSocket(t)
+	dir := filepath.Dir(sock)
+
+	// Pre-bind so ListenAndServe returns "already running" without starting a server.
+	existing, err := net.Listen("unix", sock)
+	require.NoError(t, err)
+	defer existing.Close()
+
+	tests := []struct {
+		name string
+		mode os.FileMode
+		warn bool
+	}{
+		{"owner only", 0700, false},
+		{"group readable", 0750, true},
+		{"world readable", 0755, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.NoError(t, os.Chmod(dir, tt.mode))
+			var out bytes.Buffer
+			ctx.GetLogger().SetOutput(&out)
+
+			cmd := &Cached{socketPath: sock, runningJobs: make(chan int)}
+			require.ErrorContains(t, cmd.ListenAndServe(ctx), "already running")
+			require.Equal(t, tt.warn, strings.Contains(out.String(), "accessible by other users"))
+		})
+	}
 }
