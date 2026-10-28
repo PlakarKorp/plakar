@@ -145,3 +145,29 @@ func TestServerParseToken(t *testing.T) {
 		})
 	}
 }
+
+func TestServerParseCertKeyPair(t *testing.T) {
+	_, ctx := ptesting.GenerateRepository(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil), nil)
+	defer ctx.Close()
+
+	tests := []struct {
+		name    string
+		args    []string
+		wantErr bool
+	}{
+		{"neither", []string{}, false},
+		{"both", []string{"-cert", "c.pem", "-key", "k.pem"}, false},
+		{"cert only", []string{"-cert", "c.pem"}, true},
+		{"key only", []string{"-key", "k.pem"}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := (&Server{}).Parse(ctx, tt.args)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}

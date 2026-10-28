@@ -54,6 +54,10 @@ func (cmd *Server) Parse(ctx *appcontext.AppContext, args []string) error {
 		return errors.New("-token requires a non-empty value")
 	}
 
+	if (cmd.Cert == "") != (cmd.Key == "") {
+		return errors.New("-cert and -key must be given together")
+	}
+
 	cmd.RepositorySecret = ctx.GetSecret()
 	cmd.NoDelete = !cmd.allowDelete
 
