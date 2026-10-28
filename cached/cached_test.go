@@ -1,6 +1,8 @@
 package cached
 
 import (
+	"context"
+	"errors"
 	"io"
 	"net"
 	"os"
@@ -354,6 +356,10 @@ func TestRebuildStateContextCancelled(t *testing.T) {
 
 func TestRebuildStateCancellationInterruptsResponseWait(t *testing.T) {
 	const cancellationTimeout = time.Second
+	type rebuildResult struct {
+		code int
+		err  error
+	}
 
 	ctx := newTestContext(t)
 	requestReceived := make(chan struct{})
@@ -362,19 +368,26 @@ func TestRebuildStateCancellationInterruptsResponseWait(t *testing.T) {
 		waitForClientClose: true,
 	})
 
-	errCh := make(chan error, 1)
+	resultCh := make(chan rebuildResult, 1)
 	go func() {
-		_, err := RebuildStateFromStore(ctx, uuid.New(), nil, false)
-		errCh <- err
+		code, err := RebuildStateFromStore(ctx, uuid.New(), nil, false)
+		resultCh <- rebuildResult{code, err}
 	}()
 
-	<-requestReceived
+	select {
+	case <-requestReceived:
+	case <-time.After(cancellationTimeout):
+		t.Fatal("server did not receive the state rebuild request")
+	}
 	ctx.Cancel(nil)
 
 	select {
-	case err := <-errCh:
-		if err == nil {
-			t.Fatal("expected cancellation error")
+	case result := <-resultCh:
+		if !errors.Is(result.err, context.Canceled) {
+			t.Fatalf("error = %v, want context.Canceled", result.err)
+		}
+		if result.code != 1 {
+			t.Fatalf("exit code = %d, want 1", result.code)
 		}
 	case <-time.After(cancellationTimeout):
 		t.Fatal("state rebuild did not stop after context cancellation")
