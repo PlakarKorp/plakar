@@ -9,7 +9,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-func connectPlugin(ctx context.Context, runner Runner) (grpc.ClientConnInterface, error) {
+func connectPlugin(ctx context.Context, runner Runner) (*grpc.ClientConn, error) {
 	conn, err := runner.Run(ctx)
 	if err != nil {
 		return nil, err

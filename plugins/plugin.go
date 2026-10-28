@@ -6,15 +6,13 @@ import (
 	"io"
 	"path/filepath"
 
-	grpc_exporter "github.com/PlakarKorp/integration-grpc/exporter"
-	grpc_importer "github.com/PlakarKorp/integration-grpc/importer"
-	grpc_storage "github.com/PlakarKorp/integration-grpc/storage"
 	"github.com/PlakarKorp/kloset/connectors"
 	"github.com/PlakarKorp/kloset/connectors/exporter"
 	"github.com/PlakarKorp/kloset/connectors/importer"
 	"github.com/PlakarKorp/kloset/connectors/storage"
 	"github.com/PlakarKorp/kloset/location"
 	"github.com/PlakarKorp/pkg"
+	"github.com/PlakarKorp/plakar/plugins/grpcconn"
 )
 
 func RegisterStorage(proto string, flags location.Flags, runner Runner) error {
@@ -24,7 +22,7 @@ func RegisterStorage(proto string, flags location.Flags, runner Runner) error {
 			return nil, fmt.Errorf("failed to connect to plugin: %w", err)
 		}
 
-		return grpc_storage.NewStorage(ctx, client, s, config)
+		return grpcconn.NewStorage(ctx, client, s, config)
 	})
 	if err != nil {
 		return err
@@ -39,7 +37,7 @@ func RegisterImporter(proto string, flags location.Flags, runner Runner) error {
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to plugin: %w", err)
 		}
-		return grpc_importer.NewImporter(ctx, client, o, s, config)
+		return grpcconn.NewImporter(ctx, client, o, s, config)
 	})
 	if err != nil {
 		return err
@@ -54,7 +52,7 @@ func RegisterExporter(proto string, flags location.Flags, runner Runner) error {
 			return nil, fmt.Errorf("failed to connect to plugin: %w", err)
 		}
 
-		return grpc_exporter.NewExporter(ctx, client, o, s, config)
+		return grpcconn.NewExporter(ctx, client, o, s, config)
 	})
 	if err != nil {
 		return err
