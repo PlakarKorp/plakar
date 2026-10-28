@@ -26,6 +26,7 @@ type NativeRunner struct {
 
 func (r *NativeRunner) Run(_ context.Context) (net.Conn, error) {
 	cmd := exec.Command(r.Path, r.Args...)
+	cmd.SysProcAttr = detachedProcAttr()
 	cmd.Stderr = r.Stderr
 	if cmd.Stderr == nil {
 		cmd.Stderr = os.Stderr
