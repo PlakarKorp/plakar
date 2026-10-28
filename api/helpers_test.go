@@ -33,7 +33,7 @@ func server(t *testing.T, token string) (*http.ServeMux, *repository.Repository,
 		ptesting.NewMockFile("top.txt", 0644, "top level"),
 	})
 	mux := http.NewServeMux()
-	SetupRoutes(mux, repo, ctx, token, true /* norefresh */)
+	SetupRoutes(mux, repo, ctx, token, "", true /* norefresh */)
 	return mux, repo, snap, ctx
 }
 

@@ -28,6 +28,11 @@ type uiserver struct {
 	repository *repository.Repository
 	norefresh  bool
 
+	// token guards every route; launchCode, when set, is redeemed for it by
+	// the browser plakar ui spawned.
+	token      string
+	launchCode *launchCode
+
 	// integrationsCache used used by api_proxy.go to cache the results of
 	// pkg.Manager.Query() across requests so the /integration list and detail
 	// endpoints don't fetch the ~449 KB remote catalog from api.plakar.io on
@@ -179,13 +184,17 @@ func (ui *uiserver) apiInfo(w http.ResponseWriter, r *http.Request) error {
 	return json.NewEncoder(w).Encode(res)
 }
 
-func SetupRoutes(server *http.ServeMux, repo *repository.Repository, ctx *appcontext.AppContext, token string, norefresh bool) {
+// SetupRoutes registers the UI API on server. When token is not empty every
+// route requires it as a bearer, and launchCode, when not empty, is what the
+// spawned browser redeems once for the token.
+func SetupRoutes(server *http.ServeMux, repo *repository.Repository, ctx *appcontext.AppContext, token, launchCode string, norefresh bool) {
 	ui := uiserver{
 		store:             repo.Store(),
 		config:            repo.Configuration(),
 		repository:        repo,
 		ctx:               ctx,
 		norefresh:         norefresh,
+		token:             token,
 		integrationsCache: ttlmap.New[string, []*pkg.Integration](5 * time.Minute),
 	}
 	ui.integrationsCache.AutoExpire()
@@ -205,6 +214,11 @@ func SetupRoutes(server *http.ServeMux, repo *repository.Repository, ctx *appcon
 	isDemoMode, _ := strconv.ParseBool(os.Getenv("PLAKAR_DEMO_MODE"))
 
 	server.Handle("GET /api/info", authToken(JSONAPIView(ui.apiInfo)))
+
+	if token != "" && launchCode != "" {
+		ui.launchCode = newLaunchCode(launchCode)
+		server.Handle("POST /api/authentication/exchange", JSONAPIView(ui.authenticationExchange))
+	}
 
 	// The demo mode is the read-only mode of the API available at demo.plakar.io. Disable the write operations.
 	if !isDemoMode {

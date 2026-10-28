@@ -13,3 +13,8 @@ export type LoginStartResponse = z.infer<typeof LoginStartResponseSchema>;
 export const LoginPollResponseSchema = z.object({
   status: z.enum(["pending", "code-required", "invalid-code", "ok"]),
 });
+
+// The token handed back for the one-time code plakar ui gave the browser.
+export const ExchangeResponseSchema = z.object({
+  token: z.string(),
+});

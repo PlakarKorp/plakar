@@ -32,6 +32,7 @@ import (
 	"github.com/PlakarKorp/plakar/api"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/utils"
+	"github.com/google/uuid"
 )
 
 type UiOptions struct {
@@ -58,7 +59,14 @@ var placeholder []byte
 
 func Ui(repo *repository.Repository, ctx *appcontext.AppContext, addr string, opts *UiOptions) error {
 	server := http.NewServeMux()
-	api.SetupRoutes(server, repo, ctx, opts.Token, opts.NoRefresh)
+	// The browser is spawned with a one-time code rather than the token: the
+	// arguments of a process are visible to other local users on some
+	// systems, and a code is spent by the first redeem.
+	launchCode := ""
+	if opts.Token != "" && !opts.NoSpawn {
+		launchCode = uuid.NewString()
+	}
+	api.SetupRoutes(server, repo, ctx, opts.Token, launchCode, opts.NoRefresh)
 
 	statics, err := staticHandler(content)
 	if err != nil {
@@ -91,7 +99,11 @@ func Ui(repo *repository.Repository, ctx *appcontext.AppContext, addr string, op
 	}
 
 	if !opts.NoSpawn {
-		if err := utils.BrowserTrySpawn(url); err != nil {
+		launch := fmt.Sprintf("%s://%s/", protocol, addr)
+		if launchCode != "" {
+			launch = fmt.Sprintf("%s?plakar_code=%s", launch, launchCode)
+		}
+		if err := utils.BrowserTrySpawn(launch); err != nil {
 			repo.Logger().Printf("failed to launch browser: %s", err)
 			repo.Logger().Printf("you can access the webUI at %s", url)
 		}

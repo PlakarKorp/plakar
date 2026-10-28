@@ -14,7 +14,7 @@ import (
 func TestRepositoryEmpty(t *testing.T) {
 	repo, ctx := ptesting.GenerateRepository(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil), nil)
 	mux := http.NewServeMux()
-	SetupRoutes(mux, repo, ctx, "", true)
+	SetupRoutes(mux, repo, ctx, "", "", true)
 
 	t.Run("empty repository serves 200", func(t *testing.T) {
 		for _, path := range []string{

@@ -1,4 +1,5 @@
 import {
+  ExchangeResponseSchema,
   LoginPollResponseSchema,
   LoginStartResponseSchema,
 } from "~/api/auth/schema";
@@ -67,4 +68,16 @@ export const logout = async () => {
   });
 
   return null;
+};
+
+// Trade the one-time code plakar ui put in the launch URL for the API token.
+export const exchangeLaunchCode = async (code: string) => {
+  const url = "/api/authentication/exchange";
+
+  const res = await CallApi(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code }),
+  });
+  return ExchangeResponseSchema.parse(await parseJSON(url, res));
 };
