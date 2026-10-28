@@ -128,7 +128,7 @@ func TestExecuteHTTPChrootStartServeShutdown(t *testing.T) {
 		err    error
 	}, 1)
 	go func() {
-		status, err := ExecuteHTTP(ctx, repo, "http://"+addr, nil, chroot)
+		status, err := ExecuteHTTP(ctx, repo, "http://"+addr, nil, chroot, "")
 		errCh <- struct {
 			status int
 			err    error
@@ -166,7 +166,59 @@ func TestExecuteHTTPListenError(t *testing.T) {
 	repo, ctx := ptesting.GenerateRepository(t, nil, nil, nil)
 
 	chroot := fstest.MapFS{}
-	status, err := ExecuteHTTP(ctx, repo, "http://256.256.256.256:99999", nil, chroot)
+	status, err := ExecuteHTTP(ctx, repo, "http://256.256.256.256:99999", nil, chroot, "")
 	require.Error(t, err)
 	require.Equal(t, 1, status)
+}
+
+func TestExecuteHTTPRequiresToken(t *testing.T) {
+	// With a token, a request without the matching Authorization header is
+	// refused before any file is served.
+	repo, ctx := ptesting.GenerateRepository(t, nil, nil, nil)
+
+	chroot := fstest.MapFS{
+		"file.txt": &fstest.MapFile{Data: []byte("chroot-content")},
+	}
+
+	addr := freePort(t)
+	errCh := make(chan error, 1)
+	go func() {
+		_, err := ExecuteHTTP(ctx, repo, "http://"+addr, nil, chroot, "s3cret")
+		errCh <- err
+	}()
+
+	url := "http://" + addr + "/file.txt"
+	var resp *http.Response
+	var err error
+	for waited := time.Duration(0); waited < 3*time.Second; waited += 25 * time.Millisecond {
+		if resp, err = http.Get(url); err == nil {
+			break
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
+	require.NoError(t, err, "server never became reachable")
+	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+	_ = resp.Body.Close()
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer wrong")
+	resp, err = http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+	_ = resp.Body.Close()
+
+	req.Header.Set("Authorization", "Bearer s3cret")
+	resp, err = http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	_ = resp.Body.Close()
+
+	ctx.GetInner().Cancel(nil)
+	select {
+	case err := <-errCh:
+		require.NoError(t, err)
+	case <-time.After(8 * time.Second):
+		t.Fatal("ExecuteHTTP did not return after context cancellation")
+	}
 }

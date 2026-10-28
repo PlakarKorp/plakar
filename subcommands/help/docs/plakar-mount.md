@@ -8,7 +8,9 @@ PLAKAR-MOUNT(1) - General Commands Manual
 
 **plakar&nbsp;mount**
 \[**-allow-others**]
+\[**-no-auth**]
 \[**-to**&nbsp;*mountpoint*]
+\[**-token**&nbsp;*string*]
 \[*snapshotID*]
 
 # DESCRIPTION
@@ -35,6 +37,12 @@ The options are as follows:
 
 > Allow other users to access the mounted filesystem.
 
+**-no-auth**
+
+> Serve an HTTP mount without requiring a token.
+> The files served are decrypted, so anyone who can reach the address can
+> read every snapshot.
+
 **-to** *mountpoint*
 
 > Specify the mount location.
@@ -49,6 +57,12 @@ The options are as follows:
 
 > If not specified, mount will attempt a FUSE mount in the working directory with
 > a random subdirectory name.
+
+**-token** *string*
+
+> Require clients of an HTTP mount to provide the given Authorization Bearer
+> token.
+> If not specified, a random token is generated and printed at startup.
 
 *snapshotID*
 
@@ -82,9 +96,14 @@ Mount snapshots matching a filter (e.g., snapshots with tag "daily-backup"):
 
 	$ plakar mount -to ~/mnt -tag daily-backup
 
-Mount a snapshot to an HTTP endpoint:
+Mount a snapshot to an HTTP endpoint, with a generated token printed at startup:
 
 	$ plakar mount -to http://hostname:8080
+
+Mount a snapshot to an HTTP endpoint with a chosen token, and read a file:
+
+	$ plakar mount -to http://hostname:8080 -token s3cret
+	$ curl -H 'Authorization: Bearer s3cret' http://hostname:8080/
 
 Mount a specific snapshot to an HTTP endpoint:
 
@@ -95,4 +114,4 @@ Mount a specific snapshot to an HTTP endpoint:
 plakar(1),
 plakar-query(7)
 
-Plakar - May 29, 2026 - PLAKAR-MOUNT(1)
+Plakar - October 29, 2026 - PLAKAR-MOUNT(1)

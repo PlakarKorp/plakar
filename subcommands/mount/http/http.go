@@ -37,12 +37,16 @@ import (
 	"github.com/PlakarKorp/kloset/snapshot/header"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/cached"
+	"github.com/PlakarKorp/plakar/server/httpd"
 )
 
 type ListFn func(ctx context.Context, w http.ResponseWriter, r *http.Request)
 type OpenFn func(ctx context.Context, snapshot string) (fs.FS, error)
 
-func ExecuteHTTP(ctx *appcontext.AppContext, repo *repository.Repository, mountpoint string, locateOptions *locate.LocateOptions, chrootfs fs.FS) (int, error) {
+// ExecuteHTTP serves the snapshots over HTTP at mountpoint. The files it
+// serves are decrypted, so unless token is empty every request must carry
+// it as an Authorization Bearer header.
+func ExecuteHTTP(ctx *appcontext.AppContext, repo *repository.Repository, mountpoint string, locateOptions *locate.LocateOptions, chrootfs fs.FS, token string) (int, error) {
 	addr := strings.TrimPrefix(mountpoint, "http://")
 
 	var handler http.Handler
@@ -104,7 +108,7 @@ func ExecuteHTTP(ctx *appcontext.AppContext, repo *repository.Repository, mountp
 
 	srv := &http.Server{
 		Addr:    addr,
-		Handler: handler,
+		Handler: httpd.Auth(token, handler),
 		// Optional: bind request contexts to app ctx
 		BaseContext: func(_ net.Listener) context.Context { return ctx },
 	}
@@ -112,6 +116,11 @@ func ExecuteHTTP(ctx *appcontext.AppContext, repo *repository.Repository, mountp
 	errCh := make(chan error, 1)
 	go func() {
 		ctx.GetLogger().Info("HTTP serving at http://%s", addr)
+		if token == "" {
+			ctx.GetLogger().Warn("HTTP mount serves decrypted files without authentication")
+		} else {
+			ctx.GetLogger().Info("requests must carry the header: Authorization: Bearer %s", token)
+		}
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			errCh <- err
 			return

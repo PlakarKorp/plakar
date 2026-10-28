@@ -26,6 +26,7 @@ import (
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/subcommands/mount/fuse"
 	"github.com/PlakarKorp/plakar/subcommands/mount/http"
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 )
 
@@ -35,6 +36,8 @@ type Mount struct {
 	Mountpoint    string
 	LocateOptions *locate.LocateOptions
 	AllowOthers   bool
+	Token         string
+	NoAuth        bool
 
 	SnapshotPath string
 }
@@ -51,6 +54,8 @@ func (cmd *Mount) CobraCommand() *cobra.Command {
 	}
 	c.Flags().StringVar(&cmd.Mountpoint, "to", "", "mount point")
 	c.Flags().BoolVar(&cmd.AllowOthers, "allow-others", false, "allow other users to access the mount")
+	c.Flags().StringVar(&cmd.Token, "token", "", "Bearer token required by the HTTP mount (default: random)")
+	c.Flags().BoolVar(&cmd.NoAuth, "no-auth", false, "serve the HTTP mount without authentication")
 	subcommands.InstallGoFlags(c.Flags(), cmd.LocateOptions.InstallLocateFlags)
 	return c
 }
@@ -100,7 +105,13 @@ func (cmd *Mount) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 	}
 
 	if strings.HasPrefix(cmd.Mountpoint, "http://") {
-		return http.ExecuteHTTP(ctx, repo, cmd.Mountpoint, cmd.LocateOptions, chrootFS)
+		token := cmd.Token
+		if cmd.NoAuth {
+			token = ""
+		} else if token == "" {
+			token = uuid.NewString()
+		}
+		return http.ExecuteHTTP(ctx, repo, cmd.Mountpoint, cmd.LocateOptions, chrootFS, token)
 	}
 	return fuse.ExecuteFUSE(ctx, repo, cmd.Mountpoint, cmd.LocateOptions, chrootFS, cmd.AllowOthers)
 }

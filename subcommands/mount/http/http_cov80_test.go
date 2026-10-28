@@ -38,7 +38,7 @@ func TestHTTPCov80OpenClosureServesSnapshotFile(t *testing.T) {
 	}
 	errCh := make(chan result, 1)
 	go func() {
-		status, err := ExecuteHTTP(ctx, repo, "http://"+addr, locate.NewDefaultLocateOptions(), nil)
+		status, err := ExecuteHTTP(ctx, repo, "http://"+addr, locate.NewDefaultLocateOptions(), nil, "")
 		errCh <- result{status, err}
 	}()
 
@@ -100,7 +100,7 @@ func TestHTTPCov80OpenClosureBadHexID(t *testing.T) {
 	}
 	errCh := make(chan result, 1)
 	go func() {
-		status, err := ExecuteHTTP(ctx, repo, "http://"+addr, locate.NewDefaultLocateOptions(), nil)
+		status, err := ExecuteHTTP(ctx, repo, "http://"+addr, locate.NewDefaultLocateOptions(), nil, "")
 		errCh <- result{status, err}
 	}()
 
