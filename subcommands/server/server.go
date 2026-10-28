@@ -18,6 +18,7 @@ package server
 
 import (
 	"net/http"
+	"os"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
@@ -35,7 +36,6 @@ func (cmd *Server) CobraCommand() *cobra.Command {
 		Use: "server [OPTIONS]",
 	}
 	c.Flags().StringVar(&cmd.ListenAddr, "listen", "localhost:9876", "address to listen on")
-	c.Flags().StringVar(&cmd.Token, "token", "", "Bearer token")
 	c.Flags().BoolVar(&cmd.allowDelete, "allow-delete", false, "enable delete operations")
 	c.Flags().StringVar(&cmd.Cert, "cert", "", "Full certificate chain")
 	c.Flags().StringVar(&cmd.Key, "key", "", "Certificate private key")
@@ -58,7 +58,6 @@ type Server struct {
 
 	ListenAddr string
 	NoDelete   bool
-	Token      string
 	Cert       string
 	Key        string
 
@@ -75,9 +74,12 @@ func (cmd *Server) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 	ctx.GetLogger().Info("listening on %s://%s", protocol, cmd.ListenAddr)
 	mux := httpd.Mux(repo.Store(), cmd.NoDelete)
 
+	// The token never comes from a flag: command lines show up in ps.
+	token := os.Getenv("PLAKAR_SERVER_TOKEN")
+
 	server := &http.Server{
 		Addr:    cmd.ListenAddr,
-		Handler: httpd.Logging(httpd.Auth(cmd.Token, mux)),
+		Handler: httpd.Logging(httpd.Auth(token, mux)),
 	}
 	go func() {
 		<-ctx.Done()

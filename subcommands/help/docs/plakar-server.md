@@ -11,7 +11,6 @@ PLAKAR-SERVER(1) - General Commands Manual
 \[**-listen**&nbsp;\[*host*]:*port*]
 \[**-cert**&nbsp;*path*]
 \[**-key**&nbsp;*path*]
-\[**-token**&nbsp;*string*]
 
 # DESCRIPTION
 
@@ -55,11 +54,16 @@ The options are as follows:
 
 > Path to a certificate private key file in PEM format.
 
-**-token** *string*
+# ENVIRONMENT
 
-> Require clients to provide the given Authorization Bearer token in order
-> to interact with
+`PLAKAR_SERVER_TOKEN`
+
+> Authorization Bearer token that clients must provide in order to interact
+> with
 > **plakar server**.
+> If not set, the server accepts requests without authentication.
+> The token is read from the environment rather than a flag so that it does
+> not appear in the process listing.
 
 # EXIT STATUS
 
@@ -83,6 +87,10 @@ Start a https server on a specific address and port:
 
 	$ plakar server -listen backup.example.com:12345 -cert fullchain.pem -key privkey.pem
 
+Start a server that requires a bearer token:
+
+	$ PLAKAR_SERVER_TOKEN=s3cret plakar server
+
 # SEE ALSO
 
 plakar(1)
@@ -94,4 +102,4 @@ When a host name is provided,
 uses only one of the IP addresses it resolves to,
 preferably IPv4 .
 
-Plakar - August 25, 2026 - PLAKAR-SERVER(1)
+Plakar - October 29, 2026 - PLAKAR-SERVER(1)

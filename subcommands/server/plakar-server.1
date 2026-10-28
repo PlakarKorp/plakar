@@ -1,4 +1,4 @@
-.Dd August 25, 2026
+.Dd October 29, 2026
 .Dt PLAKAR-SERVER 1
 .Os
 .Sh NAME
@@ -10,7 +10,6 @@
 .Op Fl listen Oo Ar host Ns Oc : Ns Ar port
 .Op Fl cert Ar path
 .Op Fl key Ar path
-.Op Fl token Ar string
 .Sh DESCRIPTION
 The
 .Nm plakar server
@@ -44,10 +43,16 @@ are provided, the server will expect https connections.
 If one or both are missing, the server will fall back to http.
 .It Fl key Ar path
 Path to a certificate private key file in PEM format.
-.It Fl token Ar string
-Require clients to provide the given Authorization Bearer token in order
-to interact with
+.El
+.Sh ENVIRONMENT
+.Bl -tag -width Ds
+.It Ev PLAKAR_SERVER_TOKEN
+Authorization Bearer token that clients must provide in order to interact
+with
 .Nm plakar server .
+If not set, the server accepts requests without authentication.
+The token is read from the environment rather than a flag so that it does
+not appear in the process listing.
 .El
 .Sh EXIT STATUS
 .Ex -std
@@ -70,6 +75,11 @@ $ plakar server -listen 127.0.0.1:12345
 Start a https server on a specific address and port:
 .Bd -literal -offset indent
 $ plakar server -listen backup.example.com:12345 -cert fullchain.pem -key privkey.pem
+.Ed
+.Pp
+Start a server that requires a bearer token:
+.Bd -literal -offset indent
+$ PLAKAR_SERVER_TOKEN=s3cret plakar server
 .Ed
 .Sh SEE ALSO
 .Xr plakar 1
