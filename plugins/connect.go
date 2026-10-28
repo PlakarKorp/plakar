@@ -23,6 +23,7 @@ func connectPlugin(ctx context.Context, runner Runner) (grpc.ClientConnInterface
 		}),
 	)
 	if err != nil {
+		conn.Close()
 		return nil, fmt.Errorf("grpc client creation failed: %w", err)
 	}
 	return clientConn, nil
