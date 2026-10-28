@@ -291,3 +291,48 @@ function ReviewSummary({
     </div>
   );
 }
+
+export const Segmented: Story = {
+  render: () => (
+    <div className="m-auto w-[48rem]">
+      <Stepper steps={["Rules", "Scope"] as const} variant="segmented">
+        {({ currentStep, setProgress, goToPreviousStep, goToNextStep }) => (
+          <div className="flex flex-col gap-4">
+            <div className="flex gap-2">
+              {[0, 50, 100].map((value) => (
+                <Button
+                  key={value}
+                  size="md"
+                  variant="secondary"
+                  onPress={() => setProgress(value)}
+                >
+                  {`${value}%`}
+                </Button>
+              ))}
+            </div>
+            <div className="grid w-full grid-cols-2 gap-4">
+              <Button
+                size="md"
+                variant="secondary"
+                leftIcon="arrow-left"
+                onPress={goToPreviousStep}
+                isDisabled={currentStep === "Rules"}
+              >
+                Back
+              </Button>
+              <Button
+                size="md"
+                variant="primary"
+                rightIcon="arrow-right"
+                onPress={goToNextStep}
+                isDisabled={currentStep === "Scope"}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
+      </Stepper>
+    </div>
+  ),
+};
