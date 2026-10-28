@@ -135,24 +135,20 @@ function Step({
         {!isLast && (
           <ProgressBar
             aria-label={`Step ${index} progress`}
-            className={clsx(
-              "h-1 w-full rounded-full",
-              {
-                complete: "bg-success",
-                current: "bg-accent-tertiary",
-                upcoming: "bg-accent-tertiary",
-              }[status]
-            )}
+            className="bg-accent-tertiary h-1 w-full rounded-full"
             minValue={status === "current" ? 0 : undefined}
             maxValue={status === "current" ? 100 : undefined}
             value={status === "current" ? percentage : undefined}
           >
-            {status === "current" && (
-              <div
-                className="bg-accent h-full rounded-full transition-all duration-300 ease-out"
-                style={{ width: `${percentage}%` }}
-              />
-            )}
+            <div
+              className={clsx(
+                "h-full rounded-full transition-all duration-300 ease-out",
+                status === "complete" ? "bg-success" : "bg-accent"
+              )}
+              style={{
+                width: `${{ complete: 100, current: percentage, upcoming: 0 }[status]}%`,
+              }}
+            />
           </ProgressBar>
         )}
       </div>
