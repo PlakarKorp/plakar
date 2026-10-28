@@ -19,6 +19,7 @@ package server
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
@@ -88,8 +89,10 @@ func (cmd *Server) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 	mux := httpd.Mux(repo.Store(), cmd.NoDelete)
 
 	server := &http.Server{
-		Addr:    cmd.ListenAddr,
-		Handler: httpd.Logging(httpd.Auth(cmd.Token, mux)),
+		Addr:              cmd.ListenAddr,
+		Handler:           httpd.Logging(httpd.Auth(cmd.Token, mux)),
+		ReadHeaderTimeout: 10 * time.Second,
+		MaxHeaderBytes:    64 << 10,
 	}
 	go func() {
 		<-ctx.Done()
