@@ -13,10 +13,12 @@ import { FieldSupportText } from "../field/field-support-text";
 import { Icon } from "../icon/icon";
 import { Typography } from "../typography/typography";
 
-export type RadioGroupProps = AriaRadioGroupProps & {
+export type RadioGroupProps = Omit<AriaRadioGroupProps, "children"> & {
+  children?: ReactNode;
   label?: string;
   supportText?: string;
   spacing?: 1 | 2 | 4;
+  layout?: "stack" | "grid";
 };
 
 export function RadioGroup({
@@ -24,24 +26,34 @@ export function RadioGroup({
   children,
   supportText,
   spacing = 2,
+  layout = "stack",
   className,
   ...props
 }: RadioGroupProps) {
+  const gap = {
+    1: "gap-1",
+    2: "gap-2",
+    4: "gap-4",
+  }[spacing];
+
   return (
     <AriaRadioGroup
       {...props}
-      className={clsx(
-        "group flex flex-col",
-        {
-          1: "gap-1",
-          2: "gap-2",
-          4: "gap-4",
-        }[spacing],
-        className
-      )}
+      className={clsx("group flex flex-col", gap, className)}
     >
       {label && <FieldLabel isRequired={props.isRequired}>{label}</FieldLabel>}
-      <>{children}</>
+      {layout === "grid" ? (
+        <div
+          className={clsx(
+            "grid grid-cols-[repeat(auto-fit,minmax(min(100%,12rem),1fr))]",
+            gap
+          )}
+        >
+          {children}
+        </div>
+      ) : (
+        <>{children}</>
+      )}
       {supportText && <FieldSupportText>{supportText}</FieldSupportText>}
     </AriaRadioGroup>
   );

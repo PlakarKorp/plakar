@@ -249,3 +249,20 @@ export const CompactCardRadios: Story = {
     ),
   },
 };
+
+export const CompactCardRadiosGrid: Story = {
+  args: {
+    label: "Environment",
+    layout: "grid",
+    defaultValue: "production",
+    children: (
+      <>
+        <CompactCardRadio value="production" label="production" />
+        <CompactCardRadio value="staging" label="staging" />
+        <CompactCardRadio value="integration" label="integration" />
+        <CompactCardRadio value="testing" label="testing" />
+        <CompactCardRadio value="sandbox" label="sandbox" />
+      </>
+    ),
+  },
+};
