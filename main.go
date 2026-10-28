@@ -219,10 +219,16 @@ func entryPoint() int {
 	opt_silent := opts.silent
 	opt_keyfile := opts.keyfile
 
-	var interrupted bool
-
 	ctx := appcontext.NewAppContext()
 	defer ctx.Close()
+
+	interrupts := &interrupter{
+		cancel: ctx.Cancel,
+		exit: func() {
+			_, _ = fmt.Fprintf(os.Stderr, "%s: interrupted again, exiting without waiting for plugins\n", progName())
+			os.Exit(1)
+		},
+	}
 
 	if hadAt {
 		if atRepository == "" {
@@ -266,8 +272,7 @@ func entryPoint() int {
 	go func() {
 		if err := renderer.Wait(); err != nil {
 			if errors.Is(err, ui.ErrUserAbort) {
-				interrupted = true
-				ctx.Cancel(err)
+				interrupts.interrupt(err)
 			}
 		}
 	}()
@@ -491,15 +496,15 @@ func entryPoint() int {
 
 	c := make(chan os.Signal, 1)
 	go func() {
-		<-c
-		ctx.Cancel(fmt.Errorf("interrupted"))
-		interrupted = true
+		for range c {
+			interrupts.interrupt(fmt.Errorf("interrupted"))
+		}
 	}()
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
 		<-ctx.Done()
-		if interrupted {
+		if interrupts.fired.Load() {
 			logger.Stderr("%s: received interrupt signal, stopping gracefully...\n", progName())
 		}
 	}()
