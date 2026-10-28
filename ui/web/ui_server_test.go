@@ -124,3 +124,45 @@ func TestUiQuitStopsServer(t *testing.T) {
 	}
 	require.Error(t, ctx.Err())
 }
+
+func TestUiRejectsForeignHost(t *testing.T) {
+	repo, ctx := ptesting.GenerateRepository(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil), nil)
+
+	addr := freePort(t)
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- Ui(repo, ctx, addr, &UiOptions{NoSpawn: true, NoRefresh: true})
+	}()
+	t.Cleanup(func() {
+		ctx.GetInner().Cancel(nil)
+		<-errCh
+	})
+
+	get := func(host string) (int, error) {
+		req, err := http.NewRequest(http.MethodGet, "http://"+addr+"/api/info", nil)
+		if err != nil {
+			return 0, err
+		}
+		if host != "" {
+			req.Host = host
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return 0, err
+		}
+		_ = resp.Body.Close()
+		return resp.StatusCode, nil
+	}
+
+	var status int
+	require.Eventually(t, func() bool {
+		var err error
+		status, err = get("")
+		return err == nil
+	}, 3*time.Second, 25*time.Millisecond, "server never became reachable")
+	require.Equal(t, http.StatusOK, status)
+
+	status, err := get("evil.example")
+	require.NoError(t, err)
+	require.Equal(t, http.StatusForbidden, status)
+}

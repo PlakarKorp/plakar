@@ -103,6 +103,8 @@ func Ui(repo *repository.Repository, ctx *appcontext.AppContext, addr string, op
 		handler = corsMiddleware(server)
 	}
 
+	handler = api.HostMiddleware(addr)(handler)
+
 	s := &http.Server{Addr: addr, Handler: handler}
 	errc := make(chan error, 1)
 	go func() {
