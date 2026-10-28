@@ -2,6 +2,7 @@ package plugins
 
 import (
 	"context"
+	"io"
 	"os/exec"
 	"strings"
 	"testing"
@@ -62,9 +63,9 @@ func TestNativeRunnerNonexistentExecutable(t *testing.T) {
 	}
 }
 
-func TestNativeRunnerCancelledContextWaitErrors(t *testing.T) {
-	// A cancelled context kills the spawned process, so Close's cmd.Wait()
-	// reports the signal as an error — covering the Wait error branch.
+func TestNativeRunnerCancelLeavesPluginRunning(t *testing.T) {
+	// The connector context is cancelled on interrupt, before the plugin has
+	// been asked to Close; it must not kill the plugin.
 	catPath := lookPath(t, "cat")
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -72,12 +73,19 @@ func TestNativeRunnerCancelledContextWaitErrors(t *testing.T) {
 	if err != nil {
 		t.Fatalf("run: %v", err)
 	}
+	cancel()
 
-	cancel() // sends SIGKILL to cat via CommandContext
+	if _, err := conn.Write([]byte("ping\n")); err != nil {
+		t.Fatalf("write after cancel: %v", err)
+	}
+	buf := make([]byte, 5)
+	if _, err := io.ReadFull(conn, buf); err != nil {
+		t.Fatalf("read after cancel: %v", err)
+	}
 
-	// Close should surface the non-nil Wait() error (killed process).
-	if err := conn.Close(); err == nil {
-		t.Log("Close returned nil; the process may have already exited cleanly")
+	// cat exits on stdin EOF; a killed process would make Wait fail.
+	if err := conn.Close(); err != nil {
+		t.Fatalf("close: %v", err)
 	}
 }
 
