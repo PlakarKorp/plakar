@@ -10,7 +10,6 @@ PLAKAR-MOUNT(1) - General Commands Manual
 \[**-allow-others**]
 \[**-no-auth**]
 \[**-to**&nbsp;*mountpoint*]
-\[**-token**&nbsp;*string*]
 \[*snapshotID*]
 
 # DESCRIPTION
@@ -58,17 +57,20 @@ The options are as follows:
 > If not specified, mount will attempt a FUSE mount in the working directory with
 > a random subdirectory name.
 
-**-token** *string*
-
-> Require clients of an HTTP mount to provide the given Authorization Bearer
-> token.
-> If not specified, a random token is generated and printed at startup.
-
 *snapshotID*
 
 > Optional.
 > Specifies which snapshot to mount.
 > If not provided, all snapshots are mounted.
+
+# ENVIRONMENT
+
+`PLAKAR_MOUNT_TOKEN`
+
+> Authorization Bearer token that clients of an HTTP mount must provide.
+> If not set, a random token is generated and printed at startup.
+> The token is read from the environment rather than a flag so that it does
+> not appear in the process listing.
 
 # EXIT STATUS
 
@@ -102,7 +104,7 @@ Mount a snapshot to an HTTP endpoint, with a generated token printed at startup:
 
 Mount a snapshot to an HTTP endpoint with a chosen token, and read a file:
 
-	$ plakar mount -to http://hostname:8080 -token s3cret
+	$ PLAKAR_MOUNT_TOKEN=s3cret plakar mount -to http://hostname:8080
 	$ curl -H 'Authorization: Bearer s3cret' http://hostname:8080/
 
 Mount a specific snapshot to an HTTP endpoint:

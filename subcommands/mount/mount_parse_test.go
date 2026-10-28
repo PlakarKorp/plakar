@@ -46,19 +46,20 @@ func TestMountParseAllowOthers(t *testing.T) {
 	require.True(t, cmd.AllowOthers)
 }
 
-func TestMountParseToken(t *testing.T) {
+func TestMountParseNoAuth(t *testing.T) {
 	repo, ctx := ptesting.GenerateRepository(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil), nil)
 	_ = repo
 
 	cmd := &Mount{}
-	require.NoError(t, cmd.Parse(ctx, []string{"-token", "s3cret", "-to", "http://127.0.0.1:0"}))
-	require.Equal(t, "s3cret", cmd.Token)
+	require.NoError(t, cmd.Parse(ctx, []string{"-to", "http://127.0.0.1:0"}))
 	require.False(t, cmd.NoAuth)
 
 	cmd = &Mount{}
 	require.NoError(t, cmd.Parse(ctx, []string{"-no-auth", "-to", "http://127.0.0.1:0"}))
-	require.Equal(t, "", cmd.Token)
 	require.True(t, cmd.NoAuth)
+
+	// The token is never a flag: it would show up in ps output.
+	require.Error(t, cmd.Parse(ctx, []string{"-token", "s3cret", "-to", "http://127.0.0.1:0"}))
 }
 
 func TestMountExecuteBadSnapshot(t *testing.T) {

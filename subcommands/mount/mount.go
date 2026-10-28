@@ -18,6 +18,7 @@ package mount
 
 import (
 	"io/fs"
+	"os"
 	"strings"
 
 	"github.com/PlakarKorp/kloset/locate"
@@ -36,7 +37,6 @@ type Mount struct {
 	Mountpoint    string
 	LocateOptions *locate.LocateOptions
 	AllowOthers   bool
-	Token         string
 	NoAuth        bool
 
 	SnapshotPath string
@@ -54,7 +54,6 @@ func (cmd *Mount) CobraCommand() *cobra.Command {
 	}
 	c.Flags().StringVar(&cmd.Mountpoint, "to", "", "mount point")
 	c.Flags().BoolVar(&cmd.AllowOthers, "allow-others", false, "allow other users to access the mount")
-	c.Flags().StringVar(&cmd.Token, "token", "", "Bearer token required by the HTTP mount (default: random)")
 	c.Flags().BoolVar(&cmd.NoAuth, "no-auth", false, "serve the HTTP mount without authentication")
 	subcommands.InstallGoFlags(c.Flags(), cmd.LocateOptions.InstallLocateFlags)
 	return c
@@ -105,11 +104,13 @@ func (cmd *Mount) Execute(ctx *appcontext.AppContext, repo *repository.Repositor
 	}
 
 	if strings.HasPrefix(cmd.Mountpoint, "http://") {
-		token := cmd.Token
-		if cmd.NoAuth {
-			token = ""
-		} else if token == "" {
-			token = uuid.NewString()
+		// The token never comes from a flag: command lines show up in ps.
+		var token string
+		if !cmd.NoAuth {
+			if token = os.Getenv("PLAKAR_MOUNT_TOKEN"); token == "" {
+				token = uuid.NewString()
+				ctx.GetLogger().Info("PLAKAR_MOUNT_TOKEN is not set, requests must carry the header: Authorization: Bearer %s", token)
+			}
 		}
 		return http.ExecuteHTTP(ctx, repo, cmd.Mountpoint, cmd.LocateOptions, chrootFS, token)
 	}

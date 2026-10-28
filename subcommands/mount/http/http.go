@@ -118,8 +118,6 @@ func ExecuteHTTP(ctx *appcontext.AppContext, repo *repository.Repository, mountp
 		ctx.GetLogger().Info("HTTP serving at http://%s", addr)
 		if token == "" {
 			ctx.GetLogger().Warn("HTTP mount serves decrypted files without authentication")
-		} else {
-			ctx.GetLogger().Info("requests must carry the header: Authorization: Bearer %s", token)
 		}
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			errCh <- err
