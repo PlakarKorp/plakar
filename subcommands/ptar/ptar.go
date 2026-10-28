@@ -149,6 +149,7 @@ func (cmd *Ptar) Parse(ctx *appcontext.AppContext, args []string) error {
 		if err != nil {
 			return err
 		}
+		defer peerStore.Close(ctx)
 
 		peerStoreConfig, err := storage.NewConfigurationFromWrappedBytes(peerStoreSerializedConfig)
 		if err != nil {
@@ -332,6 +333,7 @@ func (cmd *Ptar) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (
 		if err != nil {
 			return 1, fmt.Errorf("could not open source store %s: %s", syncTarget, err)
 		}
+		defer peerStore.Close(ctx)
 
 		srcCtx := appcontext.NewAppContextFrom(ctx)
 		srcRepository, err := repository.New(srcCtx.GetInner(), cmd.SyncSecrets[i], peerStore, peerStoreSerializedConfig)
@@ -383,6 +385,7 @@ func (cmd *Ptar) backup(ctx *appcontext.AppContext, repo *repository.RepositoryW
 		if err != nil {
 			return err
 		}
+		defer imp.Close(ctx)
 
 		backupOptions := &snapshot.BuilderOptions{
 			NoCheckpoint: true,
