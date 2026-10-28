@@ -2,12 +2,14 @@ import clsx from "clsx";
 import { useState } from "react";
 import { ProgressBar } from "react-aria-components";
 
-import { Icon, Typography } from "..";
+import { Icon, StepBadge, Typography } from "..";
 
 export type Status = "complete" | "current" | "upcoming";
 
 type StepperProps<T extends readonly string[]> = {
   steps: T;
+  /** Default joins each step to the next; segmented gives every step its own bar. */
+  variant?: "default" | "segmented";
   children: (props: {
     currentStep: T[number];
     setProgress: (value: number) => void;
@@ -18,6 +20,7 @@ type StepperProps<T extends readonly string[]> = {
 
 export function Stepper<T extends readonly string[]>({
   steps,
+  variant = "default",
   children,
 }: StepperProps<T>) {
   const [progress, setProgress] = useState(0);
@@ -55,28 +58,44 @@ export function Stepper<T extends readonly string[]>({
       `}</style>
 
       <ol
-        className="border-secondary grid w-full items-start gap-2 border-b pb-8"
+        className={clsx(
+          "border-secondary grid w-full items-start border-b",
+          variant === "segmented" ? "gap-x-6 pb-6" : "gap-2 pb-8"
+        )}
         style={{
-          gridTemplateColumns: `repeat(${Math.max(steps.length - 1, 0)}, minmax(0,1fr)) auto`,
+          gridTemplateColumns:
+            variant === "segmented"
+              ? `repeat(${steps.length}, minmax(0,1fr))`
+              : `repeat(${Math.max(steps.length - 1, 0)}, minmax(0,1fr)) auto`,
         }}
       >
-        {steps?.map((step, index) => (
-          <Step
-            key={step}
-            index={index + 1}
-            title={step}
-            status={
-              index < currentIndex ||
-              (index === currentIndex && progress === 100)
-                ? "complete"
-                : index === currentIndex
-                  ? "current"
-                  : "upcoming"
-            }
-            progress={progress}
-            isLast={index === steps.length - 1}
-          />
-        ))}
+        {steps?.map((step, index) => {
+          const status =
+            index < currentIndex || (index === currentIndex && progress === 100)
+              ? "complete"
+              : index === currentIndex
+                ? "current"
+                : "upcoming";
+
+          return variant === "segmented" ? (
+            <SegmentStep
+              key={step}
+              index={index + 1}
+              title={step}
+              status={status}
+              progress={progress}
+            />
+          ) : (
+            <Step
+              key={step}
+              index={index + 1}
+              title={step}
+              status={status}
+              progress={progress}
+              isLast={index === steps.length - 1}
+            />
+          );
+        })}
       </ol>
 
       {children({
@@ -133,23 +152,7 @@ function Step({
           )}
         </div>
         {!isLast && (
-          <ProgressBar
-            aria-label={`Step ${index} progress`}
-            className="bg-accent-tertiary h-1 w-full rounded-full"
-            minValue={status === "current" ? 0 : undefined}
-            maxValue={status === "current" ? 100 : undefined}
-            value={status === "current" ? percentage : undefined}
-          >
-            <div
-              className={clsx(
-                "h-full rounded-full transition-all duration-300 ease-out",
-                status === "complete" ? "bg-success" : "bg-accent"
-              )}
-              style={{
-                width: `${{ complete: 100, current: percentage, upcoming: 0 }[status]}%`,
-              }}
-            />
-          </ProgressBar>
+          <StepBar index={index} status={status} percentage={percentage} />
         )}
       </div>
       <div className="mr-2">
@@ -180,6 +183,99 @@ function Step({
               upcoming: "Pending",
             }[status]
           }
+        </Typography>
+      </div>
+    </li>
+  );
+}
+
+function StepBar({
+  index,
+  status,
+  percentage,
+}: {
+  index: number;
+  status: Status;
+  percentage: number;
+}) {
+  return (
+    <ProgressBar
+      aria-label={`Step ${index} progress`}
+      className="bg-accent-tertiary h-1 w-full rounded-full"
+      minValue={status === "current" ? 0 : undefined}
+      maxValue={status === "current" ? 100 : undefined}
+      value={status === "current" ? percentage : undefined}
+    >
+      <div
+        className={clsx(
+          "h-full rounded-full transition-all duration-300 ease-out",
+          status === "complete" ? "bg-success" : "bg-accent"
+        )}
+        style={{
+          width: `${{ complete: 100, current: percentage, upcoming: 0 }[status]}%`,
+        }}
+      />
+    </ProgressBar>
+  );
+}
+
+const STATUS_LABEL: Record<Status, string> = {
+  complete: "Completed",
+  current: "In progress",
+  upcoming: "Pending",
+};
+
+const STATUS_TEXT_CLASS: Record<Status, string> = {
+  complete: "text-success",
+  current: "text-accent",
+  upcoming: "text-tertiary",
+};
+
+function SegmentStep({
+  status = "upcoming",
+  progress = 0,
+  index,
+  title,
+}: Omit<StepProps, "isLast">) {
+  const percentage = Math.max(0, Math.min(100, progress));
+
+  return (
+    <li
+      className="flex min-w-0 flex-col gap-2"
+      aria-current={status === "current" ? "step" : undefined}
+    >
+      <StepBar index={index} status={status} percentage={percentage} />
+      <div className="flex min-w-0 items-center gap-2">
+        <StepBadge
+          step={index}
+          size="sm"
+          variant={
+            (
+              {
+                complete: "default",
+                current: "accent",
+                upcoming: "muted",
+              } as const
+            )[status]
+          }
+        />
+        <Typography
+          as="span"
+          weight="medium"
+          className={clsx(
+            "truncate",
+            status === "upcoming" ? "text-secondary" : "text-primary"
+          )}
+        >
+          {title}
+        </Typography>
+        <Typography
+          as="span"
+          size="sm"
+          weight="medium"
+          className={clsx("ml-auto shrink-0", STATUS_TEXT_CLASS[status])}
+        >
+          {STATUS_LABEL[status]}
         </Typography>
       </div>
     </li>
