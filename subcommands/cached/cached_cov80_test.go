@@ -5,6 +5,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -174,4 +175,29 @@ func TestCov80ExecuteCrashLogOpenError(t *testing.T) {
 	status, err := c.Execute(ctx, nil)
 	require.Error(t, err)
 	require.Equal(t, 1, status)
+}
+
+func TestListenAndServeSocketMode(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("file modes are not enforced on windows")
+	}
+	ctx := newCov80Ctx(t)
+	sock := shortSocket(t)
+
+	cmd := &Cached{
+		socketPath:  sock,
+		runningJobs: make(chan int),
+		teardown:    time.Hour,
+	}
+	done := make(chan error, 1)
+	go func() { done <- cmd.ListenAndServe(ctx) }()
+	t.Cleanup(func() {
+		ctx.GetInner().Cancel(nil)
+		<-done
+	})
+
+	require.Eventually(t, func() bool {
+		info, err := os.Stat(sock)
+		return err == nil && info.Mode().Perm() == 0600
+	}, 3*time.Second, 10*time.Millisecond)
 }

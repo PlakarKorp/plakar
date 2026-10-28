@@ -196,6 +196,11 @@ func (cmd *Cached) ListenAndServe(ctx *appcontext.AppContext) error {
 		return fmt.Errorf("failed to bind the socket: %w", err)
 	}
 
+	if err := os.Chmod(cmd.socketPath, 0600); err != nil {
+		listener.Close()
+		return fmt.Errorf("failed to restrict the socket: %w", err)
+	}
+
 	go cmd.Watcher(listener)
 
 	cancelled := false
