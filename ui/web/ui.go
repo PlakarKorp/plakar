@@ -103,6 +103,10 @@ func Ui(repo *repository.Repository, ctx *appcontext.AppContext, addr string, op
 		handler = corsMiddleware(server)
 	}
 
+	if !opts.Cors {
+		// --cors opts in to cross-origin callers such as a dev server.
+		handler = api.SameOriginMiddleware(handler)
+	}
 	handler = api.HostMiddleware(addr)(handler)
 
 	s := &http.Server{Addr: addr, Handler: handler}
