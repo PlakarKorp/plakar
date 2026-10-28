@@ -289,7 +289,8 @@ func newApplication(ctx *appcontext.AppContext, name string, repo *repository.Re
 		done:  done,
 		state: newApplicationState(),
 	}
-	capp.prog = tea.NewProgram(modelFunc(ctx, capp, repo))
+	// signals are handled by the main
+	capp.prog = tea.NewProgram(modelFunc(ctx, capp, repo), tea.WithoutSignalHandler())
 
 	go func() {
 		defer close(done)
