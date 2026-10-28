@@ -24,8 +24,8 @@ type NativeRunner struct {
 	Stderr io.Writer
 }
 
-func (r *NativeRunner) Run(ctx context.Context) (net.Conn, error) {
-	cmd := exec.CommandContext(ctx, r.Path, r.Args...)
+func (r *NativeRunner) Run(_ context.Context) (net.Conn, error) {
+	cmd := exec.Command(r.Path, r.Args...)
 	cmd.Stderr = r.Stderr
 	if cmd.Stderr == nil {
 		cmd.Stderr = os.Stderr
