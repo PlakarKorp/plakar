@@ -99,7 +99,7 @@ func (cmd *Cached) Parse(ctx *appcontext.AppContext, args []string) error {
 	}
 
 	if cmd.logfile != "" {
-		f, err := os.OpenFile(cmd.logfile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+		f, err := os.OpenFile(cmd.logfile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
 		if err != nil {
 			return err
 		}

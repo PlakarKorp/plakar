@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -77,6 +78,19 @@ func TestCachedParseLogfile(t *testing.T) {
 	require.NoError(t, cmd.Parse(ctx, []string{"-foreground", "-log", logfile}))
 	_, err := os.Stat(logfile)
 	require.NoError(t, err)
+}
+
+func TestCachedParseLogfileMode(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("file modes are not enforced on windows")
+	}
+	ctx := newCachedCtx(t)
+	logfile := filepath.Join(ctx.CacheDir, "cached.log")
+	cmd := &Cached{}
+	require.NoError(t, cmd.Parse(ctx, []string{"-foreground", "-log", logfile}))
+	info, err := os.Stat(logfile)
+	require.NoError(t, err)
+	require.Equal(t, os.FileMode(0600), info.Mode().Perm())
 }
 
 func TestCachedParseLogfileError(t *testing.T) {
