@@ -170,3 +170,23 @@ func TestExecuteHTTPListenError(t *testing.T) {
 	require.Error(t, err)
 	require.Equal(t, 1, status)
 }
+
+func TestExecuteHTTPRejectsShortSnapshotID(t *testing.T) {
+	repo, ctx := ptesting.GenerateRepository(t, nil, nil, nil)
+	addr := freePort(t)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		ExecuteHTTP(ctx, repo, "http://"+addr, nil, nil)
+	}()
+	t.Cleanup(func() { ctx.GetInner().Cancel(nil); <-done })
+
+	require.Eventually(t, func() bool {
+		resp, err := http.Get("http://" + addr + "/abcd/")
+		if err != nil {
+			return false
+		}
+		resp.Body.Close()
+		return resp.StatusCode == http.StatusInternalServerError
+	}, 3*time.Second, 25*time.Millisecond)
+}
