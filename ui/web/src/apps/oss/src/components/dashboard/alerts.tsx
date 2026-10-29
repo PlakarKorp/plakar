@@ -1,4 +1,11 @@
-import { Button, Card, Feed, EmptyList } from "@plakar-ui/ui/components";
+import {
+  Button,
+  Card,
+  EmptyList,
+  Icon,
+  Skeleton,
+  Typography,
+} from "@plakar-ui/ui/components";
 import { useQuery } from "@tanstack/react-query";
 import { ComponentProps } from "react";
 
@@ -27,11 +34,11 @@ export function CardAlerting({ repositoryId }: CardReportsProps) {
     FAILURE: "close",
     unknown: "cloud",
   } as const;
-  const status = {
-    OK: "success",
-    WARNING: "warning",
-    FAILURE: "error",
-    unknown: "default",
+  const iconClasses = {
+    OK: "text-success",
+    WARNING: "text-warning",
+    FAILURE: "text-error",
+    unknown: "text-tertiary",
   } as const;
   const isAuthenticated = query.data?.__type !== "unauthenticated";
   const button = !isAuthenticated
@@ -55,7 +62,12 @@ export function CardAlerting({ repositoryId }: CardReportsProps) {
       <Card.Header title="Latest alerting reports" buttonProps={button} />
 
       <Card.Content>
-        <Feed loading={query.isPending}>
+        <div className="flex flex-col">
+          {query.isPending &&
+            [0, 1, 2, 3, 4].map((row) => (
+              <Skeleton key={row} variant="text" size="sm" className="my-2" />
+            ))}
+
           {query.error && (
             <EmptyList
               illustrationType="sad"
@@ -96,18 +108,43 @@ export function CardAlerting({ repositoryId }: CardReportsProps) {
                   tasks."
               />
             ) : (
-              query.data.items.map((report) => (
-                <Feed.Item
-                  key={report.id}
-                  icon={icons[report.report_task.status]}
-                  status={status[report.report_task.status]}
-                  title={report.report_task.type.HumanString}
-                  description={report.report_task.error_message || "Success"}
-                  alt={report.timestamp.relativeToNow()}
-                />
-              ))
+              <ol>
+                {query.data.items.map((report) => (
+                  <li
+                    key={report.id}
+                    className="flex h-8 min-w-0 items-center gap-2.5"
+                  >
+                    <Icon
+                      type={icons[report.report_task.status]}
+                      size="sm"
+                      className={iconClasses[report.report_task.status]}
+                    />
+                    <Typography
+                      as="span"
+                      size="sm"
+                      className="text-primary shrink-0 capitalize"
+                    >
+                      {report.report_task.type.HumanString}
+                    </Typography>
+                    <Typography
+                      as="span"
+                      size="sm"
+                      className="text-tertiary min-w-0 flex-1 truncate"
+                    >
+                      {report.report_task.error_message || "Success"}
+                    </Typography>
+                    <Typography
+                      as="span"
+                      size="xs"
+                      className="text-tertiary shrink-0"
+                    >
+                      {report.timestamp.relativeToNow()}
+                    </Typography>
+                  </li>
+                ))}
+              </ol>
             ))}
-        </Feed>
+        </div>
       </Card.Content>
     </Card>
   );
