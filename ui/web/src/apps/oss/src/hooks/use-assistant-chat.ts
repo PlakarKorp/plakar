@@ -4,7 +4,7 @@ import {
   forgetAssistantConversation,
   sendAssistantMessage,
 } from "~/api/assistant/api";
-import { AssistantEvent } from "~/api/assistant/schema";
+import { AssistantEvent, AssistantPage } from "~/api/assistant/schema";
 
 export type ToolCall = {
   id: string;
@@ -145,7 +145,7 @@ export function useAssistantChat() {
   );
 
   const send = useCallback(
-    async (text: string) => {
+    async (text: string, page?: AssistantPage) => {
       const message = text.trim();
       if (message === "" || abortRef.current) {
         return;
@@ -169,6 +169,7 @@ export function useAssistantChat() {
         await sendAssistantMessage({
           conversationId: conversationRef.current,
           message,
+          page,
           signal: controller.signal,
           onEvent: (event) => {
             if (event.name === "conversation") {
