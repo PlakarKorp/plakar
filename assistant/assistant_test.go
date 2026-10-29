@@ -198,11 +198,16 @@ func post(t *testing.T, mux *http.ServeMux, token string, body string) *httptest
 	return w
 }
 
-// ask sends message in the conversation (a new one when empty) and returns
-// the conversation ID and the events of the answer.
-func ask(t *testing.T, mux *http.ServeMux, conversation, message string) (string, []event) {
+// ask sends message in the conversation (a new one when empty), from the
+// page if given, and returns the conversation ID and the events of the
+// answer.
+func ask(t *testing.T, mux *http.ServeMux, conversation, message string, page ...Page) (string, []event) {
 	t.Helper()
-	body, err := json.Marshal(map[string]string{"conversation_id": conversation, "message": message})
+	req := map[string]any{"conversation_id": conversation, "message": message}
+	if len(page) > 0 {
+		req["page"] = page[0]
+	}
+	body, err := json.Marshal(req)
 	require.NoError(t, err)
 	w := post(t, mux, "secret", string(body))
 	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
@@ -449,4 +454,52 @@ func TestBusyConversation(t *testing.T) {
 	// script left, so the answer is an error event, not a refusal.
 	w = post(t, mux, "secret", `{"conversation_id":"`+id+`","message":"x"}`)
 	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+}
+
+func TestPageNote(t *testing.T) {
+	fake := &fakeClaude{scripts: []func(http.ResponseWriter){
+		textScript("A directory."),
+		textScript("Nothing to add."),
+	}}
+	mux, _ := newTestServer(t, fake)
+
+	// The page rides along in the user turn, after the message.
+	_, events := ask(t, mux, "", `what is here?`, Page{Name: "browse", Snapshot: "1a2b3c4d", Path: "/home"})
+	require.Equal(t, "done", events[len(events)-1].name)
+	first, err := json.Marshal(fake.messagesOf(t, 1)[0])
+	require.NoError(t, err)
+	require.Contains(t, string(first), `what is here?\n\n[The web UI is showing snapshot 1a2b3c4d, browsing the directory /home.]`)
+
+	// A page without a subject adds nothing.
+	_, events = ask(t, mux, "", `and now?`, Page{Name: "settings"})
+	require.Equal(t, "done", events[len(events)-1].name)
+	second, err := json.Marshal(fake.messagesOf(t, 2)[0])
+	require.NoError(t, err)
+	require.NotContains(t, string(second), "web UI")
+
+	// An oversized page is refused before anything is sent.
+	w := post(t, mux, "secret", fmt.Sprintf(`{"message":"hi","page":{"name":"browse","snapshot":"x","path":%q}}`, strings.Repeat("p", maxPageField+1)))
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	require.Contains(t, w.Body.String(), "page")
+	require.Len(t, fake.requests, 2)
+}
+
+func TestPageNotes(t *testing.T) {
+	for _, c := range []struct {
+		page Page
+		want string
+	}{
+		{Page{Name: "browse", Snapshot: "ab", Path: "/", File: "/etc/hosts"}, "[The web UI is showing snapshot ab, previewing the file /etc/hosts.]"},
+		{Page{Name: "browse"}, ""},
+		{Page{Name: "errors", Snapshot: "ab", Path: "/"}, "[The web UI is showing the errors of snapshot ab.]"},
+		{Page{Name: "errors", Snapshot: "ab", Path: "/var"}, "[The web UI is showing the errors of snapshot ab under /var.]"},
+		{Page{Name: "compare", Older: "ab", Newer: "cd", Path: "/etc"}, "[The web UI is showing the comparison of snapshot ab (older) with snapshot cd (newer), at /etc.]"},
+		{Page{Name: "compare"}, "[The web UI is showing the comparison of the newest snapshot with the one before it from the same source.]"},
+		{Page{Name: "snapshots"}, "[The web UI is showing the list of snapshots.]"},
+		{Page{Name: "login"}, ""},
+	} {
+		require.Equal(t, c.want, c.page.note(), "%+v", c.page)
+	}
+	var none *Page
+	require.Equal(t, "", none.note())
 }

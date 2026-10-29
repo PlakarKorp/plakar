@@ -5,6 +5,7 @@ import { AssistantChat } from "./assistant-chat";
 
 import { getAssistantStatusQueryOptions } from "~/api/assistant/queries";
 import { useAssistantChat } from "~/hooks/use-assistant-chat";
+import { useAssistantPage } from "~/hooks/use-assistant-page";
 
 type AssistantDrawerProps = {
   open: boolean;
@@ -16,10 +17,11 @@ export function AssistantDrawer({ open, setOpen }: AssistantDrawerProps) {
   // does not lose it.
   const chat = useAssistantChat();
   const { data: status } = useQuery(getAssistantStatusQueryOptions());
+  const page = useAssistantPage();
 
   return (
     <Drawer open={open} setOpen={setOpen} title="Assistant">
-      <AssistantChat chat={chat} status={status} />
+      <AssistantChat chat={chat} status={status} page={page} />
     </Drawer>
   );
 }

@@ -56,3 +56,14 @@ export type AssistantEvent = z.infer<typeof AssistantEventSchema>;
 export const AssistantErrorSchema = z.object({
   error: z.object({ message: z.string() }),
 });
+
+// What the UI shows as a message is sent, so the model can resolve "this
+// snapshot" or "this directory". Each page sets the fields it has.
+export type AssistantPage = {
+  name: string;
+  snapshot?: string;
+  path?: string;
+  file?: string;
+  older?: string;
+  newer?: string;
+};

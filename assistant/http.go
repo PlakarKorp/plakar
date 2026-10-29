@@ -29,6 +29,9 @@ import (
 // maxMessageBytes bounds a user message; the request body a little more.
 const maxMessageBytes = 32 << 10
 
+// maxBodyBytes allows the message, the page and the JSON around them.
+const maxBodyBytes = maxMessageBytes + 6*maxPageField + 1024
+
 // Status is what GET /api/assistant reports. Local says whether messages
 // stay on this machine; Provider is the name to show for where they go.
 type Status struct {
@@ -67,6 +70,8 @@ func SetupRoutes(mux *http.ServeMux, auth func(http.Handler) http.Handler, a *As
 type messageRequest struct {
 	ConversationID string `json:"conversation_id"`
 	Message        string `json:"message"`
+	// Page is what the UI shows as the message is sent, if anything.
+	Page *Page `json:"page,omitempty"`
 }
 
 // ConversationEvent opens a response with the conversation the answer
@@ -85,7 +90,7 @@ type ErrorEvent struct {
 // the turn unfolds, and done or error last.
 func (a *Assistant) postMessage(w http.ResponseWriter, r *http.Request) error {
 	var req messageRequest
-	body := http.MaxBytesReader(w, r.Body, maxMessageBytes+1024)
+	body := http.MaxBytesReader(w, r.Body, maxBodyBytes)
 	if err := json.NewDecoder(body).Decode(&req); err != nil {
 		return &api.ApiError{HttpCode: http.StatusBadRequest, ErrCode: "bad-request", Message: fmt.Sprintf("invalid request body: %s", err)}
 	}
@@ -96,6 +101,11 @@ func (a *Assistant) postMessage(w http.ResponseWriter, r *http.Request) error {
 	}
 	if len(req.Message) > maxMessageBytes {
 		return parameterError("message", api.InvalidArgument, fmt.Sprintf("message exceeds %d bytes", maxMessageBytes))
+	}
+	if req.Page != nil {
+		if err := req.Page.validate(); err != nil {
+			return parameterError("page", api.InvalidArgument, err.Error())
+		}
 	}
 
 	conv, err := a.acquire(req.ConversationID)
@@ -142,7 +152,13 @@ func (a *Assistant) postMessage(w http.ResponseWriter, r *http.Request) error {
 	if err := emit("conversation", ConversationEvent{ID: conv.id}); err != nil {
 		return nil
 	}
-	if err := a.run(r.Context(), conv, req.Message, emit); err != nil {
+	// The page rides along in the user turn, after the message, so that it
+	// dates with it: a later message from another page tells the new one.
+	text := req.Message
+	if note := req.Page.note(); note != "" {
+		text += "\n\n" + note
+	}
+	if err := a.run(r.Context(), conv, text, emit); err != nil {
 		if r.Context().Err() != nil {
 			// The browser left: nobody to tell.
 			return nil
