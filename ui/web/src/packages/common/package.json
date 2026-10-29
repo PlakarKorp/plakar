@@ -28,7 +28,7 @@
     "@internationalized/date": "^3.12.3",
     "@plakar-ui/config": "workspace:*",
     "@plakar-ui/ui": "workspace:*",
-    "@storybook/react-vite": "^10.6.2",
+    "@storybook/react-vite": "^10.6.3",
     "@tanstack/react-form": "^1.33.5",
     "@tanstack/react-pacer": "^0.23.0",
     "@tanstack/react-query": "^5.104.3",
