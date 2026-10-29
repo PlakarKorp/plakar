@@ -40,7 +40,8 @@ export function CardLatestSnapshots() {
       <Card.Header
         title="Latest restore points"
         description={
-          data && `${data.total} restore points in this Kloset store.`
+          data &&
+          `${data.total.toLocaleString("en-US")} ${data.total === 1 ? "restore point" : "restore points"} in this Kloset store.`
         }
         buttonProps={button}
       />
