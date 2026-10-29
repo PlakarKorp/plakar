@@ -5,6 +5,9 @@ on:
     branches: [ main ]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   # A PR touching only ui/web/src/ skips the build job instead of not starting
   # the workflow: a skipped job satisfies a required check, a missing one does
