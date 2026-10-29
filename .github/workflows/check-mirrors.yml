@@ -50,7 +50,9 @@ jobs:
           name=Plakar Repository
           baseurl=https://www.plakar.io/dist/repos/rpm/$(uname -m)/
           enabled=1
+          # The packages are unsigned; the signed metadata pins their checksums.
           gpgcheck=0
+          repo_gpgcheck=1
           gpgkey=https://www.plakar.io/dist/keys/community-v1.1.0.gpg
           EOF
 
