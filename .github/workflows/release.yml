@@ -42,7 +42,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: stable
+          go-version-file: 'go.mod'
 
       - name: Install cosign
         uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3.9.1
@@ -66,7 +66,7 @@ jobs:
           distribution: goreleaser
           # To enable goreleaser-pro, uncomment the following line
           # distribution: goreleaser-pro
-          version: "~> v2"
+          version: "v2.19.0"
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
