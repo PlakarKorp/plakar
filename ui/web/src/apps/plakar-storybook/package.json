@@ -13,7 +13,7 @@
     "@plakar-ui/common": "workspace:*",
     "@plakar-ui/config": "workspace:*",
     "@plakar-ui/ui": "workspace:*",
-    "@storybook/addon-docs": "^10.5.9",
+    "@storybook/addon-docs": "^10.6.3",
     "@storybook/react-vite": "^10.6.2",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/react-router": "^1.170.38",
