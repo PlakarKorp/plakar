@@ -34,6 +34,12 @@ command creates a new snapshot of
 or the current directory.
 Snapshots can be filtered to ignore specific files or directories
 based on patterns provided through options.
+Patterns follow the gitignore syntax but are matched against the
+absolute pathname, not against a path relative to
+*place*:
+a pattern that contains a slash is anchored at
+*/*.
+To ignore a single directory, give its absolute path.
 
 *place*
 can be either a path, an URI, or a label with the form
@@ -182,6 +188,15 @@ Define an alias for an s3 bucket and backup multiple path prefixes
 Ignore files using patterns in one or more files or from the command line:
 
 	$ plakar backup -ignore-file ~/.plkignore -ignore "*.tmp" /var/www
+
+Ignore every
+*node\_modules*
+directory, and only the
+*cache*
+directory at the top of
+*/var/www*:
+
+	$ plakar backup -ignore node_modules -ignore /var/www/cache /var/www
 
 Pass an option to the importer, in this case to don't traverse mount
 points:
