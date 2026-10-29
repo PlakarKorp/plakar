@@ -245,7 +245,7 @@ func TestRunPlakarConcurrent(t *testing.T) {
 func TestPlakarToolOverMCP(t *testing.T) {
 	f := newCLIFixture(t)
 	cmd := &Mcp{MaxOutput: 1 << 20}
-	server := cmd.newServer(f.ctx, f.repo)
+	server := cmd.NewServer(f.ctx, f.repo)
 
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
 	serverSession, err := server.Connect(context.Background(), serverTransport, nil)
