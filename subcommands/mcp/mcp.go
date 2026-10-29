@@ -60,7 +60,7 @@ func (cmd *Mcp) CobraCommand() *cobra.Command {
 		Use:   "mcp [-listen ADDR [-token TOKEN] [-cert FILE -key FILE]] [-max-file-size SIZE] [-allow-backup] [-allow-delete] [-allow-sync] [-allow-restore -restore-root DIR]",
 		Short: "serve the repository over the Model Context Protocol",
 	}
-	c.Flags().Int64Var(&cmd.MaxFileSize, "max-file-size", 1<<20, "maximum size of a file returned by read_file")
+	c.Flags().Int64Var(&cmd.MaxFileSize, "max-file-size", DefaultMaxFileSize, "maximum size of a file returned by read_file")
 	c.Flags().BoolVar(&cmd.AllowBackup, "allow-backup", false, "enable the backup tool, allowing clients to create snapshots")
 	c.Flags().BoolVar(&cmd.AllowDelete, "allow-delete", false, "enable the remove and prune tools, allowing clients to delete snapshots permanently")
 	c.Flags().BoolVar(&cmd.AllowRestore, "allow-restore", false, "enable the restore tool, allowing clients to write snapshot contents under -restore-root")
@@ -153,7 +153,7 @@ const shutdownGrace = 5 * time.Second
 const defaultListenAddr = "localhost:9877"
 
 func (cmd *Mcp) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	server := cmd.newServer(ctx, repo)
+	server := cmd.NewServer(ctx, repo)
 
 	if cmd.ListenAddr != "" {
 		return cmd.serveHTTP(ctx, server)
@@ -166,9 +166,20 @@ func (cmd *Mcp) Execute(ctx *appcontext.AppContext, repo *repository.Repository)
 	return 0, nil
 }
 
-// newServer builds the MCP server and registers everything the flags enable.
+// DefaultMaxFileSize is what read_file returns of a file at most unless
+// -max-file-size says otherwise.
+const DefaultMaxFileSize = 1 << 20
+
+// NewServer builds the MCP server and registers everything the flags enable.
 // Both transports serve the same one: the tools do not know which is in use.
-func (cmd *Mcp) newServer(ctx *appcontext.AppContext, repo *repository.Repository) *mcp.Server {
+// The web UI assistant builds one too, reached in-process.
+func (cmd *Mcp) NewServer(ctx *appcontext.AppContext, repo *repository.Repository) *mcp.Server {
+	// A caller that did not go through Parse, such as the web UI, may have
+	// left the size unset; zero would make every read empty.
+	if cmd.MaxFileSize <= 0 {
+		cmd.MaxFileSize = DefaultMaxFileSize
+	}
+
 	description := "Read-only access to a Plakar repository: list snapshots, browse their contents and read files."
 	enabled := make([]string, 0, 4)
 	if cmd.AllowBackup {

@@ -50,6 +50,47 @@ If one or both are missing, the server will fall back to http.
 .It Fl key Ar path
 Path to a certificate private key file in PEM format.
 .El
+.Sh ENVIRONMENT
+The UI serves a chat assistant when the environment names a model
+provider.
+The assistant answers questions about the repository by driving the
+model through the read-only tools of
+.Xr plakar-mcp 1 .
+With a hosted provider, snapshot metadata and file contents the
+assistant reads are sent to that provider, but only for a message
+someone sent it; with a local server nothing leaves the machine.
+Anyone who can reach the UI can use the assistant, and so the
+credentials behind it.
+.Bl -tag -width Ds
+.It Ev ANTHROPIC_API_KEY , Ev OPENAI_API_KEY , Ev GEMINI_API_KEY
+The key of a hosted provider.
+Setting one enables the assistant with that provider, the first of
+these when several are set.
+.It Ev PLAKAR_ASSISTANT_PROVIDER
+The provider to use:
+.Cm anthropic ,
+.Cm openai ,
+.Cm gemini ,
+.Cm lmstudio ,
+.Cm ollama
+or
+.Cm openai-compatible
+for any other server speaking the chat completions API.
+The local servers and
+.Cm openai-compatible
+have to be named here, as they need no key.
+.It Ev PLAKAR_ASSISTANT_MODEL
+The model to talk to.
+Required with every provider but
+.Cm anthropic ,
+which has a default.
+.It Ev PLAKAR_ASSISTANT_URL
+The base URL of the provider's API, in place of its usual one.
+Required with
+.Cm openai-compatible .
+.It Ev PLAKAR_ASSISTANT_API_KEY
+The key to send, in place of the provider's own variable above.
+.El
 .Sh EXIT STATUS
 .Ex -std
 .Sh EXAMPLES

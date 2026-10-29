@@ -31,6 +31,8 @@ import (
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/api"
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/assistant"
+	plakarmcp "github.com/PlakarKorp/plakar/subcommands/mcp"
 	"github.com/PlakarKorp/plakar/utils"
 )
 
@@ -59,6 +61,23 @@ var placeholder []byte
 func Ui(repo *repository.Repository, ctx *appcontext.AppContext, addr string, opts *UiOptions) error {
 	server := http.NewServeMux()
 	api.SetupRoutes(server, repo, ctx, opts.Token, opts.NoRefresh)
+
+	// The assistant sends repository contents to a model API, so it is
+	// only served when the environment names one. Even then nothing leaves
+	// the machine until someone sends it a message.
+	var helper *assistant.Assistant
+	if aopts, enabled, err := assistant.FromEnv(os.Getenv); err != nil {
+		return fmt.Errorf("assistant: %w", err)
+	} else if enabled {
+		aopts.Logger = repo.Logger()
+		mcpServer := (&plakarmcp.Mcp{MaxFileSize: assistant.MaxFileSize}).NewServer(ctx, repo)
+		helper, err = assistant.New(ctx, mcpServer, aopts)
+		if err != nil {
+			return fmt.Errorf("assistant: %w", err)
+		}
+		defer helper.Close()
+	}
+	assistant.SetupRoutes(server, api.TokenAuthMiddleware(opts.Token), helper)
 
 	statics, err := staticHandler(content)
 	if err != nil {
