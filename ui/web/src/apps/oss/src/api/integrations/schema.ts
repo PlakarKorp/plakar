@@ -31,7 +31,6 @@ export const IntegrationSchema = z.object({
   display_name: z.string(),
   description: z.string(),
   documentation: z.string(),
-  homepage: z.union([z.string().url(), z.literal("")]),
   icon: z.union([z.string().url(), z.literal("")]),
   featured: z.union([z.string().url(), z.literal("")]),
   tags: z.array(z.string()),

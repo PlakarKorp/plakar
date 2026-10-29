@@ -306,16 +306,16 @@ function UpdateRow({
           <span className="text-primary">{integration.latest_version}</span>
         </Typography>
         <UpdateStatus state={state} />
-        {integration.homepage && (
-          <Link
-            href={integration.homepage}
-            target="_blank"
-            className="inline-flex shrink-0 items-center gap-1 text-xs font-medium"
-          >
-            Homepage
-            <Icon type="arrow-up-right" size="xs" />
-          </Link>
-        )}
+        <Link
+          href={{
+            to: "/integrations/$integrationId",
+            params: { integrationId: integration.id },
+          }}
+          target="_blank"
+          className="shrink-0 text-xs font-medium"
+        >
+          Docs
+        </Link>
       </div>
       {state.status === "failed" && (
         <Typography size="xs" className="text-error pl-7">
