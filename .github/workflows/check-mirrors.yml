@@ -50,7 +50,9 @@ jobs:
           name=Plakar Repository
           baseurl=https://www.plakar.io/dist/repos/rpm/$(uname -m)/
           enabled=1
+          # The packages are unsigned; the signed metadata pins their checksums.
           gpgcheck=0
+          repo_gpgcheck=1
           gpgkey=https://www.plakar.io/dist/keys/community-v1.1.0.gpg
           EOF
 
@@ -67,16 +69,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions: {}
     steps:
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential procps curl file git
-
-      - name: Install Homebrew
-        run: |
-          curl -fsSL -o install.sh https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh
-          NONINTERACTIVE=1 bash install.sh
-
       - name: Install Plakar
         run: |
           /home/linuxbrew/.linuxbrew/bin/brew install plakar
@@ -90,16 +82,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions: {}
     steps:
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential procps curl file git
-
-      - name: Install Homebrew
-        run: |
-          curl -fsSL -o install.sh https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh
-          NONINTERACTIVE=1 bash install.sh
-
       - name: Install Plakar
         run: |
           /home/linuxbrew/.linuxbrew/bin/brew install plakarkorp/tap/plakar
