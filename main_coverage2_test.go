@@ -9,6 +9,7 @@ import (
 	"github.com/PlakarKorp/kloset/connectors/exporter"
 	"github.com/PlakarKorp/kloset/connectors/importer"
 	"github.com/PlakarKorp/pkg"
+	"github.com/PlakarKorp/integration-sdk"
 	"github.com/stretchr/testify/require"
 )
 
@@ -27,7 +28,7 @@ func exporterBackends() []string { return exporter.Backends() }
 func manifestWith(typ, proto string) *pkg.Manifest {
 	return &pkg.Manifest{
 		Connectors: []pkg.ManifestConnector{
-			{Type: pkg.ConnectorType(typ), Protocols: []string{proto}},
+			{Type: integration.ConnectorType(typ), Protocols: []string{proto}},
 		},
 	}
 }
