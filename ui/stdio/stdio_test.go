@@ -249,3 +249,24 @@ func TestHandleEvent_UnknownTypeIsNoOp(t *testing.T) {
 	}
 }
 
+
+func TestHandleEvent_PathsAreSanitized(t *testing.T) {
+	var out, errBuf bytes.Buffer
+	ctx := newCtxWithBufferedLogger(t, &out, &errBuf)
+
+	evil := "/a\x1b[2K\x1b]0;pwned\x07b"
+	snap := [32]byte{}
+
+	HandleEvent(ctx, &Event{Type: "path.ok", Snapshot: snap, Data: map[string]any{"path": evil}})
+	HandleEvent(ctx, &Event{Level: "error", Type: "path.error", Snapshot: snap,
+		Data: map[string]any{"path": evil, "error": errors.New("bad " + evil)}})
+
+	for name, b := range map[string]*bytes.Buffer{"stdout": &out, "stderr": &errBuf} {
+		if b.Len() == 0 {
+			t.Fatalf("%s: no output", name)
+		}
+		if bytes.ContainsAny(b.Bytes(), "\x1b\x07") {
+			t.Fatalf("%s contains raw control bytes: %q", name, b.String())
+		}
+	}
+}

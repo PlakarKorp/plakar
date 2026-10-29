@@ -13,6 +13,7 @@ import (
 	"github.com/PlakarKorp/kloset/snapshot/vfs"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/PlakarKorp/plakar/utils"
 	"github.com/spf13/cobra"
 	"github.com/vmihailenco/msgpack/v5"
 )
@@ -90,7 +91,7 @@ func (cmd *DiagDirPack) Execute(ctx *appcontext.AppContext, repo *repository.Rep
 			break
 		}
 
-		fmt.Fprintf(ctx.Stdout, "%s %x\n", path, dirpackmac)
+		fmt.Fprintf(ctx.Stdout, "%s %x\n", utils.SanitizeText(path), dirpackmac)
 
 		obj, err := snap.LookupObject(dirpackmac)
 		if err != nil {
@@ -124,8 +125,8 @@ func (cmd *DiagDirPack) Execute(ctx *appcontext.AppContext, repo *repository.Rep
 				return 1, fmt.Errorf("failed to read entry mac: %w", err)
 			}
 
-			fmt.Fprintf(ctx.Stdout, "vfs-entry %x %s %v %v %s\n", entry.MAC, path,
-				siz, typ, entry.Name())
+			fmt.Fprintf(ctx.Stdout, "vfs-entry %x %s %v %v %s\n", entry.MAC, utils.SanitizeText(path),
+				siz, typ, utils.SanitizeText(entry.Name()))
 		}
 	}
 	if err := it.Err(); err != nil {

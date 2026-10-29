@@ -6,6 +6,7 @@ import (
 	"github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/utils"
 )
 
 func (cmd *Info) executeErrors(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
@@ -32,7 +33,7 @@ func (cmd *Info) executeErrors(ctx *appcontext.AppContext, repo *repository.Repo
 			return 1, fmt.Errorf("failed to scan errors: %w", err)
 		}
 
-		fmt.Fprintf(ctx.Stdout, "%s: %s\n", item.Name, item.Error)
+		fmt.Fprintf(ctx.Stdout, "%s: %s\n", utils.SanitizeText(item.Name), utils.SanitizeText(item.Error))
 	}
 	return 0, nil
 }

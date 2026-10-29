@@ -13,6 +13,7 @@ import (
 	"github.com/PlakarKorp/kloset/snapshot/vfs"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/subcommands"
+	"github.com/PlakarKorp/plakar/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -95,7 +96,7 @@ func (cmd *DiagXattr) Execute(ctx *appcontext.AppContext, repo *repository.Repos
 			return 1, err
 		}
 
-		fmt.Fprintln(ctx.Stdout, xattr.Path, xattr.Name, string(value))
+		fmt.Fprintln(ctx.Stdout, utils.SanitizeText(xattr.Path), utils.SanitizeText(xattr.Name), utils.SanitizeText(string(value)))
 	}
 	if err := it.Err(); err != nil {
 		return 1, err

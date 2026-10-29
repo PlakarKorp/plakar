@@ -9,6 +9,7 @@ import (
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/utils"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/dustin/go-humanize"
 	"github.com/google/uuid"
@@ -338,7 +339,7 @@ func (s *State) Update(e Event) {
 
 	case "path":
 		if p, ok := e.Data["path"].(string); ok {
-			s.lastItem = p
+			s.lastItem = utils.SanitizeText(p)
 		}
 		s.countPath++
 

@@ -10,6 +10,7 @@ import (
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/ui"
+	"github.com/PlakarKorp/plakar/utils"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/dustin/go-humanize"
 )
@@ -61,13 +62,13 @@ func HandleEvent(ctx *appcontext.AppContext, e *Event) {
 
 	case "path.error":
 		snapshotID := e.Snapshot
-		pathname := e.Data["path"].(string)
-		errorMessage := e.Data["error"].(error)
+		pathname := utils.SanitizeText(e.Data["path"].(string))
+		errorMessage := utils.SanitizeText(e.Data["error"].(error).Error())
 		ctx.GetLogger().Stderr("%x: KO %s %s: %s", snapshotID[:4], crossMark, pathname, errorMessage)
 
 	case "path.ok":
 		snapshotID := e.Snapshot
-		pathname := e.Data["path"].(string)
+		pathname := utils.SanitizeText(e.Data["path"].(string))
 		ctx.GetLogger().Stdout("%x: OK %s %s", snapshotID[:4], checkMark, pathname)
 
 	case "object", "chunk":
