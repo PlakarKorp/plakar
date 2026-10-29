@@ -8,6 +8,7 @@ import {
   AssistantErrorSchema,
   AssistantEvent,
   AssistantEventSchema,
+  AssistantPage,
   AssistantStatusSchema,
 } from "./schema";
 
@@ -36,6 +37,7 @@ export async function getAssistantStatus() {
 type SendAssistantMessageParams = {
   conversationId?: string;
   message: string;
+  page?: AssistantPage;
   signal: AbortSignal;
   onEvent: (event: AssistantEvent) => void;
 };
@@ -48,13 +50,18 @@ type SendAssistantMessageParams = {
 export async function sendAssistantMessage({
   conversationId,
   message,
+  page,
   signal,
   onEvent,
 }: SendAssistantMessageParams) {
   const res = await CallApi("/api/assistant/messages", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ conversation_id: conversationId, message }),
+    body: JSON.stringify({
+      conversation_id: conversationId,
+      message,
+      page,
+    }),
     signal,
   });
 
