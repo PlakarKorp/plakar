@@ -1,4 +1,5 @@
 export * from "./accordion/accordion";
+export * from "./activity-heatmap/activity-heatmap";
 export * from "./alert/alert";
 export * from "./area-chart/area-chart";
 export * from "./avatar/avatar";
@@ -70,6 +71,7 @@ export * from "./selection-controls/selection-controls";
 export * from "./skeleton/skeleton";
 export * from "./slider/slider";
 export * from "./spinner/spinner";
+export * from "./stat-card/stat-card";
 export * from "./step-badge/step-badge";
 export * from "./stepper/stepper";
 export * from "./status-dot/status-dot";

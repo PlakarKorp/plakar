@@ -187,6 +187,31 @@ export const WithTitleSuffix: Story = {
   ),
 };
 
+export const FullWidthDivider: Story = {
+  args: {
+    title: "Latest restore points",
+  },
+  render: ({ title = "" }) => (
+    <Card className="overflow-hidden">
+      <Card.Header
+        title={title}
+        description="The divider spans the card when a full-width band follows."
+        isDividerFullWidth
+      />
+      <Typography
+        size="xs"
+        weight="medium"
+        className="bg-secondary border-secondary text-tertiary border-b px-4 py-1.5"
+      >
+        Today
+      </Typography>
+      <Card.Content>
+        <p className="text-primary">Rows go here.</p>
+      </Card.Content>
+    </Card>
+  ),
+};
+
 export const CustomStyle: Story = {
   args: {
     title: "Card Title",

@@ -59,6 +59,7 @@ type CardHeaderProps = {
   description?: React.ReactNode;
   suffix?: React.ReactNode;
   buttonProps?: ComponentProps<typeof Button>;
+  isDividerFullWidth?: boolean;
   className?: string;
 };
 
@@ -69,6 +70,7 @@ function CardHeader({
   description,
   suffix,
   buttonProps,
+  isDividerFullWidth = false,
   className,
 }: CardHeaderProps) {
   const { isCollapsible, isCollapsed, toggleCollapsed } = useContext(Context);
@@ -76,7 +78,8 @@ function CardHeader({
   return (
     <div
       className={clsx(
-        "b mx-2 flex items-center justify-between gap-2 py-2 md:mx-4 md:py-4",
+        "b flex items-center justify-between gap-2 py-2 md:py-4",
+        isDividerFullWidth ? "px-2 md:px-4" : "mx-2 md:mx-4",
         (!isCollapsible || !isCollapsed) && "border-secondary border-b",
         className
       )}
