@@ -50,6 +50,7 @@ export function CardLatestSnapshots() {
         <RestorePointListSkeleton rows={PER_PAGE} />
       ) : isError ? (
         <EmptyList
+          size="sm"
           illustrationType="sad"
           title="Unable to load the latest restore points"
           description={error.message}
@@ -63,6 +64,7 @@ export function CardLatestSnapshots() {
         />
       ) : isEmpty ? (
         <EmptyList
+          size="sm"
           illustrationType="default_nut"
           title="No restore points yet"
           description="There are no restore points available in this Kloset repository."

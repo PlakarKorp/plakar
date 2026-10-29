@@ -76,6 +76,7 @@ export function CardAlerting({ repositoryId }: CardReportsProps) {
 
           {query.error && (
             <EmptyList
+              size="sm"
               illustrationType="sad"
               title="Unable to load the latest alerting reports"
               description={query.error.message}
@@ -92,6 +93,7 @@ export function CardAlerting({ repositoryId }: CardReportsProps) {
           {query.isSuccess &&
             (query.data.__type === "unauthenticated" ? (
               <EmptyList
+                size="sm"
                 illustrationType="emperor"
                 title="Sign in to enable Alerts"
                 description="Get notified when backups, restores, checks, or maintenance tasks complete or fail."
@@ -107,6 +109,7 @@ export function CardAlerting({ repositoryId }: CardReportsProps) {
               />
             ) : query.data.items.length === 0 ? (
               <EmptyList
+                size="sm"
                 illustrationType="waving"
                 title="You don't have any alerting reports yet"
                 description="Enable alerting to start receiving reports automatically
