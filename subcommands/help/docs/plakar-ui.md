@@ -37,6 +37,8 @@ The options are as follows:
 > Set the
 > 'Access-Control-Allow-Origin'
 > HTTP headers to allow the UI to be accessed from any origin.
+> It cannot be combined with
+> **-no-auth**.
 
 **-no-auth**
 
@@ -76,6 +78,55 @@ The options are as follows:
 > **-no-auth**
 > is given.
 
+The UI serves a chat assistant when the environment names a model
+provider.
+The assistant answers questions about the repository by driving the
+model through the read-only tools of
+plakar-mcp(1).
+With a hosted provider, snapshot metadata and file contents the
+assistant reads are sent to that provider, but only for a message
+someone sent it; with a local server nothing leaves the machine.
+Anyone who can reach the UI can use the assistant, and so the
+credentials behind it.
+
+`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`
+
+> The key of a hosted provider.
+> Setting one enables the assistant with that provider, the first of
+> these when several are set.
+
+`PLAKAR_ASSISTANT_PROVIDER`
+
+> The provider to use:
+> **anthropic**,
+> **openai**,
+> **gemini**,
+> **lmstudio**,
+> **ollama**
+> or
+> **openai-compatible**
+> for any other server speaking the chat completions API.
+> The local servers and
+> **openai-compatible**
+> have to be named here, as they need no key.
+
+`PLAKAR_ASSISTANT_MODEL`
+
+> The model to talk to.
+> Required with every provider but
+> **anthropic**,
+> which has a default.
+
+`PLAKAR_ASSISTANT_URL`
+
+> The base URL of the provider's API, in place of its usual one.
+> Required with
+> **openai-compatible**.
+
+`PLAKAR_ASSISTANT_API_KEY`
+
+> The key to send, in place of the provider's own variable above.
+
 # EXIT STATUS
 
 The **plakar-ui** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
@@ -94,4 +145,4 @@ Create a https server with a custom certificate:
 
 plakar(1)
 
-Plakar - May 5, 2026 - PLAKAR-UI(1)
+Plakar - May 5, 2026

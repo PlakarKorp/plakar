@@ -10,8 +10,11 @@ import { PropsWithChildren, useMemo, useState } from "react";
 import { NAV_ITEMS, SUB_NAV_ITEMS } from "./layout.constants";
 
 import { getAccountMeQueryOptions } from "~/api/account/queries";
+import { getAssistantStatusQueryOptions } from "~/api/assistant/queries";
 import { getApiInfoQueryOptions } from "~/api/info/queries";
 import { useQuit } from "~/api/quit/mutations";
+import { AssistantDrawer } from "~/components/assistant/assistant-drawer";
+import { AssistantIcon } from "~/components/assistant/assistant-icon";
 import { KlosetDescription } from "~/components/kloset-description/kloset-description";
 import { NotificationsDrawer } from "~/components/notifications/drawer";
 import { NotificationsIcon } from "~/components/notifications/icon";
@@ -76,11 +79,13 @@ type ShellProps = PropsWithChildren<{
 
 function Shell({ repository, version, onQuit, children }: ShellProps) {
   const [open, setOpen] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
 
   useApi();
   useNotificationToast(repository);
   const query = useQuery(getAccountMeQueryOptions());
   const { data: { demo_mode } = {} } = useQuery(getApiInfoQueryOptions());
+  const { data: assistant } = useQuery(getAssistantStatusQueryOptions());
 
   const currentRoute = useCurrentRoute(
     [...NAV_ITEMS, ...SUB_NAV_ITEMS].map((item) => String(item.href?.to))
@@ -116,10 +121,15 @@ function Shell({ repository, version, onQuit, children }: ShellProps) {
         }}
         version={version}
         controls={
-          <NotificationsIcon
-            repository={repository}
-            onPress={() => setOpen((prev) => !prev)}
-          />
+          <>
+            {assistant?.enabled && (
+              <AssistantIcon onPress={() => setAssistantOpen(true)} />
+            )}
+            <NotificationsIcon
+              repository={repository}
+              onPress={() => setOpen((prev) => !prev)}
+            />
+          </>
         }
         footer={<KlosetDescription />}
         isDemo={demo_mode}
@@ -133,6 +143,10 @@ function Shell({ repository, version, onQuit, children }: ShellProps) {
         setOpen={setOpen}
         repository={repository}
       />
+
+      {assistant?.enabled && (
+        <AssistantDrawer open={assistantOpen} setOpen={setAssistantOpen} />
+      )}
     </SidePanelProvider>
   );
 }

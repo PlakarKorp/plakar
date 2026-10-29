@@ -177,7 +177,7 @@ func startTestServer(t *testing.T, ctx *appcontext.AppContext, cmd *Mcp, repo *r
 	cmd.ListenAddr = addr
 	wait := make(chan error, 1)
 	go func() {
-		_, err := cmd.serveHTTP(ctx, cmd.newServer(ctx, repo))
+		_, err := cmd.serveHTTP(ctx, cmd.NewServer(ctx, repo))
 		wait <- err
 	}()
 
