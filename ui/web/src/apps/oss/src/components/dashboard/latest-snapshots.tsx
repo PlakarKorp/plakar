@@ -44,6 +44,7 @@ export function CardLatestSnapshots() {
           `${data.total.toLocaleString("en-US")} ${data.total === 1 ? "restore point" : "restore points"} in this Kloset store.`
         }
         buttonProps={button}
+        isDividerFullWidth={isPending || (!isError && !isEmpty)}
       />
       {isPending ? (
         <RestorePointListSkeleton rows={PER_PAGE} />
