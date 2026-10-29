@@ -35,6 +35,14 @@ export const Empty: Story = {
   },
 };
 
+export const HighVolume: Story = {
+  args: {
+    days: lastDays(
+      Array.from({ length: 30 }, (_, index) => ((index * 7) % 11) * 4)
+    ),
+  },
+};
+
 export const Widths: Story = {
   render: (args) => (
     <div className="flex flex-col gap-6">

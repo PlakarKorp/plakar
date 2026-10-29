@@ -20,8 +20,12 @@ const LEVEL_CLASSES = [
   "bg-accent",
 ];
 
-function levelClass(count: number) {
-  return LEVEL_CLASSES[Math.min(count, LEVEL_CLASSES.length - 1)];
+function levelClass(count: number, maxCount: number) {
+  if (count === 0) {
+    return LEVEL_CLASSES[0];
+  }
+  const activeLevels = LEVEL_CLASSES.length - 1;
+  return LEVEL_CLASSES[Math.ceil((count / maxCount) * activeLevels)];
 }
 
 function mondayBasedWeekday(date: Date) {
@@ -30,10 +34,6 @@ function mondayBasedWeekday(date: Date) {
 
 function dayLabel({ date, count }: ActivityDay) {
   return `${date.toDateString()}: ${count}`;
-}
-
-function levelLabel(level: number) {
-  return level === LEVEL_CLASSES.length - 1 ? `${level}+` : `${level}`;
 }
 
 function shortDate(date: Date) {
@@ -52,6 +52,7 @@ function periodLabel(days: ActivityDay[]) {
 
 export function ActivityHeatmap({ days }: ActivityHeatmapProps) {
   const leadingBlanks = days.length > 0 ? mondayBasedWeekday(days[0].date) : 0;
+  const maxCount = Math.max(0, ...days.map((day) => day.count));
 
   return (
     <div className="flex flex-col gap-3">
@@ -77,7 +78,7 @@ export function ActivityHeatmap({ days }: ActivityHeatmapProps) {
             key={day.date.toISOString()}
             title={dayLabel(day)}
             aria-label={dayLabel(day)}
-            className={clsx("h-5 rounded", levelClass(day.count))}
+            className={clsx("h-5 rounded", levelClass(day.count, maxCount))}
           />
         ))}
       </ol>
@@ -88,15 +89,19 @@ export function ActivityHeatmap({ days }: ActivityHeatmapProps) {
         <Typography as="span" size="xs" className="text-tertiary">
           {periodLabel(days)}
         </Typography>
-        <span className="flex items-center gap-2.5">
-          {LEVEL_CLASSES.map((className, level) => (
-            <span key={className} className="flex items-center gap-1">
-              <span className={clsx("size-2.5 rounded-xs", className)} />
-              <Typography as="span" size="xs" className="text-tertiary">
-                {levelLabel(level)}
-              </Typography>
-            </span>
+        <span className="flex items-center gap-1">
+          <Typography as="span" size="xs" className="text-tertiary mr-1">
+            Less
+          </Typography>
+          {LEVEL_CLASSES.map((className) => (
+            <span
+              key={className}
+              className={clsx("size-2.5 rounded-xs", className)}
+            />
           ))}
+          <Typography as="span" size="xs" className="text-tertiary ml-1">
+            More
+          </Typography>
         </span>
       </div>
     </div>
