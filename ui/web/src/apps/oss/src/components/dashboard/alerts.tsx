@@ -40,6 +40,12 @@ export function CardAlerting({ repositoryId }: CardReportsProps) {
     FAILURE: "text-error",
     unknown: "text-tertiary",
   } as const;
+  const statusLabels = {
+    OK: "Success",
+    WARNING: "Warning",
+    FAILURE: "Failure",
+    unknown: "Unknown status",
+  } as const;
   const isAuthenticated = query.data?.__type !== "unauthenticated";
   const button = !isAuthenticated
     ? ({
@@ -131,7 +137,8 @@ export function CardAlerting({ repositoryId }: CardReportsProps) {
                       size="sm"
                       className="text-tertiary min-w-0 flex-1 truncate"
                     >
-                      {report.report_task.error_message || "Success"}
+                      {report.report_task.error_message ||
+                        statusLabels[report.report_task.status]}
                     </Typography>
                     <Typography
                       as="span"
