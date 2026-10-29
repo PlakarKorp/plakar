@@ -43,31 +43,27 @@ function itemsLabel(items: number) {
   return `${items.toLocaleString()} ${items === 1 ? "item" : "items"}`;
 }
 
-function sourcesLabel(sources: RestorePointSource[]) {
-  const [first] = sources;
-  const more = sources.length - 1;
-  return more > 0
-    ? `${first.directory} + ${more} more ${more === 1 ? "source" : "sources"}`
-    : first.directory;
+function sourcesTitle(sources: RestorePointSource[]) {
+  return sources
+    .map((source) => `${source.type} · ${source.origin} · ${source.directory}`)
+    .join("\n");
 }
 
 function RestorePointRow({ point }: { point: RestorePointListItem }) {
+  const [first] = point.sources;
+  const moreSources = point.sources.length - 1;
+
   return (
     <Link
       href={point.link}
       aria-label={`Restore point ${point.id}`}
-      className="border-secondary hover:bg-primary-hover data-focus-visible:outline-focus flex items-center gap-4 border-b px-4 py-2.5 whitespace-nowrap outline-0 data-focus-visible:outline-2 data-focus-visible:-outline-offset-2"
+      className="border-secondary hover:bg-primary-hover data-focus-visible:outline-focus flex items-center gap-3 border-b px-4 py-2.5 whitespace-nowrap outline-0 data-focus-visible:outline-2 data-focus-visible:-outline-offset-2"
     >
-      <span className="text-secondary flex shrink-0 items-center gap-1">
-        {point.sources.map((source, index) => (
-          <span
-            key={index}
-            title={`${source.type} · ${source.origin}`}
-            className="flex"
-          >
-            <Icon type={getIntegrationIcon(source.type)} size="lg" />
-          </span>
-        ))}
+      <span
+        title={sourcesTitle(point.sources)}
+        className="text-secondary flex shrink-0"
+      >
+        <Icon type={getIntegrationIcon(first.type)} size="lg" />
       </span>
       <Typography
         as="span"
@@ -84,21 +80,37 @@ function RestorePointRow({ point }: { point: RestorePointListItem }) {
       >
         {point.createdAt.relativeToNow()}
       </Typography>
-      <Typography
-        as="span"
-        size="sm"
-        className="text-secondary min-w-0 flex-1 truncate"
-      >
-        {sourcesLabel(point.sources)}
-      </Typography>
-      <Errors length={point.errors} />
-      <span className="ml-auto flex shrink-0 items-center gap-4">
+      <span className="flex min-w-0 flex-1 items-center gap-1.5">
+        <Typography
+          as="span"
+          size="sm"
+          title={first.directory}
+          className="text-secondary min-w-0 truncate"
+        >
+          {first.directory}
+        </Typography>
+        {moreSources > 0 && (
+          <Typography
+            as="span"
+            size="xs"
+            weight="medium"
+            title={sourcesTitle(point.sources)}
+            className="bg-tertiary text-secondary shrink-0 rounded px-1.5"
+          >
+            +{moreSources}
+          </Typography>
+        )}
+      </span>
+      <span className="flex shrink-0">
+        <Errors length={point.errors} />
+      </span>
+      <span className="ml-auto flex shrink-0 items-center gap-3">
         {point.duration && (
           <Typography
             as="span"
             size="sm"
             title="Duration"
-            className="text-tertiary hidden w-14 items-center justify-end gap-1 tabular-nums md:flex"
+            className="text-tertiary hidden min-w-14 items-center justify-end gap-1 tabular-nums md:flex"
           >
             <Icon type="clock" size="xs" />
             {point.duration}
