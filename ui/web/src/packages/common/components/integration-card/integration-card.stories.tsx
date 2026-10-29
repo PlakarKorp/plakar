@@ -1,124 +1,93 @@
 import { Meta, StoryObj } from "@storybook/react-vite";
-import { ComponentProps } from "react";
 import { fn } from "storybook/test";
 
 import { IntegrationCard } from "./integration-card";
-import { IntegrationCardSkeleton } from "./integration-card-skeleton";
-import { IntegrationInstallationStatuses } from "./integration-card.constants";
-
-type TemplateProps = Omit<ComponentProps<typeof IntegrationCard>, "types"> & {
-  isStorage: boolean;
-  isSource: boolean;
-  isDestination: boolean;
-  isSecretProvider: boolean;
-  isInventory: boolean;
-};
-
-function Template({
-  isStorage,
-  isSource,
-  isDestination,
-  isSecretProvider,
-  isInventory,
-  ...props
-}: TemplateProps) {
-  const types = {
-    storage: isStorage,
-    source: isSource,
-    destination: isDestination,
-    secret_provider: isSecretProvider,
-    inventory: isInventory,
-  };
-
-  return <IntegrationCard types={types} {...props} />;
-}
+import { IntegrationCardSkeleton } from "./integration-skeletons";
 
 const meta = {
   title: "components/Integration Card",
   tags: ["autodocs"],
-  component: Template,
-  argTypes: {
-    installationStatus: {
-      control: { type: "radio" },
-      options: IntegrationInstallationStatuses,
-    },
-    documentationProps: {
-      control: false,
-      table: { disable: true },
-    },
-    onInstall: {
-      control: false,
-      table: { disable: true },
-    },
-    onRemove: {
-      control: false,
-      table: { disable: true },
-    },
-    stage: {
-      control: { type: "radio" },
-      options: ["stable", "testing", "beta", "devel", "unknown"],
-    },
+  component: IntegrationCard,
+  args: {
+    name: "notion",
+    displayName: "Notion",
+    version: "v1.0.2",
+    stage: "stable",
+    description: "Back up Notion workspaces, pages and databases.",
+    types: { source: true },
+    status: "not-installed",
+    detailHref: "#",
+    onInstall: fn(),
   },
-} satisfies Meta<typeof Template>;
+  decorators: [
+    (Story) => (
+      <div className="max-w-sm">
+        <Story />
+      </div>
+    ),
+  ],
+} satisfies Meta<typeof IntegrationCard>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = {
+export const Default: Story = {};
+
+export const Installing: Story = {
   args: {
-    name: "k8s",
-    displayName: "Integration name",
-    version: "v1.0.2",
-    stage: "stable",
-    installationStatus: "installed",
-    isStorage: true,
-    isSource: true,
-    isDestination: true,
-    isSecretProvider: false,
-    isInventory: false,
-
-    tags: ["Lorem", "Ipsum", "Dolor"],
-
-    description:
-      "Lorem ipsum dolor sit amet consectetur. Mauris leo vel elementum volutpat. Sed eget pulvinar suspendisse dignissim. Aliquam urna placerat cras pellentesque integer. Tristique non magna convallis nec.",
-    documentationProps: { onPress: fn() },
-    pending: false,
-    onInstall: fn(),
-    onRemove: fn(),
+    pending: true,
   },
 };
 
-/** What somebody who may read the catalogue and not install from it sees. */
-export const NotPermitted: Story = {
+export const LoginRequired: Story = {
   args: {
-    ...Default.args,
-    installationStatus: "not-installed",
-    onUpgrade: fn(),
-    latestVersion: "v1.1.0",
     isDisabled: true,
   },
 };
 
-export const Upgradable: Story = {
+export const Unstable: Story = {
   args: {
-    ...Default.args,
-    version: "v1.0.2",
-    latestVersion: "v1.1.0-beta.6",
+    name: "mongodb",
+    displayName: "MongoDB",
+    version: "v1.0.0-beta.2",
+    stage: "beta",
+    description:
+      "Back up and restore MongoDB databases and collections, with point-in-time consistency across replica sets.",
+    types: { source: true, destination: true },
+  },
+};
+
+export const UpdateAvailable: Story = {
+  args: {
+    name: "ftp",
+    displayName: "FTP",
+    version: "v1.1.2",
+    status: "installed",
+    latestVersion: "v1.1.4",
     onUpgrade: fn(),
+    onRemove: fn(),
   },
 };
 
-export const WithQuickActions: Story = {
+export const UpToDate: Story = {
   args: {
-    ...Default.args,
-    quickActions: [
-      { label: "Add store", href: "#" },
-      { label: "Add source", href: "#" },
-    ],
+    name: "s3",
+    displayName: "S3",
+    version: "v1.1.10",
+    status: "installed",
+    onRemove: fn(),
   },
 };
 
-export const Loading = {
-  argTypes: {},
+export const BuiltIn: Story = {
+  args: {
+    name: "fs",
+    displayName: "Filesystem",
+    version: "v1.2.0",
+    status: "built-in",
+  },
+};
+
+export const Loading: Story = {
   render: () => <IntegrationCardSkeleton />,
 };

@@ -1,5 +1,6 @@
 import {
   Breadcrumbs,
+  IntegrationDetails,
   IntegrationDocumentation,
 } from "@plakar-ui/common/components";
 import { Main } from "@plakar-ui/common/layouts";
@@ -8,8 +9,8 @@ import { createLazyFileRoute } from "@tanstack/react-router";
 
 import { getIntegrationQueryOptions } from "~/api/integrations/queries";
 import type { Integration } from "~/api/integrations/schema";
+import { IntegrationHeaderAdapter } from "~/components/integration-card/integration-adapters";
 import { IntegrationAlertLoginRequired } from "~/components/integration-card/integration-alert-login-required";
-import { IntegrationCardAdapter } from "~/components/integration-card/integration-card-adapter";
 import { useAuthentication } from "~/hooks/use-authentication";
 
 export const Route = createLazyFileRoute(
@@ -51,26 +52,31 @@ function RouteComponent() {
 
   return (
     <Main breadcrumb={<PageCrumbs integration={integration} />}>
-      <IntegrationDocumentation
-        documentation={integration.documentation}
-        aside={
-          <>
-            {!isAuthenticated && (
-              <IntegrationAlertLoginRequired
-                name={query.data.id}
-                version={query.data.latest_version}
-                os={repositoryInfo.item.os}
-                arch={repositoryInfo.item.arch}
-              />
-            )}
-
-            <IntegrationCardAdapter
-              integration={integration}
-              installDisabled={!isAuthenticated}
+      <div className="flex flex-col gap-6">
+        <IntegrationHeaderAdapter
+          integration={integration}
+          installDisabled={!isAuthenticated}
+        />
+        {!isAuthenticated && (
+          <IntegrationAlertLoginRequired
+            name={integration.id}
+            version={integration.latest_version}
+            os={repositoryInfo.item.os}
+            arch={repositoryInfo.item.arch}
+          />
+        )}
+        <IntegrationDocumentation
+          documentation={integration.documentation}
+          aside={
+            <IntegrationDetails
+              installedVersion={integration.installation.version}
+              latestVersion={integration.latest_version}
+              stage={integration.stage}
+              types={integration.types}
             />
-          </>
-        }
-      />
+          }
+        />
+      </div>
     </Main>
   );
 }

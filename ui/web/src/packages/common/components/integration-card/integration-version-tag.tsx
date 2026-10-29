@@ -17,7 +17,7 @@ export function IntegrationStageTag({ stage }: IntegrationStageTagProps) {
     alpha: "red",
   };
 
-  const found = Object.keys(colors).find(([key]) => {
+  const found = Object.keys(colors).find((key) => {
     return stage.toLowerCase().includes(key);
   });
 
