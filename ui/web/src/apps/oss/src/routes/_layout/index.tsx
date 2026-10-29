@@ -28,7 +28,7 @@ function Component() {
     >
       <div className="flex flex-col gap-3 lg:gap-4">
         <DashboardStats />
-        <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-4">
+        <div className="grid grid-cols-1 items-start gap-3 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-4">
           <CardLatestSnapshots />
           <div className="flex flex-col gap-3 lg:gap-4">
             <CardActivity />
