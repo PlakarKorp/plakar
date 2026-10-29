@@ -1,4 +1,5 @@
 export * from "./accordion/accordion";
+export * from "./activity-heatmap/activity-heatmap";
 export * from "./alert/alert";
 export * from "./area-chart/area-chart";
 export * from "./avatar/avatar";
