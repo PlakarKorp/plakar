@@ -1,7 +1,5 @@
-import { TableFilters } from "@plakar-ui/common/components";
-import { Select, TagToggleGroup } from "@plakar-ui/ui/components";
-import { useCallback } from "react";
-import { Key } from "react-aria-components";
+import { FilterPanel } from "@plakar-ui/common/components";
+import { SegmentedControl } from "@plakar-ui/ui/components";
 
 import {
   IntegrationInstallationStatusFilter,
@@ -9,109 +7,102 @@ import {
   IntegrationType,
   IntegrationTypeSchema,
 } from "~/api/integrations/schema";
-import { Route } from "~/routes/_layout/integrations.index";
+import {
+  type IntegrationCounts,
+  shownCount,
+} from "~/components/integration-card/use-integration-counts";
 
-const TYPE_OPTIONS: Array<{ id: IntegrationType; name: string }> = [
-  { id: "storage", name: "Storage" },
-  { id: "source", name: "Source" },
-  { id: "destination", name: "Destination" },
+const ALL = "all";
+
+const TYPE_OPTIONS: Array<{ id: IntegrationType; label: string }> = [
+  { id: "storage", label: "Storage" },
+  { id: "source", label: "Source" },
+  { id: "destination", label: "Destination" },
 ];
 
-const INSTALLATION_STATUS_OPTIONS: Array<{
-  id: IntegrationInstallationStatusFilter;
-  name: string;
-}> = [
-  { id: "installed", name: "Installed" },
-  { id: "not-installed", name: "Not installed" },
-  { id: "upgradable", name: "To upgrade" },
-];
+type IntegrationsFiltersProps = {
+  search: string;
+  types: IntegrationType[] | undefined;
+  status: IntegrationInstallationStatusFilter | undefined;
+  counts: IntegrationCounts;
+  onSearchChange: (search: string) => void;
+  onTypesChange: (types: IntegrationType[] | undefined) => void;
+  onStatusChange: (
+    status: IntegrationInstallationStatusFilter | undefined
+  ) => void;
+  onClear: (() => void) | undefined;
+};
 
-export function IntegrationsFilters() {
-  const { search, types, installation_status } = Route.useSearch();
-  const navigate = Route.useNavigate();
-
-  const handleSearch = useCallback(
-    (search: string) =>
-      navigate({
-        search: (prev) => ({ ...prev, page: 0, search }),
-        replace: true,
-      }),
-    [navigate]
-  );
-
-  const handleTypesChange = useCallback(
-    (selected: Set<Key>) => {
-      const nextTypes = Array.from(selected)
-        .map((k) => IntegrationTypeSchema.safeParse(String(k)))
-        .flatMap((r) => (r.success ? [r.data] : []));
-      navigate({
-        search: (prev) => ({
-          ...prev,
-          page: 0,
-          types: nextTypes.length ? nextTypes : undefined,
-        }),
-        replace: true,
-      });
-    },
-    [navigate]
-  );
-
-  const handleInstallationStatusChange = useCallback(
-    (key: string) => {
-      const parsed = IntegrationInstallationStatusFilterSchema.safeParse(key);
-      navigate({
-        search: (prev) => ({
-          ...prev,
-          page: 0,
-          installation_status: parsed.success ? parsed.data : undefined,
-        }),
-        replace: true,
-      });
-    },
-    [navigate]
-  );
-
+export function IntegrationsFilters({
+  search,
+  types,
+  status,
+  counts,
+  onSearchChange,
+  onTypesChange,
+  onStatusChange,
+  onClear,
+}: IntegrationsFiltersProps) {
   return (
-    <TableFilters
-      search={search}
-      searchPlaceholder="Search integrations..."
-      onSearch={handleSearch}
-      filters={
-        <>
-          <Select
-            aria-label="Filter by installation"
-            placeholder="Filter by installation"
-            value={installation_status ?? ""}
-            onChange={(key) => handleInstallationStatusChange(String(key))}
-            isClearable
-            className="min-w-60 max-sm:w-full"
-          >
-            <Select.ListBox>
-              {INSTALLATION_STATUS_OPTIONS.map((option) => (
-                <Select.Item
-                  key={option.id}
-                  id={option.id}
-                  name={option.name}
-                />
-              ))}
-            </Select.ListBox>
-          </Select>
-
-          <TagToggleGroup
-            selectionMode="multiple"
-            selectedKeys={types ?? []}
-            onSelectionChange={handleTypesChange}
-            aria-label="Filter by type"
-            className="order-2 max-sm:w-full"
-          >
-            {TYPE_OPTIONS.map((option) => (
-              <TagToggleGroup.Button key={option.id} id={option.id}>
-                {option.name}
-              </TagToggleGroup.Button>
-            ))}
-          </TagToggleGroup>
-        </>
-      }
-    />
+    <FilterPanel>
+      <FilterPanel.Search
+        value={search}
+        onSearch={onSearchChange}
+        placeholder="Search integrations by name…"
+        aria-label="Search integrations"
+      />
+      <FilterPanel.Groups>
+        <FilterPanel.Group label="Status">
+          <SegmentedControl
+            variant="accent"
+            ariaLabel="Status"
+            selectedId={status ?? ALL}
+            onSelect={(id) =>
+              onStatusChange(
+                IntegrationInstallationStatusFilterSchema.safeParse(id).data
+              )
+            }
+            items={[
+              { id: ALL, label: "All", count: shownCount(counts, undefined) },
+              {
+                id: "installed",
+                label: "Installed",
+                count: shownCount(counts, "installed"),
+                dot: "success",
+              },
+              {
+                id: "upgradable",
+                label: "Updates available",
+                count: counts.upgradable,
+                dot: "warning",
+              },
+              {
+                id: "not-installed",
+                label: "Not installed",
+                count: counts["not-installed"],
+              },
+            ]}
+          />
+        </FilterPanel.Group>
+        <FilterPanel.Group label="Type">
+          <SegmentedControl
+            variant="accent"
+            ariaLabel="Type"
+            selectedId={types?.length === 1 ? types[0] : ALL}
+            onSelect={(id) => {
+              const type = IntegrationTypeSchema.safeParse(id);
+              onTypesChange(type.success ? [type.data] : undefined);
+            }}
+            items={[{ id: ALL, label: "All" }, ...TYPE_OPTIONS]}
+          />
+        </FilterPanel.Group>
+      </FilterPanel.Groups>
+      <FilterPanel.Footer
+        shown={shownCount(counts, status)}
+        total={counts.unfiltered}
+        noun="integrations"
+        onClear={onClear}
+      />
+    </FilterPanel>
   );
 }

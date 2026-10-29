@@ -1,50 +1,34 @@
 import { RepositoryInfoQueryOptions } from "@plakar-ui/common/api/kloset";
 import { Main } from "@plakar-ui/common/layouts";
 import { createPaginationSearchSchema } from "@plakar-ui/common/utils";
-import { EmptyList, Pagination, Spinner } from "@plakar-ui/ui/components";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { EmptyList } from "@plakar-ui/ui/components";
 import { createFileRoute } from "@tanstack/react-router";
-import clsx from "clsx";
 import { z } from "zod";
 
-import { listIntegrationsQueryOptions } from "~/api/integrations/queries";
 import {
   IntegrationInstallationStatusFilterSchema,
   IntegrationTypeSchema,
 } from "~/api/integrations/schema";
-import { OssApiToCard } from "~/components/integration-card/field-mapping";
 import { IntegrationAlertLoginRequired } from "~/components/integration-card/integration-alert-login-required";
-import { IntegrationCardAdapter } from "~/components/integration-card/integration-card-adapter";
+import { IntegrationPagedGrid } from "~/components/integration-card/integration-paged-grid";
+import { IntegrationShelf } from "~/components/integration-card/integration-shelf";
 import { IntegrationsFilters } from "~/components/integration-card/integrations.filters";
+import { ReviewUpdatesControls } from "~/components/integration-card/review-updates-controls";
+import {
+  shownCount,
+  useIntegrationCounts,
+} from "~/components/integration-card/use-integration-counts";
 import { useAuthentication } from "~/hooks/use-authentication";
 
 export const Route = createFileRoute("/_layout/integrations/")({
-  validateSearch: createPaginationSearchSchema(30).extend({
-    search: z.string().catch("").default(""),
-    types: z.array(IntegrationTypeSchema).optional(),
-    installation_status: IntegrationInstallationStatusFilterSchema.optional(),
-  }),
-
-  loaderDeps: ({ search }) => {
-    return {
-      page: search.page,
-      per_page: search.per_page,
-      search: search.search,
-      types: search.types,
-      installation_status: search.installation_status,
-    };
-  },
-
-  loader: async ({ context, deps }) => {
-    context.queryClient.prefetchQuery(
-      listIntegrationsQueryOptions({
-        page: deps.page,
-        perPage: deps.per_page,
-        search: deps.search,
-        types: deps.types,
-        installationStatus: deps.installation_status,
-      })
-    );
+  validateSearch: createPaginationSearchSchema()
+    .pick({ page: true })
+    .extend({
+      search: z.string().catch("").default(""),
+      types: z.array(IntegrationTypeSchema).optional(),
+      installation_status: IntegrationInstallationStatusFilterSchema.optional(),
+    }),
+  loader: async ({ context }) => {
     return context.queryClient.ensureQueryData(
       RepositoryInfoQueryOptions(context.klosetAPI, { repository: undefined })
     );
@@ -54,45 +38,50 @@ export const Route = createFileRoute("/_layout/integrations/")({
 
 function RouteComponent() {
   const search = Route.useSearch();
-
   const repositoryInfo = Route.useLoaderData();
-
+  const navigate = Route.useNavigate();
   const { isAuthenticated } = useAuthentication();
-  const query = useQuery({
-    ...listIntegrationsQueryOptions({
-      page: search.page,
-      perPage: search.per_page,
-      search: search.search,
-      types: search.types,
-      installationStatus: search.installation_status,
-    }),
-    placeholderData: keepPreviousData,
-  });
-  const integrations = query.data?.items ?? [];
-  const total = query.data?.total ?? 0;
+  const installDisabled = !isAuthenticated;
 
-  const hasActiveFilters =
+  const status = search.installation_status;
+  const counts = useIntegrationCounts({
+    search: search.search,
+    types: search.types,
+  });
+
+  const isFiltered =
     search.search !== "" ||
     (search.types !== undefined && search.types.length > 0) ||
-    search.installation_status !== undefined;
+    status !== undefined;
 
-  const highlightedTypes = search.types?.map((t) => OssApiToCard[t]);
+  const isAll = status === undefined;
+  const isInstalledView = status === "installed" || status === "upgradable";
+  const showBuiltIn = isAll || status === "installed" || status === "built-in";
+  const showAvailable = isAll || status === "not-installed";
 
-  const navigate = Route.useNavigate();
+  const reviewUpdates = !!counts.upgradable && (
+    <ReviewUpdatesControls
+      count={counts.upgradable}
+      isDisabled={installDisabled}
+      search={search.search}
+      types={search.types}
+    />
+  );
 
-  const onPrev =
-    search.page > 0
-      ? () => {
-          navigate({ search: (prev) => ({ ...prev, page: search.page - 1 }) });
-        }
-      : undefined;
+  const pagination = {
+    search: search.search,
+    types: search.types,
+    page: search.page,
+    onPageChange: (page: number) =>
+      navigate({ search: (previous) => ({ ...previous, page }) }),
+    installDisabled,
+  };
 
-  const onNext =
-    (search.page + 1) * search.per_page < total
-      ? () => {
-          navigate({ search: (prev) => ({ ...prev, page: search.page + 1 }) });
-        }
-      : undefined;
+  const updateSearch = (patch: Partial<typeof search>) =>
+    navigate({
+      search: (previous) => ({ ...previous, page: 0, ...patch }),
+      replace: true,
+    });
 
   return (
     <Main
@@ -101,81 +90,92 @@ function RouteComponent() {
       title="Integrations"
       description="Extend Plakar with integrations."
     >
-      {query.isError ? (
-        <EmptyList
-          illustrationType="sad"
-          title="Failed to load integrations"
-          description={query.error?.message}
-          actions={[
-            {
-              children: "Retry",
-              onPress: () => query.refetch(),
-              variant: "secondary",
-            },
-          ]}
+      <div className="flex flex-col gap-6">
+        {!isAuthenticated && (
+          <IntegrationAlertLoginRequired
+            os={repositoryInfo.item.os}
+            arch={repositoryInfo.item.arch}
+          />
+        )}
+        <IntegrationsFilters
+          search={search.search}
+          types={search.types}
+          status={status}
+          counts={counts}
+          onSearchChange={(value) => updateSearch({ search: value })}
+          onTypesChange={(types) => updateSearch({ types })}
+          onStatusChange={(installation_status) =>
+            updateSearch({ installation_status })
+          }
+          onClear={
+            isFiltered
+              ? () =>
+                  updateSearch({
+                    search: "",
+                    types: undefined,
+                    installation_status: undefined,
+                  })
+              : undefined
+          }
         />
-      ) : (
-        <div className="flex flex-col gap-6">
-          {!isAuthenticated && (
-            <IntegrationAlertLoginRequired
-              os={repositoryInfo.item.os}
-              arch={repositoryInfo.item.arch}
-            />
-          )}
-          <IntegrationsFilters />
-          {query.isPending ? (
-            <Spinner />
-          ) : query.isSuccess && total === 0 ? (
-            hasActiveFilters ? (
-              <EmptyList
-                title="No integrations match your filters"
-                description="Try adjusting the search or clearing filters."
-                illustrationType="juggles_nuts"
-              />
-            ) : (
-              <EmptyList
-                title="No integrations found"
-                description="Here, you should see all the integrations available for Plakar. Unfortunately, there are none at the moment."
-                illustrationType="juggles_nuts"
-              />
-            )
-          ) : (
-            <>
-              <div
-                className={clsx(
-                  "grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3",
-                  query.isFetching && "animate-pulse"
-                )}
-              >
-                {integrations.map((integration) => (
-                  <IntegrationCardAdapter
-                    key={integration.id}
-                    integration={integration}
-                    documentationProps={{
-                      href: {
-                        to: "/integrations/$integrationId",
-                        params: { integrationId: integration.id },
-                      },
-                    }}
-                    installDisabled={!isAuthenticated}
-                    highlightedTypes={highlightedTypes}
-                  />
-                ))}
-              </div>
 
-              <Pagination
-                currentPage={search.page}
-                total={{
-                  count: total,
-                  perPage: search.per_page,
-                }}
-                onPrev={onPrev}
-                onNext={onNext}
+        {shownCount(counts, status) === 0 ? (
+          <EmptyList
+            size="sm"
+            title={
+              isFiltered
+                ? "No integrations match your filters"
+                : "No integrations found"
+            }
+            description={
+              isFiltered
+                ? "Try adjusting the search or clearing filters."
+                : "Here, you should see all the integrations available for Plakar. Unfortunately, there are none at the moment."
+            }
+            illustrationType="juggles_nuts"
+          />
+        ) : (
+          <>
+            {isAll && (
+              <IntegrationShelf
+                title="Installed"
+                status="installed"
+                search={search.search}
+                types={search.types}
+                installDisabled={installDisabled}
+                action={reviewUpdates}
               />
-            </>
-          )}
-        </div>
-      )}
+            )}
+            {isInstalledView && (
+              <IntegrationPagedGrid
+                title={
+                  status === "upgradable" ? "Updates available" : "Installed"
+                }
+                status={status}
+                action={reviewUpdates}
+                {...pagination}
+              />
+            )}
+            {showBuiltIn && (
+              <IntegrationShelf
+                title="Built-in"
+                status="built-in"
+                search={search.search}
+                types={search.types}
+                installDisabled={installDisabled}
+                isHiddenWhileLoading
+              />
+            )}
+            {showAvailable && (
+              <IntegrationPagedGrid
+                title="Available"
+                status="not-installed"
+                {...pagination}
+              />
+            )}
+          </>
+        )}
+      </div>
     </Main>
   );
 }

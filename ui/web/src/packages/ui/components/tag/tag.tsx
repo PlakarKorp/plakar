@@ -54,6 +54,8 @@ export function Tag({
             "bg-accent-tertiary text-accent border-background-accent-tertiary",
           green: "border-success bg-success-tertiary text-success",
           yellow: "border-warning bg-warning-tertiary text-warning",
+          yellow_borderless:
+            "bg-warning-tertiary text-warning border-background-warning-tertiary",
           red: "border-error bg-error-tertiary text-error",
           transparent: "border-secondary text-secondary",
           source: "border-source bg-source-accent text-on-brand",

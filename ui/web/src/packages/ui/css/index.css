@@ -198,6 +198,7 @@ Supported variables:
   --color-border-accent: var(--border-color-accent);
   --color-background-accent-hover: var(--background-color-accent-hover);
   --color-background-accent-tertiary: var(--background-color-accent-tertiary);
+  --color-background-warning-tertiary: var(--background-color-warning-tertiary);
   --color-background-disable: var(--background-color-disable);
   --color-background-success: var(--background-color-success);
   --color-background-warning: var(--background-color-warning);
@@ -343,6 +344,7 @@ Supported variables:
   --color-border-accent: var(--border-color-accent);
   --color-background-accent-hover: var(--background-color-accent-hover);
   --color-background-accent-tertiary: var(--background-color-accent-tertiary);
+  --color-background-warning-tertiary: var(--background-color-warning-tertiary);
   --color-background-disable: var(--background-color-disable);
   --color-background-success: var(--background-color-success);
   --color-background-warning: var(--background-color-warning);

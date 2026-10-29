@@ -1,61 +1,32 @@
-import {
-  Button,
-  Icon,
-  IconButton,
-  Link,
-  Tag,
-  Typography,
-} from "@plakar-ui/ui/components";
-import { ComponentProps, useState } from "react";
+import { Button, Icon, Link, Typography } from "@plakar-ui/ui/components";
+import { ReactNode } from "react";
 import { LinkProps } from "react-aria-components";
 
-import { IntegrationInstallationStatuses } from "./integration-card.constants";
+import { IntegrationActionsMenu } from "./integration-actions-menu";
+import {
+  IntegrationInstallationStatus,
+  IntegrationTypeFlags,
+} from "./integration-card.constants";
+import { IntegrationIcon } from "./integration-icon";
+import { IntegrationTypeTags } from "./integration-type-tags";
 import { IntegrationStageTag } from "./integration-version-tag";
-import { RemoveIntegrationModal } from "./remove-integration-modal";
-import { getIntegrationIcon, hasIntegrationIcon } from "../../api/enrich";
 
-type IntegrationInstallationStatus =
-  (typeof IntegrationInstallationStatuses)[number];
-
-const INTEGRATION_TYPE_TAGS = [
-  { key: "storage", label: "Storage" },
-  { key: "source", label: "Source" },
-  { key: "destination", label: "Destination" },
-  { key: "secret_provider", label: "Secret provider" },
-  { key: "inventory", label: "Inventory" },
-] as const;
-
-type IntegrationTypeTag = (typeof INTEGRATION_TYPE_TAGS)[number];
-export type IntegrationCardTypeKey = IntegrationTypeTag["key"];
-
-export type IntegrationCardProps = {
+type IntegrationCardProps = {
   name: string;
   icon?: string;
   displayName: string;
   version: string;
   stage: string;
-  installationStatus: IntegrationInstallationStatus;
-  types: {
-    source?: boolean;
-    destination?: boolean;
-    storage?: boolean;
-    secret_provider?: boolean;
-    inventory?: boolean;
-  };
-  tags: string[];
   description: string;
-  documentationProps?: ComponentProps<typeof Button>;
-  onInstall?: () => void;
-  onRemove?: () => void;
-  onUpgrade?: () => void;
+  types: IntegrationTypeFlags;
+  status: IntegrationInstallationStatus;
+  detailHref: LinkProps["href"];
   latestVersion?: string;
+  onInstall?: () => void;
+  onUpgrade?: () => void;
+  onRemove?: () => void;
   pending?: boolean;
   isDisabled?: boolean;
-  getTypeHref?: (
-    typeKey: IntegrationCardTypeKey
-  ) => LinkProps["href"] | undefined;
-  highlightedTypes?: Array<IntegrationCardTypeKey>;
-  quickActions?: Array<{ label: string; href: LinkProps["href"] }>;
 };
 
 export function IntegrationCard({
@@ -64,239 +35,111 @@ export function IntegrationCard({
   displayName,
   version,
   stage,
-  installationStatus,
-  types,
-  tags,
   description,
-  documentationProps,
-  onInstall,
-  onRemove,
-  onUpgrade,
+  types,
+  status,
+  detailHref,
   latestVersion,
+  onInstall,
+  onUpgrade,
+  onRemove,
   pending = false,
   isDisabled = false,
-  getTypeHref,
-  highlightedTypes,
-  quickActions,
 }: IntegrationCardProps) {
   return (
-    <div className="border-secondary bg-primary flex flex-col gap-4 rounded-xl border p-4">
-      {/* Top */}
-      <div className="flex gap-2">
-        <div className="bg-tertiary flex h-11 w-11 shrink-0 items-center justify-center rounded-lg p-2">
+    <article className="border-secondary bg-primary flex flex-col gap-3 rounded-xl border p-4">
+      <div className="flex items-center gap-3">
+        <span className="bg-tertiary flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl p-2">
           <IntegrationIcon name={name} icon={icon} />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <Typography
-            as="h2"
-            variant="heading"
-            weight="medium"
-            size="sm"
-            className="text-primary leading-none break-all"
+        </span>
+        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <Link
+            href={detailHref}
+            inheritColor
+            className="text-primary truncate text-base font-semibold"
           >
             {displayName}
-          </Typography>
-          <div className="flex items-center gap-1">
-            <Typography className="text-tertiary leading-none break-all">
+          </Link>
+          <span className="flex items-center gap-1.5">
+            {status === "installed" && (
+              <Typography
+                as="span"
+                size="xs"
+                weight="medium"
+                className="text-success flex items-center gap-1"
+              >
+                <Icon type="check" size="xs" />
+                Installed
+              </Typography>
+            )}
+            <Typography as="span" size="xs" monospace className="text-tertiary">
               {version}
             </Typography>
-            <IntegrationStageTag stage={stage} />
-          </div>
-        </div>
-
-        <div className="ml-auto">
-          <InstallationStatus
-            status={installationStatus}
-            onInstall={onInstall}
-            pending={pending}
-            isDisabled={isDisabled}
-          />
-        </div>
+            {stage !== "stable" && <IntegrationStageTag stage={stage} />}
+          </span>
+        </span>
+        <IntegrationActionsMenu
+          displayName={displayName}
+          version={version}
+          onRemove={onRemove}
+          pending={pending}
+          isDisabled={isDisabled}
+          size="sm"
+        />
       </div>
-
-      {/* Content */}
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-wrap gap-2">
-          {INTEGRATION_TYPE_TAGS.filter(({ key }) => types[key]).map(
-            ({ key, label }) => (
-              <Tag
-                key={key}
-                variant={
-                  highlightedTypes?.includes(key)
-                    ? "blue_borderless"
-                    : "default"
-                }
-                radius="sqrt"
-                href={getTypeHref?.(key)}
-              >
-                {label}
-              </Tag>
-            )
-          )}
-          {tags.map((tag) => (
-            <Tag key={tag} variant="transparent" radius="rounded">
-              {tag}
-            </Tag>
-          ))}
-        </div>
-        <Typography className="text-secondary overflow-auto" size="sm">
-          {description}
-        </Typography>
-        {quickActions && quickActions.length > 0 && (
-          <div className="flex flex-wrap gap-x-4 gap-y-1">
-            {quickActions.map(({ label, href }) => (
-              <Link
-                key={label}
-                href={href}
-                className="inline-flex items-center gap-1 text-sm font-medium"
-              >
-                <Icon type="plus" size="sm" />
-                {label}
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Actions */}
-      <div className="mt-auto flex gap-2 text-center">
-        {documentationProps && (
+      <Typography size="sm" className="text-secondary line-clamp-2 min-h-10">
+        {description}
+      </Typography>
+      <IntegrationTypeTags types={types} />
+      <div className="mt-auto grid grid-cols-2 gap-2">
+        <Button
+          variant="secondary"
+          href={detailHref}
+          className="whitespace-nowrap"
+        >
+          Read documentation
+        </Button>
+        {status === "not-installed" ? (
           <Button
-            variant="secondary"
-            className="flex-1"
-            {...documentationProps}
+            leftIcon="plus"
+            onPress={onInstall}
+            isPending={pending}
+            isDisabled={!onInstall || pending || isDisabled}
           >
-            Read documentation
+            Install
           </Button>
-        )}
-
-        {installationStatus === "installed" && onUpgrade && (
+        ) : latestVersion ? (
           <Button
             variant="accent-tertiary"
-            className="flex-1"
-            leftIcon="circle-up"
+            leftIcon="arrow-up"
             onPress={onUpgrade}
-            isDisabled={pending || isDisabled}
             isPending={pending}
+            isDisabled={!onUpgrade || pending || isDisabled}
+            aria-label={`Update ${displayName} to ${latestVersion}`}
+            className="min-w-0 [&>span:last-child]:min-w-0 [&>span:last-child]:truncate"
           >
-            {latestVersion ? `Upgrade to ${latestVersion}` : "Upgrade"}
+            Update to {latestVersion}
           </Button>
-        )}
-
-        {installationStatus === "installed" && onRemove && (
-          <RemoveIntegrationButton
-            displayName={displayName}
-            version={version}
-            onRemove={onRemove}
-            pending={pending}
-            isDisabled={isDisabled}
-          />
+        ) : (
+          <CardStatus>
+            {status === "built-in" ? "Built-in" : "Up to date"}
+          </CardStatus>
         )}
       </div>
-    </div>
+    </article>
   );
 }
 
-type RemoveIntegrationButtonProps = {
-  displayName: string;
-  version: string;
-  onRemove: () => void;
-  pending: boolean;
-  isDisabled: boolean;
-};
-
-function RemoveIntegrationButton({
-  displayName,
-  version,
-  onRemove,
-  pending,
-  isDisabled,
-}: RemoveIntegrationButtonProps) {
-  const [isConfirming, setIsConfirming] = useState(false);
-
+function CardStatus({ children }: { children: ReactNode }) {
   return (
-    <>
-      <IconButton
-        aria-label="Remove"
-        tooltip="Remove"
-        variant="tertiary"
-        className="ml-auto"
-        icon="trash"
-        onPress={() => setIsConfirming(true)}
-        isDisabled={pending || isDisabled}
-        isPending={pending}
-      />
-      <RemoveIntegrationModal
-        displayName={displayName}
-        version={version}
-        isOpen={isConfirming}
-        onOpenChange={setIsConfirming}
-        onConfirm={onRemove}
-      />
-    </>
+    <Typography
+      as="span"
+      size="sm"
+      weight="medium"
+      className="text-success flex h-[38px] items-center justify-center gap-1.5"
+    >
+      <Icon type="check" size="sm" />
+      {children}
+    </Typography>
   );
-}
-
-type IntegrationIconProps = {
-  name: string;
-  icon?: string;
-};
-
-function IntegrationIcon({ name, icon }: IntegrationIconProps) {
-  if (!hasIntegrationIcon(name) && icon) {
-    return (
-      <img
-        src={icon}
-        className="h-full w-full object-cover object-center"
-        alt=""
-      />
-    );
-  }
-
-  return <Icon type={getIntegrationIcon(name)} size="2xl" />;
-}
-
-type InstallationStatusProps = {
-  status: IntegrationInstallationStatus;
-  onInstall: (() => void) | undefined;
-  pending: boolean;
-  isDisabled: boolean;
-};
-
-function InstallationStatus({
-  status,
-  onInstall,
-  pending,
-  isDisabled,
-}: InstallationStatusProps) {
-  return {
-    installed: (
-      <div className="flex items-center gap-1">
-        <Icon type="success-circle" size="md" className="text-accent" />
-        <Typography weight="medium" size="sm" className="text-accent">
-          Installed
-        </Typography>
-      </div>
-    ),
-    "not-installed": (
-      <Button
-        leftIcon="download"
-        isDisabled={!onInstall || pending || isDisabled}
-        onPress={onInstall}
-        isPending={pending}
-        className="w-full"
-      >
-        Install
-      </Button>
-    ),
-    "built-in": (
-      <div className="flex items-center gap-1">
-        <Icon type="success-circle" size="md" className="text-accent" />
-        <Typography weight="medium" size="sm" className="text-accent">
-          Built-in
-        </Typography>
-      </div>
-    ),
-  }[status];
 }
