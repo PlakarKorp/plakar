@@ -50,6 +50,15 @@ If one or both are missing, the server will fall back to http.
 .It Fl key Ar path
 Path to a certificate private key file in PEM format.
 .El
+.Sh ENVIRONMENT
+.Bl -tag -width Ds
+.It Ev PLAKAR_UI_TOKEN
+Authentication token to use instead of generating a random one at
+each start.
+Ignored when
+.Fl no-auth
+is given.
+.El
 .Sh EXIT STATUS
 .Ex -std
 .Sh EXAMPLES
