@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	_ "github.com/PlakarKorp/integrations/fs/exporter"
-	ptesting "github.com/PlakarKorp/plakar/testing"
 	"github.com/PlakarKorp/plakar/subcommands"
+	ptesting "github.com/PlakarKorp/plakar/testing"
 	"github.com/stretchr/testify/require"
 )
 
@@ -44,6 +44,22 @@ func TestMountParseAllowOthers(t *testing.T) {
 	cmd := &Mount{}
 	require.NoError(t, cmd.Parse(ctx, []string{"-allow-others", "-to", "/mnt/x"}))
 	require.True(t, cmd.AllowOthers)
+}
+
+func TestMountParseNoAuth(t *testing.T) {
+	repo, ctx := ptesting.GenerateRepository(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil), nil)
+	_ = repo
+
+	cmd := &Mount{}
+	require.NoError(t, cmd.Parse(ctx, []string{"-to", "http://127.0.0.1:0"}))
+	require.False(t, cmd.NoAuth)
+
+	cmd = &Mount{}
+	require.NoError(t, cmd.Parse(ctx, []string{"-no-auth", "-to", "http://127.0.0.1:0"}))
+	require.True(t, cmd.NoAuth)
+
+	// The token is never a flag: it would show up in ps output.
+	require.Error(t, cmd.Parse(ctx, []string{"-token", "s3cret", "-to", "http://127.0.0.1:0"}))
 }
 
 func TestMountExecuteBadSnapshot(t *testing.T) {

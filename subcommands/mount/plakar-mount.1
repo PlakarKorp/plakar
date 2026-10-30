@@ -1,4 +1,4 @@
-.Dd May 29, 2026
+.Dd October 29, 2026
 .Dt PLAKAR-MOUNT 1
 .Os
 .Sh NAME
@@ -7,6 +7,7 @@
 .Sh SYNOPSIS
 .Nm plakar mount
 .Op Fl allow-others
+.Op Fl no-auth
 .Op Fl to Ar mountpoint
 .Op Ar snapshotID
 .Sh DESCRIPTION
@@ -30,6 +31,10 @@ The options are as follows:
 .Bl -tag -width Ds
 .It Fl allow-others
 Allow other users to access the mounted filesystem.
+.It Fl no-auth
+Serve an HTTP mount without requiring a token.
+The files served are decrypted, so anyone who can reach the address can
+read every snapshot.
 .It Fl to Ar mountpoint
 Specify the mount location.
 The
@@ -48,6 +53,14 @@ a random subdirectory name.
 Optional.
 Specifies which snapshot to mount.
 If not provided, all snapshots are mounted.
+.El
+.Sh ENVIRONMENT
+.Bl -tag -width Ds
+.It Ev PLAKAR_MOUNT_TOKEN
+Authorization Bearer token that clients of an HTTP mount must provide.
+If not set, a random token is generated and printed at startup.
+The token is read from the environment rather than a flag so that it does
+not appear in the process listing.
 .El
 .Sh EXIT STATUS
 .Ex -std
@@ -77,9 +90,15 @@ Mount snapshots matching a filter (e.g., snapshots with tag "daily-backup"):
 $ plakar mount -to ~/mnt -tag daily-backup
 .Ed
 .Pp
-Mount a snapshot to an HTTP endpoint:
+Mount a snapshot to an HTTP endpoint, with a generated token printed at startup:
 .Bd -literal -offset indent
 $ plakar mount -to http://hostname:8080
+.Ed
+.Pp
+Mount a snapshot to an HTTP endpoint with a chosen token, and read a file:
+.Bd -literal -offset indent
+$ PLAKAR_MOUNT_TOKEN=s3cret plakar mount -to http://hostname:8080
+$ curl -H 'Authorization: Bearer s3cret' http://hostname:8080/
 .Ed
 .Pp
 Mount a specific snapshot to an HTTP endpoint:
