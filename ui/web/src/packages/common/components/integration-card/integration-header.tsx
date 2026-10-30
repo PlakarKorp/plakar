@@ -75,7 +75,7 @@ export function IntegrationHeader({
       <div className="flex items-center gap-2">
         {status === "not-installed" && (
           <Button
-            leftIcon="plus"
+            leftIcon="download"
             onPress={onInstall}
             isPending={pending}
             isDisabled={!onInstall || pending || isDisabled}

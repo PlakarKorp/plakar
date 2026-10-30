@@ -55,7 +55,7 @@ export function IntegrationCard({
     status === "not-installed" ? (
       <Button
         size="sm"
-        leftIcon="plus"
+        leftIcon="download"
         onPress={onInstall}
         isPending={pending}
         isDisabled={!onInstall || pending || isDisabled}
