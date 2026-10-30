@@ -23,6 +23,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
 	"runtime/debug"
 	"sync"
 	"time"
@@ -99,7 +100,7 @@ func (cmd *Cached) Parse(ctx *appcontext.AppContext, args []string) error {
 	}
 
 	if cmd.logfile != "" {
-		f, err := os.OpenFile(cmd.logfile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+		f, err := os.OpenFile(cmd.logfile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
 		if err != nil {
 			return err
 		}
@@ -177,6 +178,14 @@ func (cmd *Cached) Watcher(listener net.Listener) {
 }
 
 func (cmd *Cached) ListenAndServe(ctx *appcontext.AppContext) error {
+	// A stat failure surfaces when binding.
+	if runtime.GOOS != "windows" {
+		dir := filepath.Dir(cmd.socketPath)
+		if info, err := os.Stat(dir); err == nil && info.Mode().Perm()&0077 != 0 {
+			ctx.GetLogger().Warn("socket directory %s is accessible by other users (mode %04o)", dir, info.Mode().Perm())
+		}
+	}
+
 	lock, err := cached.LockedFile(cmd.socketPath + ".cached-lock")
 	if err != nil {
 		return fmt.Errorf("failed to obtain lock")
@@ -194,6 +203,11 @@ func (cmd *Cached) ListenAndServe(ctx *appcontext.AppContext) error {
 
 	if err != nil {
 		return fmt.Errorf("failed to bind the socket: %w", err)
+	}
+
+	if err := os.Chmod(cmd.socketPath, 0600); err != nil {
+		listener.Close()
+		return fmt.Errorf("failed to restrict the socket: %w", err)
 	}
 
 	go cmd.Watcher(listener)

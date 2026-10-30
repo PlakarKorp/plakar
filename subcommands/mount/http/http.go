@@ -88,6 +88,9 @@ func ExecuteHTTP(ctx *appcontext.AppContext, repo *repository.Repository, mountp
 			if err != nil {
 				return nil, err
 			}
+			if len(snapshotID) != len(objects.MAC{}) {
+				return nil, fmt.Errorf("invalid snapshot id %q", snapshotID_string)
+			}
 			snap, err := snapshot.Load(repo, objects.MAC(snapshotID))
 			if err != nil {
 				return nil, err

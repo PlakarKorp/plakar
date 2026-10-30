@@ -87,7 +87,7 @@ func (cmd *Archive) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 
 	out := os.Stdout
 	if cmd.Output != "-" {
-		out, err = os.Create(cmd.Output)
+		out, err = os.OpenFile(cmd.Output, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 		if err != nil {
 			return 1, fmt.Errorf("failed to create %s: %w", cmd.Output, err)
 		}
