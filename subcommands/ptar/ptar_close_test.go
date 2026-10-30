@@ -18,8 +18,19 @@ import (
 )
 
 // openStores and openImporters count the connectors opened through the
-// "ptartrackfs" scheme and not closed yet.
-var openStores, openImporters atomic.Int64
+// "ptartrackfs" scheme and not closed yet; peakStores and peakImporters record
+// the most that were ever open at once.
+var openStores, openImporters, peakStores, peakImporters atomic.Int64
+
+func trackOpen(open, peak *atomic.Int64) {
+	n := open.Add(1)
+	for {
+		p := peak.Load()
+		if n <= p || peak.CompareAndSwap(p, n) {
+			return
+		}
+	}
+}
 
 type trackedStore struct {
 	storage.Store
@@ -47,7 +58,7 @@ func init() {
 		if err != nil {
 			return nil, err
 		}
-		openStores.Add(1)
+		trackOpen(&openStores, &peakStores)
 		return &trackedStore{Store: st}, nil
 	})
 	importer.Register("ptartrackfs", 0, func(ctx context.Context, opts *connectors.Options, name string, config map[string]string) (importer.Importer, error) {
@@ -55,33 +66,37 @@ func init() {
 		if err != nil {
 			return nil, err
 		}
-		openImporters.Add(1)
+		trackOpen(&openImporters, &peakImporters)
 		return &trackedImporter{Importer: imp}, nil
 	})
 }
 
 func TestPtarClosesPeerStoresAndImporters(t *testing.T) {
-	srcRepo, _ := ptesting.GenerateRepository(t, nil, nil, nil)
-	srcSnap := ptesting.GenerateSnapshot(t, srcRepo, []ptesting.MockFile{
-		ptesting.NewMockFile("file.txt", 0644, "hello"),
-	})
-	defer srcSnap.Close()
-	sourceDir := ptesting.GenerateFiles(t, []ptesting.MockFile{
-		ptesting.NewMockFile("file.txt", 0644, "hello"),
-	})
+	args := []string{"-plaintext", "-o", filepath.Join(t.TempDir(), "test.ptar")}
+	for range 2 {
+		srcRepo, _ := ptesting.GenerateRepository(t, nil, nil, nil)
+		srcSnap := ptesting.GenerateSnapshot(t, srcRepo, []ptesting.MockFile{
+			ptesting.NewMockFile("file.txt", 0644, "hello"),
+		})
+		defer srcSnap.Close()
+		args = append(args, "-k", "ptartrackfs://"+srcRepo.Root())
+	}
+	for range 2 {
+		sourceDir := ptesting.GenerateFiles(t, []ptesting.MockFile{
+			ptesting.NewMockFile("file.txt", 0644, "hello"),
+		})
+		args = append(args, "ptartrackfs://"+sourceDir)
+	}
 	repo, ctx := ptesting.GenerateRepositoryWithoutConfig(t, nil, nil, nil)
 
 	cmd := &Ptar{}
-	require.NoError(t, cmd.Parse(ctx, []string{
-		"-plaintext",
-		"-o", filepath.Join(t.TempDir(), "test.ptar"),
-		"-k", "ptartrackfs://" + srcRepo.Root(),
-		"ptartrackfs://" + sourceDir,
-	}))
+	require.NoError(t, cmd.Parse(ctx, args))
 	status, err := cmd.Execute(ctx, repo)
 	require.NoError(t, err)
 	require.Equal(t, 0, status)
 
 	require.Zero(t, openStores.Load(), "peer stores left open")
 	require.Zero(t, openImporters.Load(), "importers left open")
+	require.EqualValues(t, 1, peakStores.Load(), "peer stores held open across targets")
+	require.EqualValues(t, 1, peakImporters.Load(), "importers held open across targets")
 }
