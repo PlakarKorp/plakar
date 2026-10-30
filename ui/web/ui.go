@@ -18,6 +18,7 @@ package web
 
 import (
 	"context"
+	"crypto/subtle"
 	"embed"
 	"errors"
 	"fmt"
@@ -26,12 +27,14 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"sync/atomic"
 	"time"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/api"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/utils"
+	"github.com/google/uuid"
 )
 
 type UiOptions struct {
@@ -77,7 +80,7 @@ func Ui(repo *repository.Repository, ctx *appcontext.AppContext, addr string, op
 		addr = fmt.Sprintf("localhost:%d", port)
 	}
 
-	var url string
+	var url, launchURL string
 	var protocol string
 	if opts.Cert != "" && opts.Key != "" {
 		protocol = "https"
@@ -86,12 +89,27 @@ func Ui(repo *repository.Repository, ctx *appcontext.AppContext, addr string, op
 	}
 	if opts.Token == "" {
 		url = fmt.Sprintf("%s://%s", protocol, addr)
+		launchURL = url
 	} else {
 		url = fmt.Sprintf("%s://%s?plakar_token=%s", protocol, addr, opts.Token)
+
+		// The launcher's command line is readable by every local user, so the
+		// browser gets a code that is redeemed once for the token URL.
+		launch := uuid.NewString()
+		launchURL = fmt.Sprintf("%s://%s?plakar_launch=%s", protocol, addr, launch)
+		var redeemed atomic.Bool
+		server.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
+			code := r.URL.Query().Get("plakar_launch")
+			if code != "" && subtle.ConstantTimeCompare([]byte(code), []byte(launch)) == 1 && redeemed.CompareAndSwap(false, true) {
+				http.Redirect(w, r, "/?plakar_token="+opts.Token, http.StatusFound)
+				return
+			}
+			statics.ServeHTTP(w, r)
+		})
 	}
 
 	if !opts.NoSpawn {
-		if err := utils.BrowserTrySpawn(url); err != nil {
+		if err := utils.BrowserTrySpawn(launchURL); err != nil {
 			repo.Logger().Printf("failed to launch browser: %s", err)
 			repo.Logger().Printf("you can access the webUI at %s", url)
 		}
