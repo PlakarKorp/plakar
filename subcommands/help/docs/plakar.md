@@ -188,6 +188,11 @@ The following options are available:
 > Remove unused data from a Kloset store, refer to
 > plakar-maintenance(1).
 
+**mcp**
+
+> Serve a Kloset store over the Model Context Protocol, refer to
+> plakar-mcp(1).
+
 **prune**
 
 > Prune snapshots according to a policy, refer to
