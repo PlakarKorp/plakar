@@ -28,6 +28,7 @@ export * from "./empty-list/empty-list";
 export * from "./errors/errors";
 export * from "./expandable-list/expandable-list";
 export * from "./feed/feed";
+export * from "./field-popover/field-popover";
 export * from "./field/field-button";
 export * from "./field/field-label";
 export * from "./field/field-support-text";
