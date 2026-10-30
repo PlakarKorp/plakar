@@ -17,13 +17,16 @@
 package server
 
 import (
+	"errors"
 	"net/http"
+	"time"
 
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/server/httpd"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 func init() {
@@ -36,6 +39,7 @@ func (cmd *Server) CobraCommand() *cobra.Command {
 	}
 	c.Flags().StringVar(&cmd.ListenAddr, "listen", "localhost:9876", "address to listen on")
 	c.Flags().StringVar(&cmd.Token, "token", "", "Bearer token")
+	cmd.tokenFlag = c.Flags().Lookup("token")
 	c.Flags().BoolVar(&cmd.allowDelete, "allow-delete", false, "enable delete operations")
 	c.Flags().StringVar(&cmd.Cert, "cert", "", "Full certificate chain")
 	c.Flags().StringVar(&cmd.Key, "key", "", "Certificate private key")
@@ -45,6 +49,14 @@ func (cmd *Server) CobraCommand() *cobra.Command {
 func (cmd *Server) Parse(ctx *appcontext.AppContext, args []string) error {
 	if _, err := subcommands.ParseCobra(cmd, args); err != nil {
 		return err
+	}
+
+	if cmd.tokenFlag.Changed && cmd.Token == "" {
+		return errors.New("-token requires a non-empty value")
+	}
+
+	if (cmd.Cert == "") != (cmd.Key == "") {
+		return errors.New("-cert and -key must be given together")
 	}
 
 	cmd.RepositorySecret = ctx.GetSecret()
@@ -63,6 +75,7 @@ type Server struct {
 	Key        string
 
 	allowDelete bool
+	tokenFlag   *pflag.Flag
 }
 
 func (cmd *Server) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
@@ -76,8 +89,10 @@ func (cmd *Server) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 	mux := httpd.Mux(repo.Store(), cmd.NoDelete)
 
 	server := &http.Server{
-		Addr:    cmd.ListenAddr,
-		Handler: httpd.Logging(httpd.Auth(cmd.Token, mux)),
+		Addr:              cmd.ListenAddr,
+		Handler:           httpd.Logging(httpd.Auth(cmd.Token, mux)),
+		ReadHeaderTimeout: 10 * time.Second,
+		MaxHeaderBytes:    64 << 10,
 	}
 	go func() {
 		<-ctx.Done()
