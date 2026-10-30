@@ -1,24 +1,37 @@
 import { RepositoryInfoQueryOptions } from "@plakar-ui/common/api/kloset";
+import {
+  IntegrationPagedGrid,
+  IntegrationShelf,
+  IntegrationsFilters,
+  ReviewUpdatesButton,
+  ReviewUpdatesModal,
+  sumCounts,
+  useIntegrationCounts,
+} from "@plakar-ui/common/components";
 import { Main } from "@plakar-ui/common/layouts";
 import { createPaginationSearchSchema } from "@plakar-ui/common/utils";
 import { EmptyList } from "@plakar-ui/ui/components";
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { z } from "zod";
 
+import { useInstallIntegration } from "~/api/integrations/mutations";
 import {
   IntegrationInstallationStatusFilterSchema,
+  IntegrationType,
   IntegrationTypeSchema,
 } from "~/api/integrations/schema";
 import { IntegrationAlertLoginRequired } from "~/components/integration-card/integration-alert-login-required";
-import { IntegrationPagedGrid } from "~/components/integration-card/integration-paged-grid";
-import { IntegrationShelf } from "~/components/integration-card/integration-shelf";
-import { IntegrationsFilters } from "~/components/integration-card/integrations.filters";
-import { ReviewUpdatesControls } from "~/components/integration-card/review-updates-controls";
-import {
-  shownCount,
-  useIntegrationCounts,
-} from "~/components/integration-card/use-integration-counts";
+import { integrationCatalog } from "~/components/integration-card/integration-catalog";
 import { useAuthentication } from "~/hooks/use-authentication";
+
+const COUNTED_STATUSES = IntegrationInstallationStatusFilterSchema.options;
+
+const TYPE_ITEMS: Array<{ id: IntegrationType; label: string }> = [
+  { id: "storage", label: "Storage" },
+  { id: "source", label: "Source" },
+  { id: "destination", label: "Destination" },
+];
 
 export const Route = createFileRoute("/_layout/integrations/")({
   validateSearch: createPaginationSearchSchema()
@@ -42,12 +55,25 @@ function RouteComponent() {
   const navigate = Route.useNavigate();
   const { isAuthenticated } = useAuthentication();
   const installDisabled = !isAuthenticated;
+  const catalog = integrationCatalog(installDisabled);
+  const install = useInstallIntegration();
+  const [isReviewOpen, setIsReviewOpen] = useState(false);
 
   const status = search.installation_status;
-  const counts = useIntegrationCounts({
-    search: search.search,
-    types: search.types,
-  });
+  const filters = { search: search.search, types: search.types };
+  const counts = useIntegrationCounts(catalog, COUNTED_STATUSES, filters);
+  const installedCount = sumCounts(
+    counts.byStatus.installed,
+    counts.byStatus["built-in"]
+  );
+  const allCount = sumCounts(installedCount, counts.byStatus["not-installed"]);
+  const shownCount =
+    status === undefined
+      ? allCount
+      : status === "installed"
+        ? installedCount
+        : counts.byStatus[status];
+  const upgradableCount = counts.byStatus.upgradable;
 
   const isFiltered =
     search.search !== "" ||
@@ -59,22 +85,20 @@ function RouteComponent() {
   const showBuiltIn = isAll || status === "installed" || status === "built-in";
   const showAvailable = isAll || status === "not-installed";
 
-  const reviewUpdates = !!counts.upgradable && (
-    <ReviewUpdatesControls
-      count={counts.upgradable}
+  const reviewUpdates = !!upgradableCount && (
+    <ReviewUpdatesButton
+      count={upgradableCount}
       isDisabled={installDisabled}
-      search={search.search}
-      types={search.types}
+      onPress={() => setIsReviewOpen(true)}
     />
   );
 
   const pagination = {
-    search: search.search,
-    types: search.types,
+    catalog,
+    ...filters,
     page: search.page,
     onPageChange: (page: number) =>
       navigate({ search: (previous) => ({ ...previous, page }) }),
-    installDisabled,
   };
 
   const updateSearch = (patch: Partial<typeof search>) =>
@@ -99,14 +123,36 @@ function RouteComponent() {
         )}
         <IntegrationsFilters
           search={search.search}
-          types={search.types}
-          status={status}
-          counts={counts}
           onSearchChange={(value) => updateSearch({ search: value })}
-          onTypesChange={(types) => updateSearch({ types })}
+          status={status}
+          allCount={allCount}
+          statusItems={[
+            {
+              id: "installed",
+              label: "Installed",
+              count: installedCount,
+              dot: "success",
+            },
+            {
+              id: "upgradable",
+              label: "Updates available",
+              count: upgradableCount,
+              dot: "warning",
+            },
+            {
+              id: "not-installed",
+              label: "Not installed",
+              count: counts.byStatus["not-installed"],
+            },
+          ]}
           onStatusChange={(installation_status) =>
             updateSearch({ installation_status })
           }
+          types={search.types}
+          typeItems={TYPE_ITEMS}
+          onTypesChange={(types) => updateSearch({ types })}
+          shown={shownCount}
+          total={counts.unfiltered}
           onClear={
             isFiltered
               ? () =>
@@ -119,7 +165,7 @@ function RouteComponent() {
           }
         />
 
-        {shownCount(counts, status) === 0 ? (
+        {shownCount === 0 ? (
           <EmptyList
             size="sm"
             title={
@@ -138,12 +184,11 @@ function RouteComponent() {
           <>
             {isAll && (
               <IntegrationShelf
+                catalog={catalog}
                 title="Installed"
                 status="installed"
-                search={search.search}
-                types={search.types}
-                installDisabled={installDisabled}
                 action={reviewUpdates}
+                {...filters}
               />
             )}
             {isInstalledView && (
@@ -158,12 +203,11 @@ function RouteComponent() {
             )}
             {showBuiltIn && (
               <IntegrationShelf
+                catalog={catalog}
                 title="Built-in"
                 status="built-in"
-                search={search.search}
-                types={search.types}
-                installDisabled={installDisabled}
                 isHiddenWhileLoading
+                {...filters}
               />
             )}
             {showAvailable && (
@@ -174,6 +218,20 @@ function RouteComponent() {
               />
             )}
           </>
+        )}
+        {isReviewOpen && (
+          <ReviewUpdatesModal
+            catalog={catalog}
+            upgradableStatus="upgradable"
+            onUpdate={async (integration) => {
+              await install.mutateAsync({
+                integrationId: integration.id,
+                version: integration.latest_version,
+              });
+            }}
+            onClose={() => setIsReviewOpen(false)}
+            {...filters}
+          />
         )}
       </div>
     </Main>

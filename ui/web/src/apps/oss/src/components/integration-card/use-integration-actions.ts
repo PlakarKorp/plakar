@@ -1,4 +1,4 @@
-import { addToast } from "@plakar-ui/common/components";
+import { addToast, isUpgradable } from "@plakar-ui/common/components";
 
 import {
   useInstallIntegration,
@@ -19,14 +19,6 @@ function toastError(error: Error) {
   addToast({
     content: { children: error.message, variant: "error" },
   });
-}
-
-export function isUpgradable({ installation, latest_version }: Integration) {
-  return (
-    installation.status === "installed" &&
-    installation.version !== undefined &&
-    installation.version !== latest_version
-  );
 }
 
 export function useIntegrationActions(

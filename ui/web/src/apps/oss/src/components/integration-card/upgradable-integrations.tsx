@@ -6,9 +6,10 @@ import { listIntegrationsQueryOptions } from "~/api/integrations/queries";
 export function UpgradableIntegrations() {
   const { data: total } = useQuery({
     ...listIntegrationsQueryOptions({
+      search: "",
+      installationStatus: "upgradable",
       page: 0,
       perPage: 1,
-      installationStatus: "upgradable",
     }),
     select: (data) => data.total,
     refetchInterval: false,

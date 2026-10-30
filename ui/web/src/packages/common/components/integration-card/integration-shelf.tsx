@@ -1,54 +1,56 @@
-import { IntegrationTileSkeleton } from "@plakar-ui/common/components";
 import { Button, Skeleton } from "@plakar-ui/ui/components";
 import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
-import { ReactNode, useState } from "react";
+import { Fragment, ReactNode, useState } from "react";
 
-import { listIntegrationsInfiniteQueryOptions } from "~/api/integrations/queries";
-import type { Integration, IntegrationType } from "~/api/integrations/schema";
-import { IntegrationTileAdapter } from "~/components/integration-card/integration-adapters";
-import { TILE_GRID } from "~/components/integration-card/integration-grids";
+import {
+  IntegrationCatalog,
+  IntegrationCatalogFilters,
+  IntegrationCatalogItem,
+  integrationShelfQueryOptions,
+  isUpgradable,
+} from "./integration-catalog";
 import {
   IntegrationSectionError,
   IntegrationSectionHeader,
-} from "~/components/integration-card/integration-section";
-import { isUpgradable } from "~/components/integration-card/use-integration-actions";
+} from "./integration-section";
+import { IntegrationTileSkeleton } from "./integration-skeletons";
 
 const COLLAPSED_TILES = 6;
-const PER_PAGE = 50;
 
-function upgradableFirst(integrations: Integration[]) {
+function upgradableFirst<T extends IntegrationCatalogItem>(integrations: T[]) {
   return [...integrations].sort(
     (a, b) => Number(isUpgradable(b)) - Number(isUpgradable(a))
   );
 }
 
-type IntegrationShelfProps = {
+type IntegrationShelfProps<
+  T extends IntegrationCatalogItem,
+  Type extends string,
+  Status extends string,
+> = IntegrationCatalogFilters<Type> & {
+  catalog: IntegrationCatalog<T, Type, Status>;
   title: string;
-  status: "installed" | "built-in";
-  search: string;
-  types: IntegrationType[] | undefined;
-  installDisabled: boolean;
+  status: Status;
   action?: ReactNode;
   isHiddenWhileLoading?: boolean;
 };
 
-export function IntegrationShelf({
+export function IntegrationShelf<
+  T extends IntegrationCatalogItem,
+  Type extends string,
+  Status extends string,
+>({
+  catalog,
   title,
   status,
   search,
   types,
-  installDisabled,
   action,
   isHiddenWhileLoading = false,
-}: IntegrationShelfProps) {
+}: IntegrationShelfProps<T, Type, Status>) {
   const [isExpanded, setIsExpanded] = useState(false);
   const query = useInfiniteQuery({
-    ...listIntegrationsInfiniteQueryOptions({
-      search,
-      types,
-      installationStatus: status,
-      perPage: PER_PAGE,
-    }),
+    ...integrationShelfQueryOptions(catalog, status, { search, types }),
     placeholderData: keepPreviousData,
   });
 
@@ -73,7 +75,7 @@ export function IntegrationShelf({
 
       {query.isPending ? (
         <>
-          <div className={TILE_GRID}>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
             {Array.from({ length: COLLAPSED_TILES }, (_, index) => (
               <IntegrationTileSkeleton key={index} />
             ))}
@@ -89,13 +91,11 @@ export function IntegrationShelf({
           onRetry={() => query.refetch()}
         />
       ) : (
-        <div className={TILE_GRID}>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {visible.map((integration) => (
-            <IntegrationTileAdapter
-              key={integration.id}
-              integration={integration}
-              installDisabled={installDisabled}
-            />
+            <Fragment key={integration.id}>
+              {catalog.renderTile(integration)}
+            </Fragment>
           ))}
         </div>
       )}
