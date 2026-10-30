@@ -13,6 +13,7 @@ import (
 
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/exitcodes"
 	"github.com/PlakarKorp/plakar/utils"
 	"github.com/google/uuid"
 	"github.com/vmihailenco/msgpack/v5"
@@ -47,6 +48,9 @@ var (
 
 func rebuildStateRequest(ctx *appcontext.AppContext, req *RequestPkt) (int, error) {
 	client, err := newClient(ctx, filepath.Join(ctx.CacheDir, "cached.sock"), false)
+	if errors.Is(err, ErrWrongVersion) {
+		return exitcodes.CachedVersionMismatch, err
+	}
 	if err != nil {
 		return 1, err
 	}
