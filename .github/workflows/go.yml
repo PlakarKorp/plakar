@@ -55,11 +55,11 @@ jobs:
         go build -v ./...
         go build tool
 
-    # Produce a coverage profile (Codecov coverage) and a JUnit XML (Codecov
-    # Test Analytics) in one run. The `timeout -s QUIT 5m` wrapper is kept so a
-    # hung test still dumps goroutine stacks. continue-on-error + explicit exit
-    # keeps the upload steps reachable on failure (that is when test results are
-    # most useful); a later step re-surfaces the failure.
+    # Produce a coverage profile and a JUnit XML in one run. The `timeout -s
+    # QUIT 5m` wrapper is kept so a hung test still dumps goroutine stacks.
+    # continue-on-error + explicit exit keeps the upload steps reachable on
+    # failure (that is when test results are most useful); a later step
+    # re-surfaces the failure.
     - name: Test
       id: gotest
       continue-on-error: true
@@ -71,8 +71,8 @@ jobs:
         # real encryption/snapshot work; with the default parallelism they
         # over-subscribe the runner's cores, starve each other, and blow the
         # per-test timeout -- which kills the whole package and reports every
-        # test in it as failed-to-return to Codecov. Capping concurrency keeps
-        # the run both fast and reliable.
+        # test in it as failed-to-return. Capping concurrency keeps the run both
+        # fast and reliable.
         timeout -s QUIT 5m go test -v -p 4 -coverprofile=coverage.out -covermode=atomic -timeout 2m -json ./... > out.json
         status=$?
         if [ $status -ne 0 ]; then
@@ -81,22 +81,6 @@ jobs:
         go tool go-junit-report -parser gojson -set-exit-code < out.json > junit.xml
         echo "test_exit=$status" >> "$GITHUB_OUTPUT"
         exit $status
-
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5.5.5
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        files: ./coverage.out
-        fail_ci_if_error: false
-
-    - name: Upload test results to Codecov
-      if: ${{ !cancelled() }}
-      uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5.5.5
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        files: ./junit.xml
-        report_type: test_results
-        fail_ci_if_error: false
 
     # kortex gets the same reports, sent by the uploader it serves (a public
     # repository cannot use its action) with the job's OIDC token: no secret.

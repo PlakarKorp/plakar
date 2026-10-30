@@ -54,10 +54,10 @@ junit:
 		| ${GO} tool go-junit-report -parser gojson -set-exit-code > junit.xml
 
 # coverage runs the test suite and reports total statement coverage with the
-# testing/ support packages (mocks, fixtures) excluded, matching the Codecov
-# `ignore` config. Go has no package-level coverage exclude, so we filter the
-# profile after the fact: the `mode:` header line is kept, and every block
-# belonging to a testing/ package is dropped before `go tool cover` totals it.
+# testing/ support packages (mocks, fixtures) excluded. Go has no package-level
+# coverage exclude, so we filter the profile after the fact: the `mode:` header
+# line is kept, and every block belonging to a testing/ package is dropped
+# before `go tool cover` totals it.
 COVERPROFILE = coverage.out
 coverage:
 	${GO} test -covermode=atomic -coverprofile=${COVERPROFILE} ./...
