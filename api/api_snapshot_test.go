@@ -490,6 +490,45 @@ func TestSignedReader(t *testing.T) {
 		require.Equal(t, http.StatusUnauthorized, w.Code, "body=%s", w.Body.String())
 	})
 
+	t.Run("other hmac method", func(t *testing.T) {
+		// Signed with the right key but HS384: only HS256 is issued.
+		now := time.Now()
+		jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS384, SnapshotSignedURLClaims{
+			SnapshotID: id,
+			Path:       "/subdir/dummy.txt",
+			RegisteredClaims: jwt.RegisteredClaims{
+				ExpiresAt: jwt.NewNumericDate(now.Add(time.Hour)),
+				IssuedAt:  jwt.NewNumericDate(now),
+				Issuer:    "plakar-api",
+			},
+		})
+		sig, err := jwtToken.SignedString([]byte(token))
+		require.NoError(t, err)
+
+		w := get(t, mux, "/api/snapshot/reader/"+id+":/subdir/dummy.txt?signature="+sig)
+		require.Equal(t, http.StatusUnauthorized, w.Code, "body=%s", w.Body.String())
+	})
+
+	for _, issuer := range []string{"", "someone-else"} {
+		t.Run("wrong issuer "+issuer, func(t *testing.T) {
+			now := time.Now()
+			jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, SnapshotSignedURLClaims{
+				SnapshotID: id,
+				Path:       "/subdir/dummy.txt",
+				RegisteredClaims: jwt.RegisteredClaims{
+					ExpiresAt: jwt.NewNumericDate(now.Add(time.Hour)),
+					IssuedAt:  jwt.NewNumericDate(now),
+					Issuer:    issuer,
+				},
+			})
+			sig, err := jwtToken.SignedString([]byte(token))
+			require.NoError(t, err)
+
+			w := get(t, mux, "/api/snapshot/reader/"+id+":/subdir/dummy.txt?signature="+sig)
+			require.Equal(t, http.StatusUnauthorized, w.Code, "body=%s", w.Body.String())
+		})
+	}
+
 	t.Run("no signature requires token", func(t *testing.T) {
 		// No signature and no Authorization header -> token middleware rejects.
 		w := get(t, mux, "/api/snapshot/reader/"+id+":/subdir/dummy.txt")

@@ -236,6 +236,8 @@ func NewSnapshotReaderURLSigner(ui *uiserver, token string) SnapshotReaderURLSig
 	return SnapshotReaderURLSigner{ui, token}
 }
 
+const signedURLIssuer = "plakar-api"
+
 type SnapshotSignedURLClaims struct {
 	SnapshotID string `json:"snapshot_id"`
 	Path       string `json:"path"`
@@ -279,7 +281,7 @@ func (signer SnapshotReaderURLSigner) Sign(w http.ResponseWriter, r *http.Reques
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(2 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(now),
-			Issuer:    "plakar-api",
+			Issuer:    signedURLIssuer,
 		},
 	})
 
@@ -315,7 +317,7 @@ func (signer SnapshotReaderURLSigner) VerifyMiddleware(next http.Handler) http.H
 				return nil, authError(fmt.Sprintf("unexpected signing method: %v", jwtToken.Header["alg"]))
 			}
 			return []byte(signer.token), nil
-		})
+		}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}), jwt.WithIssuer(signedURLIssuer))
 
 		if err != nil {
 			if errors.Is(err, jwt.ErrTokenExpired) {

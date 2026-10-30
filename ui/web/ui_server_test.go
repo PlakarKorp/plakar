@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -123,4 +124,86 @@ func TestUiQuitStopsServer(t *testing.T) {
 		t.Fatal("Ui did not return after /api/quit")
 	}
 	require.Error(t, ctx.Err())
+}
+
+func TestUiRejectsForeignHost(t *testing.T) {
+	repo, ctx := ptesting.GenerateRepository(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil), nil)
+
+	addr := freePort(t)
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- Ui(repo, ctx, addr, &UiOptions{NoSpawn: true, NoRefresh: true})
+	}()
+	t.Cleanup(func() {
+		ctx.GetInner().Cancel(nil)
+		<-errCh
+	})
+
+	get := func(host string) (int, error) {
+		req, err := http.NewRequest(http.MethodGet, "http://"+addr+"/api/info", nil)
+		if err != nil {
+			return 0, err
+		}
+		if host != "" {
+			req.Host = host
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return 0, err
+		}
+		_ = resp.Body.Close()
+		return resp.StatusCode, nil
+	}
+
+	var status int
+	require.Eventually(t, func() bool {
+		var err error
+		status, err = get("")
+		return err == nil
+	}, 3*time.Second, 25*time.Millisecond, "server never became reachable")
+	require.Equal(t, http.StatusOK, status)
+
+	status, err := get("evil.example")
+	require.NoError(t, err)
+	require.Equal(t, http.StatusForbidden, status)
+}
+
+func TestUiRejectsCrossSiteMutations(t *testing.T) {
+	repo, ctx := ptesting.GenerateRepository(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil), nil)
+
+	addr := freePort(t)
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- Ui(repo, ctx, addr, &UiOptions{NoSpawn: true, NoRefresh: true, Token: "tok"})
+	}()
+	t.Cleanup(func() {
+		ctx.GetInner().Cancel(nil)
+		<-errCh
+	})
+
+	require.Eventually(t, func() bool {
+		resp, err := http.Get("http://" + addr + "/api/info")
+		if err != nil {
+			return false
+		}
+		_ = resp.Body.Close()
+		return true
+	}, 3*time.Second, 25*time.Millisecond, "server never became reachable")
+
+	post := func(headers map[string]string) int {
+		req, err := http.NewRequest(http.MethodPost, "http://"+addr+"/api/authentication/logout", strings.NewReader("{}"))
+		require.NoError(t, err)
+		req.Header.Set("Authorization", "Bearer tok")
+		for k, v := range headers {
+			req.Header.Set(k, v)
+		}
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		_ = resp.Body.Close()
+		return resp.StatusCode
+	}
+
+	require.Equal(t, http.StatusUnsupportedMediaType, post(map[string]string{"Content-Type": "text/plain"}))
+	require.Equal(t, http.StatusForbidden, post(map[string]string{"Content-Type": "application/json", "Origin": "https://evil.example"}))
+	require.NotEqual(t, http.StatusForbidden, post(map[string]string{"Content-Type": "application/json", "Origin": "http://" + addr}))
 }

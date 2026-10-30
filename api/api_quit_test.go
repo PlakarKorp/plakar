@@ -36,6 +36,10 @@ func TestQuit(t *testing.T) {
 			"Authorization":  "Bearer secret-token",
 			"Sec-Fetch-Site": "cross-site",
 		}, http.StatusForbidden},
+		{"same-site", map[string]string{
+			"Authorization":  "Bearer secret-token",
+			"Sec-Fetch-Site": "same-site",
+		}, http.StatusForbidden},
 	} {
 		t.Run(c.name+" is refused", func(t *testing.T) {
 			w := postQuit(t, mux, c.headers)
@@ -44,10 +48,10 @@ func TestQuit(t *testing.T) {
 		})
 	}
 
-	t.Run("same-site with token stops", func(t *testing.T) {
+	t.Run("same-origin with token stops", func(t *testing.T) {
 		w := postQuit(t, mux, map[string]string{
 			"Authorization":  "Bearer secret-token",
-			"Sec-Fetch-Site": "same-site",
+			"Sec-Fetch-Site": "same-origin",
 		})
 		require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
 
