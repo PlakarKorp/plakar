@@ -2,25 +2,17 @@ import {
   IntegrationCard,
   IntegrationHeader,
   IntegrationTile,
+  isUpgradable,
 } from "@plakar-ui/common/components";
 
 import type { Integration } from "~/api/integrations/schema";
-import {
-  isUpgradable,
-  useIntegrationActions,
-} from "~/components/integration-card/use-integration-actions";
+import { integrationDetailHref } from "~/components/integration-card/integration-href";
+import { useIntegrationActions } from "~/components/integration-card/use-integration-actions";
 
 type IntegrationAdapterProps = {
   integration: Integration;
   installDisabled: boolean;
 };
-
-function detailHref(integration: Integration) {
-  return {
-    to: "/integrations/$integrationId",
-    params: { integrationId: integration.id },
-  } as const;
-}
 
 export function IntegrationTileAdapter({
   integration,
@@ -40,7 +32,7 @@ export function IntegrationTileAdapter({
       version={integration.installation.version ?? integration.latest_version}
       stage={integration.stage}
       isBuiltIn={isBuiltIn}
-      detailHref={detailHref(integration)}
+      detailHref={integrationDetailHref(integration)}
       latestVersion={
         isUpgradable(integration) ? integration.latest_version : undefined
       }
@@ -72,7 +64,7 @@ export function IntegrationCardAdapter({
       description={integration.description}
       types={integration.types}
       status={status}
-      detailHref={detailHref(integration)}
+      detailHref={integrationDetailHref(integration)}
       latestVersion={
         isUpgradable(integration) ? integration.latest_version : undefined
       }

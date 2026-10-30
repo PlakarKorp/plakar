@@ -2,7 +2,10 @@ import { Button, Icon, Link, Typography } from "@plakar-ui/ui/components";
 import { ReactNode } from "react";
 import { LinkProps } from "react-aria-components";
 
-import { IntegrationActionsMenu } from "./integration-actions-menu";
+import {
+  IntegrationActionsMenu,
+  IntegrationQuickAction,
+} from "./integration-actions-menu";
 import {
   IntegrationInstallationStatus,
   IntegrationTypeFlags,
@@ -20,11 +23,12 @@ type IntegrationCardProps = {
   description: string;
   types: IntegrationTypeFlags;
   status: IntegrationInstallationStatus;
-  detailHref: LinkProps["href"];
+  detailHref?: LinkProps["href"];
   latestVersion?: string;
   onInstall?: () => void;
   onUpgrade?: () => void;
   onRemove?: () => void;
+  quickActions?: IntegrationQuickAction[];
   pending?: boolean;
   isDisabled?: boolean;
 };
@@ -43,9 +47,37 @@ export function IntegrationCard({
   onInstall,
   onUpgrade,
   onRemove,
+  quickActions,
   pending = false,
   isDisabled = false,
 }: IntegrationCardProps) {
+  const primaryAction =
+    status === "not-installed" ? (
+      <Button
+        size="sm"
+        leftIcon="download"
+        onPress={onInstall}
+        isPending={pending}
+        isDisabled={!onInstall || pending || isDisabled}
+        className="shrink-0 self-start"
+      >
+        Install
+      </Button>
+    ) : latestVersion ? (
+      <Button
+        variant="accent-tertiary"
+        size="sm"
+        leftIcon="arrow-up"
+        onPress={onUpgrade}
+        isPending={pending}
+        isDisabled={!onUpgrade || pending || isDisabled}
+        aria-label={`Update ${displayName} to ${latestVersion}`}
+        className="min-w-0 self-start [&>span:last-child]:min-w-0 [&>span:last-child]:truncate"
+      >
+        Update to {latestVersion}
+      </Button>
+    ) : undefined;
+
   return (
     <article className="border-secondary bg-primary flex flex-col gap-3 rounded-xl border p-4">
       <div className="flex items-center gap-3">
@@ -53,13 +85,24 @@ export function IntegrationCard({
           <IntegrationIcon name={name} icon={icon} />
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <Link
-            href={detailHref}
-            inheritColor
-            className="text-primary truncate text-base font-semibold"
-          >
-            {displayName}
-          </Link>
+          {detailHref ? (
+            <Link
+              href={detailHref}
+              inheritColor
+              className="text-primary truncate text-base font-semibold"
+            >
+              {displayName}
+            </Link>
+          ) : (
+            <Typography
+              as="span"
+              size="md"
+              weight="semibold"
+              className="text-primary truncate"
+            >
+              {displayName}
+            </Typography>
+          )}
           <span className="flex items-center gap-1.5">
             {status === "installed" && (
               <Typography
@@ -78,54 +121,39 @@ export function IntegrationCard({
             {stage !== "stable" && <IntegrationStageTag stage={stage} />}
           </span>
         </span>
+        {!detailHref && primaryAction}
         <IntegrationActionsMenu
           displayName={displayName}
           version={version}
           onRemove={onRemove}
+          quickActions={quickActions}
           pending={pending}
           isDisabled={isDisabled}
           size="sm"
+          className="self-start"
         />
       </div>
       <Typography size="sm" className="text-secondary line-clamp-2 min-h-10">
         {description}
       </Typography>
       <IntegrationTypeTags types={types} />
-      <div className="mt-auto grid grid-cols-2 gap-2">
-        <Button
-          variant="secondary"
-          href={detailHref}
-          className="whitespace-nowrap"
-        >
-          Read documentation
-        </Button>
-        {status === "not-installed" ? (
+      {detailHref && (
+        <div className="mt-auto grid grid-cols-2 gap-2">
           <Button
-            leftIcon="plus"
-            onPress={onInstall}
-            isPending={pending}
-            isDisabled={!onInstall || pending || isDisabled}
+            variant="secondary"
+            size="sm"
+            href={detailHref}
+            className="whitespace-nowrap"
           >
-            Install
+            Read documentation
           </Button>
-        ) : latestVersion ? (
-          <Button
-            variant="accent-tertiary"
-            leftIcon="arrow-up"
-            onPress={onUpgrade}
-            isPending={pending}
-            isDisabled={!onUpgrade || pending || isDisabled}
-            aria-label={`Update ${displayName} to ${latestVersion}`}
-            className="min-w-0 [&>span:last-child]:min-w-0 [&>span:last-child]:truncate"
-          >
-            Update to {latestVersion}
-          </Button>
-        ) : (
-          <CardStatus>
-            {status === "built-in" ? "Built-in" : "Up to date"}
-          </CardStatus>
-        )}
-      </div>
+          {primaryAction ?? (
+            <CardStatus>
+              {status === "built-in" ? "Built-in" : "Up to date"}
+            </CardStatus>
+          )}
+        </div>
+      )}
     </article>
   );
 }
@@ -136,7 +164,7 @@ function CardStatus({ children }: { children: ReactNode }) {
       as="span"
       size="sm"
       weight="medium"
-      className="text-success flex h-[38px] items-center justify-center gap-1.5"
+      className="text-success flex h-6.5 items-center justify-center gap-1.5"
     >
       <Icon type="check" size="sm" />
       {children}

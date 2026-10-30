@@ -1,4 +1,3 @@
-import { IntegrationIcon } from "@plakar-ui/common/components";
 import {
   Button,
   Checkbox,
@@ -11,10 +10,15 @@ import {
 } from "@plakar-ui/ui/components";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { LinkProps } from "react-aria-components";
 
-import { useInstallIntegration } from "~/api/integrations/mutations";
-import { listIntegrationsQueryOptions } from "~/api/integrations/queries";
-import type { Integration, IntegrationType } from "~/api/integrations/schema";
+import {
+  IntegrationCatalog,
+  IntegrationCatalogFilters,
+  IntegrationCatalogItem,
+  integrationListQueryOptions,
+} from "./integration-catalog";
+import { IntegrationIcon } from "./integration-icon";
 
 const MAX_UPDATES = 100;
 
@@ -24,71 +28,67 @@ type UpdateState =
   | { status: "done" }
   | { status: "failed"; message: string };
 
-type ReviewFilters = {
-  search: string;
-  types: IntegrationType[] | undefined;
-};
-
-type ReviewUpdatesControlsProps = ReviewFilters & {
+type ReviewUpdatesButtonProps = {
   count: number;
   isDisabled: boolean;
+  onPress: () => void;
 };
 
-export function ReviewUpdatesControls({
+export function ReviewUpdatesButton({
   count,
   isDisabled,
-  search,
-  types,
-}: ReviewUpdatesControlsProps) {
-  const [isOpen, setIsOpen] = useState(false);
-
+  onPress,
+}: ReviewUpdatesButtonProps) {
   return (
-    <>
-      <Button
-        variant="secondary"
-        leftIcon="arrow-up"
-        onPress={() => setIsOpen(true)}
-        isDisabled={isDisabled}
-      >
-        Review updates
-        <Tag
-          variant="yellow_borderless"
-          radius="sqrt"
-          size="sm"
-          className="ml-2"
-        >
-          {count}
-        </Tag>
-      </Button>
-      {isOpen && (
-        <ReviewUpdatesModal
-          search={search}
-          types={types}
-          onClose={() => setIsOpen(false)}
-        />
-      )}
-    </>
+    <Button
+      variant="secondary"
+      leftIcon="arrow-up"
+      onPress={onPress}
+      isDisabled={isDisabled}
+    >
+      Review updates
+      <Tag variant="yellow_borderless" radius="sqrt" size="sm" className="ml-2">
+        {count}
+      </Tag>
+    </Button>
   );
 }
 
-function ReviewUpdatesModal({
+type ReviewUpdatesModalProps<
+  T extends IntegrationCatalogItem,
+  Type extends string,
+  Status extends string,
+> = IntegrationCatalogFilters<Type> & {
+  catalog: IntegrationCatalog<T, Type, Status>;
+  upgradableStatus: Status;
+  onUpdate: (integration: T) => Promise<void>;
+  onClose: () => void;
+};
+
+export function ReviewUpdatesModal<
+  T extends IntegrationCatalogItem,
+  Type extends string,
+  Status extends string,
+>({
+  catalog,
+  upgradableStatus,
+  onUpdate,
   search,
   types,
   onClose,
-}: ReviewFilters & { onClose: () => void }) {
+}: ReviewUpdatesModalProps<T, Type, Status>) {
   const query = useQuery({
-    ...listIntegrationsQueryOptions({
+    ...integrationListQueryOptions(catalog, {
       search,
       types,
-      installationStatus: "upgradable",
+      installationStatus: upgradableStatus,
       page: 0,
       perPage: MAX_UPDATES,
     }),
     refetchInterval: false,
   });
-  const install = useInstallIntegration();
 
-  const [reviewed, setReviewed] = useState<Integration[]>();
+  const [reviewed, setReviewed] = useState<T[]>();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [states, setStates] = useState<Record<string, UpdateState>>({});
   const [isRunning, setIsRunning] = useState(false);
@@ -125,10 +125,7 @@ function ReviewUpdatesModal({
         [integration.id]: { status: "pending" },
       }));
       try {
-        await install.mutateAsync({
-          integrationId: integration.id,
-          version: integration.latest_version,
-        });
+        await onUpdate(integration);
         setStates((previous) => ({
           ...previous,
           [integration.id]: { status: "done" },
@@ -196,6 +193,7 @@ function ReviewUpdatesModal({
                   <UpdateRow
                     key={integration.id}
                     integration={integration}
+                    detailHref={catalog.detailHref?.(integration)}
                     isSelected={selected.has(integration.id)}
                     onToggle={(isSelected) =>
                       toggle(integration.id, isSelected)
@@ -257,7 +255,8 @@ function ReviewUpdatesModal({
 }
 
 type UpdateRowProps = {
-  integration: Integration;
+  integration: IntegrationCatalogItem;
+  detailHref: LinkProps["href"] | undefined;
   isSelected: boolean;
   onToggle: (isSelected: boolean) => void;
   isLocked: boolean;
@@ -266,6 +265,7 @@ type UpdateRowProps = {
 
 function UpdateRow({
   integration,
+  detailHref,
   isSelected,
   onToggle,
   isLocked,
@@ -306,16 +306,15 @@ function UpdateRow({
           <span className="text-primary">{integration.latest_version}</span>
         </Typography>
         <UpdateStatus state={state} />
-        <Link
-          href={{
-            to: "/integrations/$integrationId",
-            params: { integrationId: integration.id },
-          }}
-          target="_blank"
-          className="shrink-0 text-xs font-medium"
-        >
-          Docs
-        </Link>
+        {detailHref && (
+          <Link
+            href={detailHref}
+            target="_blank"
+            className="shrink-0 text-xs font-medium"
+          >
+            Docs
+          </Link>
+        )}
       </div>
       {state.status === "failed" && (
         <Typography size="xs" className="text-error pl-7">

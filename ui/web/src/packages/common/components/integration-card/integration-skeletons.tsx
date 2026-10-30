@@ -27,7 +27,11 @@ export function IntegrationTileSkeleton() {
   );
 }
 
-export function IntegrationCardSkeleton() {
+export function IntegrationCardSkeleton({
+  hasDocumentation = true,
+}: {
+  hasDocumentation?: boolean;
+}) {
   return (
     <div className="border-secondary bg-primary flex flex-col gap-3 rounded-xl border p-4">
       <div className="flex items-center gap-3">
@@ -51,6 +55,14 @@ export function IntegrationCardSkeleton() {
             className="my-[3px]"
           />
         </span>
+        {!hasDocumentation && (
+          <Skeleton
+            variant="rectangle"
+            width={76}
+            height={26}
+            className="shrink-0 self-start rounded-md"
+          />
+        )}
       </div>
       <span className="flex min-h-10 flex-col">
         <Skeleton
@@ -70,20 +82,22 @@ export function IntegrationCardSkeleton() {
         <Skeleton variant="rectangle" width={56} height={20} />
         <Skeleton variant="rectangle" width={56} height={20} />
       </span>
-      <div className="mt-auto grid grid-cols-2 gap-2">
-        <Skeleton
-          variant="rectangle"
-          width="100%"
-          height={38}
-          className="rounded-lg"
-        />
-        <Skeleton
-          variant="rectangle"
-          width="100%"
-          height={38}
-          className="rounded-lg"
-        />
-      </div>
+      {hasDocumentation && (
+        <div className="mt-auto grid grid-cols-2 gap-2">
+          <Skeleton
+            variant="rectangle"
+            width="100%"
+            height={26}
+            className="rounded-md"
+          />
+          <Skeleton
+            variant="rectangle"
+            width="100%"
+            height={26}
+            className="rounded-md"
+          />
+        </div>
+      )}
     </div>
   );
 }
