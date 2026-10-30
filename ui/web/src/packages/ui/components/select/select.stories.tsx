@@ -226,6 +226,27 @@ export const WithSections: Story = {
   ),
 };
 
+export const ContentWidePopover: Story = {
+  args: {
+    className: "w-[140px]",
+    popoverWidth: "content",
+    selectOptions: [
+      "Chipmunk from the northern forests",
+      "Kitten",
+      "Rabbit of the long meadows",
+    ],
+  },
+};
+
+export const SupportTextOutOfFlow: Story = {
+  args: {
+    isInvalid: true,
+    supportText: "This field is required.",
+    className: "relative w-[200px]",
+    supportTextClassName: "absolute top-full left-0 mt-1 whitespace-nowrap",
+  },
+};
+
 export const Pending: Story = {
   args: {
     isPending: true,
