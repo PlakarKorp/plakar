@@ -353,3 +353,70 @@ func TestBackupOutputMentionsCompletion(t *testing.T) {
 	out := bufOut.String()
 	require.True(t, strings.Contains(out, "backup completed"), "missing 'backup completed' line in:\n%s", out)
 }
+
+// Ignore patterns are matched against the absolute pathname: a pattern with a
+// slash anchors at the filesystem root, not at the backup root.
+func TestBackupIgnoreAnchoring(t *testing.T) {
+	tests := []struct {
+		name     string
+		pattern  func(root string) string
+		excluded []string
+		kept     []string
+	}{
+		{
+			name:     "bare name matches at any depth",
+			pattern:  func(string) string { return "subdir" },
+			excluded: []string{"subdir/foo.txt", "another_subdir/subdir/nested.txt"},
+		},
+		{
+			name:    "leading slash anchors at the filesystem root",
+			pattern: func(string) string { return "/subdir" },
+			kept:    []string{"subdir/foo.txt", "another_subdir/subdir/nested.txt"},
+		},
+		{
+			name:    "inner slash anchors at the filesystem root",
+			pattern: func(string) string { return "another_subdir/subdir" },
+			kept:    []string{"another_subdir/subdir/nested.txt"},
+		},
+		{
+			name:     "absolute path anchors at the backup root",
+			pattern:  func(root string) string { return root + "/subdir" },
+			excluded: []string{"subdir/foo.txt"},
+			kept:     []string{"another_subdir/subdir/nested.txt"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bufOut := bytes.NewBuffer(nil)
+			bufErr := bytes.NewBuffer(nil)
+			repo, tmpBackupDir, ctx := generateFixtures(t, bufOut, bufErr)
+
+			renderer := stdio.New(ctx)
+			renderer.Run()
+			t.Cleanup(func() { renderer.Wait() })
+			t.Cleanup(ctx.Close)
+			ctx.MaxConcurrency = 1
+
+			nested := filepath.Join(tmpBackupDir, "another_subdir", "subdir")
+			require.NoError(t, os.MkdirAll(nested, 0o755))
+			require.NoError(t, os.WriteFile(filepath.Join(nested, "nested.txt"), []byte("nested"), 0o644))
+
+			cmd := &Backup{}
+			require.NoError(t, cmd.Parse(ctx, []string{"-ignore", tt.pattern(tmpBackupDir), tmpBackupDir}))
+			status, err := cmd.Execute(ctx, repo)
+			require.NoError(t, err)
+			require.Equal(t, 0, status)
+
+			saved := func(p string) bool {
+				return strings.Contains(bufOut.String(), " "+filepath.Join(tmpBackupDir, p)+"\n")
+			}
+			for _, p := range tt.excluded {
+				require.False(t, saved(p), "%s should be excluded", p)
+			}
+			for _, p := range tt.kept {
+				require.True(t, saved(p), "%s should be kept", p)
+			}
+		})
+	}
+}
