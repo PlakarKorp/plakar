@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/PlakarKorp/plakar/utils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -18,11 +19,12 @@ func runEntryPointCov80(t *testing.T, setup func(home, configDir string), args .
 	t.Helper()
 
 	base := t.TempDir()
+	cacheHome := shortCacheDir(t)
 	configDir := filepath.Join(base, "config")
 	for _, kv := range [][2]string{
 		{"HOME", base},
 		{"XDG_CONFIG_HOME", configDir},
-		{"XDG_CACHE_HOME", filepath.Join(base, "cache")},
+		{"XDG_CACHE_HOME", cacheHome},
 		{"XDG_DATA_HOME", filepath.Join(base, "data")},
 		{"TERM", "dumb"},
 		{"PLAKAR_REPOSITORY", ""},
@@ -30,6 +32,8 @@ func runEntryPointCov80(t *testing.T, setup func(home, configDir string), args .
 	} {
 		t.Setenv(kv[0], kv[1])
 	}
+	// The test binary cannot be spawned as cached: stand one in.
+	startFakeCached(t, filepath.Join(cacheHome, "plakar"), utils.GetVersion())
 
 	if setup != nil {
 		setup(base, filepath.Join(configDir, "plakar"))

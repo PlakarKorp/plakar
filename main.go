@@ -508,7 +508,7 @@ func entryPoint() int {
 
 	// If we are working on a repo, rebuild the state.
 	if cmd.GetFlags()&subcommands.BeforeRepositoryOpen == 0 && cmd.GetFlags()&subcommands.BeforeRepositoryWithStorage == 0 {
-		_, err = cached.RebuildStateFromStore(ctx, repo.Configuration().RepositoryID, storeConfig, false)
+		status, err = cached.RebuildStateFromStore(ctx, repo.Configuration().RepositoryID, storeConfig, false)
 		if err == nil {
 			status, err = task.RunCommand(ctx, cmd, repo, "@agentless")
 		}
@@ -523,7 +523,7 @@ func entryPoint() int {
 			err = context.Cause(ctx)
 		}
 
-		logger.Printf("%s: %s\n", progName(), utils.SanitizeText(err.Error()))
+		logger.Stderr("%s: %s\n", progName(), utils.SanitizeText(err.Error()))
 		if errors.Is(err, cached.ErrWrongVersion) {
 			logger.Stderr("To stop the current cached, run:")
 			logger.Stderr("\t$ plakar cached stop")

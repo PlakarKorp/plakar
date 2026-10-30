@@ -13,6 +13,7 @@ import (
 	"github.com/PlakarKorp/kloset/logging"
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/exitcodes"
 	"github.com/PlakarKorp/plakar/utils"
 	"github.com/google/uuid"
 	"github.com/vmihailenco/msgpack/v5"
@@ -304,8 +305,8 @@ func TestRebuildStateVersionMismatch(t *testing.T) {
 	if !errorsIsWrongVersion(err) {
 		t.Errorf("error = %v, want ErrWrongVersion", err)
 	}
-	if code != 1 {
-		t.Errorf("exit code = %d, want 1", code)
+	if code != exitcodes.CachedVersionMismatch {
+		t.Errorf("exit code = %d, want %d", code, exitcodes.CachedVersionMismatch)
 	}
 }
 
