@@ -111,6 +111,17 @@ func (s *server) putResource(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Without -allow-delete the store is append-only: overwriting an
+	// existing packfile or state destroys data just like deleting it.
+	// Locks are exempt, a running backup refreshes its lock in place.
+	if s.noDelete && typ != storage.StorageResourceLock {
+		if rd, err := s.store.Get(r.Context(), typ, mac, nil); err == nil {
+			rd.Close()
+			http.Error(w, "not allowed to overwrite", http.StatusConflict)
+			return
+		}
+	}
+
 	if _, err = s.store.Put(r.Context(), typ, mac, r.Body); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}

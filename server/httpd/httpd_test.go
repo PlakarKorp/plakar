@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -66,7 +67,10 @@ func (f *fakeStore) Get(ctx context.Context, typ storage.StorageResource, mac ob
 	if f.getReader != nil {
 		return f.getReader, nil
 	}
-	data := f.getData[typ][mac]
+	data, ok := f.getData[typ][mac]
+	if !ok {
+		return nil, fs.ErrNotExist
+	}
 	return io.NopCloser(bytes.NewReader(data)), nil
 }
 
@@ -453,6 +457,81 @@ func TestPutResource_StoreError(t *testing.T) {
 	mux.ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusInternalServerError, rec.Code)
+}
+
+func TestPutResource_NoDelete_ExistingRefused(t *testing.T) {
+	mac := makeMAC(0x42)
+	for name, typ := range map[string]storage.StorageResource{
+		"packfiles": storage.StorageResourcePackfile,
+		"states":    storage.StorageResourceState,
+	} {
+		t.Run(name, func(t *testing.T) {
+			store := &fakeStore{
+				getData: map[storage.StorageResource]map[objects.MAC][]byte{
+					typ: {mac: []byte("original")},
+				},
+			}
+			mux := Mux(store, true) // noDelete=true
+
+			req := httptest.NewRequest(http.MethodPut,
+				"/resources/"+name+"/"+hex.EncodeToString(mac[:]), strings.NewReader("PWNED"))
+			rec := httptest.NewRecorder()
+			mux.ServeHTTP(rec, req)
+
+			require.Equal(t, http.StatusConflict, rec.Code)
+			require.Nil(t, store.lastPutData)
+		})
+	}
+}
+
+func TestPutResource_NoDelete_NewOk(t *testing.T) {
+	mac := makeMAC(0x42)
+	store := &fakeStore{}
+	mux := Mux(store, true) // noDelete=true
+
+	req := httptest.NewRequest(http.MethodPut,
+		"/resources/packfiles/"+hex.EncodeToString(mac[:]), strings.NewReader("body-bytes"))
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Equal(t, []byte("body-bytes"), store.lastPutData)
+}
+
+func TestPutResource_NoDelete_LockOverwriteOk(t *testing.T) {
+	mac := makeMAC(0x42)
+	store := &fakeStore{
+		getData: map[storage.StorageResource]map[objects.MAC][]byte{
+			storage.StorageResourceLock: {mac: []byte("old-lock")},
+		},
+	}
+	mux := Mux(store, true) // noDelete=true
+
+	req := httptest.NewRequest(http.MethodPut,
+		"/resources/locks/"+hex.EncodeToString(mac[:]), strings.NewReader("new-lock"))
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Equal(t, []byte("new-lock"), store.lastPutData)
+}
+
+func TestPutResource_AllowDelete_OverwriteOk(t *testing.T) {
+	mac := makeMAC(0x42)
+	store := &fakeStore{
+		getData: map[storage.StorageResource]map[objects.MAC][]byte{
+			storage.StorageResourcePackfile: {mac: []byte("original")},
+		},
+	}
+	mux := Mux(store, false) // noDelete=false
+
+	req := httptest.NewRequest(http.MethodPut,
+		"/resources/packfiles/"+hex.EncodeToString(mac[:]), strings.NewReader("replacement"))
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Equal(t, []byte("replacement"), store.lastPutData)
 }
 
 func TestDeleteResource_Ok(t *testing.T) {
