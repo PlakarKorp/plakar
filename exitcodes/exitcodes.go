@@ -32,4 +32,9 @@ const (
 	// (corrupted chunks, Merkle tree mismatch).
 	// Corresponds to EX_DATAERR from sysexits.h.
 	IntegrityFailure = 65
+
+	// CachedVersionMismatch indicates the running cached daemon belongs
+	// to a different plakar version; stopping it and retrying fixes it.
+	// Corresponds to EX_TEMPFAIL from sysexits.h.
+	CachedVersionMismatch = 75
 )

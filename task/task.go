@@ -4,6 +4,7 @@ import (
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/exitcodes"
 	"github.com/PlakarKorp/plakar/reporting"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/subcommands/backup"
@@ -60,6 +61,12 @@ func RunCommand(ctx *appcontext.AppContext, cmd subcommands.Subcommand, repo *re
 		}
 	} else {
 		status, err = cmd.Execute(ctx, repo)
+	}
+
+	// An error is a failure even when the command forgot to say so;
+	// otherwise the report would record the task as done.
+	if err != nil && status == 0 {
+		status = exitcodes.Failure
 	}
 
 	if status == 0 {

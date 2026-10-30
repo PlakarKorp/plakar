@@ -25,10 +25,11 @@ func runEntryPoint(t *testing.T, args ...string) (status int, stdout, stderr str
 
 	// Hermetic directories.
 	base := t.TempDir()
+	cacheHome := shortCacheDir(t)
 	for _, kv := range [][2]string{
 		{"HOME", base},
 		{"XDG_CONFIG_HOME", filepath.Join(base, "config")},
-		{"XDG_CACHE_HOME", filepath.Join(base, "cache")},
+		{"XDG_CACHE_HOME", cacheHome},
 		{"XDG_DATA_HOME", filepath.Join(base, "data")},
 		{"TERM", "dumb"},          // force stdio renderer, no TUI
 		{"PLAKAR_REPOSITORY", ""}, // don't inherit a real repo
@@ -36,6 +37,8 @@ func runEntryPoint(t *testing.T, args ...string) (status int, stdout, stderr str
 	} {
 		t.Setenv(kv[0], kv[1])
 	}
+	// The test binary cannot be spawned as cached: stand one in.
+	startFakeCached(t, filepath.Join(cacheHome, "plakar"), utils.GetVersion())
 
 	// Save and restore global process state.
 	oldArgs := os.Args
