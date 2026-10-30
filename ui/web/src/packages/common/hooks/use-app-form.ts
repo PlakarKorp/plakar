@@ -21,6 +21,7 @@ import {
   TagsField,
   TextAreaField,
   TextField,
+  TimeField,
   ToggleField,
 } from "../components/form";
 
@@ -45,6 +46,7 @@ export const { useAppForm, withFieldGroup, withForm } = createFormHook({
     TagsField,
     TextAreaField,
     TextField,
+    TimeField,
     ToggleField,
   },
   formComponents: {

@@ -20,4 +20,5 @@ export * from "./tag-toggle-group-field";
 export * from "./tags-field";
 export * from "./text-area-field";
 export * from "./text-field";
+export * from "./time-field";
 export * from "./toggle-field";

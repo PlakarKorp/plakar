@@ -2,18 +2,26 @@ import {
   ComboBox,
   ComboBoxOption,
   ComboBoxProps,
+  Select,
 } from "@plakar-ui/ui/components";
 
 import { useFieldContext } from "../../hooks/form-context";
 import { useFormReadOnly } from "../../hooks/use-form-read-only";
 
+export type ComboBoxSection = { title: string; options: ComboBoxOption[] };
+
 type ComboBoxFieldProps = Omit<
   ComboBoxProps,
   "selectedKey" | "onSelectionChange" | "onBlur" | "isInvalid"
-> & { options: ComboBoxOption[] };
+> &
+  (
+    | { options: ComboBoxOption[]; sections?: never }
+    | { sections: ComboBoxSection[]; options?: never }
+  );
 
 export function ComboBoxField({
   options,
+  sections,
   supportText,
   ...props
 }: ComboBoxFieldProps) {
@@ -30,9 +38,17 @@ export function ComboBoxField({
       {...props}
       isReadOnly={isReadOnly || props.isReadOnly}
     >
-      {options.map(({ id, name }) => (
-        <ComboBox.Item key={id} id={id} name={name} />
-      ))}
+      {sections
+        ? sections.map((section) => (
+            <Select.Section key={section.title} title={section.title}>
+              {section.options.map(({ id, name }) => (
+                <ComboBox.Item key={id} id={id} name={name} />
+              ))}
+            </Select.Section>
+          ))
+        : options.map(({ id, name }) => (
+            <ComboBox.Item key={id} id={id} name={name} />
+          ))}
     </ComboBox>
   );
 }
