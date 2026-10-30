@@ -84,6 +84,7 @@ export * from "./terminal/terminal";
 export * from "./text-area/text-area";
 export * from "./text-highlight/text-highlight";
 export * from "./text-input/text-input";
+export * from "./time-input/time-input";
 export * from "./toaster/toaster";
 export * from "./toggle/toggle";
 export * from "./toggle-button-group/toggle-button-group";
