@@ -5,14 +5,14 @@ go 1.26.10
 require (
 	github.com/PlakarKorp/go-human2duration v0.1.6
 	github.com/PlakarKorp/go-signify v0.1.0
-	github.com/PlakarKorp/integration-grpc v1.1.2
-	github.com/PlakarKorp/integrations/fs v1.1.9
-	github.com/PlakarKorp/integrations/http v1.1.4
-	github.com/PlakarKorp/integrations/ptar v1.1.1
-	github.com/PlakarKorp/integrations/stdio v1.1.0
-	github.com/PlakarKorp/integrations/tar v1.1.1
-	github.com/PlakarKorp/kloset v1.2.0-alpha.2.0.20261026160819-2efc3399e223
-	github.com/PlakarKorp/pkg v1.1.10
+	github.com/PlakarKorp/integration-sdk v1.1.2
+	github.com/PlakarKorp/integrations/fs v1.1.10
+	github.com/PlakarKorp/integrations/http v1.1.5
+	github.com/PlakarKorp/integrations/ptar v1.1.2
+	github.com/PlakarKorp/integrations/stdio v1.1.1
+	github.com/PlakarKorp/integrations/tar v1.1.2
+	github.com/PlakarKorp/kloset v1.2.0-alpha.2.0.20261030154357-79368e26560b
+	github.com/PlakarKorp/pkg v1.1.11
 	github.com/alecthomas/chroma v0.10.0
 	github.com/anacrolix/fuse v0.3.3-0.20260723023734-9e1272bc0085
 	github.com/charmbracelet/bubbletea v1.3.10
