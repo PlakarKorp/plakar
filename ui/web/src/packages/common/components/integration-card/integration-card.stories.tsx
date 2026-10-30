@@ -79,6 +79,19 @@ export const UpToDate: Story = {
   },
 };
 
+export const WithQuickActions: Story = {
+  args: {
+    ...UpToDate.args,
+    quickActions: [{ label: "Add store", href: "#" }],
+  },
+};
+
+export const WithoutDocumentation: Story = {
+  args: {
+    detailHref: undefined,
+  },
+};
+
 export const BuiltIn: Story = {
   args: {
     name: "fs",

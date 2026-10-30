@@ -45,6 +45,15 @@ export const Updating: Story = {
   },
 };
 
+export const WithQuickActions: Story = {
+  args: {
+    quickActions: [
+      { label: "Add inventory", href: "#" },
+      { label: "Add secret provider", href: "#" },
+    ],
+  },
+};
+
 export const Unstable: Story = {
   args: {
     name: "oci",

@@ -4,6 +4,11 @@ import { LinkProps, MenuTrigger, Popover } from "react-aria-components";
 
 import { RemoveIntegrationModal } from "./remove-integration-modal";
 
+export type IntegrationQuickAction = {
+  label: string;
+  href: LinkProps["href"];
+};
+
 type IntegrationActionsMenuProps = {
   displayName: string;
   version: string;
@@ -11,6 +16,7 @@ type IntegrationActionsMenuProps = {
   latestVersion?: string;
   onUpgrade?: () => void;
   onRemove?: () => void;
+  quickActions?: IntegrationQuickAction[];
   pending?: boolean;
   isDisabled?: boolean;
   variant?: ComponentProps<typeof IconButton>["variant"];
@@ -24,6 +30,7 @@ export function IntegrationActionsMenu({
   latestVersion,
   onUpgrade,
   onRemove,
+  quickActions = [],
   pending = false,
   isDisabled = false,
   variant = "tertiary",
@@ -31,7 +38,7 @@ export function IntegrationActionsMenu({
 }: IntegrationActionsMenuProps) {
   const [isConfirmingRemove, setIsConfirmingRemove] = useState(false);
 
-  if (!latestVersion && !detailHref && !onRemove) {
+  if (!latestVersion && !detailHref && !onRemove && quickActions.length === 0) {
     return null;
   }
 
@@ -55,6 +62,14 @@ export function IntegrationActionsMenu({
                 isDisabled={!onUpgrade || pending || isDisabled}
               />
             )}
+            {quickActions.map(({ label, href }) => (
+              <Menu.Item
+                key={label}
+                label={label}
+                leftIcon="plus"
+                href={href}
+              />
+            ))}
             {detailHref && (
               <Menu.Item
                 label="Read documentation"
