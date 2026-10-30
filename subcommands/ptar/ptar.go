@@ -138,46 +138,32 @@ func (cmd *Ptar) Parse(ctx *appcontext.AppContext, args []string) error {
 	cmd.Excludes = excludes
 
 	for _, syncTarget := range cmd.SyncTargets {
-		var peerSecret []byte
+		if err := func() error {
+			var peerSecret []byte
 
-		storeConfig, err := ctx.Config.GetRepository(syncTarget)
-		if err != nil {
-			return fmt.Errorf("peer repository: %w", err)
-		}
+			storeConfig, err := ctx.Config.GetRepository(syncTarget)
+			if err != nil {
+				return fmt.Errorf("peer repository: %w", err)
+			}
 
-		peerStore, peerStoreSerializedConfig, err := storage.Open(ctx.GetInner(), storeConfig)
-		if err != nil {
-			return err
-		}
+			peerStore, peerStoreSerializedConfig, err := storage.Open(ctx.GetInner(), storeConfig)
+			if err != nil {
+				return err
+			}
+			defer peerStore.Close(ctx)
 
-		peerStoreConfig, err := storage.NewConfigurationFromWrappedBytes(peerStoreSerializedConfig)
-		if err != nil {
-			return err
-		}
+			peerStoreConfig, err := storage.NewConfigurationFromWrappedBytes(peerStoreSerializedConfig)
+			if err != nil {
+				return err
+			}
 
-		if err := utils.CheckPlaintext(storeConfig["location"], peerStoreConfig.Encryption != nil); err != nil {
-			return err
-		}
+			if err := utils.CheckPlaintext(storeConfig["location"], peerStoreConfig.Encryption != nil); err != nil {
+				return err
+			}
 
-		if peerStoreConfig.Encryption != nil {
-			if pass, ok := storeConfig["passphrase"]; ok {
-				key, err := encryption.DeriveKey(peerStoreConfig.Encryption.KDFParams, []byte(pass))
-				if err != nil {
-					return err
-				}
-				if !encryption.VerifyCanary(peerStoreConfig.Encryption, key) {
-					return fmt.Errorf("invalid passphrase")
-				}
-				peerSecret = key
-			} else {
-				for {
-					passphrase, err := utils.GetPassphrase("source repository")
-					if err != nil {
-						fmt.Fprintf(os.Stderr, "%s\n", err)
-						continue
-					}
-
-					key, err := encryption.DeriveKey(peerStoreConfig.Encryption.KDFParams, passphrase)
+			if peerStoreConfig.Encryption != nil {
+				if pass, ok := storeConfig["passphrase"]; ok {
+					key, err := encryption.DeriveKey(peerStoreConfig.Encryption.KDFParams, []byte(pass))
 					if err != nil {
 						return err
 					}
@@ -185,17 +171,37 @@ func (cmd *Ptar) Parse(ctx *appcontext.AppContext, args []string) error {
 						return fmt.Errorf("invalid passphrase")
 					}
 					peerSecret = key
-					break
+				} else {
+					for {
+						passphrase, err := utils.GetPassphrase("source repository")
+						if err != nil {
+							fmt.Fprintf(os.Stderr, "%s\n", err)
+							continue
+						}
+
+						key, err := encryption.DeriveKey(peerStoreConfig.Encryption.KDFParams, passphrase)
+						if err != nil {
+							return err
+						}
+						if !encryption.VerifyCanary(peerStoreConfig.Encryption, key) {
+							return fmt.Errorf("invalid passphrase")
+						}
+						peerSecret = key
+						break
+					}
 				}
 			}
-		}
 
-		peerCtx := appcontext.NewAppContextFrom(ctx)
-		_, err = repository.NewNoRebuild(peerCtx.GetInner(), peerSecret, peerStore, peerStoreSerializedConfig, true)
-		if err != nil {
+			peerCtx := appcontext.NewAppContextFrom(ctx)
+			_, err = repository.NewNoRebuild(peerCtx.GetInner(), peerSecret, peerStore, peerStoreSerializedConfig, true)
+			if err != nil {
+				return err
+			}
+			cmd.SyncSecrets = append(cmd.SyncSecrets, peerSecret)
+			return nil
+		}(); err != nil {
 			return err
 		}
-		cmd.SyncSecrets = append(cmd.SyncSecrets, peerSecret)
 	}
 
 	if hashing.GetHasher(strings.ToUpper(cmd.Hashing)) == nil {
@@ -323,23 +329,29 @@ func (cmd *Ptar) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (
 
 	repoWriter := repo.NewRepositoryWriter(scanCache, identifier, repository.PtarType, "")
 	for i, syncTarget := range cmd.SyncTargets {
-		storeConfig, err := ctx.Config.GetRepository(syncTarget)
-		if err != nil {
-			return 1, fmt.Errorf("source repository: %w", err)
-		}
+		if err := func() error {
+			storeConfig, err := ctx.Config.GetRepository(syncTarget)
+			if err != nil {
+				return fmt.Errorf("source repository: %w", err)
+			}
 
-		peerStore, peerStoreSerializedConfig, err := storage.Open(ctx.GetInner(), storeConfig)
-		if err != nil {
-			return 1, fmt.Errorf("could not open source store %s: %s", syncTarget, err)
-		}
+			peerStore, peerStoreSerializedConfig, err := storage.Open(ctx.GetInner(), storeConfig)
+			if err != nil {
+				return fmt.Errorf("could not open source store %s: %s", syncTarget, err)
+			}
+			defer peerStore.Close(ctx)
 
-		srcCtx := appcontext.NewAppContextFrom(ctx)
-		srcRepository, err := repository.New(srcCtx.GetInner(), cmd.SyncSecrets[i], peerStore, peerStoreSerializedConfig)
-		if err != nil {
-			return 1, fmt.Errorf("could not open source repository %s: %s", syncTarget, err)
-		}
+			srcCtx := appcontext.NewAppContextFrom(ctx)
+			srcRepository, err := repository.New(srcCtx.GetInner(), cmd.SyncSecrets[i], peerStore, peerStoreSerializedConfig)
+			if err != nil {
+				return fmt.Errorf("could not open source repository %s: %s", syncTarget, err)
+			}
 
-		if err := cmd.synchronize(ctx, srcRepository, repoWriter); err != nil {
+			if err := cmd.synchronize(ctx, srcRepository, repoWriter); err != nil {
+				return err
+			}
+			return nil
+		}(); err != nil {
 			return 1, err
 		}
 	}
@@ -363,58 +375,64 @@ func (cmd *Ptar) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (
 
 func (cmd *Ptar) backup(ctx *appcontext.AppContext, repo *repository.RepositoryWriter) error {
 	for _, loc := range cmd.BackupTargets {
-		opts := map[string]string{
-			"location": loc,
-		}
-		if strings.HasPrefix(loc, "@") {
-			remote, ok := ctx.Config.GetSource(loc[1:])
-			if !ok {
-				return fmt.Errorf("could not resolve importer: %s", loc)
+		if err := func() error {
+			opts := map[string]string{
+				"location": loc,
 			}
-			if _, ok := remote["location"]; !ok {
-				return fmt.Errorf("could not resolve importer location: %s", loc)
+			if strings.HasPrefix(loc, "@") {
+				remote, ok := ctx.Config.GetSource(loc[1:])
+				if !ok {
+					return fmt.Errorf("could not resolve importer: %s", loc)
+				}
+				if _, ok := remote["location"]; !ok {
+					return fmt.Errorf("could not resolve importer location: %s", loc)
+				}
+				opts = remote
 			}
-			opts = remote
-		}
 
-		importerOpts := ctx.ImporterOpts()
-		importerOpts.Excludes = cmd.Excludes
-		imp, err := importer.NewImporter(ctx.GetInner(), importerOpts, opts)
-		if err != nil {
-			return err
-		}
+			importerOpts := ctx.ImporterOpts()
+			importerOpts.Excludes = cmd.Excludes
+			imp, err := importer.NewImporter(ctx.GetInner(), importerOpts, opts)
+			if err != nil {
+				return err
+			}
+			defer imp.Close(ctx)
 
-		backupOptions := &snapshot.BuilderOptions{
-			NoCheckpoint: true,
-			NoCommit:     true,
-		}
+			backupOptions := &snapshot.BuilderOptions{
+				NoCheckpoint: true,
+				NoCommit:     true,
+			}
 
-		source, err := snapshot.NewSource(ctx, imp)
-		if err != nil {
-			return err
-		}
+			source, err := snapshot.NewSource(ctx, imp)
+			if err != nil {
+				return err
+			}
 
-		if err := source.SetExcludes(cmd.Excludes); err != nil {
-			return err
-		}
+			if err := source.SetExcludes(cmd.Excludes); err != nil {
+				return err
+			}
 
-		snap, err := snapshot.CreateWithRepositoryWriter(repo, backupOptions, objects.NilMac)
-		if err != nil {
-			return err
-		}
+			snap, err := snapshot.CreateWithRepositoryWriter(repo, backupOptions, objects.NilMac)
+			if err != nil {
+				return err
+			}
 
-		err = snap.Backup(source)
-		if err != nil {
-			return err
-		}
+			err = snap.Backup(source)
+			if err != nil {
+				return err
+			}
 
-		_, err = snap.PutSnapshot()
-		if err != nil {
-			return err
-		}
+			_, err = snap.PutSnapshot()
+			if err != nil {
+				return err
+			}
 
-		err = snap.Close()
-		if err != nil {
+			err = snap.Close()
+			if err != nil {
+				return err
+			}
+			return nil
+		}(); err != nil {
 			return err
 		}
 	}
