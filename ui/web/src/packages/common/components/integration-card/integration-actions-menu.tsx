@@ -1,4 +1,5 @@
 import { IconButton, Menu } from "@plakar-ui/ui/components";
+import clsx from "clsx";
 import { ComponentProps, useState } from "react";
 import { LinkProps, MenuTrigger, Popover } from "react-aria-components";
 
@@ -21,6 +22,7 @@ type IntegrationActionsMenuProps = {
   isDisabled?: boolean;
   variant?: ComponentProps<typeof IconButton>["variant"];
   size?: ComponentProps<typeof IconButton>["size"];
+  className?: string;
 };
 
 export function IntegrationActionsMenu({
@@ -35,6 +37,7 @@ export function IntegrationActionsMenu({
   isDisabled = false,
   variant = "tertiary",
   size,
+  className,
 }: IntegrationActionsMenuProps) {
   const [isConfirmingRemove, setIsConfirmingRemove] = useState(false);
 
@@ -50,7 +53,7 @@ export function IntegrationActionsMenu({
           aria-label={`Actions for ${displayName}`}
           variant={variant}
           size={size}
-          className="shrink-0"
+          className={clsx("shrink-0", className)}
         />
         <Popover placement="bottom end" offset={4}>
           <Menu>

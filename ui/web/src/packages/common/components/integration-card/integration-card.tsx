@@ -130,6 +130,7 @@ export function IntegrationCard({
           pending={pending}
           isDisabled={isDisabled}
           size="sm"
+          className="self-start"
         />
       </div>
       <Typography size="sm" className="text-secondary line-clamp-2 min-h-10">
