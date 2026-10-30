@@ -2,6 +2,8 @@ package ui
 
 import (
 	"bytes"
+	"net"
+	"net/http"
 	"os"
 	"testing"
 	"time"
@@ -96,4 +98,43 @@ func TestUiExecuteStartsAndShutsDown(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("Ui.Execute did not return after context cancellation")
 	}
+}
+
+func TestUiTokenFromEnvironment(t *testing.T) {
+	t.Setenv("PLAKAR_UI_TOKEN", "pinned-token")
+
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	addr := l.Addr().String()
+	require.NoError(t, l.Close())
+
+	repo, ctx := ptesting.GenerateRepository(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil), nil)
+	cmd := &Ui{}
+	require.NoError(t, cmd.Parse(ctx, []string{"-addr", addr, "-no-spawn", "-no-refresh"}))
+
+	done := make(chan struct{})
+	go func() {
+		cmd.Execute(ctx, repo)
+		close(done)
+	}()
+	t.Cleanup(func() {
+		ctx.GetInner().Cancel(nil)
+		<-done
+	})
+
+	status := func(token string) int {
+		req, err := http.NewRequest(http.MethodGet, "http://"+addr+"/api/info", nil)
+		require.NoError(t, err)
+		req.Header.Set("Authorization", "Bearer "+token)
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return 0
+		}
+		res.Body.Close()
+		return res.StatusCode
+	}
+
+	require.Eventually(t, func() bool { return status("pinned-token") == http.StatusOK },
+		5*time.Second, 20*time.Millisecond)
+	require.Equal(t, http.StatusUnauthorized, status("another-token"))
 }

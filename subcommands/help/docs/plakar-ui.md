@@ -66,6 +66,16 @@ The options are as follows:
 
 > Path to a certificate private key file in PEM format.
 
+# ENVIRONMENT
+
+`PLAKAR_UI_TOKEN`
+
+> Authentication token to use instead of generating a random one at
+> each start.
+> Ignored when
+> **-no-auth**
+> is given.
+
 # EXIT STATUS
 
 The **plakar-ui** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
