@@ -72,7 +72,10 @@ export function IntegrationPagedGrid<
       {query.isPending ? (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: SKELETON_CARDS }, (_, index) => (
-            <IntegrationCardSkeleton key={index} />
+            <IntegrationCardSkeleton
+              key={index}
+              hasDocumentation={catalog.detailHref !== undefined}
+            />
           ))}
         </div>
       ) : query.isError ? (

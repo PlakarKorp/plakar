@@ -104,3 +104,7 @@ export const BuiltIn: Story = {
 export const Loading: Story = {
   render: () => <IntegrationCardSkeleton />,
 };
+
+export const LoadingWithoutDocumentation: Story = {
+  render: () => <IntegrationCardSkeleton hasDocumentation={false} />,
+};
