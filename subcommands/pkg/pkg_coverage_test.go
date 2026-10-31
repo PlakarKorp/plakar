@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/PlakarKorp/kloset/connectors"
-	"github.com/PlakarKorp/kloset/location"
+	"github.com/PlakarKorp/integration-sdk/location"
 	ppkg "github.com/PlakarKorp/pkg"
 	ptesting "github.com/PlakarKorp/plakar/testing"
 	"github.com/stretchr/testify/require"

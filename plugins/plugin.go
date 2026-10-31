@@ -6,25 +6,23 @@ import (
 	"io"
 	"path/filepath"
 
-	grpc_exporter "github.com/PlakarKorp/integration-grpc/exporter"
-	grpc_importer "github.com/PlakarKorp/integration-grpc/importer"
-	grpc_storage "github.com/PlakarKorp/integration-grpc/storage"
+	"github.com/PlakarKorp/integration-sdk/client"
+	"github.com/PlakarKorp/integration-sdk/location"
 	"github.com/PlakarKorp/kloset/connectors"
 	"github.com/PlakarKorp/kloset/connectors/exporter"
 	"github.com/PlakarKorp/kloset/connectors/importer"
 	"github.com/PlakarKorp/kloset/connectors/storage"
-	"github.com/PlakarKorp/kloset/location"
 	"github.com/PlakarKorp/pkg"
 )
 
 func RegisterStorage(proto string, flags location.Flags, runner Runner) error {
 	err := storage.Register(proto, flags, func(ctx context.Context, s string, config map[string]string) (storage.Store, error) {
-		client, err := connectPlugin(ctx, runner)
+		gclient, err := connectPlugin(ctx, runner)
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to plugin: %w", err)
 		}
 
-		return grpc_storage.NewStorage(ctx, client, s, config)
+		return client.NewStorage(ctx, gclient, s, config)
 	})
 	if err != nil {
 		return err
@@ -35,11 +33,11 @@ func RegisterStorage(proto string, flags location.Flags, runner Runner) error {
 
 func RegisterImporter(proto string, flags location.Flags, runner Runner) error {
 	err := importer.Register(proto, flags, func(ctx context.Context, o *connectors.Options, s string, config map[string]string) (importer.Importer, error) {
-		client, err := connectPlugin(ctx, runner)
+		gclient, err := connectPlugin(ctx, runner)
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to plugin: %w", err)
 		}
-		return grpc_importer.NewImporter(ctx, client, o, s, config)
+		return client.NewImporter(ctx, gclient, o, s, config)
 	})
 	if err != nil {
 		return err
@@ -49,12 +47,12 @@ func RegisterImporter(proto string, flags location.Flags, runner Runner) error {
 
 func RegisterExporter(proto string, flags location.Flags, runner Runner) error {
 	err := exporter.Register(proto, flags, func(ctx context.Context, o *connectors.Options, s string, config map[string]string) (exporter.Exporter, error) {
-		client, err := connectPlugin(ctx, runner)
+		gclient, err := connectPlugin(ctx, runner)
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to plugin: %w", err)
 		}
 
-		return grpc_exporter.NewExporter(ctx, client, o, s, config)
+		return client.NewExporter(ctx, gclient, o, s, config)
 	})
 	if err != nil {
 		return err
