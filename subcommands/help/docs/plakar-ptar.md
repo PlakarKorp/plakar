@@ -36,6 +36,17 @@ options naming remote or local kloset repositories, and/or one or more
 arguments identifying files or directories to back up.
 The destination archive name is mandatory and supplied with
 **-o**.
+A
+*path*
+of the form
+"@*name*"
+references a source connector configured with
+plakar-source(1),
+whose own
+**ignore**
+and
+**ignore-file**
+rules are applied before, and overridden by, the flags below.
 
 Unless the
 **-overwrite**
@@ -116,6 +127,7 @@ The **plakar-ptar** utility exits&#160;0 on success, and&#160;&gt;0 if an error 
 
 plakar(1),
 plakar-backup(1),
-plakar-create(1)
+plakar-create(1),
+plakar-source(1)
 
 Plakar - May 5, 2026 - PLAKAR-PTAR(1)
