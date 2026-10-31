@@ -1,0 +1,96 @@
+.Dd September 28, 2026
+.Dt PLAKAR-DOCTOR 1
+.Os
+.Sh NAME
+.Nm plakar-doctor
+.Nd Measure the read reliability and latency of a Plakar repository store
+.Sh SYNOPSIS
+.Nm plakar doctor
+.Op Fl deep
+.Op Fl duration Ar time
+.Op Fl n Ar count
+.Op Fl retries Ar count
+.Op Fl threshold Ar percent
+.Sh DESCRIPTION
+The
+.Nm plakar doctor
+command reads a random sample of blobs from the repository and reports
+how many reads failed, along with a latency distribution and the
+throughput.
+It helps telling whether a storage connector is healthy before opening
+an issue, and can be used from monitoring.
+.Pp
+The sample is drawn uniformly at random from the blobs recorded in the
+local repository state, whatever their type, so choosing it does not
+read anything from the store.
+Only the reads of the sampled blobs are measured.
+They run in parallel, as many at a time as the
+.Fl concurrency
+option of
+.Xr plakar 1
+allows.
+Every failure is printed with the type of the blob, its mac, the
+packfile holding it and the error returned by the store.
+When no read fails, the report gives the failure rate the sample rules
+out at 95% confidence: a clean run over few blobs cannot tell a healthy
+store from one that fails rarely.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl deep
+Verify the content of each blob against its mac.
+This tells a read that failed from a read that returned the wrong data.
+Blobs of types that are not keyed by the mac of their content are read
+but not verified, and their number is reported.
+.It Fl duration Ar time
+Stop reading after
+.Ar time
+has elapsed.
+Choosing the sample is not counted.
+A value of 0 disables the limit.
+The default is one minute.
+.It Fl n Ar count
+Read at most
+.Ar count
+blobs.
+The default is 60000, enough to catch a failure rate of one read in
+18000 with 95% probability.
+On a slow store,
+.Fl duration
+usually ends the run first.
+.It Fl retries Ar count
+Read a failed blob again up to
+.Ar count
+times, and report whether a retry read it.
+A failure that a retry recovers is transient; one that every retry
+repeats is not.
+The original failure is still counted in the failure rate and the exit
+status.
+The default is 2.
+.It Fl threshold Ar percent
+Exit with a non-zero status only if the failure rate is above
+.Ar percent ,
+between 0 and 100.
+The default is 0, any failure is reported as an error.
+The threshold only applies to failed reads: a blob that does not match
+its mac is always an error.
+.El
+.Sh EXIT STATUS
+The
+.Nm plakar doctor
+utility exits 0 if the failure rate is not above the threshold,
+65 if some blobs did not match their mac,
+and 1 if reads failed or another error occurred.
+.Sh EXAMPLES
+Read blobs for up to a minute and print the results:
+.Bd -literal -offset indent
+$ plakar doctor
+.Ed
+.Pp
+Verify 1000 blobs and tolerate up to one percent of failures:
+.Bd -literal -offset indent
+$ plakar doctor -n 1000 -deep -threshold 1
+.Ed
+.Sh SEE ALSO
+.Xr plakar 1 ,
+.Xr plakar-check 1
