@@ -204,6 +204,19 @@ func (cmd *Restore) Execute(ctx *appcontext.AppContext, repo *repository.Reposit
 			return 1, err
 		}
 
+		backupErrorCount := uint64(0)
+		for i := 0; i < len(snap.Header.Sources); i++ {
+			s := snap.Header.GetSource(i)
+			backupErrorCount += s.Summary.Directory.Errors + s.Summary.Below.Errors
+		}
+		if backupErrorCount != 0 {
+			errorWord := "errors"
+			if backupErrorCount == 1 {
+				errorWord = "error"
+			}
+			ctx.GetLogger().Warn("snapshot contains %d backup %s; restored files are limited to data that was backed up", backupErrorCount, errorWord)
+		}
+
 		snap.Close()
 	}
 
