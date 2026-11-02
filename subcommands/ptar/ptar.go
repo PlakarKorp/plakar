@@ -366,6 +366,7 @@ func (cmd *Ptar) backup(ctx *appcontext.AppContext, repo *repository.RepositoryW
 		opts := map[string]string{
 			"location": loc,
 		}
+		excludes := cmd.Excludes
 		if strings.HasPrefix(loc, "@") {
 			remote, ok := ctx.Config.GetSource(loc[1:])
 			if !ok {
@@ -375,10 +376,18 @@ func (cmd *Ptar) backup(ctx *appcontext.AppContext, repo *repository.RepositoryW
 				return fmt.Errorf("could not resolve importer location: %s", loc)
 			}
 			opts = remote
+
+			rules, err := utils.SourceIgnoreRules(remote)
+			if err != nil {
+				return fmt.Errorf("source %s: %w", loc, err)
+			}
+			// Command line last: gitignore is last-match-wins and it
+			// takes precedence over the source configuration.
+			excludes = append(rules, cmd.Excludes...)
 		}
 
 		importerOpts := ctx.ImporterOpts()
-		importerOpts.Excludes = cmd.Excludes
+		importerOpts.Excludes = excludes
 		imp, err := importer.NewImporter(ctx.GetInner(), importerOpts, opts)
 		if err != nil {
 			return err
@@ -394,7 +403,7 @@ func (cmd *Ptar) backup(ctx *appcontext.AppContext, repo *repository.RepositoryW
 			return err
 		}
 
-		if err := source.SetExcludes(cmd.Excludes); err != nil {
+		if err := source.SetExcludes(excludes); err != nil {
 			return err
 		}
 

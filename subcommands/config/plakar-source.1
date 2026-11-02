@@ -18,6 +18,30 @@ describing a source for a backup operation.
 A source is defined by at least a location, specifying the importer
 to use, and some importer-specific parameters.
 .Pp
+Two options are interpreted by Plakar itself:
+.Bl -tag -width Ds
+.It Cm ignore Ns = Ns Ar patterns
+A comma-separated list of gitignore-style patterns excluded when
+backing up this source.
+.It Cm ignore-file Ns = Ns Ar files
+A comma-separated list of files holding newline-separated gitignore-style
+patterns, treated as
+.Cm ignore .
+.El
+.Pp
+They apply to
+.Xr plakar-backup 1
+and
+.Xr plakar-ptar 1 .
+The rules given on the command line are applied after them and,
+gitignore matching being last-match-wins, take precedence.
+.Pp
+Sources sharing an importer type and an origin are backed up through a
+single set of exclusion rules.
+.Xr plakar-backup 1
+refuses a run in which two of them carry different rules rather than
+apply one source's rules to the other.
+.Pp
 The subcommands are as follows:
 .Bl -tag -width Ds
 .It Cm add Ar name Ar location Op Ar option Ns No = Ns Ar value ...
@@ -98,4 +122,6 @@ for the source entry identified by
 .Sh EXIT STATUS
 .Ex -std
 .Sh SEE ALSO
-.Xr plakar 1
+.Xr plakar 1 ,
+.Xr plakar-backup 1 ,
+.Xr plakar-ptar 1

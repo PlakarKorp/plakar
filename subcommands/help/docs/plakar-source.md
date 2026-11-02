@@ -21,6 +21,32 @@ describing a source for a backup operation.
 A source is defined by at least a location, specifying the importer
 to use, and some importer-specific parameters.
 
+Two options are interpreted by Plakar itself:
+
+**ignore**=*patterns*
+
+> A comma-separated list of gitignore-style patterns excluded when
+> backing up this source.
+
+**ignore-file**=*files*
+
+> A comma-separated list of files holding newline-separated gitignore-style
+> patterns, treated as
+> **ignore**.
+
+They apply to
+plakar-backup(1)
+and
+plakar-ptar(1).
+The rules given on the command line are applied after them and,
+gitignore matching being last-match-wins, take precedence.
+
+Sources sharing an importer type and an origin are backed up through a
+single set of exclusion rules.
+plakar-backup(1)
+refuses a run in which two of them carry different rules rather than
+apply one source's rules to the other.
+
 The subcommands are as follows:
 
 **add** *name* *location* \[*option*=*value ...*]
@@ -117,6 +143,8 @@ The **plakar-source** utility exits&#160;0 on success, and&#160;&gt;0 if an erro
 
 # SEE ALSO
 
-plakar(1)
+plakar(1),
+plakar-backup(1),
+plakar-ptar(1)
 
 Plakar - September 11, 2025 - PLAKAR-SOURCE(1)
