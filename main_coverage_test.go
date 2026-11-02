@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/PlakarKorp/plakar/utils"
 )
 
 // runEntryPoint drives the global entryPoint() dispatcher in a hermetic

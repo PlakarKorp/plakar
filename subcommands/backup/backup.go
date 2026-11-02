@@ -107,7 +107,7 @@ func (e *tagFlags) asList() []string {
 }
 
 func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
-	var opt_ignore_file string
+	var opt_ignore_files ignoreFlags
 	var opt_ignore ignoreFlags
 	var opt_tags tagFlags
 
@@ -129,7 +129,7 @@ func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
 	flags.StringVar(&cmd.Environment, "environment", "", "backup environment")
 	flags.StringVar(&cmd.Perimeter, "perimeter", "", "backup perimeter")
 	flags.StringVar(&cmd.Job, "job", "", "backup job")
-	flags.StringVar(&opt_ignore_file, "ignore-file", "", "path to a file containing newline-separated gitignore patterns, treated as -ignore")
+	flags.Var(&opt_ignore_files, "ignore-file", "path to a file containing newline-separated gitignore patterns, treated as -ignore; can be specified multiple times")
 	flags.Var(&opt_ignore, "ignore", "gitignore pattern to exclude files, can be specified multiple times to add several exclusion patterns")
 	flags.StringVar(&cmd.PackfileTempStorage, "packfiles", "", "memory or a path to a directory to store temporary packfiles")
 	flags.BoolVar(&cmd.OptCheck, "check", false, "check the snapshot after creating it")
@@ -148,8 +148,8 @@ func (cmd *Backup) Parse(ctx *appcontext.AppContext, args []string) error {
 		}
 	}
 
-	if opt_ignore_file != "" {
-		lines, err := LoadIgnoreFile(opt_ignore_file)
+	for _, ignoreFile := range opt_ignore_files {
+		lines, err := LoadIgnoreFile(ignoreFile)
 		if err != nil {
 			return err
 		}
