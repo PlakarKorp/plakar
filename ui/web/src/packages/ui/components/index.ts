@@ -75,6 +75,7 @@ export * from "./spinner/spinner";
 export * from "./stat-card/stat-card";
 export * from "./step-badge/step-badge";
 export * from "./stepper/stepper";
+export * from "./stepper/use-stepper";
 export * from "./status-dot/status-dot";
 export * from "./tab/tab";
 export * from "./tag-toggle-group/tag-toggle-group";
