@@ -1,4 +1,4 @@
-import { CalendarDateTime } from "@internationalized/date";
+import { CalendarDateTime, Time } from "@internationalized/date";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 import { useAppForm } from "../../hooks";
@@ -18,6 +18,7 @@ function Template({ isReadOnly = false }: { isReadOnly?: boolean }) {
       recurrence: "option1",
       notifications: false,
       date: null as CalendarDateTime | null,
+      time: null as Time | null,
       excluded_from_coverage: false,
     },
     onSubmit: async ({ value }) => {
@@ -173,6 +174,16 @@ function Template({ isReadOnly = false }: { isReadOnly?: boolean }) {
           }}
         >
           {(field) => <field.DateField label="Date" />}
+        </form.AppField>
+
+        <form.AppField
+          name="time"
+          validators={{
+            onSubmit: ({ value }: { value: Time | null }) =>
+              value ? undefined : "Time is required",
+          }}
+        >
+          {(field) => <field.TimeField label="Time" inputWidth="w-28" />}
         </form.AppField>
 
         <form.AppField

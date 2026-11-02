@@ -66,6 +66,8 @@ export type SelectProps = PropsWithChildren<
     SelectValuePrefix?: ReactNode;
     triggerDescription?: ReactNode;
     popoverFooter?: ReactNode;
+    popoverWidth?: "trigger" | "content";
+    supportTextClassName?: string;
     triggerClassName?: string;
     beforeLabelAction?: React.ReactNode;
     labelAction?: React.ReactNode;
@@ -85,6 +87,8 @@ function SelectRoot({
   SelectValuePrefix,
   triggerDescription,
   popoverFooter,
+  popoverWidth = "trigger",
+  supportTextClassName,
   beforeLabelAction,
   labelAction,
   ...props
@@ -248,7 +252,11 @@ function SelectRoot({
           )}
         </div>
 
-        {supportText && <FieldSupportText>{supportText}</FieldSupportText>}
+        {supportText && (
+          <FieldSupportText className={supportTextClassName}>
+            {supportText}
+          </FieldSupportText>
+        )}
 
         <Popover
           offset={4}
@@ -256,7 +264,7 @@ function SelectRoot({
           className={clsx(
             "flex flex-col",
             "rounded-lg border shadow-lg",
-            variant === "heading"
+            variant === "heading" || popoverWidth === "content"
               ? "w-max max-w-[min(28rem,calc(100vw-1rem))] min-w-[var(--trigger-width)]"
               : "w-[var(--trigger-width)]",
             {
