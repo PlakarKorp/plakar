@@ -329,10 +329,6 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 			return 1, err, objects.NilMac, nil
 		}
 
-		if err := source.SetExcludes(cmd.Excludes); err != nil {
-			return 1, err, objects.MAC{}, nil
-		}
-
 		if cmd.DryRun {
 			if err := dryrun(ctx, source, emitter); err != nil {
 				return 1, err, objects.MAC{}, nil
@@ -381,10 +377,6 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 			source, err := snapshot.NewSource(repo.AppContext(), sourcesPerOrigForStats[key]...)
 			if err != nil {
 				return 1, err, objects.NilMac, nil
-			}
-
-			if err := source.SetExcludes(cmd.Excludes); err != nil {
-				return 1, err, objects.MAC{}, nil
 			}
 
 			go func() {
@@ -524,18 +516,7 @@ func dryrun(ctx *appcontext.AppContext, source *snapshot.Source, emitter *events
 			for record := range records {
 				ack(record, results)
 
-				var (
-					pathname = record.Pathname
-					isDir    = false
-				)
-
-				if record.Err == nil && record.FileInfo.Lmode.IsDir() {
-					isDir = true
-				}
-
-				if source.GetExcludes().IsExcluded(pathname, isDir) {
-					continue
-				}
+				pathname := record.Pathname
 
 				emitter.Path(pathname)
 				switch {
@@ -614,19 +595,6 @@ func statistics(ctx *appcontext.AppContext, source *snapshot.Source) FilesystemS
 		progress(ctx, imp, func(records <-chan *connectors.Record, results chan<- *connectors.Result) {
 			for record := range records {
 				ack(record, results)
-
-				var (
-					pathname = record.Pathname
-					isDir    = false
-				)
-
-				if record.Err == nil && record.FileInfo.Lmode.IsDir() {
-					isDir = true
-				}
-
-				if source.GetExcludes().IsExcluded(pathname, isDir) {
-					continue
-				}
 
 				switch {
 				case record.Err != nil:

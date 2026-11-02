@@ -394,10 +394,6 @@ func (cmd *Ptar) backup(ctx *appcontext.AppContext, repo *repository.RepositoryW
 			return err
 		}
 
-		if err := source.SetExcludes(cmd.Excludes); err != nil {
-			return err
-		}
-
 		snap, err := snapshot.CreateWithRepositoryWriter(repo, backupOptions, objects.NilMac)
 		if err != nil {
 			return err

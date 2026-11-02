@@ -75,10 +75,9 @@ func (m *MockFile) ScanResult() *connectors.Record {
 }
 
 type testingOptions struct {
-	name     string
-	tags     []string
-	excludes []string
-	gen      func(chan<- *connectors.Record)
+	name string
+	tags []string
+	gen  func(chan<- *connectors.Record)
 }
 
 func newTestingOptions() *testingOptions {
@@ -98,12 +97,6 @@ func WithName(name string) TestingOptions {
 func WithTags(tags []string) TestingOptions {
 	return func(o *testingOptions) {
 		o.tags = tags
-	}
-}
-
-func WithExcludes(excludes []string) TestingOptions {
-	return func(o *testingOptions) {
-		o.excludes = excludes
 	}
 }
 
@@ -159,9 +152,6 @@ func GenerateSnapshot(t *testing.T, repo *repository.Repository, files []MockFil
 	}
 
 	s, err := snapshot.NewSource(repo.AppContext(), imp)
-	require.NoError(t, err)
-
-	err = s.SetExcludes(o.excludes)
 	require.NoError(t, err)
 
 	err = builder.Backup(s)
