@@ -1,54 +1,28 @@
 import clsx from "clsx";
-import { useState } from "react";
 import { ProgressBar } from "react-aria-components";
 
 import { Icon, StepBadge, Typography } from "..";
+import { StepperState, useStepper } from "./use-stepper";
 
 export type Status = "complete" | "current" | "upcoming";
 
-type StepperProps<T extends readonly string[]> = {
-  steps: T;
+type Variant = "default" | "segmented";
+
+type StepperStepsProps<T extends readonly string[]> = {
+  stepper: StepperState<T>;
   /** Default joins each step to the next; segmented gives every step its own bar. */
-  variant?: "default" | "segmented";
-  children: (props: {
-    currentStep: T[number];
-    setProgress: (value: number) => void;
-    goToPreviousStep: () => void;
-    goToNextStep: () => void;
-  }) => React.ReactNode;
+  variant?: Variant;
 };
 
-export function Stepper<T extends readonly string[]>({
-  steps,
+/**
+ * The steps bar of a stepper whose state the caller holds.
+ */
+export function StepperSteps<T extends readonly string[]>({
+  stepper: { steps, currentIndex, progress },
   variant = "default",
-  children,
-}: StepperProps<T>) {
-  const [progress, setProgress] = useState(0);
-  const [currentStep, setCurrentStep] = useState<T[number]>(steps[0]);
-
-  const currentIndex = steps.indexOf(currentStep);
-  if (currentIndex === -1) {
-    throw new Error(
-      `Current step "${currentStep}" not found in steps: [${steps.join(", ")}]`
-    );
-  }
-
-  const goToPreviousStep = () => {
-    if (currentIndex > 0) {
-      setProgress(0);
-      setCurrentStep(steps[currentIndex - 1]);
-    }
-  };
-
-  const goToNextStep = () => {
-    if (currentIndex < steps.length - 1) {
-      setProgress(0);
-      setCurrentStep(steps[currentIndex + 1]);
-    }
-  };
-
+}: StepperStepsProps<T>) {
   return (
-    <div className="flex w-full flex-col gap-8">
+    <>
       <style>{`
         @keyframes plk-check-pop {
           0%   { transform: scale(0) rotate(-45deg); opacity: 0; }
@@ -97,13 +71,29 @@ export function Stepper<T extends readonly string[]>({
           );
         })}
       </ol>
+    </>
+  );
+}
 
-      {children({
-        currentStep,
-        setProgress,
-        goToPreviousStep,
-        goToNextStep,
-      })}
+type StepperProps<T extends readonly string[]> = Omit<
+  StepperStepsProps<T>,
+  "stepper"
+> & {
+  steps: T;
+  children: (stepper: StepperState<T>) => React.ReactNode;
+};
+
+export function Stepper<T extends readonly string[]>({
+  steps,
+  variant = "default",
+  children,
+}: StepperProps<T>) {
+  const stepper = useStepper(steps);
+
+  return (
+    <div className="flex w-full flex-col gap-8">
+      <StepperSteps stepper={stepper} variant={variant} />
+      {children(stepper)}
     </div>
   );
 }
