@@ -30,6 +30,7 @@ import (
 	"github.com/PlakarKorp/kloset/connectors/importer"
 	"github.com/PlakarKorp/kloset/connectors/storage"
 	"github.com/PlakarKorp/kloset/encryption"
+	"github.com/PlakarKorp/kloset/exclude"
 	"github.com/PlakarKorp/kloset/hashing"
 	"github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/kloset/objects"
@@ -379,6 +380,11 @@ func (cmd *Ptar) backup(ctx *appcontext.AppContext, repo *repository.RepositoryW
 
 		importerOpts := ctx.ImporterOpts()
 		importerOpts.Excludes = cmd.Excludes
+		excludes := exclude.NewRuleSet()
+		if err := excludes.AddRulesFromArray(cmd.Excludes); err != nil {
+			return fmt.Errorf("failed to setup exclude rules: %w", err)
+		}
+
 		imp, err := importer.NewImporter(ctx.GetInner(), importerOpts, opts)
 		if err != nil {
 			return err
