@@ -1,4 +1,4 @@
-.Dd May 5, 2026
+.Dd October 30, 2026
 .Dt PLAKAR-RESTORE 1
 .Os
 .Sh NAME
@@ -72,6 +72,19 @@ Can be used to pass extra arguments to the destination connector.
 The given
 .Ar option
 takes precedence over the configuration file.
+.Pp
+When restoring to the local file system, the following options are
+recognized:
+.Bl -tag -width skip_permissions
+.It Cm skip_permissions Ns = Ns Cm true
+Do not restore file modes.
+By default the mode recorded in the snapshot is restored, including
+the setuid, setgid and sticky bits.
+.It Cm skip_ownership Ns = Ns Cm true
+Do not restore file ownership.
+By default, when running as root, files are given the user and group
+recorded in the snapshot.
+.El
 .El
 .Sh EXIT STATUS
 .Ex -std
@@ -99,6 +112,12 @@ $ plakar restore -to @s3target abc123
 Restore specific path to a specific destination :
 .Bd -literal -offset indent
 $ plakar restore -to  @s3target abc123:/etc/apache2
+.Ed
+.Pp
+Restore without reproducing the modes and ownership recorded in the
+snapshot:
+.Bd -literal -offset indent
+$ plakar restore -o skip_permissions=true -o skip_ownership=true abc123
 .Ed
 .Sh SEE ALSO
 .Xr plakar 1 ,
