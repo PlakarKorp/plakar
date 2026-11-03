@@ -337,8 +337,7 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		}
 
 		var parentVFS *vfs.Filesystem
-
-		if cmd.Cache == "vfs" {
+		if cmd.Cache == "vfs" && source.Flags()&location.FLAG_NOCACHE == 0 {
 			parentID, _, err := locate.Match(repo, &locate.LocateOptions{
 				Filters: locate.LocateFilters{
 					Latest: true,
