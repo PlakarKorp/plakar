@@ -6,6 +6,7 @@ import { JobsBarChart } from "./jobs-bar-chart";
 import { PieChart as PieChartComponent } from "./pie-chart";
 import { RatioBar } from "./ratio-bar";
 import { ResourceLineChart } from "./resource-line-chart";
+import { SparkBars } from "./spark-bars";
 import { UsageBar } from "./usage-bar";
 
 const meta = {
@@ -214,6 +215,19 @@ export const ResourceChart: StoryObj<
   render: (args) => (
     <div className="h-60 w-180">
       <ResourceLineChart {...args} />
+    </div>
+  ),
+};
+
+export const Sparkline: StoryObj<typeof SparkBars> = {
+  args: {
+    data: [0, 2, 1, 0, 3, 4, 2, 0, 0, 5, 3, 2, 4, 6, 1, 0, 2, 3, 5, 4].map(
+      (value, index) => ({ label: `Day ${index + 1}`, value })
+    ),
+  },
+  render: (args) => (
+    <div className="w-40">
+      <SparkBars {...args} />
     </div>
   ),
 };
