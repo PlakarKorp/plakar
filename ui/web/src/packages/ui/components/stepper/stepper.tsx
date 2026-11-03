@@ -12,6 +12,9 @@ type StepperStepsProps<T extends readonly string[]> = {
   stepper: StepperState<T>;
   /** Default joins each step to the next; segmented gives every step its own bar. */
   variant?: Variant;
+
+  /** Completes a step when the user leaves it, not at 100% progress. */
+  completeOnLeave?: boolean;
 };
 
 /**
@@ -20,6 +23,7 @@ type StepperStepsProps<T extends readonly string[]> = {
 export function StepperSteps<T extends readonly string[]>({
   stepper: { steps, currentIndex, progress },
   variant = "default",
+  completeOnLeave = false,
 }: StepperStepsProps<T>) {
   return (
     <>
@@ -45,7 +49,8 @@ export function StepperSteps<T extends readonly string[]>({
       >
         {steps?.map((step, index) => {
           const status =
-            index < currentIndex || (index === currentIndex && progress === 100)
+            index < currentIndex ||
+            (!completeOnLeave && index === currentIndex && progress === 100)
               ? "complete"
               : index === currentIndex
                 ? "current"
@@ -86,13 +91,18 @@ type StepperProps<T extends readonly string[]> = Omit<
 export function Stepper<T extends readonly string[]>({
   steps,
   variant = "default",
+  completeOnLeave,
   children,
 }: StepperProps<T>) {
   const stepper = useStepper(steps);
 
   return (
     <div className="flex w-full flex-col gap-8">
-      <StepperSteps stepper={stepper} variant={variant} />
+      <StepperSteps
+        stepper={stepper}
+        variant={variant}
+        completeOnLeave={completeOnLeave}
+      />
       {children(stepper)}
     </div>
   );
