@@ -114,8 +114,12 @@ const SummarySchema = z
 // ─── Repository info ──────────────────────────────────────────────────────────
 
 const RepositoryInfoConfigurationSchema = z.object({
+  version: VersionSchema,
   timestamp: z.string().transform(Date),
   repository_id: z.string().transform(Checksum),
+  packfile: z.object({
+    max_size: z.number().transform(Size),
+  }),
   hashing: z
     .object({
       algorithm: z.string(),
@@ -125,6 +129,8 @@ const RepositoryInfoConfigurationSchema = z.object({
   chunking: z
     .object({
       algorithm: z.string(),
+      min_size: z.number().transform(Size),
+      max_size: z.number().transform(Size),
     })
     .nullable(),
   compression: z
@@ -135,6 +141,9 @@ const RepositoryInfoConfigurationSchema = z.object({
   encryption: z
     .object({
       data_algorithm: z.string(),
+      KDF_params: z.object({
+        KDF: z.string(),
+      }),
     })
     .nullable(),
 });
