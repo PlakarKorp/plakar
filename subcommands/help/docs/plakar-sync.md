@@ -91,6 +91,18 @@ Synchronize all snapshots of @peer to @repo:
 
 	$ plakar at @repo sync from @peer
 
+# CAVEATS
+
+The memory used by a synchronization grows with the size of the
+snapshot being transferred, and neither
+**-cache**
+nor
+**-packfiles**
+bounds it.
+A repository holding multi-gigabyte snapshots can therefore need more
+memory to synchronize than it needed to back up, and a host sized for
+the backups can be too small for the synchronization that follows.
+
 # SEE ALSO
 
 plakar(1),
