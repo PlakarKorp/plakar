@@ -20,11 +20,12 @@ import (
 )
 
 type RepositoryInfoSnapshots struct {
-	Total           int     `json:"total"`
-	StorageSize     int64   `json:"storage_size"`
-	LogicalSize     int64   `json:"logical_size"`
-	Efficiency      float64 `json:"efficiency"`
-	SnapshotsPerDay []int   `json:"snapshots_per_day"`
+	Total           int        `json:"total"`
+	StorageSize     int64      `json:"storage_size"`
+	LogicalSize     int64      `json:"logical_size"`
+	Efficiency      float64    `json:"efficiency"`
+	SnapshotsPerDay []int      `json:"snapshots_per_day"`
+	LastSnapshot    *time.Time `json:"last_snapshot"`
 }
 
 type RepositoryInfoResponse struct {
@@ -36,8 +37,9 @@ type RepositoryInfoResponse struct {
 	Browsable     bool                    `json:"browsable"`
 }
 
-func getNSnapshotsPerDay(repo *repository.Repository, ndays int) ([]int, error) {
+func getNSnapshotsPerDay(repo *repository.Repository, ndays int) ([]int, *time.Time, error) {
 	nSnapshotsPerDay := make([]int, ndays)
+	var lastSnapshot *time.Time
 	for snapshotID, err := range repo.ListSnapshots() {
 		if err != nil {
 			// XXX - temporarily ignore errors in List snapshots iteration, it is safe here
@@ -46,6 +48,10 @@ func getNSnapshotsPerDay(repo *repository.Repository, ndays int) ([]int, error) 
 		snap, err := snapshot.Load(repo, snapshotID)
 		if err != nil {
 			continue
+		}
+		if lastSnapshot == nil || snap.Header.Timestamp.After(*lastSnapshot) {
+			timestamp := snap.Header.Timestamp
+			lastSnapshot = &timestamp
 		}
 		if !snap.Header.Timestamp.Before(repo.Configuration().Timestamp.AddDate(0, 0, -ndays)) {
 			dayIndex := time.Since(snap.Header.Timestamp).Hours() / 24
@@ -56,7 +62,7 @@ func getNSnapshotsPerDay(repo *repository.Repository, ndays int) ([]int, error) 
 		snap.Close()
 	}
 
-	return nSnapshotsPerDay, nil
+	return nSnapshotsPerDay, lastSnapshot, nil
 }
 
 func (ui *uiserver) repositoryInfo(w http.ResponseWriter, r *http.Request) error {
@@ -65,7 +71,7 @@ func (ui *uiserver) repositoryInfo(w http.ResponseWriter, r *http.Request) error
 		return fmt.Errorf("unable to calculate logical size: %w", err)
 	}
 
-	nSnapshotsPerDay, err := getNSnapshotsPerDay(ui.repository, 30)
+	nSnapshotsPerDay, lastSnapshot, err := getNSnapshotsPerDay(ui.repository, 30)
 	if err != nil {
 		return fmt.Errorf("unable to calculate snapshots per day: %w", err)
 	}
@@ -113,6 +119,7 @@ func (ui *uiserver) repositoryInfo(w http.ResponseWriter, r *http.Request) error
 			LogicalSize:     logicalSize,
 			Efficiency:      efficiency,
 			SnapshotsPerDay: nSnapshotsPerDay,
+			LastSnapshot:    lastSnapshot,
 		},
 		Configuration: ui.config,
 		OS:            runtime.GOOS,
