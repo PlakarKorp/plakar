@@ -231,3 +231,19 @@ export const Sparkline: StoryObj<typeof SparkBars> = {
     </div>
   ),
 };
+
+export const SparklineOutcomes: StoryObj<typeof SparkBars> = {
+  args: {
+    data: [62, 70, 58, 12, 66, 71, 9, 64].map((value, index) => ({
+      label: `Job ${index + 1}`,
+      value,
+      tone: value < 20 ? "error" : "success",
+      tooltip: `Job ${index + 1} · ${value < 20 ? "Failed" : "Succeeded"} · ${value}s`,
+    })),
+  },
+  render: (args) => (
+    <div className="w-40">
+      <SparkBars {...args} />
+    </div>
+  ),
+};

@@ -78,7 +78,7 @@ function CardHeader({
   return (
     <div
       className={clsx(
-        "b flex items-center justify-between gap-2 py-2 md:py-4",
+        "b flex flex-wrap items-center justify-between gap-2 py-2 md:py-4",
         isDividerFullWidth ? "px-2 md:px-4" : "mx-2 md:mx-4",
         (!isCollapsible || !isCollapsed) && "border-secondary border-b",
         className
@@ -108,7 +108,7 @@ function CardHeader({
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {buttonProps && (
           <Button size="sm" variant="tertiary" {...buttonProps} />
         )}

@@ -158,6 +158,7 @@ const RepositoryInfoSnapshotsSchema = z.object({
     .transform((value) => (value < 0 ? null : Size(value))),
   efficiency: z.number().transform((value) => (value < 0 ? null : value)),
   snapshots_per_day: z.array(z.number()),
+  last_snapshot: z.string().transform(Date).nullable(),
 });
 
 export const RepositoryInfoSchema = z.object({
