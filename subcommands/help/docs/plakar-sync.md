@@ -91,6 +91,13 @@ Synchronize all snapshots of @peer to @repo:
 
 	$ plakar at @repo sync from @peer
 
+# SEE ALSO
+
+plakar(1),
+plakar-query(7)
+
+Plakar - May 5, 2026 - PLAKAR-SYNC(1)
+
 # CAVEATS
 
 The memory used by a synchronization grows with the size of the
@@ -102,10 +109,3 @@ bounds it.
 A repository holding multi-gigabyte snapshots can therefore need more
 memory to synchronize than it needed to back up, and a host sized for
 the backups can be too small for the synchronization that follows.
-
-# SEE ALSO
-
-plakar(1),
-plakar-query(7)
-
-Plakar - May 5, 2026 - PLAKAR-SYNC(1)
