@@ -39,6 +39,7 @@ func TestRepositoryEmpty(t *testing.T) {
 		require.Equal(t, float64(-1), resp.Item.Snapshots.Efficiency)
 		require.Equal(t, 0, resp.Item.Snapshots.Total)
 		require.Len(t, resp.Item.Snapshots.SnapshotsPerDay, 30)
+		require.Nil(t, resp.Item.Snapshots.LastSnapshot)
 	})
 }
 
@@ -56,6 +57,7 @@ func TestRepository(t *testing.T) {
 		var resp Item[RepositoryInfoResponse]
 		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 		require.GreaterOrEqual(t, resp.Item.Snapshots.Total, 1)
+		require.NotNil(t, resp.Item.Snapshots.LastSnapshot)
 		require.NotEmpty(t, resp.Item.OS)
 		require.NotEmpty(t, resp.Item.Arch)
 		require.True(t, resp.Item.Browsable)

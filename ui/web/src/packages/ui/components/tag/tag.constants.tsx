@@ -10,6 +10,7 @@ export const TagVariant = [
   "blue",
   "blue_borderless",
   "green",
+  "green_borderless",
   "yellow",
   "yellow_borderless",
   "red",

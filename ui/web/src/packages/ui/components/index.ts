@@ -12,6 +12,7 @@ export * from "./charts/jobs-bar-chart";
 export * from "./charts/pie-chart";
 export * from "./charts/ratio-bar";
 export * from "./charts/resource-line-chart";
+export * from "./charts/spark-bars";
 export * from "./charts/throughput-line-chart";
 export * from "./charts/usage-bar";
 export * from "./checkbox/checkbox";
