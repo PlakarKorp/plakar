@@ -52,7 +52,7 @@ export function IntegrationsFilters<
       <FilterPanel.Groups>
         <FilterPanel.Group label="Status">
           <SegmentedControl
-            variant="accent"
+            size="md"
             ariaLabel="Status"
             selectedId={status ?? ALL}
             onSelect={(id) =>

@@ -103,7 +103,7 @@ function FilterPanelSearch({
 
 function FilterPanelGroups({ children }: { children: ReactNode }) {
   return (
-    <div className="border-secondary flex flex-wrap items-end gap-x-8 gap-y-3 border-b px-4 pt-3 pb-4 last:rounded-b-xl last:border-b-0">
+    <div className="border-secondary flex flex-wrap items-end gap-x-8 gap-y-3 border-b px-4 py-3.5 last:rounded-b-xl last:border-b-0">
       {children}
     </div>
   );
@@ -122,7 +122,7 @@ function FilterPanelGroup({
         as="span"
         size="xs"
         weight="medium"
-        className="text-tertiary tracking-widest uppercase"
+        className="text-tertiary tracking-wide uppercase"
       >
         {label}
       </Typography>
@@ -147,7 +147,7 @@ function FilterPanelFooter({
   sort,
 }: FilterPanelFooterProps) {
   return (
-    <div className="bg-secondary border-secondary flex flex-wrap items-center justify-between gap-3 border-b px-4 py-2 last:rounded-b-xl last:border-b-0">
+    <div className="border-secondary flex flex-wrap items-center justify-between gap-3 border-b px-4 py-2 last:rounded-b-xl last:border-b-0">
       <span className="flex items-center gap-3">
         <Typography
           as="span"
@@ -170,7 +170,7 @@ function FilterPanelFooter({
           <Typography as="span" size="xs" className="text-tertiary">
             Sort by
           </Typography>
-          <SegmentedControl {...sort} variant="accent" ariaLabel="Sort by" />
+          <SegmentedControl {...sort} ariaLabel="Sort by" />
         </span>
       )}
     </div>
