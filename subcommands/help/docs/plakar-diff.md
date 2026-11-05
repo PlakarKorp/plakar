@@ -56,4 +56,4 @@ across snapshots with highlighting:
 plakar(1),
 plakar-backup(1)
 
-Plakar - May 5, 2026 - PLAKAR-DIFF(1)
+Plakar - May 5, 2026

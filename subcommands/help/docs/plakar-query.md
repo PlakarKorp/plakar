@@ -217,4 +217,4 @@ The filters are:
 > same time if comma-separated: snapshots are selected if any of them
 > matches.
 
-Plakar - October 24, 2026 - PLAKAR-QUERY(7)
+Plakar - October 24, 2026

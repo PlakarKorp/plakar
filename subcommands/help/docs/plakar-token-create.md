@@ -32,4 +32,4 @@ plakar(1),
 plakar-login(1),
 plakar-service(1)
 
-Plakar - May 5, 2026 - PLAKAR-TOKEN-CREATE(1)
+Plakar - May 5, 2026

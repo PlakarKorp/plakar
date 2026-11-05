@@ -37,6 +37,8 @@ The options are as follows:
 > Set the
 > 'Access-Control-Allow-Origin'
 > HTTP headers to allow the UI to be accessed from any origin.
+> It cannot be combined with
+> **-no-auth**.
 
 **-no-auth**
 
@@ -94,4 +96,4 @@ Create a https server with a custom certificate:
 
 plakar(1)
 
-Plakar - May 5, 2026 - PLAKAR-UI(1)
+Plakar - May 5, 2026

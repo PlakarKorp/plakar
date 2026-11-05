@@ -94,4 +94,4 @@ When a host name is provided,
 uses only one of the IP addresses it resolves to,
 preferably IPv4 .
 
-Plakar - August 25, 2026 - PLAKAR-SERVER(1)
+Plakar - August 25, 2026
