@@ -58,10 +58,11 @@ export function SegmentedControl({
       onSelectionChange={handleSelectionChange}
       isDisabled={isDisabled}
       className={clsx(
-        "inline-flex flex-row gap-0.5",
+        // Scrolls sideways, without a visible bar, when the segments do not fit.
+        "inline-flex max-w-full flex-row gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         {
           default: "bg-tertiary rounded-[9px] p-[3px]",
-          accent: "bg-tertiary max-w-full overflow-x-auto rounded-xl p-1",
+          accent: "bg-tertiary rounded-xl p-1",
         }[variant],
         className
       )}
