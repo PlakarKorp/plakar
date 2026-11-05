@@ -60,7 +60,7 @@ export function SegmentedControl({
       className={clsx(
         "inline-flex flex-row gap-0.5",
         {
-          default: "bg-tertiary rounded-lg p-0.5",
+          default: "bg-tertiary rounded-[9px] p-[3px]",
           accent: "bg-tertiary max-w-full overflow-x-auto rounded-xl p-1",
         }[variant],
         className
@@ -83,10 +83,8 @@ export function SegmentedControl({
                 // basis-auto, not the default 0: segments still share any spare
                 // width, but a long label sets a floor instead of wrapping.
                 default: clsx(
-                  clsx(
-                    "flex-1 basis-auto gap-1.5 rounded-md px-2",
-                    size === "md" ? "h-8.5" : "h-7"
-                  ),
+                  "flex-1 basis-auto gap-1.5 rounded-[7px] px-2.5",
+                  size === "md" ? "h-8" : "h-6.5",
                   "text-tertiary data-hovered:text-secondary",
                   "data-selected:bg-primary data-selected:text-primary data-selected:shadow-[0_0_0_1px_var(--border-color-secondary),0_1px_2px_rgb(15_23_42/0.12)]"
                 ),
