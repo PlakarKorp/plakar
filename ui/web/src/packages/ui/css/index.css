@@ -580,7 +580,11 @@ Supported variables:
   }
 }
 
-/* Soft status colors and task type colors. The brand accent stays untouched. */
+/*
+ * Soft status colors and task type colors. The brand accent stays untouched.
+ * Use the status-* set for job and run outcomes. The success, error and warning
+ * tokens above stay for alerts and validation.
+ */
 @theme {
   --color-status-success: #12a37f;
   --color-status-success-ink: #0b7a5c;

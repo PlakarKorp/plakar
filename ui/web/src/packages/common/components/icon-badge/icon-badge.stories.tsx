@@ -58,6 +58,11 @@ export const AllColors: Story = {
       <IconBadge icon="download" type="destination" />
       <IconBadge icon="box-archive" type="store" />
       <IconBadge icon="lock" type="secret_provider" />
+      <IconBadge icon="arrow-up-from-bracket" type="task_backup" />
+      <IconBadge icon="arrow-rotate-left" type="task_restore" />
+      <IconBadge icon="arrows-rotate" type="task_sync" />
+      <IconBadge icon="check" type="task_check" />
+      <IconBadge icon="recycle" type="task_prune" />
       <IconBadge icon="lock" type="disabled" />
       <IconBadge icon="lock" type="error" />
       <IconBadge icon="lock" type="warning" />
