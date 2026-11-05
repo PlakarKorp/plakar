@@ -24,9 +24,8 @@ export function getTabTriggerClassName({
     "relative flex items-center justify-center gap-2 whitespace-nowrap -outline-offset-1",
 
     variant === "underlined" && {
-      "border-b-2 border-transparent px-4 py-3": true,
-      "text-secondary hover:border-secondary hover:text-primary":
-        !isSelected && !isDisabled,
+      "border-b-2 border-transparent px-3 py-2.5": true,
+      "text-secondary hover:text-primary": !isSelected && !isDisabled,
       "text-primary": isSelected,
     },
 
