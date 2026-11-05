@@ -57,7 +57,7 @@ export function SegmentedControl({
       className={clsx(
         "inline-flex flex-row gap-0.5",
         {
-          default: "bg-secondary border-secondary rounded-lg border p-0.5",
+          default: "bg-tertiary rounded-lg p-0.5",
           accent: "bg-tertiary max-w-full overflow-x-auto rounded-xl p-1",
         }[variant],
         className
@@ -82,7 +82,7 @@ export function SegmentedControl({
                 default: clsx(
                   "h-7 flex-1 basis-auto gap-1.5 rounded-md px-2",
                   "text-tertiary data-hovered:text-secondary",
-                  "data-selected:bg-primary data-selected:text-primary data-selected:shadow-sm"
+                  "data-selected:bg-primary data-selected:text-primary data-selected:shadow-[0_0_0_1px_var(--border-color-secondary),0_1px_2px_rgb(15_23_42/0.12)]"
                 ),
                 accent: clsx(
                   "shrink-0 gap-2 rounded-lg px-3 py-1.5",

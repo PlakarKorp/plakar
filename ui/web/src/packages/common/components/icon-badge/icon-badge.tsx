@@ -41,6 +41,16 @@ export function IconBadge({
           disabled: "bg-disable text-disable",
           error: "bg-error-tertiary text-error",
           warning: "bg-warning-tertiary text-warning",
+          task_backup:
+            "bg-task-backup-bg text-task-backup ring-1 ring-current/15 ring-inset",
+          task_restore:
+            "bg-task-restore-bg text-task-restore ring-1 ring-current/15 ring-inset",
+          task_sync:
+            "bg-task-sync-bg text-task-sync ring-1 ring-current/15 ring-inset",
+          task_check:
+            "bg-task-check-bg text-task-check ring-1 ring-current/15 ring-inset",
+          task_prune:
+            "bg-task-prune-bg text-task-prune ring-1 ring-current/15 ring-inset",
         }[type],
         { sm: "p-2", md: "p-3" }[size],
         className

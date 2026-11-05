@@ -3,4 +3,7 @@ export const StatusDotVariant = [
   "error",
   "warning",
   "neutral",
+  "soft-success",
+  "soft-error",
+  "soft-cancel",
 ] as const;

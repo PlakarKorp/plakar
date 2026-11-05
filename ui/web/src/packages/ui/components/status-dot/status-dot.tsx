@@ -26,6 +26,9 @@ export function StatusDot({
               error: "bg-error",
               warning: "bg-warning",
               neutral: "text-disable border-[1.5px] border-current",
+              "soft-success": "bg-status-success",
+              "soft-error": "bg-status-error-bar",
+              "soft-cancel": "bg-status-cancel",
             }[variant],
         pending && "animate-pulse"
       )}
