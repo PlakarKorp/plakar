@@ -70,7 +70,7 @@ export function MultiAxisLineChart({
   const y = (value: number, axis: LineChartAxis) =>
     MARGIN_TOP +
     plotHeight -
-    ((value - axis.min) / (axis.max - axis.min)) * plotHeight;
+    ((value - axis.min) / (axis.max - axis.min || 1)) * plotHeight;
   const axisOf = (line: LineChartLine) =>
     line.axis === "right" && right ? right : left;
 
@@ -96,6 +96,27 @@ export function MultiAxisLineChart({
     (_, i) => (i / (X_TICKS - 1)) * maxT
   );
 
+  const summary = lines
+    .map((line) => {
+      const values = line.values.filter((v) => v !== undefined);
+      return values.length === 0
+        ? undefined
+        : `${line.name} from ${line.format(Math.min(...values))} to ${line.format(Math.max(...values))}, last ${line.format(values[values.length - 1])}`;
+    })
+    .filter(Boolean)
+    .join("; ");
+
+  const onKeyDown = (event: React.KeyboardEvent<SVGSVGElement>) => {
+    const step = { ArrowLeft: -1, ArrowRight: 1 }[event.key];
+    if (step === undefined || times.length === 0) {
+      return;
+    }
+    event.preventDefault();
+    setHovered((current) =>
+      Math.min(times.length - 1, Math.max(0, (current ?? 0) + step))
+    );
+  };
+
   const onPointerMove = (event: React.PointerEvent<SVGSVGElement>) => {
     const box = event.currentTarget.getBoundingClientRect();
     const t = ((event.clientX - box.left - plotLeft) / plotWidth) * maxT;
@@ -115,7 +136,10 @@ export function MultiAxisLineChart({
           width={width}
           height={height}
           role="img"
-          aria-label={label}
+          aria-label={summary ? `${label}. ${summary}` : label}
+          tabIndex={0}
+          onKeyDown={onKeyDown}
+          onBlur={() => setHovered(undefined)}
           className="block"
           onPointerMove={onPointerMove}
           onPointerLeave={() => setHovered(undefined)}
