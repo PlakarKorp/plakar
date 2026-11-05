@@ -75,4 +75,4 @@ plakar-backup(1),
 plakar-policy(1),
 plakar-query(7)
 
-Plakar - May 5, 2026 - PLAKAR-PRUNE(1)
+Plakar - May 5, 2026

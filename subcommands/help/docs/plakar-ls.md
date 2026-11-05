@@ -21,6 +21,16 @@ displays the contents of
 *path*
 in a specified snapshot.
 
+Files that could not be read when the snapshot was made are missing
+from the listing.
+When listing the contents of a snapshot,
+**plakar ls**
+reports the errors recorded for them on standard error, interleaved
+with the listing.
+Errors recorded below the listed directory are only reported when
+**-recursive**
+is given.
+
 In addition to the flags described below,
 **plakar ls**
 supports the location flags documented in
@@ -73,4 +83,4 @@ Recursively list contents of a specific snapshot:
 plakar(1),
 plakar-query(7)
 
-Plakar - May 5, 2026 - PLAKAR-LS(1)
+Plakar - May 5, 2026
