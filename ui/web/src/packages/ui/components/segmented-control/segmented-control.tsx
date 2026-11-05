@@ -59,7 +59,7 @@ export function SegmentedControl({
       isDisabled={isDisabled}
       className={clsx(
         // Scrolls sideways, without a visible bar, when the segments do not fit.
-        "inline-flex max-w-full flex-row gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        "inline-flex max-w-full [scrollbar-width:none] flex-row gap-0.5 overflow-x-auto [&::-webkit-scrollbar]:hidden",
         {
           default: "bg-tertiary rounded-[9px] p-[3px]",
           accent: "bg-tertiary rounded-xl p-1",
