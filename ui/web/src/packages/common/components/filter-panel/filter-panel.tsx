@@ -103,7 +103,7 @@ function FilterPanelSearch({
 
 function FilterPanelGroups({ children }: { children: ReactNode }) {
   return (
-    <div className="border-secondary flex flex-wrap items-end gap-x-8 gap-y-3 border-b px-4 py-3.5 last:rounded-b-xl last:border-b-0">
+    <div className="border-secondary flex flex-wrap items-end gap-x-5 gap-y-3 border-b px-4 py-3.5 last:rounded-b-xl last:border-b-0">
       {children}
     </div>
   );
