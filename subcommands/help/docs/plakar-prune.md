@@ -9,22 +9,22 @@ PLAKAR-PRUNE(1) - General Commands Manual
 **plakar&nbsp;prune**
 \[**-apply**]
 \[**-policy**&nbsp;*name*]
-\[*snapshotID&nbsp;...*]
 
 # DESCRIPTION
 
 The
 **plakar prune**
-command deletes snapshots from a Plakar repository.
-Snapshots can be filtered for deletion by age, by tag, or by
-specifying the snapshot IDs to remove.
-If no
-*snapshotID*
-are provided, either
-**-older**
-or
+command deletes snapshots from a Plakar repository according to a
+retention policy.
+Filters such as
 **-tag**
-must be specified to filter the snapshots to delete.
+select the snapshots the policy applies to, and retention flags such as
+**-days**
+decide which of them to keep.
+Selected snapshots that no retention rule keeps are deleted.
+Without a retention rule, nothing is deleted.
+To delete specific snapshots, use
+plakar-rm(1).
 
 **plakar prune**
 supports the location flags documented in
@@ -52,17 +52,9 @@ The **plakar-prune** utility exits&#160;0 on success, and&#160;&gt;0 if an error
 
 # EXAMPLES
 
-Remove a specific snapshot by ID:
-
-	$ plakar prune abc123
-
 Remove snapshots older than 30 days:
 
 	$ plakar prune -days 30
-
-Remove snapshots with a specific tag:
-
-	$ plakar prune -tag daily-backup
 
 Remove snapshots older than 1 year with a specific tag:
 
@@ -73,6 +65,7 @@ Remove snapshots older than 1 year with a specific tag:
 plakar(1),
 plakar-backup(1),
 plakar-policy(1),
+plakar-rm(1),
 plakar-query(7)
 
 Plakar - May 5, 2026

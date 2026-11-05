@@ -8,20 +8,20 @@
 .Nm plakar prune
 .Op Fl apply
 .Op Fl policy Ar name
-.Op Ar snapshotID ...
 .Sh DESCRIPTION
 The
 .Nm plakar prune
-command deletes snapshots from a Plakar repository.
-Snapshots can be filtered for deletion by age, by tag, or by
-specifying the snapshot IDs to remove.
-If no
-.Ar snapshotID
-are provided, either
-.Fl older
-or
+command deletes snapshots from a Plakar repository according to a
+retention policy.
+Filters such as
 .Fl tag
-must be specified to filter the snapshots to delete.
+select the snapshots the policy applies to, and retention flags such as
+.Fl days
+decide which of them to keep.
+Selected snapshots that no retention rule keeps are deleted.
+Without a retention rule, nothing is deleted.
+To delete specific snapshots, use
+.Xr plakar-rm 1 .
 .Pp
 .Nm plakar prune
 supports the location flags documented in
@@ -43,19 +43,9 @@ for how policies are managed.
 .Sh EXIT STATUS
 .Ex -std
 .Sh EXAMPLES
-Remove a specific snapshot by ID:
-.Bd -literal -offset indent
-$ plakar prune abc123
-.Ed
-.Pp
 Remove snapshots older than 30 days:
 .Bd -literal -offset indent
 $ plakar prune -days 30
-.Ed
-.Pp
-Remove snapshots with a specific tag:
-.Bd -literal -offset indent
-$ plakar prune -tag daily-backup
 .Ed
 .Pp
 Remove snapshots older than 1 year with a specific tag:
@@ -66,4 +56,5 @@ $ plakar prune -years 1 -tag daily-backup
 .Xr plakar 1 ,
 .Xr plakar-backup 1 ,
 .Xr plakar-policy 1 ,
+.Xr plakar-rm 1 ,
 .Xr plakar-query 7
