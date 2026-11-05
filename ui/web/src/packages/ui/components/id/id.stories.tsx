@@ -37,3 +37,18 @@ export const Default: Story = {
     noTruncate: false,
   },
 };
+
+export const CopyButtonOnRowHover: Story = {
+  args: {
+    value: "720de028-0000-0000-0000-000000000000",
+    copyButtonVisibility: "on-row-hover",
+  },
+  decorators: [
+    (Story) => (
+      <div className="group/row hover:bg-primary-hover flex items-center gap-4 p-3">
+        <span>Hover the row</span>
+        <Story />
+      </div>
+    ),
+  ],
+};

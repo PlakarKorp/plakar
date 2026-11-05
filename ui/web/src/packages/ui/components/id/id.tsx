@@ -8,6 +8,14 @@ import {
   TypographyWeight,
 } from "../typography/typography.constants";
 
+const COPY_BUTTON_VISIBILITY = {
+  always: undefined,
+  // Where a pointer can hover, the button waits for the closest `group/row`
+  // ancestor to be hovered, or for the keyboard to reach it.
+  "on-row-hover":
+    "[@media(hover:hover)]:opacity-0 group-hover/row:opacity-100 data-focus-visible:opacity-100",
+} as const;
+
 type IdProps = {
   wrap?: (children: ReactNode) => ReactNode;
   value: string;
@@ -15,6 +23,8 @@ type IdProps = {
   size?: TypographySize;
   weight?: TypographyWeight;
   withCopyButton?: boolean;
+  /** Shows the copy button always, or only while the row holding the ID is hovered. */
+  copyButtonVisibility?: keyof typeof COPY_BUTTON_VISIBILITY;
   className?: string;
   noTruncate?: boolean;
 };
@@ -26,6 +36,7 @@ export function Id({
   size,
   weight,
   withCopyButton = true,
+  copyButtonVisibility = "always",
   className,
   noTruncate = false,
 }: IdProps) {
@@ -38,7 +49,14 @@ export function Id({
       </Typography>
 
       {withCopyButton && (
-        <CopyButton content={value} tooltip={helpText} className="-my-1" />
+        <CopyButton
+          content={value}
+          tooltip={helpText}
+          className={clsx(
+            "-my-1",
+            COPY_BUTTON_VISIBILITY[copyButtonVisibility]
+          )}
+        />
       )}
     </span>
   );
