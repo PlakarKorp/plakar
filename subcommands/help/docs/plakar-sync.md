@@ -97,3 +97,15 @@ plakar(1),
 plakar-query(7)
 
 Plakar - May 5, 2026 - PLAKAR-SYNC(1)
+
+# CAVEATS
+
+The memory used by a synchronization grows with the size of the
+snapshot being transferred, and neither
+**-cache**
+nor
+**-packfiles**
+bounds it.
+A repository holding multi-gigabyte snapshots can therefore need more
+memory to synchronize than it needed to back up, and a host sized for
+the backups can be too small for the synchronization that follows.

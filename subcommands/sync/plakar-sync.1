@@ -81,3 +81,13 @@ $ plakar at @repo sync from @peer
 .Sh SEE ALSO
 .Xr plakar 1 ,
 .Xr plakar-query 7
+.Sh CAVEATS
+The memory used by a synchronization grows with the size of the
+snapshot being transferred, and neither
+.Fl cache
+nor
+.Fl packfiles
+bounds it.
+A repository holding multi-gigabyte snapshots can therefore need more
+memory to synchronize than it needed to back up, and a host sized for
+the backups can be too small for the synchronization that follows.
