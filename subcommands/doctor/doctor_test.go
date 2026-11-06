@@ -1,0 +1,343 @@
+package doctor
+
+import (
+	"bytes"
+	"context"
+	"errors"
+	"io"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/PlakarKorp/kloset/connectors/storage"
+	"github.com/PlakarKorp/kloset/objects"
+	"github.com/PlakarKorp/kloset/repository"
+	"github.com/PlakarKorp/kloset/resources"
+	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/exitcodes"
+	"github.com/PlakarKorp/plakar/subcommands"
+	ptesting "github.com/PlakarKorp/plakar/testing"
+	"github.com/stretchr/testify/require"
+)
+
+func TestRegisteredFactory(t *testing.T) {
+	cmd, _, _ := subcommands.Lookup([]string{"doctor"})
+	require.NotNil(t, cmd)
+	require.IsType(t, &Doctor{}, cmd)
+}
+
+func TestParse(t *testing.T) {
+	tests := []struct {
+		name    string
+		args    []string
+		wantErr bool
+	}{
+		{"defaults", nil, false},
+		{"all flags", []string{"-n", "5", "-deep", "-threshold", "2.5", "-duration", "10s"}, false},
+		{"zero samples", []string{"-n", "0"}, true},
+		{"negative duration", []string{"-duration", "-1s"}, true},
+		{"threshold above 100", []string{"-threshold", "101"}, true},
+		{"negative threshold", []string{"-threshold", "-1"}, true},
+		{"negative retries", []string{"-retries", "-1"}, true},
+		{"extra argument", []string{"extra"}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, ctx := ptesting.GenerateRepository(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil), nil)
+			err := (&Doctor{}).Parse(ctx, tt.args)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestParseDefaults(t *testing.T) {
+	_, ctx := ptesting.GenerateRepository(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil), nil)
+
+	cmd := &Doctor{}
+	require.NoError(t, cmd.Parse(ctx, nil))
+	require.Equal(t, 60000, cmd.Samples)
+	require.Equal(t, time.Minute, cmd.Duration)
+}
+
+// newRepo returns a repository holding one snapshot, and the buffer the
+// command writes its report to.
+func newRepo(t *testing.T) (*repository.Repository, *appcontext.AppContext, *bytes.Buffer) {
+	t.Helper()
+	out := bytes.NewBuffer(nil)
+	repo, ctx := ptesting.GenerateRepository(t, out, bytes.NewBuffer(nil), nil)
+	snap := ptesting.GenerateSnapshot(t, repo, []ptesting.MockFile{
+		ptesting.NewMockDir("subdir"),
+		ptesting.NewMockFile("subdir/dummy.txt", 0644, "hello dummy"),
+		ptesting.NewMockFile("subdir/foo.txt", 0644, "hello foo"),
+	})
+	t.Cleanup(func() { snap.Close() })
+	return repo, ctx, out
+}
+
+// breakStore removes every packfile from the store while the local state
+// still references them, so every blob read fails.
+func breakStore(t *testing.T, repo *repository.Repository) {
+	t.Helper()
+	for mac := range repo.ListPackfiles() {
+		require.NoError(t, repo.DeletePackfile(mac))
+	}
+}
+
+func TestExecute(t *testing.T) {
+	tests := []struct {
+		name        string
+		args        []string
+		concurrency int
+		broken      bool
+		wantStatus  int
+		wantErr     bool
+		wantOutput  []string
+		wantAbsent  []string
+	}{
+		{
+			name:       "healthy store",
+			args:       []string{"-n", "20"},
+			wantStatus: exitcodes.Success,
+			wantOutput: []string{"failures: 0 (0.00%)", "latency: p50=", "throughput:"},
+		},
+		{
+			name:       "sample size is bounded",
+			args:       []string{"-n", "3"},
+			wantStatus: exitcodes.Success,
+			wantOutput: []string{"read 3 blobs sampled from"},
+		},
+		{
+			name:       "clean sample reports its resolution",
+			args:       []string{"-n", "3"},
+			wantStatus: exitcodes.Success,
+			wantOutput: []string{"no failure in 3 reads: the failure rate is below 63.2% at 95% confidence"},
+		},
+		{
+			name:       "deep verifies every blob",
+			args:       []string{"-n", "100000", "-deep"},
+			wantStatus: exitcodes.Success,
+			wantOutput: []string{"failures: 0 (0.00%)"},
+		},
+		{
+			name:       "unreadable store",
+			args:       []string{"-n", "10"},
+			broken:     true,
+			wantStatus: exitcodes.Failure,
+			wantErr:    true,
+			wantOutput: []string{"failures: 10 (100.00%)", "(packfile "},
+			wantAbsent: []string{"95% confidence"},
+		},
+		{
+			name:       "failures within threshold",
+			args:       []string{"-n", "10", "-threshold", "100"},
+			broken:     true,
+			wantStatus: exitcodes.Success,
+			wantOutput: []string{"failures: 10 (100.00%)"},
+		},
+		{
+			name:        "concurrent probes",
+			args:        []string{"-n", "100000", "-deep"},
+			concurrency: 8,
+			wantStatus:  exitcodes.Success,
+			wantOutput:  []string{"concurrency 8", "failures: 0 (0.00%)"},
+		},
+		{
+			name:        "concurrent probes on an unreadable store",
+			args:        []string{"-n", "10"},
+			concurrency: 8,
+			broken:      true,
+			wantStatus:  exitcodes.Failure,
+			wantErr:     true,
+			wantOutput:  []string{"concurrency 8", "failures: 10 (100.00%)"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo, ctx, out := newRepo(t)
+			if tt.concurrency > 0 {
+				ctx.MaxConcurrency = tt.concurrency
+			}
+			if tt.broken {
+				breakStore(t, repo)
+			}
+
+			cmd := &Doctor{}
+			require.NoError(t, cmd.Parse(ctx, tt.args))
+
+			status, err := cmd.Execute(ctx, repo)
+			require.Equal(t, tt.wantStatus, status)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+			for _, want := range tt.wantOutput {
+				require.Contains(t, out.String(), want)
+			}
+			for _, absent := range tt.wantAbsent {
+				require.NotContains(t, out.String(), absent)
+			}
+		})
+	}
+}
+
+// putMismatchedBlob stores a blob under a MAC that does not match its
+// content, as a store returning the wrong bytes would.
+func putMismatchedBlob(t *testing.T, repo *repository.Repository, typ resources.Type) {
+	t.Helper()
+	stateID := objects.RandomMAC()
+	scanCache, err := repo.AppContext().GetCache().Scan(stateID)
+	require.NoError(t, err)
+	t.Cleanup(func() { scanCache.Close() })
+
+	writer := repo.NewRepositoryWriter(scanCache, stateID, repository.DefaultType, "")
+	require.NoError(t, writer.PutBlob(typ, objects.RandomMAC(), []byte("not the content of this MAC"), false))
+	writer.PackerManager.Wait()
+	require.NoError(t, writer.CommitTransaction(stateID))
+	require.NoError(t, repo.RebuildState())
+}
+
+func TestExecuteDeepDetectsMismatch(t *testing.T) {
+	for _, typ := range []resources.Type{
+		resources.RT_CHUNK,
+		resources.RT_ERROR_ENTRY,
+		resources.RT_XATTR_ENTRY,
+	} {
+		t.Run(typ.String(), func(t *testing.T) {
+			repo, ctx, _ := newRepo(t)
+			putMismatchedBlob(t, repo, typ)
+
+			cmd := &Doctor{}
+			require.NoError(t, cmd.Parse(ctx, []string{"-n", "100000", "-deep"}))
+
+			status, err := cmd.Execute(ctx, repo)
+			require.Error(t, err)
+			require.Equal(t, exitcodes.IntegrityFailure, status)
+		})
+	}
+}
+
+func TestExecuteMismatchIgnoresThreshold(t *testing.T) {
+	repo, ctx, out := newRepo(t)
+	putMismatchedBlob(t, repo, resources.RT_CHUNK)
+
+	cmd := &Doctor{}
+	require.NoError(t, cmd.Parse(ctx, []string{"-n", "100000", "-deep", "-threshold", "100"}))
+
+	status, err := cmd.Execute(ctx, repo)
+	require.Error(t, err)
+	require.Equal(t, exitcodes.IntegrityFailure, status)
+	require.Contains(t, out.String(), "blob content does not match its MAC")
+}
+
+// flakyStore fails every other packfile read, so that with a concurrency of
+// 1 each blob's first read fails and its first retry succeeds.
+type flakyStore struct {
+	storage.Store
+	mu    sync.Mutex
+	reads int
+}
+
+func (s *flakyStore) Get(ctx context.Context, res storage.StorageResource, mac objects.MAC, rg *storage.Range) (io.ReadCloser, error) {
+	if res == storage.StorageResourcePackfile && rg != nil {
+		s.mu.Lock()
+		s.reads++
+		fail := s.reads%2 == 1
+		s.mu.Unlock()
+		if fail {
+			return nil, errors.New("injected transient failure")
+		}
+	}
+	return s.Store.Get(ctx, res, mac, rg)
+}
+
+func TestExecuteRetries(t *testing.T) {
+	tests := []struct {
+		name       string
+		args       []string
+		flaky      bool
+		broken     bool
+		wantOutput []string
+		wantAbsent []string
+	}{
+		{
+			name:       "transient failures",
+			args:       []string{"-n", "100000", "-retries", "2"},
+			flaky:      true,
+			wantOutput: []string{"(read on retry 1)", "failures were transient"},
+			wantAbsent: []string{"still failing"},
+		},
+		{
+			name:       "persistent failures",
+			args:       []string{"-n", "10", "-retries", "2"},
+			broken:     true,
+			wantOutput: []string{"(still failing after 2 retries)", "0 of 10 failures were transient"},
+		},
+		{
+			name:       "no retries",
+			args:       []string{"-n", "10", "-retries", "0"},
+			broken:     true,
+			wantAbsent: []string{"retr", "transient"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo, ctx, out := newRepo(t)
+			if tt.broken {
+				breakStore(t, repo)
+			}
+			if tt.flaky {
+				config, err := repo.Store().Open(ctx)
+				require.NoError(t, err)
+				repo, err = repository.New(ctx.GetInner(), nil, &flakyStore{Store: repo.Store()}, config)
+				require.NoError(t, err)
+			}
+
+			cmd := &Doctor{}
+			require.NoError(t, cmd.Parse(ctx, tt.args))
+
+			// Every blob fails at least once, so the run fails either way: the
+			// retries only classify the failures.
+			status, err := cmd.Execute(ctx, repo)
+			require.Error(t, err)
+			require.Equal(t, exitcodes.Failure, status)
+			for _, want := range tt.wantOutput {
+				require.Contains(t, out.String(), want)
+			}
+			for _, absent := range tt.wantAbsent {
+				require.NotContains(t, out.String(), absent)
+			}
+		})
+	}
+}
+
+func TestExecuteNeverSucceedsWithoutReads(t *testing.T) {
+	repo, ctx, out := newRepo(t)
+
+	cmd := &Doctor{}
+	require.NoError(t, cmd.Parse(ctx, []string{"-duration", "1ns"}))
+
+	status, err := cmd.Execute(ctx, repo)
+	if err == nil {
+		require.Equal(t, exitcodes.Success, status)
+		require.NotContains(t, out.String(), "read 0 blobs")
+	} else {
+		require.Equal(t, exitcodes.Failure, status)
+	}
+	require.NotContains(t, out.String(), "NaN")
+}
+
+func TestExecuteEmptyRepository(t *testing.T) {
+	repo, ctx := ptesting.GenerateRepository(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil), nil)
+
+	cmd := &Doctor{}
+	require.NoError(t, cmd.Parse(ctx, nil))
+
+	status, err := cmd.Execute(ctx, repo)
+	require.Error(t, err)
+	require.Equal(t, exitcodes.Failure, status)
+}
