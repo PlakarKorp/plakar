@@ -394,6 +394,16 @@ func TestSnapshot(t *testing.T) {
 		require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
 	})
 
+	t.Run("downloader id is single-use", func(t *testing.T) {
+		url := "/api/snapshot/vfs/downloader-sign-url/" + postDownload(t) + "?format=tar"
+		w := get(t, mux, url)
+		require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
+
+		// The id is consumed by the first download, a replay is refused.
+		w = get(t, mux, url)
+		require.Equal(t, http.StatusNotFound, w.Code, "body=%s", w.Body.String())
+	})
+
 	t.Run("downloader bad body", func(t *testing.T) {
 		// malformed JSON body -> 400.
 		req, _ := http.NewRequest("POST", "/api/snapshot/vfs/downloader/"+id+":/subdir", bytes.NewBufferString("{not-json"))

@@ -841,6 +841,11 @@ func (ui *uiserver) snapshotVFSDownloaderSigned(w http.ResponseWriter, r *http.R
 		}
 	}
 
+	// The id is the only credential on this route (the browser navigates
+	// to it and cannot send the Authorization header), so it is consumed
+	// on first use: a leaked or replayed id is dead once the download starts.
+	downloadSignedUrls.Delete(id)
+
 	snap, err := loadsnap(ui.repository, link.snapshotID)
 	if err != nil {
 		return err
