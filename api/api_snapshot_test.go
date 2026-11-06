@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/PlakarKorp/kloset/caching"
@@ -345,4 +346,43 @@ func _TestSnapshotSign(t *testing.T) {
 			require.Equal(t, 283, len(signature), "signature should be 32 bytes")
 		})
 	}
+}
+
+func TestSnapshotVFSDownloaderSignedSingleUse(t *testing.T) {
+	repo, ctx := ptesting.GenerateRepository(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil), nil)
+	snap := ptesting.GenerateSnapshot(t, repo, []ptesting.MockFile{
+		ptesting.NewMockDir("subdir"),
+		ptesting.NewMockFile("subdir/dummy.txt", 0644, "hello"),
+	})
+	defer snap.Close()
+
+	token := "test-token"
+	mux := http.NewServeMux()
+	SetupRoutes(mux, repo, ctx, token, false)
+
+	// minting a download id requires the session token
+	body := strings.NewReader(`{"items":[{"pathname":"/"}]}`)
+	req := httptest.NewRequest("POST", fmt.Sprintf("/api/snapshot/vfs/downloader/%x", snap.Header.Identifier[:]), body)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+
+	var minted struct {
+		Id string `json:"id"`
+	}
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&minted))
+
+	url := fmt.Sprintf("/api/snapshot/vfs/downloader-sign-url/%s?format=tar", minted.Id)
+
+	// the first use streams the archive
+	w = httptest.NewRecorder()
+	mux.ServeHTTP(w, httptest.NewRequest("GET", url, nil))
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	require.Equal(t, "application/x-tar", w.Header().Get("Content-Type"))
+
+	// the id is consumed on first use, a replay is refused
+	w = httptest.NewRecorder()
+	mux.ServeHTTP(w, httptest.NewRequest("GET", url, nil))
+	require.Equal(t, http.StatusNotFound, w.Code)
 }
