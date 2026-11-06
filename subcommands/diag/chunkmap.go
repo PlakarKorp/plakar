@@ -56,7 +56,7 @@ func (cmd *DiagChunkmap) Execute(ctx *appcontext.AppContext, repo *repository.Re
 	files := make([]chunkmapFile, 0, len(cmd.SnapshotPaths))
 
 	for _, snapshotPath := range cmd.SnapshotPaths {
-		err := func() error {
+		err := func() error { // using a lambda to run the deferred close at each loop iteration
 			snap, pathname, err := locate.OpenSnapshotByPath(repo, snapshotPath)
 			if err != nil {
 				return fmt.Errorf("failed to open snapshot %s: %w", snapshotPath, err)
