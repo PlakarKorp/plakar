@@ -248,6 +248,45 @@ export const MultiAxisChart: StoryObj<typeof MultiAxisLineChart> = {
   ),
 };
 
+const dailyDays = ["11/01", "11/02", "11/03", "11/04", "11/05", "11/06"];
+
+export const MultiAxisChartDaily: StoryObj<typeof MultiAxisLineChart> = {
+  args: {
+    label: "Storage size per day",
+    times: dailyDays.map((_, i) => i),
+    formatTime: (t) => dailyDays[t],
+    timeTicks: [0, 2, 4],
+    left: {
+      min: 0,
+      max: 4_000_000_000,
+      ticks: evenTicks(0, 1_000_000_000, 4),
+      format: (v) => (v === 0 ? "0" : prettyBytes(v)),
+    },
+    lines: [
+      {
+        name: "Storage size",
+        color: SERIES_ACCENT,
+        axis: "left",
+        hasArea: true,
+        values: [
+          undefined,
+          undefined,
+          1_200_000_000,
+          2_100_000_000,
+          2_900_000_000,
+          3_400_000_000,
+        ],
+        format: prettyBytes,
+      },
+    ],
+  },
+  render: (args) => (
+    <div className="w-180">
+      <MultiAxisLineChart {...args} />
+    </div>
+  ),
+};
+
 export const Sparkline: StoryObj<typeof SparkBars> = {
   args: {
     data: [0, 2, 1, 0, 3, 4, 2, 0, 0, 5, 3, 2, 4, 6, 1, 0, 2, 3, 5, 4].map(
