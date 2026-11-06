@@ -32,4 +32,4 @@ Create a duplicate of a snapshot with ID "abc123":
 
 plakar(1)
 
-Plakar - May 5, 2026 - PLAKAR-DUP(1)
+Plakar - May 5, 2026

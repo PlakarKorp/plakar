@@ -61,4 +61,4 @@ Perform a fast check on specific paths of two snapshot:
 plakar(1),
 plakar-query(7)
 
-Plakar - May 5, 2025 - PLAKAR-CHECK(1)
+Plakar - May 5, 2025

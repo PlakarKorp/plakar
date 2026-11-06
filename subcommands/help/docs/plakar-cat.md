@@ -51,4 +51,4 @@ Display a file with syntax highlighting:
 plakar(1),
 plakar-backup(1)
 
-Plakar - May 5, 2026 - PLAKAR-CAT(1)
+Plakar - May 5, 2026
