@@ -70,6 +70,13 @@ The arguments are as follows:
 *repository*
 
 > Path to the peer repository to synchronize with.
+> The passphrase of the repository
+> **plakar**
+> operates on does not unlock the peer: an encrypted peer is unlocked
+> from its own store configuration, see
+> plakar-store(1),
+> and is prompted for separately when that configuration carries no
+> passphrase.
 
 # EXIT STATUS
 
