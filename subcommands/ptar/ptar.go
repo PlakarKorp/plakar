@@ -139,7 +139,7 @@ func (cmd *Ptar) Parse(ctx *appcontext.AppContext, args []string) error {
 	cmd.Excludes = excludes
 
 	for _, syncTarget := range cmd.SyncTargets {
-		if err := func() error {
+		if err := func() error { // using a lambda to run the deferred close at each loop iteration
 			var peerSecret []byte
 
 			storeConfig, err := ctx.Config.GetRepository(syncTarget)
@@ -330,7 +330,7 @@ func (cmd *Ptar) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (
 
 	repoWriter := repo.NewRepositoryWriter(scanCache, identifier, repository.PtarType, "")
 	for i, syncTarget := range cmd.SyncTargets {
-		if err := func() error {
+		if err := func() error { // using a lambda to run the deferred close at each loop iteration
 			storeConfig, err := ctx.Config.GetRepository(syncTarget)
 			if err != nil {
 				return fmt.Errorf("source repository: %w", err)
@@ -376,7 +376,7 @@ func (cmd *Ptar) Execute(ctx *appcontext.AppContext, _ *repository.Repository) (
 
 func (cmd *Ptar) backup(ctx *appcontext.AppContext, repo *repository.RepositoryWriter) error {
 	for _, loc := range cmd.BackupTargets {
-		if err := func() error {
+		if err := func() error { // using a lambda to run the deferred close at each loop iteration
 			opts := map[string]string{
 				"location": loc,
 			}
