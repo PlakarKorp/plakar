@@ -94,7 +94,11 @@ export function MultiAxisLineChart({
       line.hasArea && points.length > 1
         ? `${d} L${points[points.length - 1][0].toFixed(1)} ${baseline} L${points[0][0].toFixed(1)} ${baseline}Z`
         : undefined;
-    return { d: points.length > 1 ? d : undefined, area };
+    return {
+      d: points.length > 1 ? d : undefined,
+      area,
+      lone: points.length === 1 ? points[0] : undefined,
+    };
   });
 
   const xTicks =
@@ -205,6 +209,14 @@ export function MultiAxisLineChart({
                   strokeWidth={1.8}
                   strokeLinejoin="round"
                   strokeDasharray={line.isDashed ? "4 3" : undefined}
+                />
+              )}
+              {paths[i].lone && (
+                <circle
+                  cx={paths[i].lone[0]}
+                  cy={paths[i].lone[1]}
+                  r={3}
+                  fill={line.color}
                 />
               )}
             </g>

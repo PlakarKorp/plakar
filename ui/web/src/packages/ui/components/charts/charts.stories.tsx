@@ -287,6 +287,31 @@ export const MultiAxisChartDaily: StoryObj<typeof MultiAxisLineChart> = {
   ),
 };
 
+export const MultiAxisChartLonePoint: StoryObj<typeof MultiAxisLineChart> = {
+  ...MultiAxisChartDaily,
+  args: {
+    ...MultiAxisChartDaily.args,
+    label: "Storage size on the first day of history",
+    lines: [
+      {
+        name: "Storage size",
+        color: SERIES_ACCENT,
+        axis: "left",
+        hasArea: true,
+        values: [
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          3_400_000_000,
+        ],
+        format: prettyBytes,
+      },
+    ],
+  },
+};
+
 export const Sparkline: StoryObj<typeof SparkBars> = {
   args: {
     data: [0, 2, 1, 0, 3, 4, 2, 0, 0, 5, 3, 2, 4, 6, 1, 0, 2, 3, 5, 4].map(
