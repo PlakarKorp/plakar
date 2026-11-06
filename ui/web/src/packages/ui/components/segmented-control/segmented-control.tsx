@@ -18,6 +18,8 @@ export type SegmentedControlProps = {
   onSelect: (id: string) => void;
   ariaLabel: string;
   variant?: "default" | "accent";
+  /** Use "md" next to inputs and selects, whose height it then matches. */
+  size?: "sm" | "md";
   hideLabels?: boolean;
   isDisabled?: boolean;
   className?: string;
@@ -35,6 +37,7 @@ export function SegmentedControl({
   onSelect,
   ariaLabel,
   variant = "default",
+  size = "sm",
   hideLabels = false,
   isDisabled = false,
   className,
@@ -55,10 +58,11 @@ export function SegmentedControl({
       onSelectionChange={handleSelectionChange}
       isDisabled={isDisabled}
       className={clsx(
-        "inline-flex flex-row gap-0.5",
+        // Scrolls sideways, without a visible bar, when the segments do not fit.
+        "inline-flex max-w-full [scrollbar-width:none] flex-row gap-0.5 overflow-x-auto [&::-webkit-scrollbar]:hidden",
         {
-          default: "bg-secondary border-secondary rounded-lg border p-0.5",
-          accent: "bg-tertiary max-w-full overflow-x-auto rounded-xl p-1",
+          default: "bg-tertiary rounded-[9px] p-[3px]",
+          accent: "bg-tertiary rounded-xl p-1",
         }[variant],
         className
       )}
@@ -80,9 +84,10 @@ export function SegmentedControl({
                 // basis-auto, not the default 0: segments still share any spare
                 // width, but a long label sets a floor instead of wrapping.
                 default: clsx(
-                  "h-7 flex-1 basis-auto gap-1.5 rounded-md px-2",
+                  "flex-1 basis-auto gap-1.5 rounded-[7px] px-2.5",
+                  size === "md" ? "h-8" : "h-6.5",
                   "text-tertiary data-hovered:text-secondary",
-                  "data-selected:bg-primary data-selected:text-primary data-selected:shadow-sm"
+                  "data-selected:bg-primary data-selected:text-primary data-selected:shadow-[0_0_0_1px_var(--border-color-secondary),0_1px_2px_rgb(15_23_42/0.12)]"
                 ),
                 accent: clsx(
                   "shrink-0 gap-2 rounded-lg px-3 py-1.5",

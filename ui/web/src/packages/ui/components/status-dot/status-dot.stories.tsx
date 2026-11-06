@@ -39,3 +39,15 @@ export const OnAccent: Story = {
     ),
   ],
 };
+
+export const All: Story = {
+  args: { variant: "success" },
+  parameters: { controls: { disable: true } },
+  render: () => (
+    <div className="flex items-center gap-4">
+      {StatusDotVariant.map((variant) => (
+        <StatusDot key={variant} variant={variant} />
+      ))}
+    </div>
+  ),
+};

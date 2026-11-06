@@ -8,5 +8,10 @@ export const IconBadgeTypes = [
   "service",
   "error",
   "warning",
+  "task_backup",
+  "task_restore",
+  "task_sync",
+  "task_check",
+  "task_prune",
   ...ConfigurationTypes,
 ];

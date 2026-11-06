@@ -579,3 +579,58 @@ Supported variables:
     opacity: 0;
   }
 }
+
+/*
+ * Soft status colors and task type colors. The brand accent stays untouched.
+ * Use the status-* set for job and run outcomes. The success, error and warning
+ * tokens above stay for alerts and validation.
+ */
+@theme {
+  --color-status-success: #12a37f;
+  --color-status-success-ink: #0b7a5c;
+  --color-status-success-wash: #e3f6ef;
+  --color-status-success-bar: #8fd8bd;
+  --color-status-error: #d93a55;
+  --color-status-error-ink: #b42a43;
+  --color-status-error-wash: #fdeef1;
+  --color-status-error-line: #f4c4cd;
+  --color-status-error-bar: #e8647b;
+  --color-status-cancel: #78716c;
+  --color-status-cancel-wash: #f1efec;
+  --color-status-queue: #64748b;
+  --color-task-backup: #524cff;
+  --color-task-backup-bg: #ecf0ff;
+  --color-task-restore: #c2570c;
+  --color-task-restore-bg: #fff0e0;
+  --color-task-sync: #0a7ab5;
+  --color-task-sync-bg: #e3f3fb;
+  --color-task-check: #9b4fc4;
+  --color-task-check-bg: #f6eafc;
+  --color-task-prune: #57534e;
+  --color-task-prune-bg: #f1efec;
+}
+
+.dark {
+  --color-status-success: #34d3a0;
+  --color-status-success-ink: #6ee7b7;
+  --color-status-success-wash: #0b2a21;
+  --color-status-success-bar: #1f7a5e;
+  --color-status-error: #ff6b81;
+  --color-status-error-ink: #ff9aa9;
+  --color-status-error-wash: #2d1218;
+  --color-status-error-line: #5a2230;
+  --color-status-error-bar: #e0526a;
+  --color-status-cancel: #a8a29e;
+  --color-status-cancel-wash: #27272a;
+  --color-status-queue: #a1a1aa;
+  --color-task-backup: #8e8aff;
+  --color-task-backup-bg: #1d1650;
+  --color-task-restore: #fb9a50;
+  --color-task-restore-bg: #2d1a0c;
+  --color-task-sync: #54b8ec;
+  --color-task-sync-bg: #0c2433;
+  --color-task-check: #cf93ee;
+  --color-task-check-bg: #2a1636;
+  --color-task-prune: #a8a29e;
+  --color-task-prune-bg: #27272a;
+}

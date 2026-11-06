@@ -3,9 +3,14 @@ import prettyBytes from "pretty-bytes";
 
 import { BytesLineChart } from "./bytes-line-chart";
 import { JobsBarChart } from "./jobs-bar-chart";
+import { MultiAxisLineChart } from "./multi-axis-line-chart";
+import {
+  evenTicks,
+  SERIES_ACCENT,
+  SERIES_SUCCESS,
+} from "./multi-axis-line-chart.utils";
 import { PieChart as PieChartComponent } from "./pie-chart";
 import { RatioBar } from "./ratio-bar";
-import { ResourceLineChart } from "./resource-line-chart";
 import { SparkBars } from "./spark-bars";
 import { UsageBar } from "./usage-bar";
 
@@ -202,19 +207,43 @@ const resourceData = [
   { t: 460, cpu: 14, memory: 255_066_112 },
 ];
 
-export const ResourceChart: StoryObj<
-  typeof ResourceLineChart<"cpu" | "memory">
-> = {
+export const MultiAxisChart: StoryObj<typeof MultiAxisLineChart> = {
   args: {
-    data: resourceData,
-    series: [
-      { key: "cpu", name: "CPU", format: (v) => `${v.toFixed(1)}%` },
-      { key: "memory", name: "Memory", format: prettyBytes },
+    label: "CPU and memory usage over time",
+    times: resourceData.map((d) => d.t),
+    left: {
+      min: 0,
+      max: 100,
+      ticks: evenTicks(0, 25, 4),
+      format: (v) => `${v}%`,
+    },
+    right: {
+      min: 0,
+      max: 320_000_000,
+      ticks: evenTicks(0, 80_000_000, 4),
+      format: (v) => (v === 0 ? "0" : prettyBytes(v)),
+    },
+    lines: [
+      {
+        name: "CPU",
+        color: SERIES_ACCENT,
+        axis: "left",
+        hasArea: true,
+        values: resourceData.map((d) => d.cpu),
+        format: (v) => `${v.toFixed(1)}%`,
+      },
+      {
+        name: "Memory",
+        color: SERIES_SUCCESS,
+        axis: "right",
+        values: resourceData.map((d) => d.memory),
+        format: prettyBytes,
+      },
     ],
   },
   render: (args) => (
-    <div className="h-60 w-180">
-      <ResourceLineChart {...args} />
+    <div className="w-180">
+      <MultiAxisLineChart {...args} />
     </div>
   ),
 };
