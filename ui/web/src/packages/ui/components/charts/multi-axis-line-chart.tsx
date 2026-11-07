@@ -9,6 +9,10 @@ type MultiAxisLineChartProps = {
   right?: LineChartAxis;
   label: string;
   height?: number;
+  // Names a time, on the axis and in the tooltip.
+  formatTime?: (t: number) => string;
+  // Times the axis labels; five even steps when unset.
+  timeTicks?: number[];
 };
 
 const MARGIN_TOP = 8;
@@ -49,6 +53,8 @@ export function MultiAxisLineChart({
   right,
   label,
   height = 220,
+  formatTime = formatElapsed,
+  timeTicks,
 }: MultiAxisLineChartProps) {
   const { ref, width } = useWidth();
   const [hovered, setHovered] = useState<number>();
@@ -88,13 +94,16 @@ export function MultiAxisLineChart({
       line.hasArea && points.length > 1
         ? `${d} L${points[points.length - 1][0].toFixed(1)} ${baseline} L${points[0][0].toFixed(1)} ${baseline}Z`
         : undefined;
-    return { d: points.length > 1 ? d : undefined, area };
+    return {
+      d: points.length > 1 ? d : undefined,
+      area,
+      lone: points.length === 1 ? points[0] : undefined,
+    };
   });
 
-  const xTicks = Array.from(
-    { length: X_TICKS },
-    (_, i) => (i / (X_TICKS - 1)) * maxT
-  );
+  const xTicks =
+    timeTicks ??
+    Array.from({ length: X_TICKS }, (_, i) => (i / (X_TICKS - 1)) * maxT);
 
   const summary = lines
     .map((line) => {
@@ -175,18 +184,16 @@ export function MultiAxisLineChart({
               {right.format(tick)}
             </text>
           ))}
-          {xTicks.map((t, i) => (
+          {xTicks.map((t) => (
             <text
               key={t}
               x={x(t)}
               y={height - 6}
-              textAnchor={
-                i === 0 ? "start" : i === X_TICKS - 1 ? "end" : "middle"
-              }
+              textAnchor={t === 0 ? "start" : t === maxT ? "end" : "middle"}
               fontSize={12}
               fill="var(--text-color-quaternary)"
             >
-              {formatElapsed(t)}
+              {formatTime(t)}
             </text>
           ))}
           {lines.map((line, i) => (
@@ -202,6 +209,14 @@ export function MultiAxisLineChart({
                   strokeWidth={1.8}
                   strokeLinejoin="round"
                   strokeDasharray={line.isDashed ? "4 3" : undefined}
+                />
+              )}
+              {paths[i].lone && (
+                <circle
+                  cx={paths[i].lone[0]}
+                  cy={paths[i].lone[1]}
+                  r={3}
+                  fill={line.color}
                 />
               )}
             </g>
@@ -241,7 +256,7 @@ export function MultiAxisLineChart({
               : { left: hoveredX + 12 }
           }
         >
-          <div className="text-tertiary">{formatElapsed(times[hovered])}</div>
+          <div className="text-tertiary">{formatTime(times[hovered])}</div>
           {lines.map((line) => {
             const value = line.values[hovered];
             return value === undefined ? null : (
