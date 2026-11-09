@@ -323,6 +323,8 @@ export type getSnapshotsListFn = (
   props: {
     repository: string | undefined;
     importer?: string;
+    /** Start of the snapshot ID, in hexadecimal. */
+    id?: string;
     pagination: PaginationParams;
     since?: Date;
   },
