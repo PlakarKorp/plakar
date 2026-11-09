@@ -3,6 +3,7 @@ import {
   Radio,
   RadioGroup,
   Select,
+  TagToggleGroup,
 } from "@plakar-ui/ui/components";
 import clsx from "clsx";
 import { useState } from "react";
@@ -24,7 +25,7 @@ const DEFAULT_OPTIONS = [{ label: "Custom", value: "custom", seconds: null }];
 type DurationFieldProps = {
   label?: string;
   options?: Option[];
-  type?: "radio" | "select";
+  type?: "radio" | "select" | "tags";
   placeholder?: string;
   supportText?: string;
 };
@@ -74,8 +75,9 @@ export function DurationField({
     >
       <div
         className={clsx(
-          "flex w-full items-start",
-          type === "select" ? "gap-4" : "gap-8"
+          "flex w-full",
+          type === "tags" ? "flex-col gap-3" : "items-start",
+          type === "select" ? "gap-4" : type === "radio" && "gap-8"
         )}
       >
         {!singleOption &&
@@ -119,9 +121,32 @@ export function DurationField({
                 {isCustom && <span className="mt-7.5 hidden md:block">:</span>}
               </>
             ),
+            tags: (
+              <TagToggleGroup
+                label={label || "Duration"}
+                selectionMode="single"
+                selectedKeys={option ? [option.value] : []}
+                onSelectionChange={(keys) => {
+                  const [value] = keys;
+                  handleChangeOption(value === undefined ? "" : String(value));
+                }}
+                isDisabled={isReadOnly}
+              >
+                {options.map(({ value, label }) => (
+                  <TagToggleGroup.Button key={value} id={value}>
+                    {label}
+                  </TagToggleGroup.Button>
+                ))}
+              </TagToggleGroup>
+            ),
           }[type]}
         {isCustom && (
-          <div className="flex flex-col gap-4 self-end md:flex-row">
+          <div
+            className={clsx(
+              "flex flex-col gap-4 md:flex-row",
+              type !== "tags" && "self-end"
+            )}
+          >
             <NumberInput
               label="Days"
               value={custom.days}
