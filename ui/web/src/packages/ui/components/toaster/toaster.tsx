@@ -31,7 +31,7 @@ export function Toaster({
   return (
     <div
       className={clsx(
-        "border-primary bg-primary flex gap-2 rounded-xl border p-3 shadow-xl",
+        "border-primary bg-overlay flex gap-2 rounded-xl border p-3 shadow-xl",
         {
           default: "text-primary",
           brand: "text-accent",

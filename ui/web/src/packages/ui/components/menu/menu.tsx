@@ -27,7 +27,7 @@ function MenuRoot({
       className={clsx(
         "flex max-h-[inherit] flex-col gap-1",
         !unstyled &&
-          "border-primary bg-primary rounded-lg border p-1 shadow-lg",
+          "border-primary bg-overlay rounded-lg border p-1 shadow-lg",
         className
       )}
     >

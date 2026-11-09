@@ -49,7 +49,7 @@ function ModalDialog({
   return (
     <div
       className={clsx(
-        "border-secondary bg-primary flex max-h-[90vh] flex-col rounded-xl border",
+        "border-secondary bg-overlay flex max-h-[90vh] flex-col rounded-xl border",
         className
       )}
     >

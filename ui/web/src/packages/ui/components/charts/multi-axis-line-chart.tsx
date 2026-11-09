@@ -249,7 +249,7 @@ export function MultiAxisLineChart({
       )}
       {hovered !== undefined && (
         <div
-          className="bg-primary border-secondary text-primary pointer-events-none absolute top-2 z-10 rounded-lg border px-2 py-1 text-xs shadow-lg"
+          className="bg-overlay border-secondary text-primary pointer-events-none absolute top-2 z-10 rounded-lg border px-2 py-1 text-xs shadow-lg"
           style={
             hoveredX > width / 2
               ? { right: width - hoveredX + 12 }

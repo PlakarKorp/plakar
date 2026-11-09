@@ -58,7 +58,7 @@ export function BytesLineChart({ data }: BytesChartProps) {
           niceTicks="snap125"
         />
         <Tooltip
-          wrapperClassName="!bg-primary rounded-lg shadow-lg border !border-secondary text-sm"
+          wrapperClassName="!bg-overlay rounded-lg shadow-lg border !border-secondary text-sm"
           formatter={(value) =>
             typeof value === "number" ? prettyBytes(value) : String(value)
           }

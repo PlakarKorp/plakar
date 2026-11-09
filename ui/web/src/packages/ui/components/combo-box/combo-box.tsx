@@ -82,7 +82,7 @@ function ComboBoxRoot({
       <Popover
         offset={4}
         containerPadding={8}
-        className="border-primary bg-primary min-w-[var(--trigger-width)] rounded-lg border shadow-lg"
+        className="border-primary bg-overlay min-w-[var(--trigger-width)] rounded-lg border shadow-lg"
       >
         <ListBox
           renderEmptyState={() => (

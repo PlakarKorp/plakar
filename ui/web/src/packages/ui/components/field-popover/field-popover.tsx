@@ -97,7 +97,7 @@ export function FieldPopover({
           offset={4}
           containerPadding={8}
           placement="bottom start"
-          className="border-primary bg-primary rounded-lg border shadow-lg"
+          className="border-primary bg-overlay rounded-lg border shadow-lg"
         >
           <Dialog
             aria-label={title ? undefined : (label ?? props["aria-label"])}

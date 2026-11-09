@@ -122,7 +122,7 @@ export function DatePicker<T extends DateValue>({
       <Popover
         offset={4}
         containerPadding={8}
-        className="border-primary bg-primary rounded-lg border p-4 shadow-lg"
+        className="border-primary bg-overlay rounded-lg border p-4 shadow-lg"
       >
         <Dialog>
           <Calendar>

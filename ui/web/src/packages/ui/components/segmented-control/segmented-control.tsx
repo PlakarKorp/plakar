@@ -87,7 +87,7 @@ export function SegmentedControl({
                   "flex-1 basis-auto gap-1.5 rounded-[7px] px-2.5",
                   size === "md" ? "h-8" : "h-6.5",
                   "text-tertiary data-hovered:text-secondary",
-                  "data-selected:bg-primary data-selected:text-primary data-selected:shadow-[0_0_0_1px_var(--border-color-secondary),0_1px_2px_rgb(15_23_42/0.12)]"
+                  "data-selected:bg-selected data-selected:text-primary data-selected:shadow-[0_0_0_1px_var(--border-color-secondary),0_1px_2px_rgb(15_23_42/0.12)]"
                 ),
                 accent: clsx(
                   "shrink-0 gap-2 rounded-lg px-3 py-1.5",

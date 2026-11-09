@@ -50,7 +50,7 @@ export function JobsBarChart({ data }: JobsChartProps) {
           )}
           niceTicks="snap125"
         />
-        <Tooltip wrapperClassName="!bg-primary rounded-lg shadow-lg border !border-secondary text-sm" />
+        <Tooltip wrapperClassName="!bg-overlay rounded-lg shadow-lg border !border-secondary text-sm" />
         <CartesianGrid
           stroke="var(--background-color-tertiary)"
           strokeDasharray="5 5"

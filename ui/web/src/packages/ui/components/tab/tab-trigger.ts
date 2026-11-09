@@ -31,7 +31,7 @@ export function getTabTriggerClassName({
 
     variant === "pill" && {
       "h-9 rounded-lg px-2 py-1": true,
-      "bg-primary text-primary": isSelected,
+      "bg-selected text-primary": isSelected,
       "hover:bg-tertiary-hover": !isSelected && !isDisabled,
       "text-tertiary": !isSelected && !isDisabled,
     },
