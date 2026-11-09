@@ -9,7 +9,7 @@ import {
   Tag,
 } from "@plakar-ui/ui/components";
 import clsx from "clsx";
-import { cloneElement, ComponentType, useState } from "react";
+import { cloneElement, ComponentType, useEffect, useState } from "react";
 import { Link } from "react-aria-components";
 
 import { User, UserAvatar } from "./user-avatar";
@@ -21,6 +21,7 @@ import {
   ThemeSwitch,
   VersionLabel,
 } from "../../components";
+import { useScrollEdges } from "../../hooks/use-scroll-edges";
 
 export type ContentProps = {
   navItems: NavListItemProps[];
@@ -75,6 +76,17 @@ export function Content({
   const login = subNavItems.find((item) => item.label === "Login");
   const settings = subNavItems.find((item) => item.label === "Settings");
   const canSignIn = !user.isAuthenticated && !user.isPending;
+  const [scrollRef, { isCutTop, isCutBottom }] =
+    useScrollEdges<HTMLDivElement>();
+  const selectedPath = selectedNavPath(navItems);
+
+  // Keyed on the selected entry, not on every render, so a manual scroll of
+  // the list is left alone.
+  useEffect(() => {
+    scrollRef.current
+      ?.querySelector('[aria-current="page"]')
+      ?.scrollIntoView({ block: "nearest" });
+  }, [scrollRef, selectedPath]);
 
   const navNodes = navItems.map((item, i) => (
     <NavNodeRenderer
@@ -87,26 +99,41 @@ export function Content({
   ));
 
   return (
-    <div className="flex min-h-full flex-col justify-between gap-4 overflow-hidden">
-      <div className="flex flex-col gap-8">
-        <div className={clsx("ml-[3.5px] flex items-center justify-between")}>
-          <Link href={navItems[0].href}>
-            <ProductLogo variant={logoVariant} className="h-[32px]" />
-          </Link>
-          {isExpanded && (
-            <div
-              className={clsx("flex flex-col items-end gap-1", plan && "-mb-2")}
-            >
-              {plan && (
-                <Tag variant="brand" radius="sqrt" size="sm">
-                  <span className="capitalize">{plan}</span> plan
-                </Tag>
-              )}
-              <VersionLabel version={version} channel />
-            </div>
-          )}
-        </div>
+    <div className="flex h-full flex-col gap-4">
+      <div className="flex shrink-0 items-center justify-between pb-4 pl-[3.5px]">
+        <Link href={navItems[0].href}>
+          <ProductLogo variant={logoVariant} className="h-[32px]" />
+        </Link>
+        {isExpanded && (
+          <div
+            className={clsx("flex flex-col items-end gap-1", plan && "-mb-2")}
+          >
+            {plan && (
+              <Tag variant="brand" radius="sqrt" size="sm">
+                <span className="capitalize">{plan}</span> plan
+              </Tag>
+            )}
+            <VersionLabel version={version} channel />
+          </div>
+        )}
+      </div>
 
+      {/* Only the entries scroll: the logo and the account stay in reach. */}
+      <div
+        ref={scrollRef}
+        className={clsx(
+          "scrollbar-hide min-h-0 flex-1 overflow-y-auto overscroll-contain [&_[aria-current=page]]:scroll-my-8",
+          isCutTop &&
+            isCutBottom &&
+            "[mask-image:linear-gradient(to_bottom,transparent,black_2rem,black_calc(100%-2rem),transparent)]",
+          isCutTop &&
+            !isCutBottom &&
+            "[mask-image:linear-gradient(to_bottom,transparent,black_2rem)]",
+          !isCutTop &&
+            isCutBottom &&
+            "[mask-image:linear-gradient(to_top,transparent,black_2rem)]"
+        )}
+      >
         <NavList aria-label="main navigation">
           {scope ? (
             <NavList.Scope
@@ -123,7 +150,7 @@ export function Content({
         </NavList>
       </div>
 
-      <div className="flex flex-col gap-4">
+      <div className="flex shrink-0 flex-col gap-4">
         {isExpanded && !user.isPending && (
           <>
             {isDemo && user.isAuthenticated && <DemoBanner />}
@@ -230,6 +257,25 @@ export function Content({
       </div>
     </div>
   );
+}
+
+/**
+ * Where the selected entry sits in the tree, as its indexes joined. A group is
+ * marked selected along with its entry, so only entries count; none while they
+ * load, as their placeholders are not marked as the current page.
+ */
+function selectedNavPath(items: NavNode[]): string | undefined {
+  for (const [index, item] of items.entries()) {
+    const path = item.subItems?.length
+      ? selectedNavPath(item.subItems)
+      : item.isSelected && !item.isLoading
+        ? ""
+        : undefined;
+    if (path !== undefined) {
+      return path ? `${index}.${path}` : String(index);
+    }
+  }
+  return undefined;
 }
 
 type NavNode = NavListItemProps & {
