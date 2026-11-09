@@ -60,10 +60,10 @@ export function Header(contentProps: HeaderProps) {
         className="fixed inset-0 z-2 bg-black/50 data-[entering]:animate-[modal-fade_150ms] data-[exiting]:animate-[modal-fade_reverse_150ms] xl:hidden"
         isDismissable
       >
-        <Modal className="bg-primary fixed left-0 h-full w-70 overflow-auto shadow-xl data-[entering]:animate-[modal-slide-right_200ms_ease-out] data-[exiting]:animate-[modal-slide-right_150ms_reverse_ease-in]">
+        <Modal className="bg-primary fixed left-0 h-full w-70 overflow-hidden shadow-xl data-[entering]:animate-[modal-slide-right_200ms_ease-out] data-[exiting]:animate-[modal-slide-right_150ms_reverse_ease-in]">
           <Dialog
             aria-label="Navigation"
-            className="h-full overflow-y-auto p-4"
+            className="h-full overflow-hidden p-4"
           >
             <Content
               {...contentProps}
