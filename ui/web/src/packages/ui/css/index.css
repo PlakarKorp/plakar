@@ -108,21 +108,25 @@ Supported variables:
   --blue-brand-950: #1d1650;
 
   /* Background */
-  --background-background: oklch(0.972 0.005 278);
+  --background-background: var(--color-slate-50);
 
   --background-color-primary: var(--color-white);
-  --background-color-primary-hover: oklch(0.972 0.005 278);
+  --background-color-primary-hover: var(--color-slate-50);
 
-  --background-color-secondary: oklch(0.972 0.005 278);
-  --background-color-secondary-hover: oklch(0.948 0.008 278);
+  --background-color-secondary: var(--color-slate-50);
+  --background-color-secondary-hover: var(--color-slate-100);
 
-  --background-color-tertiary: oklch(0.955 0.007 278);
-  --background-color-tertiary-hover: oklch(0.922 0.01 278);
+  --background-color-tertiary: var(--color-slate-100);
+  --background-color-tertiary-hover: var(--color-slate-200);
 
+  --background-color-shell: var(--color-white);
   --background-color-overlay: var(--color-white);
   --background-color-selected: var(--color-white);
 
-  --background-color-accent-heavy: oklch(0.225 0.03 278);
+  --background-color-avatar: var(--blue-brand-100);
+  --background-color-avatar-service: var(--color-slate-100);
+
+  --background-color-accent-heavy: var(--color-slate-900);
   --background-color-accent: var(--blue-brand-500);
   --background-color-accent-hover: var(--blue-brand-400);
   --background-color-accent-secondary: var(--blue-brand-300);
@@ -131,43 +135,45 @@ Supported variables:
   --background-color-accent-quaternary: var(--blue-brand-50);
   --background-color-focus: var(--border-color-accent);
 
-  --background-color-success: var(--color-emerald-500);
-  --background-color-success-secondary: var(--color-emerald-300);
-  --background-color-success-tertiary: var(--color-emerald-100);
+  --background-color-success: oklch(0.7 0.14 163);
+  --background-color-success-secondary: oklch(0.86 0.08 163);
+  --background-color-success-tertiary: oklch(0.95 0.035 163);
 
-  --background-color-warning: var(--color-yellow-500);
+  --background-color-warning: oklch(0.8 0.15 80);
   --background-color-warning-secondary: var(--color-yellow-300);
   --background-color-warning-tertiary: var(--color-yellow-100);
 
-  --background-color-error: var(--color-red-500);
-  --background-color-error-hover: var(--color-red-400);
-  --background-color-error-secondary: var(--color-red-300);
-  --background-color-error-tertiary: var(--color-red-100);
+  --background-color-error: oklch(0.64 0.19 22);
+  --background-color-error-hover: oklch(0.69 0.17 22);
+  --background-color-error-secondary: oklch(0.84 0.08 22);
+  --background-color-error-tertiary: oklch(0.95 0.025 22);
 
-  --background-color-disable: oklch(0.922 0.01 278);
-  --background-color-placeholder: oklch(0.922 0.01 278);
+  --background-color-disable: var(--color-slate-200);
+  --background-color-placeholder: var(--color-slate-200);
 
   --background-color-foreground-light: var(--color-white);
-  --background-color-foreground-black: oklch(0.225 0.03 278);
+  --background-color-foreground-black: var(--color-zinc-950);
 
-  --background-color-terminal: oklch(0.205 0.02 278);
-  --background-color-terminal-hover: oklch(0.37 0.022 278);
-  --background-color-terminal-heavy: oklch(0.27 0.022 278);
+  --background-color-terminal: var(--color-slate-900);
+  --background-color-terminal-hover: var(--color-slate-700);
+  --background-color-terminal-heavy: var(--color-slate-800);
 
   --background-color-mark: var(--color-yellow-300);
 
   /* Text */
-  --text-color-primary: oklch(0.225 0.03 278);
-  --text-color-secondary: oklch(0.385 0.03 278);
-  --text-color-tertiary: oklch(0.53 0.026 278);
-  --text-color-quaternary: oklch(0.68 0.02 278);
+  --text-color-primary: var(--color-slate-900);
+  --text-color-secondary: var(--color-slate-700);
+  --text-color-tertiary: var(--color-slate-500);
+  --text-color-quaternary: var(--color-slate-400);
 
-  --text-color-disable: oklch(0.68 0.02 278);
-  --text-color-placeholder: oklch(0.68 0.02 278);
+  --text-color-disable: var(--color-slate-400);
+  --text-color-placeholder: var(--color-slate-400);
 
   --text-color-on-accent: var(--color-white);
   --text-color-on-brand: var(--color-white);
   --text-color-on-brand-secondary: var(--blue-brand-100);
+  --text-color-avatar: var(--blue-brand-600);
+  --text-color-avatar-service: var(--color-slate-600);
   --text-color-accent: var(--blue-brand-500);
   --text-color-accent-hover: var(--blue-brand-400);
 
@@ -175,24 +181,24 @@ Supported variables:
   --text-color-warning: var(--color-yellow-700);
   --text-color-error: var(--color-red-700);
 
-  --text-color-terminal: oklch(0.6 0.02 278);
-  --text-color-terminal-secondary: oklch(0.86 0.012 278);
+  --text-color-terminal: var(--color-slate-500);
+  --text-color-terminal-secondary: var(--color-slate-300);
 
   /* Borders */
-  --border-color-primary: oklch(0.865 0.013 278);
-  --border-color-secondary: oklch(0.912 0.01 278);
-  --border-color-tertiary: oklch(0.955 0.007 278);
+  --border-color-primary: var(--color-slate-300);
+  --border-color-secondary: var(--color-slate-200);
+  --border-color-tertiary: var(--color-slate-100);
 
   --border-color-accent: var(--blue-brand-500);
   --border-color-accent-secondary: var(--blue-brand-300);
-  --border-color-accent-heavy: oklch(0.225 0.03 278);
+  --border-color-accent-heavy: var(--color-slate-900);
   --border-color-on-accent: var(--color-white);
 
   --border-color-success: var(--color-emerald-600);
   --border-color-warning: var(--color-yellow-600);
   --border-color-error: var(--color-red-600);
 
-  --border-color-terminal: oklch(0.37 0.022 278);
+  --border-color-terminal: var(--color-slate-700);
 
   /* If you need to reuse colors for other purposes than borders */
   --color-text-on-accent: var(--text-color-on-accent);
@@ -270,7 +276,11 @@ Supported variables:
   --background-color-tertiary-hover: oklch(0.265 0.021 278);
 
   --background-color-overlay: oklch(0.205 0.019 278);
+  --background-color-shell: oklch(0.145 0.014 278);
   --background-color-selected: oklch(0.32 0.022 278);
+
+  --background-color-avatar: oklch(0.34 0.13 278);
+  --background-color-avatar-service: oklch(0.225 0.019 278);
 
   --background-color-accent-heavy: oklch(0.965 0.005 278);
   --background-color-accent: var(--blue-brand-500);
@@ -319,6 +329,8 @@ Supported variables:
   --text-color-on-brand: var(--color-white);
   --text-color-on-brand-secondary: var(--blue-brand-100);
   --text-color-accent: oklch(0.86 0.08 278);
+  --text-color-avatar: oklch(0.86 0.08 278);
+  --text-color-avatar-service: oklch(0.83 0.012 278);
   --text-color-accent-hover: oklch(0.92 0.05 278);
 
   --text-color-success: oklch(0.85 0.1 165);
@@ -603,7 +615,7 @@ Supported variables:
   --color-status-error-bar: #e8647b;
   --color-status-cancel: #78716c;
   --color-status-cancel-wash: #f1efec;
-  --color-status-queue: oklch(0.53 0.026 278);
+  --color-status-queue: #64748b;
   --color-task-backup: #524cff;
   --color-task-backup-bg: #ecf0ff;
   --color-task-restore: #c2570c;

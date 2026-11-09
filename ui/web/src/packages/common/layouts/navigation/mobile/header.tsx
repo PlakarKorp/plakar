@@ -34,7 +34,7 @@ export function Header(contentProps: HeaderProps) {
 
   return (
     <>
-      <header className="border-secondary bg-secondary flex items-center justify-between border-b p-2 pl-4 lg:hidden">
+      <header className="border-secondary bg-shell flex items-center justify-between border-b p-2 pl-4 lg:hidden">
         <div className="flex items-center gap-2">
           <Link href={navItems[0].href}>
             <ProductLogo variant="icon" className="h-8.5" />

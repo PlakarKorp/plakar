@@ -10,7 +10,7 @@ export function StickyControls({ children }: StickyControlsProps) {
     <div
       className={clsx(
         "absolute top-0 right-0 left-0 z-5",
-        "bg-secondary border-secondary border-b"
+        "bg-shell border-secondary border-b"
       )}
     >
       <div className="px-2 py-3 lg:px-4 2xl:container 2xl:mx-auto">

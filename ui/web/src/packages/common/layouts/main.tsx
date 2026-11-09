@@ -142,7 +142,7 @@ export function Main({
           className={clsx(
             {
               main: clsx(
-                "bg-secondary border-secondary border-b px-2 pt-4 lg:px-4",
+                "bg-shell border-secondary border-b px-2 pt-4 lg:px-4",
                 (!tabItems || tabsAsTitle) && "pb-4"
               ),
               sub: "bg-secondary mb-4",

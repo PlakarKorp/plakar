@@ -61,7 +61,7 @@ export function Navigation(contentProps: NavigationProps) {
         className={clsx(
           "border-secondary absolute z-50 h-full overflow-hidden border-r p-4",
           isExpanded ? "w-70" : "w-18",
-          isFloating ? "bg-overlay shadow-xl" : "bg-secondary"
+          isFloating ? "bg-overlay shadow-xl" : "bg-shell"
         )}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
