@@ -75,7 +75,7 @@ function CustomYTick({ x, y, payload }: CustomTickProps) {
       x={x}
       y={y}
       textAnchor="end"
-      fill="var(--text-color-quaternary)"
+      fill="var(--text-color-tertiary)"
       fontSize={12}
     >
       {payload.value}
@@ -89,7 +89,7 @@ function CustomXTick({ x, y, payload }: CustomTickProps) {
       x={x}
       y={Number(y) + 12}
       textAnchor="middle"
-      fill="var(--text-color-quaternary)"
+      fill="var(--text-color-tertiary)"
       fontSize={12}
     >
       {payload.value}

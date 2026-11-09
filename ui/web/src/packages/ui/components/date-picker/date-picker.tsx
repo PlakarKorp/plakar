@@ -162,7 +162,7 @@ export function DatePicker<T extends DateValue>({
                       "outline-focus h-8 w-8 rounded-full text-sm outline-offset-2",
                       "aria-disabled:hidden",
                       "hover:bg-primary-hover",
-                      "data-selected:bg-accent data-selected:text-on-accent"
+                      "data-selected:bg-accent data-selected:text-on-brand"
                     )}
                   />
                 )}

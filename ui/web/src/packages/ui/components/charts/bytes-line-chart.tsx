@@ -32,9 +32,9 @@ export function BytesLineChart({ data }: BytesChartProps) {
         <Area
           type="monotone"
           dataKey="processed"
-          stroke="var(--background-color-accent-secondary)"
+          stroke="var(--background-color-chart-secondary)"
           strokeWidth={2}
-          fill="var(--background-color-accent-secondary)"
+          fill="var(--background-color-chart-secondary)"
           name="Bytes processed"
         />
         <Area
@@ -88,7 +88,7 @@ function CustomYTick({ x, y, payload }: CustomTickProps) {
       x={x}
       y={y}
       textAnchor="end"
-      fill="var(--text-color-quaternary)"
+      fill="var(--text-color-tertiary)"
       fontSize={12}
     >
       {label}
@@ -102,7 +102,7 @@ function CustomXTick({ x, y, payload }: CustomTickProps) {
       x={x}
       y={Number(y) + 12}
       textAnchor="middle"
-      fill="var(--text-color-quaternary)"
+      fill="var(--text-color-tertiary)"
       fontSize={12}
     >
       {payload.value}

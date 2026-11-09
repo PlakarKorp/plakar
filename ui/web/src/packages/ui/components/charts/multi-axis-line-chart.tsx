@@ -167,7 +167,7 @@ export function MultiAxisLineChart({
                 y={y(tick, left) + 4}
                 textAnchor="end"
                 fontSize={12}
-                fill="var(--text-color-quaternary)"
+                fill="var(--text-color-tertiary)"
               >
                 {left.format(tick)}
               </text>
@@ -179,7 +179,7 @@ export function MultiAxisLineChart({
               x={plotRight + 8}
               y={y(tick, right) + 4}
               fontSize={12}
-              fill="var(--text-color-quaternary)"
+              fill="var(--text-color-tertiary)"
             >
               {right.format(tick)}
             </text>
@@ -191,7 +191,7 @@ export function MultiAxisLineChart({
               y={height - 6}
               textAnchor={t === 0 ? "start" : t === maxT ? "end" : "middle"}
               fontSize={12}
-              fill="var(--text-color-quaternary)"
+              fill="var(--text-color-tertiary)"
             >
               {formatTime(t)}
             </text>

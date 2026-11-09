@@ -42,13 +42,13 @@ export function Toggle({
             <div
               className={clsx(
                 "relative inline-flex h-6 w-10 shrink-0 rounded-full border-3 border-transparent transition-colors duration-200 ease-in-out",
-                "group-data-selected:bg-accent group-data-selected:hover:bg-accent-hover bg-zinc-200 group-data-disabled:bg-zinc-300 dark:bg-zinc-600 group-data-disabled:dark:bg-zinc-800", // hardcoded colors because DS colors don't have enough contrast
+                "group-data-selected:bg-accent group-data-selected:hover:bg-accent-hover bg-control-off group-data-disabled:bg-disable",
                 "group-data-focus-visible:outline-focus group-data-focus-visible:outline-2 group-data-focus-visible:outline-offset-2"
               )}
             >
               <div
                 className={clsx(
-                  "pointer-events-none inline-block size-4.5 transform rounded-full bg-white shadow-sm transition duration-200 ease-in-out group-data-disabled:bg-zinc-200 group-data-disabled:dark:bg-zinc-700",
+                  "pointer-events-none inline-block size-4.5 transform rounded-full bg-foreground-light shadow-sm transition duration-200 ease-in-out group-data-disabled:bg-control-thumb-disabled",
                   isSelected && "translate-x-4"
                 )}
               />

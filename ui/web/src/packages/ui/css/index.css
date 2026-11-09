@@ -160,6 +160,21 @@ Supported variables:
 
   --background-color-mark: var(--color-yellow-300);
 
+  --background-color-control-off: oklch(0.66 0.02 257);
+  --background-color-control-thumb-disabled: var(--color-slate-50);
+
+  /* Charts */
+  --background-color-chart-muted: oklch(0.66 0.02 257);
+  --background-color-chart-secondary: var(--blue-brand-300);
+
+  /* Retention tiers, one hue step per tier from the finest to the coarsest */
+  --background-color-tier-minute: oklch(0.6 0.2 5);
+  --background-color-tier-hour: oklch(0.6 0.22 350);
+  --background-color-tier-day: oklch(0.52 0.22 300);
+  --background-color-tier-week: oklch(0.56 0.18 250);
+  --background-color-tier-month: oklch(0.66 0.13 210);
+  --background-color-tier-year: oklch(0.72 0.13 175);
+
   /* Text */
   --text-color-primary: var(--color-slate-900);
   --text-color-secondary: var(--color-slate-700);
@@ -171,6 +186,7 @@ Supported variables:
 
   --text-color-on-accent: var(--color-white);
   --text-color-on-brand: var(--color-white);
+  --text-color-on-error: var(--color-white);
   --text-color-on-brand-secondary: var(--blue-brand-100);
   --text-color-avatar: var(--blue-brand-600);
   --text-color-avatar-service: var(--color-slate-600);
@@ -233,19 +249,19 @@ Supported variables:
   --outline-color-focus: var(--border-color-accent);
 
   /* Configurations colors */
-  --background-color-source-accent: var(--color-rose-600);
-  --background-color-source-tertiary: var(--color-rose-100);
-  --text-color-source: var(--color-rose-600);
-  --border-color-source: var(--color-rose-600);
+  --background-color-source-accent: oklch(0.56 0.2 340);
+  --background-color-source-tertiary: oklch(0.95 0.03 340);
+  --text-color-source: oklch(0.52 0.19 340);
+  --border-color-source: oklch(0.56 0.2 340);
 
-  --background-color-destination-accent: var(--color-emerald-600);
-  --background-color-destination-tertiary: var(--color-emerald-100);
-  --text-color-destination: var(--color-emerald-600);
-  --border-color-destination: var(--color-emerald-600);
+  --background-color-destination-accent: oklch(0.55 0.1 200);
+  --background-color-destination-tertiary: oklch(0.95 0.03 200);
+  --text-color-destination: oklch(0.5 0.09 200);
+  --border-color-destination: oklch(0.55 0.1 200);
 
   --background-color-store-accent: var(--color-blue-600);
-  --background-color-store-tertiary: var(--color-blue-100);
-  --text-color-store: var(--color-blue-600);
+  --background-color-store-tertiary: oklch(0.95 0.03 258);
+  --text-color-store: oklch(0.5 0.17 258);
   --border-color-store: var(--color-blue-600);
 
   --background-color-secret-provider-accent: var(--color-violet-600);
@@ -299,10 +315,10 @@ Supported variables:
   --background-color-warning-secondary: oklch(0.45 0.08 82);
   --background-color-warning-tertiary: oklch(0.28 0.04 82);
 
-  --background-color-error: oklch(0.66 0.17 22);
-  --background-color-error-hover: oklch(0.72 0.15 22);
-  --background-color-error-secondary: oklch(0.42 0.1 22);
-  --background-color-error-tertiary: oklch(0.27 0.06 22);
+  --background-color-error: #ff6b81;
+  --background-color-error-hover: #ff8a9b;
+  --background-color-error-secondary: #5a2230;
+  --background-color-error-tertiary: #2d1218;
 
   --background-color-disable: oklch(0.225 0.019 278);
   --background-color-placeholder: oklch(0.265 0.021 278);
@@ -316,6 +332,21 @@ Supported variables:
 
   --background-color-mark: var(--color-yellow-300);
 
+  --background-color-control-off: oklch(0.5 0.02 278);
+  --background-color-control-thumb-disabled: oklch(0.36 0.02 278);
+
+  /* Charts */
+  --background-color-chart-muted: oklch(0.5 0.02 278);
+  --background-color-chart-secondary: var(--blue-brand-300);
+
+  /* Retention tiers, one hue step per tier from the finest to the coarsest */
+  --background-color-tier-minute: oklch(0.72 0.17 5);
+  --background-color-tier-hour: oklch(0.72 0.18 350);
+  --background-color-tier-day: oklch(0.68 0.18 300);
+  --background-color-tier-week: oklch(0.7 0.15 250);
+  --background-color-tier-month: oklch(0.78 0.12 210);
+  --background-color-tier-year: oklch(0.82 0.12 175);
+
   /* Text */
   --text-color-primary: oklch(0.955 0.006 278);
   --text-color-secondary: oklch(0.83 0.012 278);
@@ -327,6 +358,7 @@ Supported variables:
 
   --text-color-on-accent: oklch(0.18 0.017 278);
   --text-color-on-brand: var(--color-white);
+  --text-color-on-error: oklch(0.18 0.017 278);
   --text-color-on-brand-secondary: var(--blue-brand-100);
   --text-color-accent: oklch(0.86 0.08 278);
   --text-color-avatar: oklch(0.86 0.08 278);
@@ -335,7 +367,7 @@ Supported variables:
 
   --text-color-success: oklch(0.85 0.1 165);
   --text-color-warning: oklch(0.88 0.11 85);
-  --text-color-error: oklch(0.82 0.1 22);
+  --text-color-error: #ff9aa9;
 
   --text-color-terminal: oklch(0.575 0.018 278);
   --text-color-terminal-secondary: oklch(0.86 0.011 278);
@@ -352,7 +384,7 @@ Supported variables:
 
   --border-color-success: oklch(0.55 0.1 165);
   --border-color-warning: oklch(0.6 0.1 82);
-  --border-color-error: oklch(0.58 0.14 22);
+  --border-color-error: #e0526a;
 
   --border-color-terminal: oklch(0.29 0.022 278);
 
@@ -388,15 +420,15 @@ Supported variables:
   --outline-color-focus: var(--blue-brand-300);
 
   /* Configurations colors */
-  --background-color-source-accent: oklch(0.48 0.14 12);
-  --background-color-source-tertiary: oklch(0.3 0.07 12);
-  --text-color-source: oklch(0.82 0.11 12);
-  --border-color-source: oklch(0.45 0.12 12);
+  --background-color-source-accent: oklch(0.48 0.14 340);
+  --background-color-source-tertiary: oklch(0.3 0.07 340);
+  --text-color-source: oklch(0.82 0.11 340);
+  --border-color-source: oklch(0.45 0.12 340);
 
-  --background-color-destination-accent: oklch(0.48 0.1 165);
-  --background-color-destination-tertiary: oklch(0.3 0.055 165);
-  --text-color-destination: oklch(0.84 0.11 165);
-  --border-color-destination: oklch(0.45 0.09 165);
+  --background-color-destination-accent: oklch(0.48 0.08 200);
+  --background-color-destination-tertiary: oklch(0.3 0.05 200);
+  --text-color-destination: oklch(0.84 0.09 200);
+  --border-color-destination: oklch(0.45 0.07 200);
 
   --background-color-store-accent: oklch(0.48 0.14 255);
   --background-color-store-tertiary: oklch(0.3 0.07 255);
@@ -599,33 +631,33 @@ Supported variables:
 }
 
 /*
- * Soft status colors and task type colors. The brand accent stays untouched.
- * Use the status-* set for job and run outcomes. The success, error and warning
- * tokens above stay for alerts and validation.
+ * Job and run outcomes reuse the success and error family, so a failure has the
+ * same red on every page; in dark that red is the Scheduling one. Task type
+ * colors stay their own set; the brand accent stays untouched.
  */
 @theme {
-  --color-status-success: #12a37f;
-  --color-status-success-ink: #0b7a5c;
-  --color-status-success-wash: #e3f6ef;
-  --color-status-success-bar: #8fd8bd;
-  --color-status-error: #d93a55;
-  --color-status-error-ink: #b42a43;
-  --color-status-error-wash: #fdeef1;
-  --color-status-error-line: #f4c4cd;
-  --color-status-error-bar: #e8647b;
-  --color-status-cancel: #78716c;
-  --color-status-cancel-wash: #f1efec;
-  --color-status-queue: #64748b;
+  --color-status-success: var(--background-color-success);
+  --color-status-success-ink: var(--text-color-success);
+  --color-status-success-wash: var(--background-color-success-tertiary);
+  --color-status-success-bar: var(--background-color-success-secondary);
+  --color-status-error: var(--background-color-error);
+  --color-status-error-ink: var(--text-color-error);
+  --color-status-error-wash: var(--background-color-error-tertiary);
+  --color-status-error-line: var(--background-color-error-secondary);
+  --color-status-error-bar: var(--background-color-error);
+  --color-status-cancel: var(--text-color-tertiary);
+  --color-status-cancel-wash: var(--background-color-tertiary);
+  --color-status-queue: var(--text-color-tertiary);
   --color-task-backup: #524cff;
   --color-task-backup-bg: #ecf0ff;
-  --color-task-restore: #c2570c;
-  --color-task-restore-bg: #fff0e0;
-  --color-task-sync: #0a7ab5;
-  --color-task-sync-bg: #e3f3fb;
-  --color-task-check: #9b4fc4;
-  --color-task-check-bg: #f6eafc;
-  --color-task-prune: #57534e;
-  --color-task-prune-bg: #f1efec;
+  --color-task-restore: oklch(0.52 0.14 50);
+  --color-task-restore-bg: oklch(0.96 0.03 60);
+  --color-task-sync: oklch(0.5 0.11 240);
+  --color-task-sync-bg: oklch(0.96 0.025 235);
+  --color-task-check: oklch(0.5 0.17 310);
+  --color-task-check-bg: oklch(0.96 0.03 310);
+  --color-task-prune: var(--text-color-secondary);
+  --color-task-prune-bg: var(--background-color-tertiary);
 }
 
 .dark {
@@ -633,10 +665,6 @@ Supported variables:
   --color-status-success-ink: #6ee7b7;
   --color-status-success-wash: #0b2a21;
   --color-status-success-bar: #1f7a5e;
-  --color-status-error: #ff6b81;
-  --color-status-error-ink: #ff9aa9;
-  --color-status-error-wash: #2d1218;
-  --color-status-error-line: #5a2230;
   --color-status-error-bar: #e0526a;
   --color-status-cancel: #a8a29e;
   --color-status-cancel-wash: oklch(0.225 0.019 278);
@@ -649,6 +677,4 @@ Supported variables:
   --color-task-sync-bg: #0c2433;
   --color-task-check: #cf93ee;
   --color-task-check-bg: #2a1636;
-  --color-task-prune: #a8a29e;
-  --color-task-prune-bg: oklch(0.225 0.019 278);
 }

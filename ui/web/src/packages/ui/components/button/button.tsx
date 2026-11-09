@@ -45,7 +45,7 @@ function getVariantClasses(variant: ButtonVariant) {
     tertiary:
       "text-tertiary data-hovered:text-tertiary-hover data-hovered:bg-primary-hover",
     error:
-      "bg-error text-on-brand data-hovered:bg-error-secondary outline-offset-3",
+      "bg-error text-on-error data-hovered:bg-error-hover outline-offset-3",
     "error-tertiary":
       "text-tertiary data-hovered:text-error data-hovered:bg-error-tertiary",
     "accent-tertiary":

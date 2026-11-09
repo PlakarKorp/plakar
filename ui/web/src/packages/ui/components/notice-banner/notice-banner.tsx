@@ -45,7 +45,7 @@ export function NoticeBanner({
         "flex w-full items-center gap-4 px-4 shadow-xl",
         {
           info: "bg-accent-tertiary text-accent",
-          danger: "bg-error text-on-brand",
+          danger: "bg-error text-on-error",
         }[variant],
         className
       )}
