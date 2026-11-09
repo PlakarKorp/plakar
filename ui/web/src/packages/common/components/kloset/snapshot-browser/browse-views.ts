@@ -107,16 +107,14 @@ export function browseViewCounts(
 }
 
 /**
- * Lists the views a directory surely has nothing for, in the directory itself
- * or with recursive in the whole tree below it. Documents only count as empty
- * without any text or application/ file, where PDFs and JSON live.
+ * Lists the views a directory surely has nothing for, in itself or below: a
+ * kind it only holds in subfolders stays open, to browse with them included.
+ * Documents only count as empty without any text or application/ file, where
+ * PDFs and JSON live.
  */
-export function emptyBrowseViews(
-  entry: VFSEntryType,
-  recursive = false
-): Set<BrowseViewId> {
-  const directory = recursive ? entry.summary?.Total : entry.summary?.directory;
-  const counts = browseViewCounts(entry, recursive);
+export function emptyBrowseViews(entry: VFSEntryType): Set<BrowseViewId> {
+  const directory = entry.summary?.Total;
+  const counts = browseViewCounts(entry, true);
   const mayHoldDocuments =
     (directory?.MIME_text ?? 0) + (directory?.MIME_application ?? 0) > 0;
   return new Set(

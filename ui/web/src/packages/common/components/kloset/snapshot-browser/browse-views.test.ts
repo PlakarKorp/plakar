@@ -111,10 +111,14 @@ describe("browse views", () => {
       music: 0,
       documents: 2,
     });
-    expect(emptyBrowseViews(entry, true)).toEqual(new Set(["music"]));
-    expect(emptyBrowseViews(entry)).toEqual(
-      new Set(["photos", "videos", "music"])
+  });
+
+  it("keeps the views of kinds a directory only holds in subfolders", () => {
+    const entry = directory(
+      { files: 2, MIME_text: 2, directories: 1 },
+      { files: 8, MIME_image: 5, MIME_video: 3 }
     );
+    expect(emptyBrowseViews(entry)).toEqual(new Set(["music"]));
   });
 
   it("suggests the view of a dominant kind of media", () => {

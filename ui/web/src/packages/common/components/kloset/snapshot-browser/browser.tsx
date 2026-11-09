@@ -116,7 +116,9 @@ type FilesBrowserProps = {
   // matching what the directory mostly holds; without onViewChange, it keeps
   // the choice to itself.
   view?: BrowseViewId;
-  onViewChange?: (view: BrowseViewId) => void;
+  // Picking a kind the directory only holds in subfolders includes them along
+  // with the view: recursive is then true.
+  onViewChange?: (view: BrowseViewId, recursive?: boolean) => void;
   // Whether a view covers the subfolders too. Left undefined, the browser
   // keeps the choice to itself, as for the view.
   recursive?: boolean;
@@ -169,13 +171,21 @@ export function FilesBrowser({
     followsPreview: boolean;
   } | null>(null);
   const explicitView = view ?? localView;
+  const isRecursive = recursive ?? localRecursive;
   const changeView = (next: BrowseViewId) => {
     setLightbox(null);
     setPlayingPath(null);
-    if (onViewChange) onViewChange(next);
-    else setLocalView(next);
+    const includeSubfolders =
+      next !== "all" &&
+      !isRecursive &&
+      browseViewCounts(vfsEntry)[next] === 0 &&
+      browseViewCounts(vfsEntry, true)[next] > 0;
+    if (onViewChange) onViewChange(next, includeSubfolders || undefined);
+    else {
+      setLocalView(next);
+      if (includeSubfolders) setLocalRecursive(true);
+    }
   };
-  const isRecursive = recursive ?? localRecursive;
   const changeRecursive = (next: boolean) => {
     setLightbox(null);
     setPlayingPath(null);
@@ -667,7 +677,7 @@ export function FilesBrowser({
     : browseViewCounts(vfsEntry, isRecursive);
   const emptyViews = isSearching
     ? viewCounts && emptySearchViews(viewCounts)
-    : emptyBrowseViews(vfsEntry, isRecursive);
+    : emptyBrowseViews(vfsEntry);
   emptyViews?.delete(activeView);
   const subfolders = vfsEntry.summary?.directory.directories ?? 0;
 

@@ -179,11 +179,12 @@ function Component() {
   );
 
   const onViewChange = useCallback(
-    (view: BrowseViewId) =>
+    (view: BrowseViewId, recursive?: boolean) =>
       navigate({
         search: (prev) => ({
           ...prev,
           view,
+          recursive: recursive ?? prev.recursive,
           page: 0,
           preview: "",
           mime: undefined,
