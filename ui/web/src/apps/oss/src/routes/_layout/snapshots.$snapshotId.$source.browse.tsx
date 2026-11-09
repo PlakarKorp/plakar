@@ -54,6 +54,8 @@ export const Route = createFileRoute(
     preview: z.string().catch("").default(""),
     // Left out, the browser picks the view that fits the directory.
     view: z.enum(BROWSE_VIEW_IDS).optional().catch(undefined),
+    // Whether a view covers the subfolders too.
+    recursive: z.boolean().catch(false).default(false),
   }),
 
   loaderDeps: ({ search }) => {
@@ -129,6 +131,7 @@ function Component() {
           path,
           page: 0,
           view: undefined,
+          recursive: undefined,
           filename: undefined,
           mime: undefined,
         }),
@@ -184,6 +187,19 @@ function Component() {
           page: 0,
           preview: "",
           mime: undefined,
+        }),
+      }),
+    [navigate]
+  );
+
+  const onRecursiveChange = useCallback(
+    (recursive: boolean) =>
+      navigate({
+        search: (prev) => ({
+          ...prev,
+          recursive: recursive || undefined,
+          page: 0,
+          preview: "",
         }),
       }),
     [navigate]
@@ -247,6 +263,8 @@ function Component() {
       onPreviewChange={onPreviewChange}
       view={search.view}
       onViewChange={onViewChange}
+      recursive={search.recursive}
+      onRecursiveChange={onRecursiveChange}
       actions={
         <Menu.Item
           leftIcon="not-equal"

@@ -86,30 +86,37 @@ export function getBrowseView(id: BrowseViewId) {
 }
 
 /**
- * Counts the files a directory holds directly, per view, from its summary.
- * Documents are counted from text files only: the summary does not tell PDFs
- * apart from the rest of application/.
+ * Counts the files a directory holds, per view, from its summary: those it
+ * holds directly, or with recursive the whole tree below it. All files always
+ * counts the direct ones, as that view lists the directory itself. Documents
+ * are counted from text files only: the summary does not tell PDFs apart from
+ * the rest of application/.
  */
 export function browseViewCounts(
-  entry: VFSEntryType
+  entry: VFSEntryType,
+  recursive = false
 ): Record<BrowseViewId, number> {
-  const directory = entry.summary?.directory;
+  const counted = recursive ? entry.summary?.Total : entry.summary?.directory;
   return {
-    all: directory?.files ?? 0,
-    photos: directory?.MIME_image ?? 0,
-    videos: directory?.MIME_video ?? 0,
-    music: directory?.MIME_audio ?? 0,
-    documents: directory?.MIME_text ?? 0,
+    all: entry.summary?.directory.files ?? 0,
+    photos: counted?.MIME_image ?? 0,
+    videos: counted?.MIME_video ?? 0,
+    music: counted?.MIME_audio ?? 0,
+    documents: counted?.MIME_text ?? 0,
   };
 }
 
 /**
- * Lists the views a directory surely has nothing for. Documents only count as
- * empty without any text or application/ file, where PDFs and JSON live.
+ * Lists the views a directory surely has nothing for, in the directory itself
+ * or with recursive in the whole tree below it. Documents only count as empty
+ * without any text or application/ file, where PDFs and JSON live.
  */
-export function emptyBrowseViews(entry: VFSEntryType): Set<BrowseViewId> {
-  const directory = entry.summary?.directory;
-  const counts = browseViewCounts(entry);
+export function emptyBrowseViews(
+  entry: VFSEntryType,
+  recursive = false
+): Set<BrowseViewId> {
+  const directory = recursive ? entry.summary?.Total : entry.summary?.directory;
+  const counts = browseViewCounts(entry, recursive);
   const mayHoldDocuments =
     (directory?.MIME_text ?? 0) + (directory?.MIME_application ?? 0) > 0;
   return new Set(

@@ -8,6 +8,7 @@ import {
   Pagination as UIPagination,
   SegmentedControl,
   Spinner,
+  Toggle,
   Tooltip,
   Typography,
 } from "@plakar-ui/ui/components";
@@ -116,6 +117,10 @@ type FilesBrowserProps = {
   // the choice to itself.
   view?: BrowseViewId;
   onViewChange?: (view: BrowseViewId) => void;
+  // Whether a view covers the subfolders too. Left undefined, the browser
+  // keeps the choice to itself, as for the view.
+  recursive?: boolean;
+  onRecursiveChange?: (recursive: boolean) => void;
 };
 
 const columnHelper = createColumnHelper<
@@ -145,8 +150,11 @@ export function FilesBrowser({
   onMount,
   view,
   onViewChange,
+  recursive,
+  onRecursiveChange,
 }: FilesBrowserProps) {
   const [localView, setLocalView] = useState<BrowseViewId>();
+  const [localRecursive, setLocalRecursive] = useState(false);
   const [menuPath, setMenuPath] = useState<string | null>(null);
   const [playingPath, setPlayingPath] = useState<string | null>(null);
   const listing = `${vfsEntry.path}:${page}`;
@@ -166,6 +174,13 @@ export function FilesBrowser({
     setPlayingPath(null);
     if (onViewChange) onViewChange(next);
     else setLocalView(next);
+  };
+  const isRecursive = recursive ?? localRecursive;
+  const changeRecursive = (next: boolean) => {
+    setLightbox(null);
+    setPlayingPath(null);
+    if (onRecursiveChange) onRecursiveChange(next);
+    else setLocalRecursive(next);
   };
 
   const [layouts, setLayouts] = useLocalStorage<
@@ -189,8 +204,9 @@ export function FilesBrowser({
             ? filters.mime.contentTypes
             : viewDef.mimes,
         filename: filters.filename,
-        // A view browses the directory itself, a search the whole tree.
-        recursive: isSearching,
+        // A view browses the directory itself unless told to include its
+        // subfolders; a search from All files covers the whole tree.
+        recursive: isRecursive,
       }
     : isSearching
       ? { filename: filters.filename }
@@ -648,11 +664,12 @@ export function FilesBrowser({
 
   const viewCounts = isSearching
     ? query.data?.contentTypes && searchViewCounts(query.data.contentTypes)
-    : browseViewCounts(vfsEntry);
+    : browseViewCounts(vfsEntry, isRecursive);
   const emptyViews = isSearching
     ? viewCounts && emptySearchViews(viewCounts)
-    : emptyBrowseViews(vfsEntry);
+    : emptyBrowseViews(vfsEntry, isRecursive);
   emptyViews?.delete(activeView);
+  const subfolders = vfsEntry.summary?.directory.directories ?? 0;
 
   const hasNextPage = query.data
     ? (page + 1) * perPage < query.data.total
@@ -707,7 +724,7 @@ export function FilesBrowser({
                   )}
 
                   <div className="flex flex-col gap-3">
-                    <div className="border-secondary flex flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-3 md:border-b">
+                    <div className="border-secondary flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center md:justify-between md:gap-3 md:border-b">
                       <ViewSwitcher
                         className="border-secondary border-b md:border-b-0"
                         view={activeView}
@@ -715,7 +732,19 @@ export function FilesBrowser({
                         emptyViews={emptyViews}
                         onChange={changeView}
                       />
-                      <div className="flex items-center justify-between gap-2 md:justify-end">
+                      <div className="flex items-center justify-between gap-3 md:ml-auto md:justify-end">
+                        {activeView !== "all" && subfolders > 0 && (
+                          <Toggle
+                            className="whitespace-nowrap"
+                            isSelected={isRecursive}
+                            onChange={changeRecursive}
+                            title={
+                              subfolders === 1
+                                ? "Include the subfolder"
+                                : `Include the ${subfolders} subfolders`
+                            }
+                          />
+                        )}
                         <SegmentedControl
                           ariaLabel="Layout"
                           hideLabels
@@ -734,18 +763,6 @@ export function FilesBrowser({
                         />
                       </div>
                     </div>
-
-                    {activeView !== "all" &&
-                      !isSearching &&
-                      (vfsEntry.summary?.directory.directories ?? 0) > 0 && (
-                        <Typography size="xs" className="text-tertiary">
-                          This view shows the files of this folder only.{" "}
-                          {vfsEntry.summary?.directory.directories === 1
-                            ? "Its subfolder is"
-                            : `Its ${vfsEntry.summary?.directory.directories} subfolders are`}{" "}
-                          in All files, and a search covers them too.
-                        </Typography>
-                      )}
                   </div>
 
                   {!showsTable && (
@@ -777,7 +794,9 @@ export function FilesBrowser({
                               ? "Try another name."
                               : activeView === "all"
                                 ? "It holds no files or folders."
-                                : `This folder holds no ${shownNoun}.`
+                                : isRecursive
+                                  ? `This folder and its subfolders hold no ${shownNoun}.`
+                                  : `This folder holds no ${shownNoun}.`
                           }
                         />
                       ) : activeView === "music" && !isListView ? (
