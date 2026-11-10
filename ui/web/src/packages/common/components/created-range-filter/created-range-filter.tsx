@@ -65,6 +65,7 @@ export function CreatedRangeFilter({
             />
             <DateBoundPicker
               label="To"
+              isEnd
               value={search.before}
               onChange={(before) => onChange({ before })}
             />
