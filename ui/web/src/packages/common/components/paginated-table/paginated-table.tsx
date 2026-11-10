@@ -13,7 +13,7 @@ import {
   TableFeatures,
 } from "@tanstack/react-table";
 import clsx from "clsx";
-import { Dispatch, memo, MouseEvent, ReactNode } from "react";
+import { Dispatch, Fragment, memo, MouseEvent, ReactNode } from "react";
 import {
   Cell,
   Column,
@@ -69,6 +69,13 @@ type PaginatedTableProps<T extends RowData> = {
   getExpandedContent?: (row: T) => ReactNode;
   getEmptyContent?: () => React.ReactNode;
   onRowContextMenu?: (row: T, event: MouseEvent) => void;
+
+  /**
+   * Group of a row, for flat tables in the default variant. A header row is
+   * rendered before each row whose group key differs from the previous row's,
+   * on the current page only.
+   */
+  getGroup?: (row: T) => { key: string; label: ReactNode } | undefined;
 };
 
 export function PaginatedTable<T extends RowData>({
@@ -86,6 +93,7 @@ export function PaginatedTable<T extends RowData>({
   getExpandedContent,
   getEmptyContent,
   onRowContextMenu,
+  getGroup,
 }: PaginatedTableProps<T>) {
   const handleRetry = () => {
     query.refetch();
@@ -99,6 +107,11 @@ export function PaginatedTable<T extends RowData>({
 
   const extraColCount =
     (table.options.enableMultiRowSelection ? 1 : 0) + (hasExpandColumn ? 1 : 0);
+  const colCount = table.getVisibleLeafColumns().length + extraColCount;
+
+  const rows = table.getRowModel().rows;
+  const groups =
+    getGroup && !isTree ? rows.map((row) => getGroup(row.original)) : [];
 
   return (
     <div className="flex min-h-[300px] flex-col gap-2">
@@ -192,10 +205,7 @@ export function PaginatedTable<T extends RowData>({
               />
             ) : query.isError ? (
               <TableRow>
-                <Cell
-                  colSpan={table.getVisibleLeafColumns().length + extraColCount}
-                  className="py-2"
-                >
+                <Cell colSpan={colCount} className="py-2">
                   <EmptyList
                     illustrationType="sad"
                     title="Failed to load data"
@@ -210,12 +220,9 @@ export function PaginatedTable<T extends RowData>({
                   />
                 </Cell>
               </TableRow>
-            ) : table.getRowModel().rows.length === 0 ? (
+            ) : rows.length === 0 ? (
               <TableRow>
-                <Cell
-                  colSpan={table.getVisibleLeafColumns().length + extraColCount}
-                  className="p-2 text-center"
-                >
+                <Cell colSpan={colCount} className="p-2 text-center">
                   {getEmptyContent?.() ?? (
                     <EmptyList
                       illustrationType="juggles_nuts"
@@ -226,7 +233,11 @@ export function PaginatedTable<T extends RowData>({
                 </Cell>
               </TableRow>
             ) : (
-              table.getRowModel().rows.map((row) => {
+              rows.map((row, index) => {
+                const group = groups[index];
+                const isGroupStart =
+                  !!group && groups[index - 1]?.key !== group.key;
+
                 // handle soft selection
                 const selectedItem = softSelectionState?.[0];
                 const isSoftSelected = !!(
@@ -241,20 +252,26 @@ export function PaginatedTable<T extends RowData>({
                   : undefined;
 
                 return (
-                  <InteractiveRow
-                    key={row.id}
-                    variant={variant}
-                    table={table}
-                    row={row}
-                    isExpanded={row.getIsExpanded()}
-                    getLink={getLink}
-                    isSoftSelected={isSoftSelected}
-                    onSoftSelect={handleSoftSelect}
-                    getExpandedContent={getExpandedContent}
-                    hasExpandColumn={hasExpandColumn}
-                    isTree={isTree}
-                    onContextMenu={onRowContextMenu}
-                  />
+                  <Fragment key={row.id}>
+                    {isGroupStart && (
+                      <GroupHeaderRow colCount={colCount}>
+                        {group.label}
+                      </GroupHeaderRow>
+                    )}
+                    <InteractiveRow
+                      variant={variant}
+                      table={table}
+                      row={row}
+                      isExpanded={row.getIsExpanded()}
+                      getLink={getLink}
+                      isSoftSelected={isSoftSelected}
+                      onSoftSelect={handleSoftSelect}
+                      getExpandedContent={getExpandedContent}
+                      hasExpandColumn={hasExpandColumn}
+                      isTree={isTree}
+                      onContextMenu={onRowContextMenu}
+                    />
+                  </Fragment>
                 );
               })
             )}
@@ -264,6 +281,28 @@ export function PaginatedTable<T extends RowData>({
 
       {!disablePagination && <Pagination query={query} table={table} />}
     </div>
+  );
+}
+
+function GroupHeaderRow({
+  colCount,
+  children,
+}: {
+  colCount: number;
+  children: ReactNode;
+}) {
+  return (
+    <TableRow className="border-secondary border-b">
+      <Cell colSpan={colCount} className="bg-secondary p-0">
+        <Typography
+          size="xs"
+          weight="medium"
+          className="text-secondary px-2 py-1.5"
+        >
+          {children}
+        </Typography>
+      </Cell>
+    </TableRow>
   );
 }
 
