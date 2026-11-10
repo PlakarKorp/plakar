@@ -1,5 +1,5 @@
 import type { PaginationParams } from "../pagination";
-import type { SnapshotType, VFSEntryType } from "./schema";
+import type { getSnapshotsListFn, SnapshotType, VFSEntryType } from "./schema";
 
 type SnapshotVFSKeyParams = {
   repository?: string;
@@ -28,12 +28,8 @@ export const klosetKeys = {
 
   snapshotsLists: () => [...klosetKeys.all(), "snapshots.list"] as const,
 
-  snapshotsList: (params: {
-    repository: string | undefined;
-    importer?: string;
-    pagination: PaginationParams;
-    since?: Date;
-  }) => [...klosetKeys.snapshotsLists(), params] as const,
+  snapshotsList: (params: Parameters<getSnapshotsListFn>[0]) =>
+    [...klosetKeys.snapshotsLists(), params] as const,
 
   snapshotGet: (params: { repository: string | undefined; snapshot: string }) =>
     [...klosetKeys.all(), "snapshots.get", params] as const,

@@ -35,7 +35,7 @@ function ComboBoxRoot({
       {...props}
       className={clsx("group flex flex-col gap-1", className)}
     >
-      <FieldLabel isRequired={props.isRequired}>{label}</FieldLabel>
+      {label && <FieldLabel isRequired={props.isRequired}>{label}</FieldLabel>}
 
       <Typography
         as="div"

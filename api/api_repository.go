@@ -143,19 +143,19 @@ func (ui *uiserver) repositorySnapshots(w http.ResponseWriter, r *http.Request) 
 		return err
 	}
 
-	var sinceTime time.Time
-	since, _, err := QueryParamToString(r, "since")
+	since, err := QueryParamToTime(r, "since")
 	if err != nil {
 		return err
-	} else {
-		sinceTime, err = time.Parse(time.RFC3339, since)
-		if err != nil && since != "" {
-			return &ApiError{
-				HttpCode: http.StatusBadRequest,
-				ErrCode:  "invalid_argument",
-				Message:  "Invalid 'since' parameter format. Expected RFC3339 format.",
-			}
-		}
+	}
+	before, err := QueryParamToTime(r, "before")
+	if err != nil {
+		return err
+	}
+
+	tags := QueryParamToStrings(r, "tag")
+	path, _, err := QueryParamToString(r, "path")
+	if err != nil {
+		return err
 	}
 
 	sortKeys, err := QueryParamToSortKeys(r, "sort", "Timestamp")
@@ -187,7 +187,7 @@ func (ui *uiserver) repositorySnapshots(w http.ResponseWriter, r *http.Request) 
 			continue
 		}
 
-		if since != "" && snap.Header.Timestamp.Before(sinceTime) {
+		if !matchesFilters(snap.Header, since, before, tags, path) {
 			snap.Close()
 			continue
 		}
@@ -217,6 +217,64 @@ func (ui *uiserver) repositorySnapshots(w http.ResponseWriter, r *http.Request) 
 	copy(items.Items, headers)
 
 	return json.NewEncoder(w).Encode(items)
+}
+
+func matchesFilters(h *header.Header, since, before time.Time, tags []string, path string) bool {
+	if !since.IsZero() && h.Timestamp.Before(since) {
+		return false
+	}
+	if !before.IsZero() && h.Timestamp.After(before) {
+		return false
+	}
+	for _, tag := range tags {
+		if !h.HasTag(tag) {
+			return false
+		}
+	}
+	// A part of a source directory matches, so that "www" finds /var/www.
+	return path == "" || slices.ContainsFunc(h.Sources, func(source header.Source) bool {
+		return strings.Contains(source.Importer.Directory, path)
+	})
+}
+
+func (ui *uiserver) repositoryFacets(w http.ResponseWriter, r *http.Request) error {
+	if !ui.norefresh {
+		if _, err := cached.RebuildStateFromStore(ui.ctx, ui.repository.Configuration().RepositoryID, ui.ctx.StoreConfig, false); err != nil {
+			return err
+		}
+	}
+
+	tags, paths := []string{}, []string{}
+	for snapshotID, err := range ui.repository.ListSnapshots() {
+		if err != nil {
+			// XXX - temporarily ignore errors in List snapshots iteration, it is safe here
+			continue
+		}
+		snap, err := snapshot.Load(ui.repository, snapshotID)
+		if err != nil {
+			// An unreadable snapshot must not hide the values of the others.
+			continue
+		}
+		for _, tag := range snap.Header.Tags {
+			if strings.TrimSpace(tag) != "" {
+				tags = append(tags, tag)
+			}
+		}
+		for _, source := range snap.Header.Sources {
+			paths = append(paths, source.Importer.Directory)
+		}
+		snap.Close()
+	}
+	slices.Sort(tags)
+	slices.Sort(paths)
+
+	return json.NewEncoder(w).Encode(struct {
+		Tags  []string `json:"tags"`
+		Paths []string `json:"paths"`
+	}{
+		Tags:  slices.Compact(tags),
+		Paths: slices.Compact(paths),
+	})
 }
 
 func (ui *uiserver) repositoryImporterTypes(w http.ResponseWriter, r *http.Request) error {
