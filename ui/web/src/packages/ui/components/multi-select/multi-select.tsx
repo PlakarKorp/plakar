@@ -128,7 +128,7 @@ function MultiSelectRoot({
         triggerRef={triggerRef}
         offset={4}
         containerPadding={8}
-        className="border-primary bg-primary flex max-h-80 flex-col rounded-lg border shadow-lg"
+        className="border-primary bg-overlay flex max-h-80 flex-col rounded-lg border shadow-lg"
         style={triggerWidth ? { width: triggerWidth } : undefined}
       >
         {children}

@@ -25,7 +25,10 @@ function ownsTheKeyboard(target: EventTarget | null) {
 
 function FilterPanelRoot({ children }: { children: ReactNode }) {
   return (
-    <div className="border-secondary bg-primary w-full rounded-xl border shadow-xs">
+    <div
+      data-filter-panel
+      className="border-secondary bg-primary w-full rounded-xl border shadow-xs"
+    >
       {children}
     </div>
   );

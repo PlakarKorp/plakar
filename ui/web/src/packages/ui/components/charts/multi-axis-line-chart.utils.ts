@@ -16,8 +16,8 @@ export type LineChartLine = {
 };
 
 export const SERIES_ACCENT = "var(--background-color-accent)";
-export const SERIES_SUCCESS = "var(--background-color-success)";
-export const SERIES_WARNING = "var(--background-color-warning)";
+export const SERIES_NEUTRAL = "var(--text-color-tertiary)";
+export const SERIES_REFERENCE = "var(--text-color-secondary)";
 
 /**
  * Returns a round step, in 1, 2, 2.5, 5 or 10 times a power of ten, that is not smaller than the raw step.

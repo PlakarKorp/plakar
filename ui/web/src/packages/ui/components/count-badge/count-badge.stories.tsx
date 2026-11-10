@@ -8,17 +8,10 @@ const meta = {
   component: CountBadge,
   args: {
     children: 115,
-    isOnAccent: false,
   },
   decorators: [
-    (Story, { args }) => (
-      <div
-        className={
-          args.isOnAccent
-            ? "bg-accent inline-flex rounded-lg p-2"
-            : "inline-flex p-2"
-        }
-      >
+    (Story) => (
+      <div className="inline-flex p-2">
         <Story />
       </div>
     ),
@@ -29,9 +22,3 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
-
-export const OnAccent: Story = {
-  args: {
-    isOnAccent: true,
-  },
-};

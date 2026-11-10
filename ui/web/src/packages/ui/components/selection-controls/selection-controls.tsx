@@ -20,7 +20,7 @@ export function SelectionControls({
   return (
     <Toolbar
       aria-label="Selection controls"
-      className="bg-primary border-primary m-4 flex w-fit items-center gap-2 rounded-xl border p-1.5 shadow-lg"
+      className="bg-overlay border-primary m-4 flex w-fit items-center gap-2 rounded-xl border p-1.5 shadow-lg"
     >
       <IconButton
         icon="close"

@@ -607,7 +607,7 @@ export function FilesBrowser({
           <FilterPanel.Groups>
             <FilterPanel.Group label="Format">
               <SegmentedControl
-                variant="accent"
+                size="md"
                 ariaLabel="Document format"
                 items={[
                   { id: "all", label: "All" },

@@ -111,7 +111,7 @@ export function Popover({ label, children, maxWidth }: PopoverProps) {
         triggerRef={triggerRef}
         onPointerEnter={handlePointerEnter}
         onPointerLeave={handlePointerLeave}
-        className="bg-primary text-primary border-secondary z-[50] rounded-lg border px-3 py-2 shadow-md outline-none"
+        className="bg-overlay text-primary border-secondary z-[50] rounded-lg border px-3 py-2 shadow-md outline-none"
         style={{ maxWidth }}
         placement="top"
       >

@@ -167,7 +167,7 @@ export function MultiAxisLineChart({
                 y={y(tick, left) + 4}
                 textAnchor="end"
                 fontSize={12}
-                fill="var(--text-color-quaternary)"
+                fill="var(--text-color-tertiary)"
               >
                 {left.format(tick)}
               </text>
@@ -179,7 +179,7 @@ export function MultiAxisLineChart({
               x={plotRight + 8}
               y={y(tick, right) + 4}
               fontSize={12}
-              fill="var(--text-color-quaternary)"
+              fill="var(--text-color-tertiary)"
             >
               {right.format(tick)}
             </text>
@@ -191,7 +191,7 @@ export function MultiAxisLineChart({
               y={height - 6}
               textAnchor={t === 0 ? "start" : t === maxT ? "end" : "middle"}
               fontSize={12}
-              fill="var(--text-color-quaternary)"
+              fill="var(--text-color-tertiary)"
             >
               {formatTime(t)}
             </text>
@@ -249,7 +249,7 @@ export function MultiAxisLineChart({
       )}
       {hovered !== undefined && (
         <div
-          className="bg-primary border-secondary text-primary pointer-events-none absolute top-2 z-10 rounded-lg border px-2 py-1 text-xs shadow-lg"
+          className="bg-overlay border-secondary text-primary pointer-events-none absolute top-2 z-10 rounded-lg border px-2 py-1 text-xs shadow-lg"
           style={
             hoveredX > width / 2
               ? { right: width - hoveredX + 12 }

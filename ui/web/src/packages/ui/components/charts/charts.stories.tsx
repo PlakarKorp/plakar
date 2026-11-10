@@ -7,7 +7,7 @@ import { MultiAxisLineChart } from "./multi-axis-line-chart";
 import {
   evenTicks,
   SERIES_ACCENT,
-  SERIES_SUCCESS,
+  SERIES_NEUTRAL,
 } from "./multi-axis-line-chart.utils";
 import { PieChart as PieChartComponent } from "./pie-chart";
 import { RatioBar } from "./ratio-bar";
@@ -234,7 +234,7 @@ export const MultiAxisChart: StoryObj<typeof MultiAxisLineChart> = {
       },
       {
         name: "Memory",
-        color: SERIES_SUCCESS,
+        color: SERIES_NEUTRAL,
         axis: "right",
         values: resourceData.map((d) => d.memory),
         format: prettyBytes,
