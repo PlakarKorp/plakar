@@ -237,6 +237,46 @@ func matchesFilters(h *header.Header, since, before time.Time, tags []string, pa
 	})
 }
 
+func (ui *uiserver) repositoryFacets(w http.ResponseWriter, r *http.Request) error {
+	if !ui.norefresh {
+		if _, err := cached.RebuildStateFromStore(ui.ctx, ui.repository.Configuration().RepositoryID, ui.ctx.StoreConfig, false); err != nil {
+			return err
+		}
+	}
+
+	tags, paths := []string{}, []string{}
+	for snapshotID, err := range ui.repository.ListSnapshots() {
+		if err != nil {
+			// XXX - temporarily ignore errors in List snapshots iteration, it is safe here
+			continue
+		}
+		snap, err := snapshot.Load(ui.repository, snapshotID)
+		if err != nil {
+			// An unreadable snapshot must not hide the values of the others.
+			continue
+		}
+		for _, tag := range snap.Header.Tags {
+			if strings.TrimSpace(tag) != "" {
+				tags = append(tags, tag)
+			}
+		}
+		for _, source := range snap.Header.Sources {
+			paths = append(paths, source.Importer.Directory)
+		}
+		snap.Close()
+	}
+	slices.Sort(tags)
+	slices.Sort(paths)
+
+	return json.NewEncoder(w).Encode(struct {
+		Tags  []string `json:"tags"`
+		Paths []string `json:"paths"`
+	}{
+		Tags:  slices.Compact(tags),
+		Paths: slices.Compact(paths),
+	})
+}
+
 func (ui *uiserver) repositoryImporterTypes(w http.ResponseWriter, r *http.Request) error {
 	if !ui.norefresh {
 		if _, err := cached.RebuildStateFromStore(ui.ctx, ui.repository.Configuration().RepositoryID, ui.ctx.StoreConfig, false); err != nil {

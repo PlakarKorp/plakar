@@ -234,6 +234,7 @@ func SetupRoutes(server *http.ServeMux, repo *repository.Repository, ctx *appcon
 	server.Handle("GET /api/repository/snapshots", authToken(JSONAPIView(ui.repositorySnapshots)))
 	server.Handle("GET /api/repository/locate-pathname", authToken(JSONAPIView(ui.repositoryLocatePathname)))
 	server.Handle("GET /api/repository/importer-types", authToken(JSONAPIView(ui.repositoryImporterTypes)))
+	server.Handle("GET /api/repository/facets", authToken(JSONAPIView(ui.repositoryFacets)))
 
 	server.Handle("GET /api/snapshot/{snapshot}", authToken(JSONAPIView(ui.snapshotHeader)))
 	server.Handle("GET /api/snapshot/reader/{snapshot_path...}", urlSigner.VerifyMiddleware(APIView(ui.snapshotReader)))
