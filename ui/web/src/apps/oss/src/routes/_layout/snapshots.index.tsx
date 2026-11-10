@@ -8,9 +8,11 @@ import {
 import {
   AppTableFeatures,
   appTableFeatures,
+  CreatedCell,
   createdBounds,
   CreatedRangeFilter,
   createdRangeSearchSchema,
+  dayGroup,
   DownloadMenuItem,
   FilterPanel,
   PaginatedTable,
@@ -22,12 +24,12 @@ import {
   Alert,
   ComboBox,
   Errors,
-  ExpandableList,
   IconButton,
   Id,
   Menu,
   Select,
   Tag,
+  TagOverflowList,
   Typography,
 } from "@plakar-ui/ui/components";
 import {
@@ -92,116 +94,106 @@ function Component() {
   const columnHelper = createColumnHelper<AppTableFeatures, SnapshotType>();
 
   const columns = columnHelper.columns([
+    columnHelper.accessor("timestamp", {
+      id: "created",
+      header: () => "Created",
+      meta: { cellClassName: "md:w-42" },
+      cell: (info) => <CreatedCell date={info.getValue()} />,
+    }),
     columnHelper.display({
       id: "identifier",
-      header: () => "ID",
-      cell: (info) => {
-        const row = info.row.original;
-        const id = row.identifier.Value;
-        const errorLength = row.total.errors;
-        return (
-          <div className="flex flex-col gap-1">
-            <Id value={id} />
-            <Errors length={errorLength} />
-          </div>
-        );
-      },
+      header: () => "Restore point",
+      cell: ({ row: { original: snapshot } }) => (
+        <span className="flex items-center gap-2 whitespace-nowrap">
+          <Id value={snapshot.identifier.Value} className="text-secondary" />
+          <Errors length={snapshot.total.errors} />
+        </span>
+      ),
     }),
-    columnHelper.accessor("timestamp", {
-      header: () => "Date",
-      cell: (info) => {
-        const date = info.getValue();
+    columnHelper.display({
+      id: "source",
+      header: () => "Source",
+      meta: { cellClassName: "max-w-0 md:min-w-64" },
+      cell: ({ row: { original: snapshot } }) => {
+        const [source, ...others] = snapshot.sources;
+        if (!source) return null;
+        const tags = snapshot.tags.filter((tag) => tag.trim());
         return (
-          <div className="flex flex-col gap-1">
+          <span className="flex min-w-0 items-center gap-2">
+            <Tag variant="source" radius="sqrt" size="sm" className="shrink-0">
+              {source.importer.type.toUpperCase()}
+            </Tag>
             <Typography
-              variant="body"
-              size="md"
-              className="text-primary whitespace-nowrap"
+              as="span"
+              size="sm"
+              weight="medium"
+              className="shrink-0"
             >
-              {date.relativeToNow()}
+              {source.importer.origin}
             </Typography>
-            <Typography variant="body" size="sm" className="text-secondary">
-              {date.toHumanString()}
+            <Typography
+              as="span"
+              size="xs"
+              monospace
+              className="text-quaternary truncate max-md:hidden"
+            >
+              {source.importer.directory.toHumanString()}
             </Typography>
-          </div>
+            {others.length > 0 && (
+              <Typography
+                as="span"
+                size="xs"
+                className="text-tertiary shrink-0"
+              >
+                +{others.length}
+              </Typography>
+            )}
+            {tags.length > 0 && (
+              <TagOverflowList
+                items={tags}
+                size="xs"
+                radius="sqrt"
+                variant="blue_borderless"
+                className="pointer-events-none basis-1/2 gap-1"
+              />
+            )}
+          </span>
         );
       },
     }),
     columnHelper.accessor("duration", {
-      header: () => "Duration",
-      cell: (info) => {
-        const duration = info.getValue();
-        return (
-          <div className="flex flex-col gap-1 whitespace-nowrap">
-            <Typography variant="body" size="md" className="text-primary">
-              {duration.toShortString()}
-            </Typography>
-            <Typography variant="body" size="sm" className="text-secondary">
-              Duration
-            </Typography>
-          </div>
-        );
-      },
+      header: () => <span className="ml-auto">Duration</span>,
+      meta: { cellClassName: "w-20 text-right max-md:hidden" },
+      cell: (info) => (
+        <Typography as="span" size="sm" className="text-secondary tabular-nums">
+          {info.getValue().toShortString()}
+        </Typography>
+      ),
     }),
-    columnHelper.display({
-      id: "importer-type",
-      header: () => "Source",
-      meta: {
-        cellClassName: "w-[60%] max-w-0 min-w-80",
-      },
-      cell: ({ row: { original: child } }) => {
-        const tags = child.tags.filter((v) => v.trim());
-        return (
-          <div className="flex w-full min-w-0 items-baseline gap-4">
-            <div className="min-w-0 flex-1">
-              <ExpandableList
-                items={child.sources.map((source) => ({
-                  tag: source.importer.type,
-                  value: source.importer.origin,
-                  subValue: source.importer.directory.toHumanString(),
-                }))}
-              />
-            </div>
-            {tags.length > 0 && (
-              <span className="flex max-w-[40%] min-w-0 flex-initial flex-wrap items-start gap-1">
-                {tags
-                  .filter((v) => v.trim())
-                  .map((tag) => (
-                    <Tag
-                      key={tag}
-                      size="sm"
-                      variant="blue_borderless"
-                      radius="sqrt"
-                    >
-                      {tag}
-                    </Tag>
-                  ))}
-              </span>
-            )}
-          </div>
-        );
-      },
+    columnHelper.accessor("total.size.Pretty", {
+      id: "size",
+      header: () => <span className="ml-auto">Size</span>,
+      meta: { cellClassName: "w-20 text-right max-md:hidden" },
+      cell: (info) => (
+        <Typography as="span" size="sm" className="text-secondary tabular-nums">
+          {info.getValue()}
+        </Typography>
+      ),
     }),
-    columnHelper.accessor("total", {
-      id: "summary",
-      header: () => "Stats",
-      cell: (info) => {
-        const total = info.getValue();
-        return (
-          <div className="flex flex-col gap-1 whitespace-nowrap">
-            <Typography variant="body" size="md" className="text-primary">
-              {total.size.Pretty}
-            </Typography>
-            <Typography variant="body" size="sm" className="text-secondary">
-              {total.files} {total.files === 1 ? "item" : "items"}
-            </Typography>
-          </div>
-        );
-      },
+    columnHelper.accessor("total.files", {
+      id: "items",
+      header: () => <span className="ml-auto">Items</span>,
+      meta: { cellClassName: "w-18 text-right max-md:hidden" },
+      cell: (info) => (
+        <Typography as="span" size="sm" className="text-secondary tabular-nums">
+          {info.getValue().toLocaleString("en-US")}
+        </Typography>
+      ),
     }),
     columnHelper.display({
       id: "actions",
-      header: () => "Actions",
+      header: () => <span className="sr-only">Actions</span>,
+      meta: { cellClassName: "w-14" },
       cell: ({ row: { original: snapshot } }) => {
         return (
           <MenuTrigger>
@@ -291,8 +283,7 @@ function Component() {
               total={repositoryInfoQuery.data.item.snapshots.total}
             />
           }
-          variant="cards"
-          skeleton="two-rows"
+          getGroup={(snapshot) => dayGroup(snapshot.timestamp)}
           getLink={
             !browsable
               ? undefined

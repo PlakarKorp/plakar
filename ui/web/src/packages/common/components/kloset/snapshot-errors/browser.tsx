@@ -37,38 +37,41 @@ export function ErrorsBrowser({
     columnHelper.accessor("name", {
       header: () => "Filename",
       meta: {
-        cellClassName: "min-w-80 md:min-w-none md:w-1/3",
+        cellClassName: "min-w-64 md:w-1/3",
       },
-      cell: ({ row }) => {
-        return (
-          <div className="flex gap-2">
-            <Icon type="exclamation-circle" className="text-error" size="md" />
-            <Typography
-              weight="medium"
-              size="md"
-              className="text-primary leading-none break-all select-text"
-            >
-              {row.original.name}
-            </Typography>
-          </div>
-        );
-      },
+      cell: ({ row }) => (
+        <span className="flex items-start gap-2">
+          <Icon
+            type="exclamation-circle"
+            className="text-error mt-0.5 shrink-0"
+            size="sm"
+          />
+          <Typography
+            as="span"
+            size="sm"
+            weight="medium"
+            monospace
+            className="break-all select-text"
+          >
+            {row.original.name}
+          </Typography>
+        </span>
+      ),
     }),
     columnHelper.accessor("error", {
       header: () => "Error",
       meta: {
-        cellClassName: "min-w-80 md:min-w-none",
+        cellClassName: "min-w-64",
       },
-      cell: ({ row }) => {
-        return (
-          <Typography
-            weight="normal"
-            className="text-secondary break-all select-text"
-          >
-            {row.original.error}
-          </Typography>
-        );
-      },
+      cell: ({ row }) => (
+        <Typography
+          as="span"
+          size="sm"
+          className="text-secondary break-all select-text"
+        >
+          {row.original.error}
+        </Typography>
+      ),
     }),
   ]);
 
@@ -103,7 +106,6 @@ export function ErrorsBrowser({
 
   return (
     <PaginatedTable<SnapshotPathError>
-      variant="cards"
       query={query}
       table={table}
       ariaLabel="Restore point errors"
