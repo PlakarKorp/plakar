@@ -373,9 +373,9 @@ Supported variables:
   --text-color-terminal-secondary: oklch(0.86 0.011 278);
 
   /* Borders */
-  --border-color-primary: oklch(0.335 0.022 278);
-  --border-color-secondary: oklch(0.265 0.021 278);
-  --border-color-tertiary: oklch(0.22 0.019 278);
+  --border-color-primary: oklch(0.38 0.022 278);
+  --border-color-secondary: oklch(0.31 0.021 278);
+  --border-color-tertiary: oklch(0.255 0.019 278);
 
   --border-color-accent: var(--blue-brand-500);
   --border-color-accent-secondary: var(--blue-brand-700);
