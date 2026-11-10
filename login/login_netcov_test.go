@@ -282,6 +282,31 @@ func TestNetDeriveTokenNon200(t *testing.T) {
 	}
 }
 
+func TestNetDeriveTokenRefused(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	defer srv.Close()
+
+	ctx := appcontext.NewAppContext()
+	mgr, err := cookies.NewManager(t.TempDir())
+	if err != nil {
+		t.Fatalf("cookies.NewManager err = %v", err)
+	}
+	if err := mgr.PutAuthToken("stale-tok"); err != nil {
+		t.Fatalf("PutAuthToken err = %v", err)
+	}
+	ctx.SetCookies(mgr)
+
+	t.Setenv("PLAKAR_TOKEN", "")
+	t.Setenv("PLAKAR_API_URL", srv.URL)
+
+	_, err = DeriveToken(ctx)
+	if err == nil || !strings.Contains(err.Error(), "plakar login") {
+		t.Fatalf("err = %v, want a hint to run plakar login", err)
+	}
+}
+
 func TestNetDeriveTokenNoAuthToken(t *testing.T) {
 	ctx := appcontext.NewAppContext()
 	cookiesManager, err := cookies.NewManager(t.TempDir())

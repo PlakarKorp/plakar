@@ -2,6 +2,7 @@ package services
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -115,8 +116,12 @@ func TestGetServicesListNon200(t *testing.T) {
 	sc, _ := newTestConnector(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "nope", http.StatusUnauthorized)
 	}), "tok")
-	if _, err := sc.GetServiceList(); err == nil {
+	_, err := sc.GetServiceList()
+	if err == nil {
 		t.Fatal("expected error on 401, got nil")
+	}
+	if !errors.Is(err, ErrLoginRequired) {
+		t.Fatalf("err = %v, want ErrLoginRequired", err)
 	}
 }
 

@@ -2,6 +2,8 @@ package login
 
 import (
 	"bytes"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -115,16 +117,61 @@ func TestCov3LoginExecuteEnvTokenStored(t *testing.T) {
 
 // --- Logout.Execute -------------------------------------------------------
 
+func revokeServer(t *testing.T, status int) (*httptest.Server, *[]string) {
+	t.Helper()
+	var seen []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/v1/auth/logout" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		seen = append(seen, r.Header.Get("Authorization"))
+		w.WriteHeader(status)
+	}))
+	t.Cleanup(srv.Close)
+	t.Setenv("PLAKAR_TOKEN", "")
+	t.Setenv("PLAKAR_API_URL", srv.URL)
+	return srv, &seen
+}
+
 func TestCov3LogoutExecuteSuccess(t *testing.T) {
 	ctx, _, mgr := cov3Ctx(t)
+	_, seen := revokeServer(t, http.StatusNoContent)
 	require.NoError(t, mgr.PutAuthToken("to-be-removed"))
 	cmd := &Logout{}
 	status, err := cmd.Execute(ctx, nil)
 	require.NoError(t, err)
 	require.Equal(t, 0, status)
+	require.Equal(t, []string{"Bearer to-be-removed"}, *seen)
 	// Token file gone now.
 	_, err = mgr.GetAuthToken()
 	require.Error(t, err)
+	require.Empty(t, ctx.Stderr.(*bytes.Buffer).String())
+}
+
+func TestCov3LogoutExecuteRevokeFails(t *testing.T) {
+	ctx, _, mgr := cov3Ctx(t)
+	_, seen := revokeServer(t, http.StatusInternalServerError)
+	require.NoError(t, mgr.PutAuthToken("to-be-removed"))
+	cmd := &Logout{}
+	status, err := cmd.Execute(ctx, nil)
+	require.NoError(t, err)
+	require.Equal(t, 0, status)
+	require.Len(t, *seen, 1)
+	_, err = mgr.GetAuthToken()
+	require.Error(t, err)
+	require.Contains(t, ctx.Stderr.(*bytes.Buffer).String(), "not revoked server-side")
+}
+
+func TestCov3LogoutExecuteEnvToken(t *testing.T) {
+	ctx, _, _ := cov3Ctx(t)
+	_, seen := revokeServer(t, http.StatusNoContent)
+	t.Setenv("PLAKAR_TOKEN", "env-supplied-token")
+	cmd := &Logout{}
+	status, err := cmd.Execute(ctx, nil)
+	require.ErrorIs(t, err, cookies.ErrDeleteEnvToken)
+	require.Equal(t, 1, status)
+	require.Empty(t, *seen)
 }
 
 func TestCov3LogoutExecuteNotLoggedIn(t *testing.T) {

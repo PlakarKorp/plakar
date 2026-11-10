@@ -19,6 +19,7 @@ package login
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -386,6 +387,9 @@ func DeriveToken(ctx *appcontext.AppContext) (string, error) {
 	}
 	defer res.Body.Close()
 
+	if res.StatusCode == http.StatusUnauthorized {
+		return "", fmt.Errorf("not logged in or the login has expired, please run `plakar login`")
+	}
 	if res.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("request failed with status %s", res.Status)
 	}
@@ -396,4 +400,45 @@ func DeriveToken(ctx *appcontext.AppContext) (string, error) {
 	}
 
 	return tokenResponse.Token, nil
+}
+
+const revokeTimeout = 10 * time.Second
+
+// Revoke ends token on the auth api, along with the tokens derived from it.
+func Revoke(ctx *appcontext.AppContext, token string) error {
+	base := os.Getenv("PLAKAR_API_URL")
+	if base == "" {
+		base = defaultBaseURL
+	}
+	reqCtx, cancel := context.WithTimeout(ctx, revokeTimeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(reqCtx, "POST", base+"/v1/auth/logout", nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("User-Agent", userAgent())
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode/100 == 2 || res.StatusCode == http.StatusUnauthorized {
+		return nil
+	}
+	return fmt.Errorf("request failed with status %s", res.Status)
+}
+
+// Logout revokes the token on the auth api, then deletes the local copy;
+// the copy goes even when revoking fails, reported as revokeErr.
+func Logout(ctx *appcontext.AppContext) (revokeErr, err error) {
+	jar := ctx.GetCookies()
+	if jar.GetAuthEnvToken() == "" {
+		if token, err := jar.GetAuthToken(); err == nil {
+			revokeErr = Revoke(ctx, token)
+		}
+	}
+	return revokeErr, jar.DeleteAuthToken()
 }
