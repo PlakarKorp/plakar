@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/PlakarKorp/kloset/locate"
 	"github.com/PlakarKorp/kloset/objects"
@@ -90,6 +91,20 @@ func QueryParamToString(r *http.Request, param string) (string, bool, error) {
 	}
 
 	return str, true, nil
+}
+
+// QueryParamToTime parses an RFC 3339 time, the zero time when absent.
+func QueryParamToTime(r *http.Request, param string) (time.Time, error) {
+	str := r.URL.Query().Get(param)
+	if str == "" {
+		return time.Time{}, nil
+	}
+
+	t, err := time.Parse(time.RFC3339, str)
+	if err != nil {
+		return time.Time{}, parameterError(param, InvalidArgument, err)
+	}
+	return t, nil
 }
 
 func QueryParamToStrings(r *http.Request, param string) []string {
