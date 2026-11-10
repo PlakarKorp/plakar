@@ -25,6 +25,8 @@ import {
 } from "@plakar-ui/common/api/kloset";
 import { getPaginationParams } from "@plakar-ui/common/api/pagination";
 
+import { RepositoryFacetsSchema } from "./schema";
+
 import { CallApi, PLAKAR_URL } from "~/api/http";
 
 export function getKlosetURL() {
@@ -61,6 +63,21 @@ export async function getRepositoryImporterTypes() {
   return GetRepositoryImporterTypesSchema.parse(data);
 }
 
+export async function getRepositoryFacets() {
+  const url = "/api/repository/facets";
+  const res = await CallApi(url);
+  let data;
+
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error(
+      `the API endpoint ${url} returned HTTP/${res.status} with an invalid JSON payload`
+    );
+  }
+  return RepositoryFacetsSchema.parse(data);
+}
+
 export async function getRepositoryLocatePathname(
   ...[
     { importerType, importerOrigin, importerDirectory, path, pagination },
@@ -89,14 +106,21 @@ export async function getRepositoryLocatePathname(
 }
 
 export async function getSnapshotsList(
-  ...[{ importer, pagination, since }]: Parameters<getSnapshotsListFn>
+  ...[
+    { importer, pagination, since, before, tags = [], path },
+  ]: Parameters<getSnapshotsListFn>
 ) {
   const qs = new URLSearchParams({
     sort: "-Timestamp",
     ...getPaginationParams(pagination),
     importer: importer ?? "",
     since: since ? since.toISOString() : "",
+    before: before ? before.toISOString() : "",
+    path: path ?? "",
   });
+  for (const tag of tags) {
+    qs.append("tag", tag);
+  }
   const url = `/api/repository/snapshots?${qs}`;
   const res = await CallApi(url);
   let data;

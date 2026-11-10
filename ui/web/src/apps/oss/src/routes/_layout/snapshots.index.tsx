@@ -8,13 +8,19 @@ import {
 import {
   AppTableFeatures,
   appTableFeatures,
+  createdBounds,
+  CreatedRangeFilter,
+  createdRangeSearchSchema,
   DownloadMenuItem,
+  FilterPanel,
   PaginatedTable,
 } from "@plakar-ui/common/components";
+import { useDebouncedSearch } from "@plakar-ui/common/hooks";
 import { Main } from "@plakar-ui/common/layouts";
 import { createPaginationSearchSchema } from "@plakar-ui/common/utils";
 import {
   Alert,
+  ComboBox,
   Errors,
   ExpandableList,
   IconButton,
@@ -24,7 +30,11 @@ import {
   Tag,
   Typography,
 } from "@plakar-ui/ui/components";
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useQuery,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { RowSelectionState } from "@tanstack/react-table";
 import {
@@ -35,10 +45,16 @@ import { useState } from "react";
 import { MenuTrigger, Popover } from "react-aria-components";
 import { z } from "zod";
 
+import { repositoryFacetsQueryOptions } from "~/api/kloset/queries";
+
 export const Route = createFileRoute("/_layout/snapshots/")({
-  validateSearch: createPaginationSearchSchema().extend({
-    importer: z.string().catch("").default(""),
-  }),
+  validateSearch: createPaginationSearchSchema()
+    .extend({
+      importer: z.string().catch("").default(""),
+      tag: z.string().catch("").default(""),
+      path: z.string().catch("").default(""),
+    })
+    .extend(createdRangeSearchSchema.shape),
   component: Component,
 });
 
@@ -56,16 +72,22 @@ function Component() {
   );
   const browsable = repositoryInfoQuery.data.item.browsable;
 
-  const query = useQuery(
-    RepositorySnapshotsQueryOptions(ctx.klosetAPI, {
+  const bounds = createdBounds(search);
+  const query = useQuery({
+    ...RepositorySnapshotsQueryOptions(ctx.klosetAPI, {
       repository: undefined,
       importer: search.importer,
+      since: bounds.since ? new Date(bounds.since) : undefined,
+      before: bounds.before ? new Date(bounds.before) : undefined,
+      tags: search.tag ? [search.tag] : undefined,
+      path: search.path,
       pagination: {
         page: search.page,
         perPage: search.per_page,
       },
-    })
-  );
+    }),
+    placeholderData: keepPreviousData,
+  });
 
   const columnHelper = createColumnHelper<AppTableFeatures, SnapshotType>();
 
@@ -263,7 +285,12 @@ function Component() {
         <PaginatedTable<SnapshotType>
           query={query}
           table={table}
-          filters={<ImporterTypeFilter />}
+          filters={
+            <SnapshotFilters
+              shown={query.data?.total}
+              total={repositoryInfoQuery.data.item.snapshots.total}
+            />
+          }
           variant="cards"
           skeleton="two-rows"
           getLink={
@@ -284,6 +311,106 @@ function Component() {
         />
       </div>
     </Main>
+  );
+}
+
+const CLEARED_FILTERS = {
+  importer: "",
+  tag: "",
+  path: "",
+  created: undefined,
+  since: undefined,
+  before: undefined,
+};
+
+function SnapshotFilters({
+  shown,
+  total,
+}: {
+  shown: number | undefined;
+  total: number;
+}) {
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const { data: facets } = useQuery(repositoryFacetsQueryOptions());
+
+  const onChange = (patch: Partial<typeof search>) =>
+    navigate({ search: (prev) => ({ ...prev, page: 0, ...patch }) });
+  const isFiltered = Object.keys(CLEARED_FILTERS).some(
+    (key) => !!search[key as keyof typeof CLEARED_FILTERS]
+  );
+
+  return (
+    <FilterPanel>
+      <FilterPanel.Groups>
+        <FilterPanel.Group label="Created">
+          <CreatedRangeFilter search={search} onChange={onChange} />
+        </FilterPanel.Group>
+        <FilterPanel.Group label="Source type">
+          <ImporterTypeFilter />
+        </FilterPanel.Group>
+        <FilterPanel.Group label="Tag">
+          <Select
+            aria-label="Filter by tag"
+            placeholder="All tags"
+            value={search.tag || null}
+            onChange={(key) => onChange({ tag: key ? String(key) : "" })}
+            isClearable
+            isDisabled={!search.tag && !facets?.tags.length}
+            selectedFallbackOption={
+              search.tag ? { id: search.tag, name: search.tag } : undefined
+            }
+            className="min-w-48 max-md:w-full"
+          >
+            <Select.ListBox
+              items={facets?.tags.map((tag) => ({ id: tag, name: tag })) ?? []}
+            >
+              {(item) => <Select.Item {...item} />}
+            </Select.ListBox>
+          </Select>
+        </FilterPanel.Group>
+        <FilterPanel.Group label="Path">
+          <PathFilter
+            value={search.path}
+            paths={facets?.paths ?? []}
+            onChange={(path) => onChange({ path })}
+          />
+        </FilterPanel.Group>
+      </FilterPanel.Groups>
+      <FilterPanel.Footer
+        shown={shown}
+        total={total}
+        noun="restore points"
+        onClear={isFiltered ? () => onChange(CLEARED_FILTERS) : undefined}
+      />
+    </FilterPanel>
+  );
+}
+
+function PathFilter({
+  value,
+  paths,
+  onChange,
+}: {
+  value: string;
+  paths: string[];
+  onChange: (path: string) => void;
+}) {
+  const input = useDebouncedSearch(value, onChange);
+
+  return (
+    <ComboBox
+      aria-label="Filter by path"
+      placeholder="Any path"
+      allowsCustomValue
+      inputValue={input.value}
+      onInputChange={input.change}
+      className="min-w-64 max-md:w-full"
+    >
+      {paths.map((path) => (
+        <ComboBox.Item key={path} id={path} name={path} />
+      ))}
+    </ComboBox>
   );
 }
 
@@ -327,7 +454,7 @@ function ImporterTypeFilter() {
           ? { id: search.importer, name: search.importer }
           : undefined
       }
-      className="ml-auto min-w-60 max-sm:w-full"
+      className="min-w-48 max-md:w-full"
     >
       <Select.ListBox items={options}>
         {(item) => <Select.Item {...item} />}
