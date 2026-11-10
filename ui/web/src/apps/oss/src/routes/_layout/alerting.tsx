@@ -2,6 +2,8 @@ import { RepositoryInfoQueryOptions } from "@plakar-ui/common/api/kloset";
 import {
   AppTableFeatures,
   appTableFeatures,
+  CreatedCell,
+  dayGroup,
   PaginatedTable,
 } from "@plakar-ui/common/components";
 import { Main } from "@plakar-ui/common/layouts";
@@ -154,14 +156,18 @@ function AlertsTable({
     features: appTableFeatures,
     data: query.isSuccess && query.data.__type === "ok" ? query.data.items : [],
     columns: columnHelper.columns([
+      columnHelper.accessor("timestamp", {
+        id: "created",
+        header: () => "Created",
+        meta: { cellClassName: "md:w-42" },
+        cell: (info) => <CreatedCell date={info.getValue()} />,
+      }),
       columnHelper.display({
         id: "status",
-        meta: {
-          cellClassName: "md:w-[20%]",
-        },
-        header: () => "Status",
+        header: () => "Task",
+        meta: { cellClassName: "md:w-40" },
         cell: (info) => {
-          const report = info.row.original;
+          const task = info.row.original.report_task;
           const statusIcon = (
             {
               OK: "success-circle",
@@ -169,75 +175,39 @@ function AlertsTable({
               FAILURE: "error-circle",
               unknown: "info-circle",
             } as Record<string, IconType>
-          )[report.report_task.status];
+          )[task.status];
           const color = {
             OK: "text-success",
             WARNING: "text-warning",
             FAILURE: "text-error",
             unknown: "",
-          }[report.report_task.status];
+          }[task.status];
 
           return (
-            <span className="flex flex-col gap-1">
-              <Typography
-                as="span"
-                size="md"
-                className={clsx("flex items-center gap-1 capitalize", color)}
-              >
-                <Icon type={statusIcon} size="md" />
-                {info.row.original.report_task.type.HumanString}
-              </Typography>
-
-              <Typography as="span" className="text-secondary" size="sm">
-                {info.row.original.report_task.duration.toHumanString() ? (
-                  <>
-                    Completed in{" "}
-                    {info.row.original.report_task.duration.toHumanString()}
-                  </>
-                ) : (
-                  <>Completed almost instantly</>
-                )}
-              </Typography>
-            </span>
-          );
-        },
-      }),
-      columnHelper.accessor("report_task.name", {
-        meta: {
-          cellClassName: "md:w-[20%]",
-        },
-        header: () => "Name",
-        cell: (info) => {
-          const value = info.getValue();
-          return (
-            <Typography as="span" className="text-primary">
-              {value === "@agent" || value === "@agentless" ? "" : value}
+            <Typography
+              as="span"
+              size="sm"
+              weight="medium"
+              className={clsx(
+                "flex items-center gap-1.5 whitespace-nowrap capitalize",
+                color
+              )}
+            >
+              <Icon type={statusIcon} size="sm" />
+              {task.type.HumanString}
             </Typography>
           );
         },
       }),
-      columnHelper.display({
-        meta: {
-          cellClassName: "md:w-[20%]",
-        },
-        id: "timeline",
-        header: () => "Timeline",
+      columnHelper.accessor("report_task.name", {
+        header: () => "Name",
+        meta: { cellClassName: "md:w-48" },
         cell: (info) => {
+          const value = info.getValue();
           return (
-            <div className="flex items-center gap-2">
-              <div className="flex flex-col gap-1">
-                <Typography
-                  as="span"
-                  className="text-primary whitespace-nowrap"
-                >
-                  {info.row.original.timestamp.relativeToNow()}
-                </Typography>
-
-                <Typography as="span" className="text-secondary" size="sm">
-                  {info.row.original.timestamp.toHumanString()}
-                </Typography>
-              </div>
-            </div>
+            <Typography as="span" size="sm">
+              {value === "@agent" || value === "@agentless" ? "" : value}
+            </Typography>
           );
         },
       }),
@@ -245,16 +215,29 @@ function AlertsTable({
         id: "output",
         header: () => "Output",
         cell: (info) => {
+          const task = info.row.original.report_task;
           return (
-            <>
-              {info.row.original.report_task.status !== "OK" && (
-                <Typography as="span" className="text-primary" size="sm">
-                  {info.row.original.report_task.error_message}
-                </Typography>
-              )}
-            </>
+            task.status !== "OK" && (
+              <Typography as="span" size="sm" className="text-secondary">
+                {task.error_message}
+              </Typography>
+            )
           );
         },
+      }),
+      columnHelper.accessor("report_task.duration", {
+        id: "duration",
+        header: () => <span className="ml-auto">Duration</span>,
+        meta: { cellClassName: "w-20 text-right max-md:hidden" },
+        cell: (info) => (
+          <Typography
+            as="span"
+            size="sm"
+            className="text-secondary tabular-nums"
+          >
+            {info.getValue().toShortString()}
+          </Typography>
+        ),
       }),
     ]),
     state: {
@@ -279,8 +262,7 @@ function AlertsTable({
       query={query}
       table={table}
       ariaLabel="Reports table"
-      variant="cards"
-      skeleton="two-rows"
+      getGroup={(report) => dayGroup(report.timestamp)}
     />
   );
 }
