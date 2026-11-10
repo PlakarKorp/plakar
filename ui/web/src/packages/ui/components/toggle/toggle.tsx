@@ -48,7 +48,7 @@ export function Toggle({
             >
               <div
                 className={clsx(
-                  "pointer-events-none inline-block size-4.5 transform rounded-full bg-foreground-light shadow-sm transition duration-200 ease-in-out group-data-disabled:bg-control-thumb-disabled",
+                  "bg-foreground-light group-data-disabled:bg-control-thumb-disabled pointer-events-none inline-block size-4.5 transform rounded-full shadow-sm transition duration-200 ease-in-out",
                   isSelected && "translate-x-4"
                 )}
               />
