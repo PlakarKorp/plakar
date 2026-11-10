@@ -1,13 +1,7 @@
-import {
-  Date as enrichDate,
-  EnrichedDate,
-  getIntegrationIcon,
-} from "@plakar-ui/common/api/enrich";
+import { EnrichedDate, getIntegrationIcon } from "@plakar-ui/common/api/enrich";
 import { Errors, Icon, Skeleton, Typography } from "@plakar-ui/ui/components";
 import type { ToOptions } from "@tanstack/react-router";
 import { Link } from "react-aria-components";
-
-const DAY_FORMAT = "yyyy-MM-dd";
 
 type RestorePointSource = {
   type: string;
@@ -25,19 +19,6 @@ export type RestorePointListItem = {
   errors: number;
   link: ToOptions;
 };
-
-function dayLabel(date: EnrichedDate) {
-  const day = date.format(DAY_FORMAT);
-  const today = enrichDate(new Date().toISOString());
-  const yesterday = enrichDate(new Date(Date.now() - 86_400_000).toISOString());
-  if (day === today.format(DAY_FORMAT)) {
-    return "Today";
-  }
-  if (day === yesterday.format(DAY_FORMAT)) {
-    return "Yesterday";
-  }
-  return date.format("EEEE, MMM d, yyyy");
-}
 
 function itemsLabel(items: number) {
   return `${items.toLocaleString()} ${items === 1 ? "item" : "items"}`;
@@ -143,9 +124,9 @@ export function RestorePointList({
   return (
     <div className="flex flex-col">
       {points.map((point, index) => {
-        const label = dayLabel(point.createdAt);
+        const label = point.createdAt.toDayLabel();
         const isNewDay =
-          index === 0 || dayLabel(points[index - 1].createdAt) !== label;
+          index === 0 || points[index - 1].createdAt.toDayLabel() !== label;
 
         return (
           <div key={point.id}>
