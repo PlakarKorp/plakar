@@ -9,9 +9,11 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/PlakarKorp/kloset/connectors/storage"
+	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/kloset/snapshot/vfs"
@@ -36,6 +38,11 @@ type uiserver struct {
 	// the API should call pkg.Manager.Query() directly instead of caching the
 	// results here.
 	integrationsCache *ttlmap.TTLMap[string, []*pkg.Integration]
+
+	// integrity holds one verification per snapshot asked about, running
+	// or finished; snapshots are immutable, so a finished one is kept.
+	integrityMu sync.Mutex
+	integrity   map[objects.MAC]*integrityRun
 
 	// XXX: Adding this for transition, it needs to go away. Some
 	// places we only have Repository and out of AppContext we
@@ -187,6 +194,7 @@ func SetupRoutes(server *http.ServeMux, repo *repository.Repository, ctx *appcon
 		ctx:               ctx,
 		norefresh:         norefresh,
 		integrationsCache: ttlmap.New[string, []*pkg.Integration](5 * time.Minute),
+		integrity:         make(map[objects.MAC]*integrityRun),
 	}
 	ui.integrationsCache.AutoExpire()
 
@@ -237,6 +245,7 @@ func SetupRoutes(server *http.ServeMux, repo *repository.Repository, ctx *appcon
 	server.Handle("GET /api/repository/facets", authToken(JSONAPIView(ui.repositoryFacets)))
 
 	server.Handle("GET /api/snapshot/{snapshot}", authToken(JSONAPIView(ui.snapshotHeader)))
+	server.Handle("GET /api/snapshot/integrity/{snapshot}", authToken(JSONAPIView(ui.snapshotIntegrity)))
 	server.Handle("GET /api/snapshot/reader/{snapshot_path...}", urlSigner.VerifyMiddleware(APIView(ui.snapshotReader)))
 	server.Handle("POST /api/snapshot/reader-sign-url/{snapshot_path...}", authToken(JSONAPIView(urlSigner.Sign)))
 
