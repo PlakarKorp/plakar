@@ -46,6 +46,13 @@ export const NAV_ITEMS: NavListItemProps[] = [
     },
     icon: "plug",
   },
+  {
+    label: "Gibson",
+    href: {
+      to: "/gibson",
+    },
+    icon: "cubes",
+  },
 ];
 
 export const SUB_NAV_ITEMS: NavListItemProps[] = [

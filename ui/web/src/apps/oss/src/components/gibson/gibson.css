@@ -1,0 +1,64 @@
+.gibson {
+  font-family: "Roboto Mono", ui-monospace, Menlo, monospace;
+  color: #8ff6ff;
+  text-shadow: 0 0 6px rgba(0, 240, 255, 0.7);
+}
+
+.gibson-scanlines {
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0) 0px,
+    rgba(0, 0, 0, 0) 2px,
+    rgba(0, 0, 0, 0.28) 3px
+  );
+}
+
+.gibson-vignette {
+  background: radial-gradient(
+    ellipse at center,
+    transparent 60%,
+    rgba(0, 0, 24, 0.55) 100%
+  );
+}
+
+.gibson-panel {
+  background: rgba(0, 6, 20, 0.7);
+  border: 1px solid rgba(0, 240, 255, 0.55);
+  box-shadow:
+    0 0 12px rgba(0, 240, 255, 0.25),
+    inset 0 0 24px rgba(0, 240, 255, 0.06);
+}
+
+.gibson-blink {
+  animation: gibson-blink 1s steps(2, start) infinite;
+}
+
+@keyframes gibson-blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+.gibson-crosshair::before,
+.gibson-crosshair::after {
+  content: "";
+  position: absolute;
+  background: rgba(140, 246, 255, 0.9);
+  box-shadow: 0 0 6px rgba(0, 240, 255, 0.9);
+}
+
+.gibson-crosshair::before {
+  left: 50%;
+  top: 0;
+  width: 1px;
+  height: 100%;
+  transform: translateX(-50%);
+}
+
+.gibson-crosshair::after {
+  top: 50%;
+  left: 0;
+  height: 1px;
+  width: 100%;
+  transform: translateY(-50%);
+}

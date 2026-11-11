@@ -25,7 +25,7 @@ import {
 } from "@plakar-ui/common/api/kloset";
 import { getPaginationParams } from "@plakar-ui/common/api/pagination";
 
-import { RepositoryFacetsSchema } from "./schema";
+import { RepositoryFacetsSchema, SnapshotIntegritySchema } from "./schema";
 
 import { CallApi, PLAKAR_URL } from "~/api/http";
 
@@ -76,6 +76,22 @@ export async function getRepositoryFacets() {
     );
   }
   return RepositoryFacetsSchema.parse(data);
+}
+
+/** Asks for a snapshot's verification; the first call starts it. */
+export async function getSnapshotIntegrity(snapshot: string) {
+  const url = `/api/snapshot/integrity/${snapshot}`;
+  const res = await CallApi(url);
+  let data;
+
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error(
+      `the API endpoint ${url} returned HTTP/${res.status} with an invalid JSON payload`
+    );
+  }
+  return SnapshotIntegritySchema.parse(data);
 }
 
 export async function getRepositoryLocatePathname(

@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LayoutRouteImport } from './routes/_layout'
+import { Route as GibsonRouteImport } from './routes/gibson'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as LayoutAlertingRouteImport } from './routes/_layout/alerting'
 import { Route as LayoutAnalyticsRouteImport } from './routes/_layout/analytics'
@@ -26,6 +27,11 @@ import { Route as LayoutSnapshotsSnapshotIdSourceErrorsRouteImport } from './rou
 
 const LayoutRoute = LayoutRouteImport.update({
   id: '/_layout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GibsonRoute = GibsonRouteImport.update({
+  id: '/gibson',
+  path: '/gibson',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LayoutIndexRoute = LayoutIndexRouteImport.update({
@@ -103,6 +109,7 @@ const LayoutSnapshotsSnapshotIdSourceErrorsRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
+  '/gibson': typeof GibsonRoute
   '/alerting': typeof LayoutAlertingRoute
   '/analytics': typeof LayoutAnalyticsRoute
   '/compare': typeof LayoutCompareRoute
@@ -117,6 +124,7 @@ export interface FileRoutesByFullPath {
   '/snapshots/$snapshotId/$source/errors': typeof LayoutSnapshotsSnapshotIdSourceErrorsRoute
 }
 export interface FileRoutesByTo {
+  '/gibson': typeof GibsonRoute
   '/alerting': typeof LayoutAlertingRoute
   '/analytics': typeof LayoutAnalyticsRoute
   '/compare': typeof LayoutCompareRoute
@@ -134,6 +142,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_layout': typeof LayoutRouteWithChildren
+  '/gibson': typeof GibsonRoute
   '/_layout/alerting': typeof LayoutAlertingRoute
   '/_layout/analytics': typeof LayoutAnalyticsRoute
   '/_layout/compare': typeof LayoutCompareRoute
@@ -152,6 +161,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/gibson'
     | '/alerting'
     | '/analytics'
     | '/compare'
@@ -166,6 +176,7 @@ export interface FileRouteTypes {
     | '/snapshots/$snapshotId/$source/errors'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/gibson'
     | '/alerting'
     | '/analytics'
     | '/compare'
@@ -182,6 +193,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_layout'
+    | '/gibson'
     | '/_layout/alerting'
     | '/_layout/analytics'
     | '/_layout/compare'
@@ -199,6 +211,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   LayoutRoute: typeof LayoutRouteWithChildren
+  GibsonRoute: typeof GibsonRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -208,6 +221,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof LayoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gibson': {
+      id: '/gibson'
+      path: '/gibson'
+      fullPath: '/gibson'
+      preLoaderRoute: typeof GibsonRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_layout/': {
@@ -343,6 +363,7 @@ const LayoutRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   LayoutRoute: LayoutRouteWithChildren,
+  GibsonRoute: GibsonRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
