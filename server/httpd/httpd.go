@@ -128,14 +128,14 @@ func (s *server) putResource(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) deleteResource(w http.ResponseWriter, r *http.Request) {
-	if s.noDelete {
-		http.Error(w, "not allowed to delete", http.StatusForbidden)
-		return
-	}
-
 	typ, err := getResource(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if s.noDelete && typ != storage.StorageResourceLock {
+		http.Error(w, "not allowed to delete", http.StatusForbidden)
 		return
 	}
 

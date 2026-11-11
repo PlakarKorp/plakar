@@ -548,6 +548,21 @@ func TestDeleteResource_Ok(t *testing.T) {
 	require.Equal(t, mac, store.lastDelMAC)
 }
 
+func TestDeleteResource_NoDelete_LockAllowed(t *testing.T) {
+	mac := makeMAC(0x42)
+	store := &fakeStore{}
+	mux := Mux(store, true) // noDelete=true
+
+	req := httptest.NewRequest(http.MethodDelete,
+		"/resources/locks/"+hex.EncodeToString(mac[:]), nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Equal(t, storage.StorageResourceLock, store.lastDelType)
+	require.Equal(t, mac, store.lastDelMAC)
+}
+
 func TestDeleteResource_Forbidden(t *testing.T) {
 	mac := makeMAC(0x42)
 	mux := Mux(&fakeStore{}, true) // noDelete=true
