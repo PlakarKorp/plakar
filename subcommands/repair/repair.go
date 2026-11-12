@@ -79,7 +79,15 @@ func (cmd *Repair) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 		return 1, err
 	}
 
-	repo.RebuildStateWithCache(oldCache)
+	legacyState, err := state.NewLegacyState(oldCache)
+	if err != nil {
+		return 1, err
+	}
+
+	if err := repo.RebuildLegacyState(legacyState); err != nil {
+		return 1, err
+	}
+
 	remoteStates, err := repo.GetStates()
 	if err != nil {
 		return 1, err
@@ -91,7 +99,7 @@ func (cmd *Repair) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 	}
 
 	packfilesPerState := make(map[objects.MAC][]objects.MAC, 0)
-	for pe, err := range repo.ListPackfileEntries() {
+	for pe, err := range legacyState.ListPackfileEntries() {
 		if err != nil {
 			return 1, err
 		}
@@ -114,7 +122,7 @@ func (cmd *Repair) Execute(ctx *appcontext.AppContext, repo *repository.Reposito
 			return 1, err
 		}
 
-		deltaState, err := state.NewLocalState(scanCache)
+		deltaState, err := state.NewLegacyState(scanCache)
 		if err != nil {
 			return 1, err
 		}

@@ -77,7 +77,7 @@ func (cmd *DiagState) Execute(ctx *appcontext.AppContext, repo *repository.Repos
 			}
 			defer scanCache.Close()
 
-			st, err := state.FromStream(rawStateRd, v, scanCache)
+			st, err := state.LegacyFromStream(rawStateRd, v, scanCache)
 			if err != nil {
 				return 1, err
 			}
