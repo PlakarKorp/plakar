@@ -28,7 +28,6 @@ export * from "./drawer/drawer";
 export * from "./dropdown-list/dropdown-list";
 export * from "./empty-list/empty-list";
 export * from "./errors/errors";
-export * from "./expandable-list/expandable-list";
 export * from "./feed/feed";
 export * from "./field-popover/field-popover";
 export * from "./field/field-button";
