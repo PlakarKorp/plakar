@@ -7,6 +7,7 @@ export * from "./use-in-view";
 export * from "./use-local-storage";
 export * from "./use-preview";
 export * from "./local-storage-preview-provider";
+export * from "./use-scroll-edges";
 export * from "./use-scroll-position";
 export * from "./use-spinner";
 export * from "./use-theme";

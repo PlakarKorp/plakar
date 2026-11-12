@@ -62,7 +62,7 @@ function TabRoot<const T extends readonly TabItem[]>({
           aria-label={ariaLabel}
           items={items}
           className={clsx("scrollbar-hide flex min-w-0 overflow-auto", {
-            "max-w-fit gap-2": variant === "underlined",
+            "max-w-fit gap-1": variant === "underlined",
             "border-secondary bg-tertiary gap-1 rounded-lg border p-0.5":
               variant === "pill",
             "flex-1": fullWidth,
@@ -83,10 +83,10 @@ function TabRoot<const T extends readonly TabItem[]>({
               )}
               {...(item.href ? { href: item.href } : {})}
             >
-              <TabLabel item={item} variant={variant} />
+              <TabLabel item={item} />
 
               {variant === "underlined" && (
-                <SelectionIndicator className="border-accent-heavy absolute -bottom-0.5 left-0 h-1 w-full border-b-2 motion-safe:transition-[translate,width,height]" />
+                <SelectionIndicator className="border-accent absolute -bottom-0.5 left-0 h-1 w-full border-b-2 motion-safe:transition-[translate,width,height]" />
               )}
             </RATab>
           ))}
@@ -110,16 +110,12 @@ function TabRoot<const T extends readonly TabItem[]>({
   );
 }
 
-function TabLabel({ item, variant }: { item: TabItem; variant: TabVariant }) {
+function TabLabel({ item }: { item: TabItem }) {
   const label = (
     <>
       {item.icon && <Icon type={item.icon} size="md" />}
 
-      <Typography
-        as="span"
-        size="sm"
-        weight={variant === "pill" ? "medium" : "normal"}
-      >
+      <Typography as="span" size="sm" weight="medium">
         {item.title}
       </Typography>
 

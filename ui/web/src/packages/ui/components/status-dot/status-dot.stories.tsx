@@ -22,20 +22,17 @@ export const Default: Story = {
   args: {
     variant: "success",
     pending: false,
-    isOnAccent: false,
   },
 };
 
-export const OnAccent: Story = {
-  args: {
-    variant: "success",
-    isOnAccent: true,
-  },
-  decorators: [
-    (Story) => (
-      <div className="bg-accent inline-flex rounded-lg p-2">
-        <Story />
-      </div>
-    ),
-  ],
+export const All: Story = {
+  args: { variant: "success" },
+  parameters: { controls: { disable: true } },
+  render: () => (
+    <div className="flex items-center gap-4">
+      {StatusDotVariant.map((variant) => (
+        <StatusDot key={variant} variant={variant} />
+      ))}
+    </div>
+  ),
 };

@@ -323,8 +323,15 @@ export type getSnapshotsListFn = (
   props: {
     repository: string | undefined;
     importer?: string;
+    /** Start of the snapshot ID, in hexadecimal. */
+    id?: string;
     pagination: PaginationParams;
     since?: Date;
+    before?: Date;
+    /** Tags a snapshot must all carry. */
+    tags?: string[];
+    /** Part of a source directory. */
+    path?: string;
   },
   init?: RequestInit
 ) => Promise<z.infer<typeof GetRepositorySnapshotsSchema>>;

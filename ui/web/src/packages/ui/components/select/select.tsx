@@ -268,7 +268,7 @@ function SelectRoot({
               ? "w-max max-w-[min(28rem,calc(100vw-1rem))] min-w-[var(--trigger-width)]"
               : "w-[var(--trigger-width)]",
             {
-              default: "border-primary bg-primary",
+              default: "border-primary bg-overlay",
               terminal: "border-terminal bg-terminal",
             }[listVariantOf(variant)]
           )}

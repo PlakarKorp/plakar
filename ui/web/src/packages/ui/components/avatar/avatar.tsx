@@ -49,7 +49,11 @@ export function Avatar({
   variant = "brand",
   shape = "circle",
 }: AvatarProps) {
-  const contentColor = variant === "group" ? "text-accent" : "text-on-brand";
+  const contentColor = {
+    brand: "text-avatar",
+    service: "text-avatar-service",
+    group: "text-accent",
+  }[variant];
 
   return (
     <div
@@ -66,8 +70,8 @@ export function Avatar({
           isDisabled
             ? "bg-disable"
             : {
-                brand: "bg-accent",
-                service: "bg-sky-600",
+                brand: "bg-avatar",
+                service: "bg-avatar-service",
                 group: "bg-accent-tertiary",
               }[variant]
         )}

@@ -59,6 +59,19 @@ export function Tag({
           yellow_borderless:
             "bg-warning-tertiary text-warning border-background-warning-tertiary",
           red: "border-error bg-error-tertiary text-error",
+          soft_success:
+            "border-status-success/20 bg-status-success-wash text-status-success-ink",
+          soft_error:
+            "border-status-error/20 bg-status-error-wash text-status-error-ink",
+          soft_cancel:
+            "border-status-cancel/20 bg-status-cancel-wash text-status-cancel",
+          task_backup:
+            "border-task-backup/20 bg-task-backup-bg text-task-backup",
+          task_restore:
+            "border-task-restore/20 bg-task-restore-bg text-task-restore",
+          task_sync: "border-task-sync/20 bg-task-sync-bg text-task-sync",
+          task_check: "border-task-check/20 bg-task-check-bg text-task-check",
+          task_prune: "border-task-prune/20 bg-task-prune-bg text-task-prune",
           transparent: "border-secondary text-secondary",
           source: "border-source bg-source-accent text-on-brand",
           source_secondary: "bg-source-tertiary text-source border-source",

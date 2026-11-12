@@ -59,9 +59,9 @@ export function Navigation(contentProps: NavigationProps) {
     <>
       <aside
         className={clsx(
-          "bg-primary border-secondary scrollbar-hide absolute z-50 h-full overflow-y-auto border-r p-4",
+          "border-secondary absolute z-50 h-full overflow-hidden border-r p-4",
           isExpanded ? "w-70" : "w-18",
-          isFloating && "shadow-xl"
+          isFloating ? "bg-overlay shadow-xl" : "bg-shell"
         )}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}

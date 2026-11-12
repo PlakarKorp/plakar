@@ -136,7 +136,7 @@ export function DropdownListPopover({
     <Popover
       offset={4}
       placement={placement}
-      className="border-primary bg-primary flex w-96 max-w-[calc(100vw-2rem)] flex-col rounded-lg border shadow-lg"
+      className="border-primary bg-overlay flex w-96 max-w-[calc(100vw-2rem)] flex-col rounded-lg border shadow-lg"
     >
       <Dialog aria-label={label} className="flex min-h-0 flex-col outline-none">
         {({ close }) => children(close)}

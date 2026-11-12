@@ -85,13 +85,13 @@ export function DatePicker<T extends DateValue>({
             "group-data-open:border-accent-heavy"
           )}
         >
-          <DateInput className="py-2">
+          <DateInput className="flex min-w-0 py-2 whitespace-nowrap">
             {(segment) => (
               <DateSegment
                 segment={segment}
                 className={clsx(
                   "rounded-sm py-0.5 outline-none",
-                  "[&[role=spinbutton]]:px-1",
+                  "[&[role=spinbutton]]:px-0.5",
                   "aria-[valuetext='Empty']:text-placeholder",
                   props.isReadOnly && !props.value && "invisible",
                   !props.isReadOnly &&
@@ -122,7 +122,7 @@ export function DatePicker<T extends DateValue>({
       <Popover
         offset={4}
         containerPadding={8}
-        className="border-primary bg-primary rounded-lg border p-4 shadow-lg"
+        className="border-primary bg-overlay rounded-lg border p-4 shadow-lg"
       >
         <Dialog>
           <Calendar>
@@ -162,7 +162,7 @@ export function DatePicker<T extends DateValue>({
                       "outline-focus h-8 w-8 rounded-full text-sm outline-offset-2",
                       "aria-disabled:hidden",
                       "hover:bg-primary-hover",
-                      "data-selected:bg-accent data-selected:text-on-accent"
+                      "data-selected:bg-accent data-selected:text-on-brand"
                     )}
                   />
                 )}

@@ -80,7 +80,7 @@ export function PieChart({
             )}
           </>
         )}
-        <Tooltip wrapperClassName="!bg-primary rounded-lg shadow-lg border !border-secondary text-sm" />
+        <Tooltip wrapperClassName="!bg-overlay rounded-lg shadow-lg border !border-secondary text-sm" />
       </RechartsPieChart>
     </ResponsiveContainer>
   );

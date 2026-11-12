@@ -71,7 +71,7 @@ export function FloatingOverlayButton({
         aria-hidden={!open}
         inert={open ? undefined : true}
         className={clsx(
-          "border-accent bg-primary text-primary absolute right-0 bottom-12 z-99 w-80 overflow-hidden rounded-xl rounded-br-none border shadow-xl transition-all duration-300 ease-out",
+          "border-accent bg-overlay text-primary absolute right-0 bottom-12 z-99 w-80 overflow-hidden rounded-xl rounded-br-none border shadow-xl transition-all duration-300 ease-out",
           open
             ? "translate-x-0 opacity-100"
             : "pointer-events-none translate-x-60 opacity-0"

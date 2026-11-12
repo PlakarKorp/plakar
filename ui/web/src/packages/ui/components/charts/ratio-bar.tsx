@@ -37,7 +37,7 @@ export function RatioBar({ label, completed, failed }: RatioBarProps) {
       <div
         className={clsx(
           "flex h-2 gap-1.5 rounded-full",
-          !completed && !failed && "bg-success-tertiary"
+          !completed && !failed && "bg-tertiary"
         )}
       >
         {clampedRatio > 0 && (

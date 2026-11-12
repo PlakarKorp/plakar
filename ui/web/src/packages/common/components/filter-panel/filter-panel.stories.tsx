@@ -67,7 +67,7 @@ function FilterPanelDemo({
       <FilterPanel.Groups>
         <FilterPanel.Group label="Protection">
           <SegmentedControl
-            variant="accent"
+            size="md"
             ariaLabel="Protection"
             items={PROTECTION}
             selectedId={protection}

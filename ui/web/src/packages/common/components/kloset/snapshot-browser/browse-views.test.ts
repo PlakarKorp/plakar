@@ -42,7 +42,10 @@ const emptyCounts = {
   errors: 0,
 };
 
-function directory(counts: Partial<typeof emptyCounts>) {
+function directory(
+  counts: Partial<typeof emptyCounts>,
+  below: Partial<typeof emptyCounts> = {}
+) {
   return VFSEntrySchema.parse({
     version: 65536,
     parent_path: "/",
@@ -67,7 +70,7 @@ function directory(counts: Partial<typeof emptyCounts>) {
         sum_entropy: 0,
         avg_entropy: 0,
       },
-      below: emptyCounts,
+      below: { ...emptyCounts, ...below },
     },
     mac: "00",
   });
@@ -94,6 +97,28 @@ describe("browse views", () => {
       music: 1,
       documents: 3,
     });
+  });
+
+  it("counts the files below a directory too when including subfolders", () => {
+    const entry = directory(
+      { files: 2, MIME_text: 2, directories: 1 },
+      { files: 8, MIME_image: 5, MIME_video: 3 }
+    );
+    expect(browseViewCounts(entry, true)).toEqual({
+      all: 2,
+      photos: 5,
+      videos: 3,
+      music: 0,
+      documents: 2,
+    });
+  });
+
+  it("keeps the views of kinds a directory only holds in subfolders", () => {
+    const entry = directory(
+      { files: 2, MIME_text: 2, directories: 1 },
+      { files: 8, MIME_image: 5, MIME_video: 3 }
+    );
+    expect(emptyBrowseViews(entry)).toEqual(new Set(["music"]));
   });
 
   it("suggests the view of a dominant kind of media", () => {

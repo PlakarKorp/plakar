@@ -35,7 +35,7 @@ function ComboBoxRoot({
       {...props}
       className={clsx("group flex flex-col gap-1", className)}
     >
-      <FieldLabel isRequired={props.isRequired}>{label}</FieldLabel>
+      {label && <FieldLabel isRequired={props.isRequired}>{label}</FieldLabel>}
 
       <Typography
         as="div"
@@ -82,7 +82,7 @@ function ComboBoxRoot({
       <Popover
         offset={4}
         containerPadding={8}
-        className="border-primary bg-primary min-w-[var(--trigger-width)] rounded-lg border shadow-lg"
+        className="border-primary bg-overlay min-w-[var(--trigger-width)] rounded-lg border shadow-lg"
       >
         <ListBox
           renderEmptyState={() => (

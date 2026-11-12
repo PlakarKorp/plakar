@@ -136,7 +136,7 @@ export function CardRadio({
               "text-primary bg-tertiary text-lg font-medium",
               // States
               "group-data-disabled/card-radio:text-tertiary",
-              "group-data-selected/card-radio:bg-accent group-data-selected/card-radio:text-on-accent dark:group-data-selected/card-radio:text-primary"
+              "group-data-selected/card-radio:bg-accent group-data-selected/card-radio:text-on-brand"
             )}
           >
             {label.charAt(0).toUpperCase()}

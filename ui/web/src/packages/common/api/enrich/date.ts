@@ -69,6 +69,12 @@ export function Date(value: string) {
       return format(date, "MMM d, yyyy");
     },
 
+    toDayLabel: () => {
+      if (isToday(date)) return "Today";
+      if (isYesterday(date)) return "Yesterday";
+      return format(date, "EEEE, MMM d, yyyy");
+    },
+
     format: (fmt: string) => format(date, fmt),
 
     // Called by JSON.stringify to convert the object back to a string

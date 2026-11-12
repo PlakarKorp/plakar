@@ -50,7 +50,7 @@ export function JobsBarChart({ data }: JobsChartProps) {
           )}
           niceTicks="snap125"
         />
-        <Tooltip wrapperClassName="!bg-primary rounded-lg shadow-lg border !border-secondary text-sm" />
+        <Tooltip wrapperClassName="!bg-overlay rounded-lg shadow-lg border !border-secondary text-sm" />
         <CartesianGrid
           stroke="var(--background-color-tertiary)"
           strokeDasharray="5 5"
@@ -75,7 +75,7 @@ function CustomYTick({ x, y, payload }: CustomTickProps) {
       x={x}
       y={y}
       textAnchor="end"
-      fill="var(--text-color-quaternary)"
+      fill="var(--text-color-tertiary)"
       fontSize={12}
     >
       {payload.value}
@@ -89,7 +89,7 @@ function CustomXTick({ x, y, payload }: CustomTickProps) {
       x={x}
       y={Number(y) + 12}
       textAnchor="middle"
-      fill="var(--text-color-quaternary)"
+      fill="var(--text-color-tertiary)"
       fontSize={12}
     >
       {payload.value}

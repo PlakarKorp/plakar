@@ -1,5 +1,8 @@
 export * from "./back-button/back-button";
 export * from "./breadcrumbs/breadcrumbs";
+export * from "./created-range-filter/created-range";
+export * from "./created-range-filter/created-range-filter";
+export * from "./created-range-filter/date-bound-picker";
 export * from "./form/code-editor-fields.validators";
 export * from "./form/form-element";
 export * from "./form/reset-button";
@@ -37,6 +40,8 @@ export * from "./integration-card/integration-version-tag";
 export * from "./integration-card/integrations-filters";
 export * from "./integration-card/review-updates";
 export * from "./integration-card/use-integration-counts";
+export * from "./paginated-table/created-cell";
+export * from "./paginated-table/day-group";
 export * from "./paginated-table/paginated-table";
 export * from "./paginated-table/table-features";
 export * from "./quick-action-card/quick-action-card";

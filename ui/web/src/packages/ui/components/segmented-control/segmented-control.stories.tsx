@@ -90,9 +90,8 @@ export const TwoSegments: Story = {
   },
 };
 
-export const Accent: Story = {
+export const WithCounts: Story = {
   args: {
-    variant: "accent",
     selectedId: "all",
     ariaLabel: "Policy",
     items: [

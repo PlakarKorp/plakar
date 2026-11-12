@@ -34,7 +34,7 @@ export function Header(contentProps: HeaderProps) {
 
   return (
     <>
-      <header className="border-primary bg-primary flex items-center justify-between border-b p-2 pl-4 lg:hidden">
+      <header className="border-secondary bg-shell flex items-center justify-between border-b p-2 pl-4 lg:hidden">
         <div className="flex items-center gap-2">
           <Link href={navItems[0].href}>
             <ProductLogo variant="icon" className="h-8.5" />
@@ -60,10 +60,10 @@ export function Header(contentProps: HeaderProps) {
         className="fixed inset-0 z-2 bg-black/50 data-[entering]:animate-[modal-fade_150ms] data-[exiting]:animate-[modal-fade_reverse_150ms] xl:hidden"
         isDismissable
       >
-        <Modal className="bg-primary fixed left-0 h-full w-70 overflow-auto shadow-xl data-[entering]:animate-[modal-slide-right_200ms_ease-out] data-[exiting]:animate-[modal-slide-right_150ms_reverse_ease-in]">
+        <Modal className="bg-overlay fixed left-0 h-full w-70 overflow-hidden shadow-xl data-[entering]:animate-[modal-slide-right_200ms_ease-out] data-[exiting]:animate-[modal-slide-right_150ms_reverse_ease-in]">
           <Dialog
             aria-label="Navigation"
-            className="h-full overflow-y-auto p-4"
+            className="h-full overflow-hidden p-4"
           >
             <Content
               {...contentProps}
