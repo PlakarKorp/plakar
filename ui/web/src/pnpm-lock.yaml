@@ -978,9 +978,6 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@lezer/common@1.5.4':
-    resolution: {integrity: sha512-xt3Q4z64xM+xhg4M7NXqw1N//1O74bUFo5kz6fwMeC4qwxSuRdwkYSmjcqCEEKYkNw5e67f2hcNqBoNERAEU0w==}
-
   '@lezer/common@1.5.5':
     resolution: {integrity: sha512-Pw7PVCndruF1pb3ebCxpSVpkMHSDjwRCLcTRw+RizUKco5QbWylwq2g4lnG/RYN7yTTQDXE9F77MwtkAyphrjg==}
 
@@ -3492,10 +3489,6 @@ packages:
     resolution: {integrity: sha512-1BC0BVFhS/p0qtw6enp8e+8OD0UrK0oFLztSjNzhcKA3WDuJxxAPXzPuPtKkjEY9UUoEWlX/8fgKeu2S8i9JTA==}
     engines: {node: '>= 0.4'}
 
-  is-core-module@2.17.0:
-    resolution: {integrity: sha512-J/vG0zBCbIKOQFfufSwyXdMrsohyJIUNkrnmo6WZGzoM7tr/lsbfW5b2BvisL6zsyMzK9UxV9L6c7AoFbyXHOA==}
-    engines: {node: '>= 0.4'}
-
   is-core-module@2.18.0:
     resolution: {integrity: sha512-qyax9fgaKOEC4qK8WZn7Q4IcoZC9RC1O1fFxRcRTq/oMMkWT/uXpqpXa12kzWR409zAt1drYN9N9BO26UmBCmw==}
     engines: {node: '>= 0.4'}
@@ -4415,10 +4408,6 @@ packages:
   scheduler@0.28.0:
     resolution: {integrity: sha512-juorfCmIkIw8tT+p5BXSm6PJjQF/ycEYmKyzURCIt/RaZIhL+PulbQ9Yu2z1HdOJDdqDTlxA1+xKBmHXJsczAw==}
 
-  semver@6.3.1:
-    resolution: {integrity: sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA==}
-    hasBin: true
-
   semver@6.3.2:
     resolution: {integrity: sha512-GYrCADwpu6yV5OAvchkQ27Z5wwMxWAEMg5NNWjyHh/5DboFFqbdbvYNIvZouQpxXyeMPoTOh0vdPYKlf0ZswdQ==}
     hasBin: true
@@ -5001,7 +4990,7 @@ snapshots:
       debug: 4.4.3
       gensync: 1.0.0-beta.2
       json5: 2.2.3
-      semver: 6.3.1
+      semver: 6.3.2
     transitivePeerDependencies:
       - supports-color
 
@@ -5019,7 +5008,7 @@ snapshots:
       '@babel/helper-validator-option': 7.29.7
       browserslist: 4.29.0
       lru-cache: 5.1.1
-      semver: 6.3.1
+      semver: 6.3.2
 
   '@babel/helper-globals@7.29.7': {}
 
@@ -5091,7 +5080,7 @@ snapshots:
       '@codemirror/language': 6.13.1
       '@codemirror/state': 6.7.6
       '@codemirror/view': 6.43.15
-      '@lezer/common': 1.5.4
+      '@lezer/common': 1.5.5
 
   '@codemirror/lang-json@6.0.2':
     dependencies:
@@ -5103,7 +5092,7 @@ snapshots:
       '@codemirror/state': 6.7.6
       '@codemirror/streamparser': 6.0.0
       '@codemirror/view': 6.43.15
-      '@lezer/common': 1.5.4
+      '@lezer/common': 1.5.5
       '@lezer/highlight': 1.2.5
       '@lezer/lr': 1.4.11
       style-mod: 4.1.4
@@ -5463,23 +5452,21 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.6.0
 
-  '@lezer/common@1.5.4': {}
-
   '@lezer/common@1.5.5': {}
 
   '@lezer/highlight@1.2.5':
     dependencies:
-      '@lezer/common': 1.5.4
+      '@lezer/common': 1.5.5
 
   '@lezer/json@1.0.3':
     dependencies:
-      '@lezer/common': 1.5.4
+      '@lezer/common': 1.5.5
       '@lezer/highlight': 1.2.5
       '@lezer/lr': 1.4.11
 
   '@lezer/lr@1.4.11':
     dependencies:
-      '@lezer/common': 1.5.4
+      '@lezer/common': 1.5.5
 
   '@marijn/find-cluster-break@1.0.4': {}
 
@@ -7798,14 +7785,9 @@ snapshots:
   is-callable@1.2.7:
     optional: true
 
-  is-core-module@2.17.0:
-    dependencies:
-      hasown: 2.0.4
-
   is-core-module@2.18.0:
     dependencies:
       hasown: 2.0.4
-    optional: true
 
   is-data-view@1.0.2:
     dependencies:
@@ -8976,7 +8958,7 @@ snapshots:
   resolve@1.22.13:
     dependencies:
       es-errors: 1.3.0
-      is-core-module: 2.17.0
+      is-core-module: 2.18.0
       path-parse: 1.0.7
       supports-preserve-symlinks-flag: 1.0.0
 
@@ -9080,10 +9062,7 @@ snapshots:
 
   scheduler@0.28.0: {}
 
-  semver@6.3.1: {}
-
-  semver@6.3.2:
-    optional: true
+  semver@6.3.2: {}
 
   semver@7.8.5: {}
 
