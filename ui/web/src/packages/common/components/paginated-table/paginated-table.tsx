@@ -25,7 +25,7 @@ import {
 } from "react-aria-components";
 
 import { Pagination } from "./pagination";
-import { SkeletonType, TableRowsSkeleton } from "./row-skeleton";
+import { TableRowsSkeleton } from "./row-skeleton";
 import { AppTableFeatures } from "./table-features";
 import { PaginationResponse } from "../../api/pagination";
 
@@ -44,8 +44,6 @@ declare module "@tanstack/react-table" {
   /* eslint-enable @typescript-eslint/no-unused-vars, unused-imports/no-unused-vars */
 }
 
-export type PaginatedTableVariant = "default" | "cards";
-
 /**
  * Horizontal space, in rem, taken by a tree chevron and its gap.
  *
@@ -55,7 +53,6 @@ export type PaginatedTableVariant = "default" | "cards";
 const TREE_INDENT_REM = 1.25;
 
 type PaginatedTableProps<T extends RowData> = {
-  variant?: PaginatedTableVariant;
   query: UseQueryResult<PaginationResponse<T>>;
   table: TanstackTable<AppTableFeatures, T>;
   softSelectionState?: [T | null, Dispatch<T | null>];
@@ -63,7 +60,6 @@ type PaginatedTableProps<T extends RowData> = {
   filters?: React.ReactNode;
   ariaLabel?: string;
   getLink?: (row: T) => LinkProps["href"];
-  skeleton?: SkeletonType;
   isLoading?: boolean;
   disablePagination?: boolean;
   getExpandedContent?: (row: T) => ReactNode;
@@ -71,15 +67,13 @@ type PaginatedTableProps<T extends RowData> = {
   onRowContextMenu?: (row: T, event: MouseEvent) => void;
 
   /**
-   * Group of a row, for flat tables in the default variant. A header row is
-   * rendered before each row whose group key differs from the previous row's,
-   * on the current page only.
+   * Group of a row, for flat tables. A header row is rendered before each row
+   * whose group key differs from the previous row's, on the current page only.
    */
   getGroup?: (row: T) => { key: string; label: ReactNode } | undefined;
 };
 
 export function PaginatedTable<T extends RowData>({
-  variant = "default",
   query,
   table,
   softSelectionState,
@@ -87,7 +81,6 @@ export function PaginatedTable<T extends RowData>({
   filters,
   ariaLabel,
   getLink,
-  skeleton = "one-row",
   isLoading = false,
   disablePagination = false,
   getExpandedContent,
@@ -124,33 +117,15 @@ export function PaginatedTable<T extends RowData>({
       )}
 
       <div
-        className={clsx(
-          {
-            default: "border-secondary overflow-auto rounded-lg border",
-            cards: "overflow-auto rounded-lg",
-          }[variant]
-        )}
+        className="border-secondary overflow-auto rounded-lg border"
         onKeyDownCapture={stopTypeaheadOnTextEntry}
       >
         <Table
           key={query.isPending || isLoading ? "loading" : "data"}
           aria-label={ariaLabel}
-          className={clsx(
-            "w-full table-auto",
-            {
-              default: "bg-primary border-collapse",
-              cards: "-mt-4 border-separate border-spacing-y-2",
-            }[variant]
-          )}
+          className="bg-primary w-full table-auto border-collapse"
         >
-          <TableHeader
-            className={clsx(
-              {
-                default: "border-secondary bg-tertiary border-b text-left",
-                cards: "sr-only",
-              }[variant]
-            )}
-          >
+          <TableHeader className="border-secondary bg-tertiary border-b text-left">
             {table.options.enableMultiRowSelection && (
               <Column className="w-4 p-2">
                 <Checkbox
@@ -198,9 +173,7 @@ export function PaginatedTable<T extends RowData>({
           <TableBody>
             {query.isPending || isLoading ? (
               <TableRowsSkeleton
-                variant={variant}
                 table={table}
-                type={skeleton}
                 hasExpandColumn={hasExpandColumn}
               />
             ) : query.isError ? (
@@ -259,7 +232,6 @@ export function PaginatedTable<T extends RowData>({
                       </GroupHeaderRow>
                     )}
                     <InteractiveRow
-                      variant={variant}
                       table={table}
                       row={row}
                       isExpanded={row.getIsExpanded()}
@@ -307,7 +279,6 @@ function GroupHeaderRow({
 }
 
 type InteractiveRowProps<T extends RowData> = {
-  variant: PaginatedTableVariant;
   table: TanstackTable<AppTableFeatures, T>;
   row: Row<AppTableFeatures, T>;
   isExpanded: boolean;
@@ -321,7 +292,6 @@ type InteractiveRowProps<T extends RowData> = {
 };
 
 function InteractiveRowInner<T extends RowData>({
-  variant,
   table,
   row,
   isExpanded,
@@ -359,20 +329,13 @@ function InteractiveRowInner<T extends RowData>({
         key={row.id}
         href={getLink?.(row.original)}
         className={clsx(
-          "align-center group relative",
-          {
-            default: clsx(
-              "border-secondary text-primary",
-              hidesBottomBorder ? "border-b-0" : "border-b last:border-b-0",
-              isSoftSelected
-                ? "outline-accent bg-accent-tertiary outline-2 -outline-offset-2"
-                : getLink || withSoftSelection || canExpand
-                  ? "hover:bg-primary-hover has-[button:hover]:bg-primary has-[a:hover]:bg-primary has-[[aria-expanded=true]]:bg-primary-hover"
-                  : ""
-            ),
-            cards:
-              "bg-primary hover:bg-primary-hover has-[button:hover]:bg-primary has-[a:hover]:bg-primary outline-none",
-          }[variant],
+          "align-center group border-secondary text-primary relative",
+          hidesBottomBorder ? "border-b-0" : "border-b last:border-b-0",
+          isSoftSelected
+            ? "outline-accent bg-accent-tertiary outline-2 -outline-offset-2"
+            : getLink || withSoftSelection || canExpand
+              ? "hover:bg-primary-hover has-[button:hover]:bg-primary has-[a:hover]:bg-primary has-[[aria-expanded=true]]:bg-primary-hover"
+              : "",
           (getLink || withSoftSelection || canExpand) && "cursor-pointer"
         )}
         onAction={handleRowClick}
@@ -415,18 +378,7 @@ function InteractiveRowInner<T extends RowData>({
           return (
             <Cell
               key={cell.id}
-              className={clsx(
-                cell.column.columnDef.meta?.cellClassName,
-                {
-                  default: "p-2",
-                  cards: clsx(
-                    "border-primary outline-focus border-t border-b p-3 -outline-offset-2",
-                    "group-data-focused:outline-2",
-                    idx === 0 && "rounded-l-lg border-l",
-                    idx === cellsCount - 1 && "rounded-r-lg border-r"
-                  ),
-                }[variant]
-              )}
+              className={clsx("p-2", cell.column.columnDef.meta?.cellClassName)}
             >
               {isTree && idx === 0 ? (
                 <div
