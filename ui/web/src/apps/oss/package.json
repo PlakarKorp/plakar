@@ -19,7 +19,7 @@
     "@plakar-ui/ui": "workspace:*",
     "@storybook/react-vite": "^10.6.4",
     "@tailwindcss/vite": "^4.3.3",
-    "@tanstack/devtools-vite": "^0.8.3",
+    "@tanstack/devtools-vite": "^0.8.6",
     "@tanstack/react-devtools": "^0.10.12",
     "@tanstack/react-form": "^1.33.5",
     "@tanstack/react-query": "^5.104.3",
