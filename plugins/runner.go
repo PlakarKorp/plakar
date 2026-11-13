@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"time"
 )
 
 // A Runner starts a plugin and returns the connection carrying its gRPC
@@ -24,8 +25,12 @@ type NativeRunner struct {
 	Stderr io.Writer
 }
 
-func (r *NativeRunner) Run(ctx context.Context) (net.Conn, error) {
-	cmd := exec.CommandContext(ctx, r.Path, r.Args...)
+func (r *NativeRunner) Run(_ context.Context) (net.Conn, error) {
+	cmd := exec.Command(r.Path, r.Args...)
+	cmd.SysProcAttr = detachedProcAttr()
+	// When Stderr is not a file, Wait also waits for the stderr copy, which
+	// never ends if the plugin left a child holding the pipe.
+	cmd.WaitDelay = time.Second
 	cmd.Stderr = r.Stderr
 	if cmd.Stderr == nil {
 		cmd.Stderr = os.Stderr
