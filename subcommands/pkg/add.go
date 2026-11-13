@@ -148,6 +148,12 @@ func (cmd *PkgAdd) Execute(ctx *appcontext.AppContext, _ *repository.Repository)
 				if errors.Is(err, pkg.ErrAlreadyInstalled) {
 					continue
 				}
+				// One removed registry must not hold back the
+				// updates of the other packages.
+				if errors.Is(err, pkg.ErrUnknownRegistry) {
+					fmt.Fprintf(ctx.Stderr, "warning: %v\n", addFailure(ctx, "update", plugin.Name, err))
+					continue
+				}
 				return 1, addFailure(ctx, "update", plugin.Name, err)
 			}
 		}
@@ -163,6 +169,10 @@ func addFailure(ctx *appcontext.AppContext, verb, name string, err error) error 
 
 	if errors.Is(err, pkg.ErrAuthorizationRequired) {
 		return fmt.Errorf("failed to %s %s: authentication required. Run `plakar login` and try again", verb, name)
+	}
+	if errors.Is(err, pkg.ErrUnknownRegistry) {
+		// err already names the package.
+		return fmt.Errorf("failed to %s: %w. Run `plakar pkg registry add <name> <url>` to configure it again", verb, err)
 	}
 
 	var ie *pkg.InstallError

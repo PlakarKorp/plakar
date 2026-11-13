@@ -1,4 +1,4 @@
-.Dd August 26, 2026
+.Dd September 26, 2026
 .Dt PLAKAR-PKG-ADD 1
 .Os
 .Sh NAME
@@ -28,6 +28,10 @@ Installing plugins without logging in is possible via the
 command, provided you have the necessary dependencies to build
 it locally
 .Pq currently, official plugins require make and a working Go toolchain .
+.Pp
+A plugin the Plakar plugin server doesn't provide is looked up in the
+additional registries configured with
+.Xr plakar-pkg-registry 1 .
 .Pp
 To install a specific version of a plugin, use the
 .Ar name Ns @ Ns Ar version
@@ -65,5 +69,6 @@ if set.
 .Xr plakar-login 1 ,
 .Xr plakar-pkg-build 1 ,
 .Xr plakar-pkg-create 1 ,
+.Xr plakar-pkg-registry 1 ,
 .Xr plakar-pkg-rm 1 ,
 .Xr plakar-pkg-show 1

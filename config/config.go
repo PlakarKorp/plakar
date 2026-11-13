@@ -2,11 +2,13 @@ package config
 
 import (
 	"fmt"
+	"maps"
 	"net/url"
 	"path"
+	"slices"
 	"strings"
 
-	"maps"
+	"github.com/PlakarKorp/pkg"
 )
 
 type Config struct {
@@ -14,18 +16,35 @@ type Config struct {
 	Repositories      map[string]RepositoryConfig
 	Sources           map[string]SourceConfig
 	Destinations      map[string]DestinationConfig
+	Registries        map[string]RegistryConfig
 }
 
 type RepositoryConfig = map[string]string
 type SourceConfig = map[string]string
 type DestinationConfig = map[string]string
 
+// RegistryConfig is an additional package registry.
+type RegistryConfig struct {
+	URL string `yaml:"url"`
+}
+
 func NewConfig() *Config {
 	return &Config{
 		Repositories: make(map[string]RepositoryConfig),
 		Sources:      make(map[string]SourceConfig),
 		Destinations: make(map[string]DestinationConfig),
+		Registries:   make(map[string]RegistryConfig),
 	}
+}
+
+// PkgRegistries returns the additional package registries sorted by name,
+// the order in which the package manager queries them.
+func (c *Config) PkgRegistries() []pkg.Registry {
+	var regs []pkg.Registry
+	for _, name := range slices.Sorted(maps.Keys(c.Registries)) {
+		regs = append(regs, pkg.Registry{Name: name, URL: c.Registries[name].URL})
+	}
+	return regs
 }
 
 func (c *Config) HasRepository(name string) bool {
