@@ -3,6 +3,7 @@ package services
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -20,6 +21,16 @@ type ServiceConnector struct {
 	endpoint  string
 
 	servicesList []ServiceDescription
+}
+
+// ErrLoginRequired is the api refusing the token.
+var ErrLoginRequired = errors.New("not logged in or the login has expired, please run `plakar login`")
+
+func statusError(what string, resp *http.Response) error {
+	if resp.StatusCode == http.StatusUnauthorized {
+		return fmt.Errorf("%s: %w", what, ErrLoginRequired)
+	}
+	return fmt.Errorf("%s: %s", what, resp.Status)
 }
 
 func NewServiceConnector(ctx *appcontext.AppContext, authToken string) *ServiceConnector {
@@ -82,7 +93,7 @@ func (sc *ServiceConnector) getServicesList() ([]ServiceDescription, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to get service list: %s", resp.Status)
+		return nil, statusError("failed to get service list", resp)
 	}
 
 	data, err := io.ReadAll(resp.Body)
@@ -143,7 +154,7 @@ func (sc *ServiceConnector) GetServiceStatus(name string) (bool, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return false, fmt.Errorf("failed to get service status: %s", resp.Status)
+		return false, statusError("failed to get service status", resp)
 	}
 
 	data, err := io.ReadAll(resp.Body)
@@ -197,7 +208,7 @@ func (sc *ServiceConnector) SetServiceStatus(name string, enabled bool) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
-		return fmt.Errorf("failed to set service status: %s", resp.Status)
+		return statusError("failed to set service status", resp)
 	}
 
 	return nil
@@ -229,7 +240,7 @@ func (sc *ServiceConnector) GetServiceConfiguration(name string) (map[string]str
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to get service status: %s", resp.Status)
+		return nil, statusError("failed to get service status", resp)
 	}
 
 	data, err := io.ReadAll(resp.Body)
@@ -281,7 +292,7 @@ func (sc *ServiceConnector) SetServiceConfiguration(name string, configuration m
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
-		return fmt.Errorf("failed to set service status: %s", resp.Status)
+		return statusError("failed to set service status", resp)
 	}
 
 	return nil

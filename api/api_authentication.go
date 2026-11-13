@@ -134,7 +134,10 @@ func (ui *uiserver) servicesLoginPoll(w http.ResponseWriter, r *http.Request) er
 }
 
 func (ui *uiserver) servicesLogout(w http.ResponseWriter, r *http.Request) error {
-	err := ui.ctx.GetCookies().DeleteAuthToken()
+	revokeErr, err := login.Logout(ui.ctx)
+	if revokeErr != nil {
+		ui.ctx.GetLogger().Warn("the token was not revoked server-side: %v", revokeErr)
+	}
 	if errors.Is(err, cookies.ErrNotLoggedIn) {
 		return nil
 	}

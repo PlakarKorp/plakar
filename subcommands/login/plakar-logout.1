@@ -9,7 +9,11 @@
 .Sh DESCRIPTION
 The
 .Nm plakar logout
-command logs out an authenticated session with the Plakar platform.
+command logs out an authenticated session with the Plakar platform:
+the session's token is revoked on the platform, so a copy of it kept
+anywhere is refused from then on, and the local copy is deleted.
+The local copy is deleted even when the platform cannot be reached,
+with a warning.
 .Sh EXAMPLES
 Log out from the current session:
 .Bd -literal -offset indent
