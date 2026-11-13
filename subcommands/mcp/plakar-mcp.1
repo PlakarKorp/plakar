@@ -6,6 +6,10 @@
 .Nd Serve a Kloset store over the Model Context Protocol
 .Sh SYNOPSIS
 .Nm plakar mcp
+.Op Fl allow-backup
+.Op Fl allow-delete
+.Op Fl allow-restore Fl restore-root Ar directory
+.Op Fl allow-sync
 .Op Fl max-output Ar size
 .Sh DESCRIPTION
 The
@@ -18,6 +22,17 @@ transport MCP clients use when they spawn the server as a child process.
 It is not meant to be run interactively: standard output carries the protocol
 stream, so everything normally printed to standard output, including progress
 reports, is redirected to standard error for the lifetime of the server.
+.Pp
+By default the exposed tools are read-only, and no tool can create, modify or
+delete a snapshot or write to the local filesystem; the write tools described
+under
+.Fl allow-backup ,
+.Fl allow-delete ,
+.Fl allow-restore
+and
+.Fl allow-sync
+are not merely hidden but absent, and calling one is answered with an unknown
+tool error.
 .Pp
 The server also exposes the files stored in snapshots as MCP resources, under
 URIs of the form
@@ -77,6 +92,48 @@ bytes is cut, the command is stopped, and the result says so.
 .Pp
 The options are as follows:
 .Bl -tag -width Ds
+.It Fl allow-backup
+Register the
+.Cm create_backup
+tool, which backs up a directory into the repository and creates a snapshot.
+Note that the source is read from the local filesystem, so a client may read any
+path this process can read and commit it to the repository.
+Disabled by default.
+.It Fl allow-delete
+Register the
+.Cm remove_snapshots
+and
+.Cm prune_snapshots
+tools, which delete snapshots permanently and cannot be undone.
+Both report what they would remove and only act when passed
+.Va apply .
+Disabled by default, and independent of
+.Fl allow-backup
+so that backups can be enabled without arming deletion.
+.It Fl allow-restore
+Register the
+.Cm restore_files
+tool, which writes snapshot contents to the local filesystem.
+Restores are confined to the directory given with
+.Fl restore-root ,
+which must exist; a destination that resolves outside it is refused.
+Disabled by default.
+.It Fl restore-root Ar directory
+The one directory
+.Cm restore_files
+may write under.
+Required by, and only meaningful with,
+.Fl allow-restore .
+.It Fl allow-sync
+Register the
+.Cm sync_snapshots
+tool, which pushes snapshots to a peer repository named in the
+.Nm plakar
+configuration.
+Only peers from the configuration are accepted, only the push direction is
+offered, and an encrypted peer must have its passphrase configured: the server
+never prompts.
+Disabled by default.
 .It Fl max-output Ar size
 Maximum number of bytes of output returned by the
 .Cm plakar
@@ -84,6 +141,30 @@ tool, and the largest file served as a resource.
 Longer output is cut and flagged as such in the result; a larger resource is
 refused.
 Defaults to 1048576.
+.El
+.Pp
+The write tools are:
+.Bl -tag -width remove_snapshots
+.It Cm create_backup
+Back up a directory into the repository.
+Requires
+.Fl allow-backup .
+.It Cm remove_snapshots
+Permanently remove the named snapshots.
+Requires
+.Fl allow-delete .
+.It Cm prune_snapshots
+Permanently remove the snapshots the retention policy selects.
+Requires
+.Fl allow-delete .
+.It Cm restore_files
+Restore a file or directory from a snapshot under the restore root.
+Requires
+.Fl allow-restore .
+.It Cm sync_snapshots
+Push snapshots to a peer repository from the configuration.
+Requires
+.Fl allow-sync .
 .El
 .Sh EXAMPLES
 Serve the default Kloset store, as an MCP client would:
@@ -94,6 +175,16 @@ $ plakar mcp
 Serve a specific Kloset store, allowing longer output:
 .Bd -literal -offset indent
 $ plakar at /var/backups mcp -max-output 4194304
+.Ed
+.Pp
+Allow a client to create snapshots, but not to remove any:
+.Bd -literal -offset indent
+$ plakar mcp -allow-backup
+.Ed
+.Pp
+Allow restores, confined to a scratch directory:
+.Bd -literal -offset indent
+$ plakar mcp -allow-restore -restore-root /var/tmp/restores
 .Ed
 .Sh DIAGNOSTICS
 .Ex -std
