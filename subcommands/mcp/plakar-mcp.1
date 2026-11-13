@@ -1,0 +1,109 @@
+.Dd November 13, 2026
+.Dt PLAKAR-MCP 1
+.Os
+.Sh NAME
+.Nm plakar-mcp
+.Nd Serve a Kloset store over the Model Context Protocol
+.Sh SYNOPSIS
+.Nm plakar mcp
+.Op Fl max-output Ar size
+.Sh DESCRIPTION
+The
+.Nm plakar mcp
+command starts a Model Context Protocol (MCP) server exposing a Kloset store
+to an MCP client, such as an AI assistant or an editor.
+.Pp
+By default the server speaks JSON-RPC over standard input and output, the
+transport MCP clients use when they spawn the server as a child process.
+It is not meant to be run interactively: standard output carries the protocol
+stream, so everything normally printed to standard output, including progress
+reports, is redirected to standard error for the lifetime of the server.
+.Pp
+The server also exposes the files stored in snapshots as MCP resources, under
+URIs of the form
+.Cm plakar://SNAPSHOT/PATH ,
+so a client can attach a backed-up file directly.
+.Pp
+Reading goes through a single tool,
+.Cm plakar ,
+which runs a read-only
+.Nm plakar
+command against the served Kloset store, in the server process, and returns
+what it printed: its standard output, its standard error and its exit code.
+A command answers exactly as it does on the command line, so there is no
+second implementation of it to keep in step with the first.
+The commands the tool runs are:
+.Bl -tag -width digest
+.It Cm ls
+List the snapshots, or the entries of a directory in a snapshot.
+.It Cm cat
+Print the contents of files in a snapshot.
+.It Cm info
+Describe the Kloset store or a snapshot, including the entries a snapshot
+could not read.
+.It Cm locate
+Find the snapshots holding files whose name matches a pattern.
+.It Cm diff
+Compare a file or directory between two snapshots.
+.It Cm digest
+Compute the digest of files in a snapshot.
+.It Cm check
+Verify the integrity of snapshots.
+.It Cm diag
+Describe the internals of the Kloset store, through its
+.Cm snapshot ,
+.Cm locks ,
+.Cm vfs ,
+.Cm xattr ,
+.Cm contenttype ,
+.Cm search ,
+.Cm chunks ,
+.Cm object ,
+.Cm blob ,
+.Cm packfile
+and
+.Cm state
+subcommands.
+.It Cm help
+Show the manual of a command, as Markdown.
+.El
+.Pp
+Every other command is refused by name before its arguments are parsed, so no
+command that writes to the Kloset store or to the local filesystem can be
+reached through the tool, whatever its arguments.
+Output past
+.Fl max-output
+bytes is cut, the command is stopped, and the result says so.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl max-output Ar size
+Maximum number of bytes of output returned by the
+.Cm plakar
+tool, and the largest file served as a resource.
+Longer output is cut and flagged as such in the result; a larger resource is
+refused.
+Defaults to 1048576.
+.El
+.Sh EXAMPLES
+Serve the default Kloset store, as an MCP client would:
+.Bd -literal -offset indent
+$ plakar mcp
+.Ed
+.Pp
+Serve a specific Kloset store, allowing longer output:
+.Bd -literal -offset indent
+$ plakar at /var/backups mcp -max-output 4194304
+.Ed
+.Sh DIAGNOSTICS
+.Ex -std
+.Sh SEE ALSO
+.Xr plakar 1 ,
+.Xr plakar-cat 1 ,
+.Xr plakar-check 1 ,
+.Xr plakar-diag 1 ,
+.Xr plakar-diff 1 ,
+.Xr plakar-digest 1 ,
+.Xr plakar-info 1 ,
+.Xr plakar-locate 1 ,
+.Xr plakar-ls 1
