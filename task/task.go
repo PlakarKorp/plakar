@@ -1,10 +1,14 @@
 package task
 
 import (
+	"encoding/json"
+	"os"
+
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/exitcodes"
+	"github.com/PlakarKorp/plakar/journal"
 	"github.com/PlakarKorp/plakar/reporting"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/subcommands/backup"
@@ -25,6 +29,10 @@ func RunCommand(ctx *appcontext.AppContext, cmd subcommands.Subcommand, repo *re
 
 	reporter := reporting.NewReporter(ctx)
 	report := reporter.NewReport()
+
+	// PoC for the operations journal: fold the run's events and show the
+	// result when asked, see the master plan.
+	fold := journal.NewFold(ctx)
 
 	var taskKind string
 	switch cmd.(type) {
@@ -80,6 +88,15 @@ func RunCommand(ctx *appcontext.AppContext, cmd subcommands.Subcommand, repo *re
 	}
 
 	reporter.StopAndWait()
+
+	state := fold.Close()
+	if os.Getenv("PLAKAR_JOURNAL_TRACE") != "" {
+		enc := json.NewEncoder(ctx.Stderr)
+		enc.SetIndent("", "  ")
+		if err := enc.Encode(state); err != nil {
+			ctx.GetLogger().Warn("journal: %s", err)
+		}
+	}
 
 	return status, err
 }
