@@ -651,6 +651,12 @@ func TestGracePeriodInvalidStringFallsBackToDefault(t *testing.T) {
 	graceHumanFormatCase(t, "not a duration", "7d")
 }
 
+// An unset PLAKAR_GRACEPERIOD must give the documented seven day default,
+// which is the value plakar-maintenance(1) states.
+func TestGracePeriodUnsetFallsBackToDefault(t *testing.T) {
+	graceHumanFormatCase(t, "", "7d")
+}
+
 func TestGracePeriod48hHumanFormat(t *testing.T) {
 	graceHumanFormatCase(t, "48h", "2d")
 }
