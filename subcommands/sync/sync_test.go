@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/repository"
@@ -225,5 +226,34 @@ func TestExecuteCmdSyncFailure(t *testing.T) {
 			require.Error(t, err)
 			require.Equal(t, 1, status)
 		})
+	}
+}
+
+// A destination store that carries no passphrase is prompted for on the
+// terminal. When there is no terminal to prompt on, the read fails
+// immediately and keeps failing, so retrying it is an endless loop: Parse
+// must give up on a read error instead. Only a wrong passphrase is worth
+// another try, and that case is covered above.
+func TestSyncPeerPassphraseReadErrorDoesNotLoop(t *testing.T) {
+	if tty, err := os.OpenFile("/dev/tty", os.O_RDWR, 0); err == nil {
+		tty.Close()
+		t.Skip("needs a process with no controlling terminal")
+	}
+
+	// An encrypted peer addressed by its path, so nothing supplies its
+	// passphrase and the prompt is the only way left.
+	fixture := setupSync(t, nil, []byte("QsDfG654321&^%*%!"))
+
+	done := make(chan error, 1)
+	go func() {
+		subcommand := &Sync{}
+		done <- subcommand.Parse(fixture.localCtx, []string{"to", fixture.peerRepo.Root()})
+	}()
+
+	select {
+	case err := <-done:
+		require.Error(t, err)
+	case <-time.After(10 * time.Second):
+		t.Fatal("Parse is still retrying a passphrase read that cannot succeed")
 	}
 }

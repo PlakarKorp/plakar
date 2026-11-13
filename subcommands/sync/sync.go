@@ -150,8 +150,7 @@ func (cmd *Sync) Parse(ctx *appcontext.AppContext, args []string) error {
 			for {
 				passphrase, err := utils.GetPassphrase("destination store")
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "%s\n", err)
-					continue
+					return fmt.Errorf("failed to read passphrase for destination store: %w", err)
 				}
 
 				key, err := encryption.DeriveKey(peerStoreConfig.Encryption.KDFParams, passphrase)
