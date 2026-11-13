@@ -21,7 +21,7 @@ func TestReadResource(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "hello dummy", string(data))
 
-	// unlike read_file, a resource cannot be paged: too large is an error
+	// unlike the plakar tool, a resource cannot say it was cut: too large is an error
 	_, _, err = readResource(repo, snapID, "/subdir/dummy.txt", 4)
 	require.Error(t, err)
 

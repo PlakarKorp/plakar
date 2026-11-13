@@ -33,7 +33,7 @@ import (
 // operator named with -restore-root: a model picks what to restore, never
 // where to.
 type restoreFilesInput struct {
-	Snapshot        string `json:"snapshot" jsonschema:"snapshot ID as returned by list_snapshots"`
+	Snapshot        string `json:"snapshot" jsonschema:"snapshot ID as listed by plakar ls"`
 	Path            string `json:"path,omitempty" jsonschema:"file or directory inside the snapshot to restore, the whole snapshot by default"`
 	Destination     string `json:"destination,omitempty" jsonschema:"directory to restore into, relative to the restore root, the root itself by default"`
 	SkipPermissions bool   `json:"skip_permissions,omitempty" jsonschema:"do not restore file permissions"`

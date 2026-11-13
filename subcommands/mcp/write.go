@@ -48,7 +48,7 @@ type createBackupOutput struct {
 // filter-based removal driven by a model is too easy to get catastrophically
 // wrong, so the caller has to name what it wants gone.
 type removeSnapshotsInput struct {
-	Snapshots []string `json:"snapshots" jsonschema:"IDs of the snapshots to remove, as returned by list_snapshots"`
+	Snapshots []string `json:"snapshots" jsonschema:"IDs of the snapshots to remove, as listed by plakar ls"`
 	Apply     bool     `json:"apply,omitempty" jsonschema:"actually remove the snapshots; when false, only report what would be removed"`
 }
 
