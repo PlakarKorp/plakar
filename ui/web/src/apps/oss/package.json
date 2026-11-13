@@ -33,7 +33,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
     "clsx": "^2.1.1",
-    "eslint": "^10.8.1",
+    "eslint": "^10.14.0",
     "path-browserify": "^1.0.1",
     "react": "^19.3.1",
     "react-aria-components": "^1.22.1",
