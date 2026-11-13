@@ -33,7 +33,7 @@
     "@types/react-syntax-highlighter": "^15.5.13",
     "@uiw/react-codemirror": "^4.25.12",
     "clsx": "^2.1.1",
-    "eslint": "^10.8.1",
+    "eslint": "^10.14.0",
     "pretty-bytes": "^7.2.0",
     "react": "^19.3.1",
     "react-aria-components": "^1.22.1",
