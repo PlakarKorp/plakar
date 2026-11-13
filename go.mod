@@ -35,8 +35,8 @@ require (
 	go.yaml.in/yaml/v3 v3.0.6
 	golang.org/x/mod v0.42.0
 	golang.org/x/sync v0.24.0
-	golang.org/x/sys v0.49.0
-	golang.org/x/term v0.47.0
+	golang.org/x/sys v0.50.0
+	golang.org/x/term v0.48.0
 	golang.org/x/tools v0.52.0
 	google.golang.org/grpc v1.85.0
 	gopkg.in/ini.v1 v1.67.3
