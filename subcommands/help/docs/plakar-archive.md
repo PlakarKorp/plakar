@@ -79,4 +79,4 @@ Archive with rebasing to remove directory structure:
 plakar(1),
 plakar-backup(1)
 
-Plakar - May 5, 2026 - PLAKAR-ARCHIVE(1)
+Plakar - May 5, 2026

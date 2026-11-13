@@ -96,4 +96,4 @@ Synchronize all snapshots of @peer to @repo:
 plakar(1),
 plakar-query(7)
 
-Plakar - May 5, 2026 - PLAKAR-SYNC(1)
+Plakar - May 5, 2026
