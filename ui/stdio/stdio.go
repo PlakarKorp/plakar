@@ -108,7 +108,7 @@ func HandleEvent(ctx *appcontext.AppContext, e *Event) {
 }
 
 func (stdio *stdio) Run() error {
-	events := stdio.ctx.Events().Listen()
+	events := stdio.ctx.Subscribe().C()
 	stdio.done = make(chan error, 1)
 
 	go func() {

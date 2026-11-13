@@ -59,7 +59,7 @@ func (jr *jsonRenderer) Wait() error {
 }
 
 func (jr *jsonRenderer) Run() error {
-	ch := jr.ctx.Events().Listen()
+	ch := jr.ctx.Subscribe().C()
 	jr.done = make(chan error, 1)
 
 	go func() {

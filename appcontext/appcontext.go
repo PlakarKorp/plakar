@@ -3,6 +3,7 @@ package appcontext
 import (
 	"context"
 	"errors"
+	"sync"
 
 	"github.com/PlakarKorp/kloset/connectors"
 	"github.com/PlakarKorp/kloset/kcontext"
@@ -22,6 +23,10 @@ type AppContext struct {
 
 	ConfigDir string
 	secret    []byte
+
+	// tee fans the event bus out to subscribers, see Subscribe.
+	tee     *eventsTee
+	teeOnce sync.Once
 
 	StoreConfig map[string]string
 

@@ -63,7 +63,7 @@ func (tui *tui) SetRepository(repo *repository.Repository) {
 }
 
 func (tui *tui) Run() error {
-	events := tui.ctx.Events().Listen()
+	events := tui.ctx.Subscribe().C()
 	tui.done = make(chan error, 1)
 
 	go func() {

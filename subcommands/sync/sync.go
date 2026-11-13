@@ -207,7 +207,7 @@ func (cmd *Sync) Execute(ctx *appcontext.AppContext, repo *repository.Repository
 	// below for the "from" direction. Closing the peer context stops the
 	// goroutine.
 	defer peerCtx.Close()
-	peerEvents := peerCtx.Events().Listen()
+	peerEvents := peerCtx.Subscribe().C()
 	primaryEvents := ctx.Events()
 	go func() {
 		for e := range peerEvents {
