@@ -11,6 +11,8 @@
 .Op Fl allow-restore Fl restore-root Ar directory
 .Op Fl allow-sync
 .Op Fl max-output Ar size
+.Op Fl listen Ar address Op Fl token Ar token
+.Op Fl cert Ar file Fl key Ar file
 .Sh DESCRIPTION
 The
 .Nm plakar mcp
@@ -22,6 +24,12 @@ transport MCP clients use when they spawn the server as a child process.
 It is not meant to be run interactively: standard output carries the protocol
 stream, so everything normally printed to standard output, including progress
 reports, is redirected to standard error for the lifetime of the server.
+.Pp
+With
+.Fl listen
+the server instead serves the MCP streamable HTTP transport, for clients that
+connect to an address rather than spawning a child process.
+A single server is shared by every session.
 .Pp
 By default the exposed tools are read-only, and no tool can create, modify or
 delete a snapshot or write to the local filesystem; the write tools described
@@ -141,6 +149,25 @@ tool, and the largest file served as a resource.
 Longer output is cut and flagged as such in the result; a larger resource is
 refused.
 Defaults to 1048576.
+.It Fl listen Ar address
+Serve the MCP streamable HTTP transport on
+.Ar address ,
+given as a host and port such as
+.Cm localhost:9877 ,
+not as a URL.
+When unset, the server speaks stdio.
+.It Fl token Ar token
+Require
+.Cm Authorization: Bearer Ar token
+from HTTP clients.
+Mandatory with
+.Fl listen
+unless the address is a loopback one, because the tools reach the repository
+and a wider bind offers them to anything that can route to the address.
+.It Fl cert Ar file , Fl key Ar file
+Serve HTTPS with this certificate chain and private key.
+Both are required together, and only with
+.Fl listen .
 .El
 .Pp
 The write tools are:
@@ -185,6 +212,18 @@ $ plakar mcp -allow-backup
 Allow restores, confined to a scratch directory:
 .Bd -literal -offset indent
 $ plakar mcp -allow-restore -restore-root /var/tmp/restores
+.Ed
+.Pp
+Serve over HTTP on the loopback address, for a client that connects rather
+than spawning the server:
+.Bd -literal -offset indent
+$ plakar mcp -listen localhost:9877
+.Ed
+.Pp
+Serve over HTTPS to other hosts, requiring a bearer token:
+.Bd -literal -offset indent
+$ plakar mcp -listen 0.0.0.0:9877 -token s3cret \
+    -cert /etc/ssl/plakar.pem -key /etc/ssl/plakar.key
 .Ed
 .Sh DIAGNOSTICS
 .Ex -std

@@ -12,6 +12,8 @@ PLAKAR-MCP(1) - General Commands Manual
 \[**-allow-restore**&nbsp;**-restore-root**&nbsp;*directory*]
 \[**-allow-sync**]
 \[**-max-output**&nbsp;*size*]
+\[**-listen**&nbsp;*address*&nbsp;\[**-token**&nbsp;*token*]]
+\[**-cert**&nbsp;*file*&nbsp;**-key**&nbsp;*file*]
 
 # DESCRIPTION
 
@@ -25,6 +27,12 @@ transport MCP clients use when they spawn the server as a child process.
 It is not meant to be run interactively: standard output carries the protocol
 stream, so everything normally printed to standard output, including progress
 reports, is redirected to standard error for the lifetime of the server.
+
+With
+**-listen**
+the server instead serves the MCP streamable HTTP transport, for clients that
+connect to an address rather than spawning a child process.
+A single server is shared by every session.
 
 By default the exposed tools are read-only, and no tool can create, modify or
 delete a snapshot or write to the local filesystem; the write tools described
@@ -172,6 +180,31 @@ The options are as follows:
 > refused.
 > Defaults to 1048576.
 
+**-listen** *address*
+
+> Serve the MCP streamable HTTP transport on
+> *address*,
+> given as a host and port such as
+> **localhost:9877**,
+> not as a URL.
+> When unset, the server speaks stdio.
+
+**-token** *token*
+
+> Require
+> **Authorization: Bearer** *token*
+> from HTTP clients.
+> Mandatory with
+> **-listen**
+> unless the address is a loopback one, because the tools reach the repository
+> and a wider bind offers them to anything that can route to the address.
+
+**-cert** *file*, **-key** *file*
+
+> Serve HTTPS with this certificate chain and private key.
+> Both are required together, and only with
+> **-listen**.
+
 The write tools are:
 
 **create\_backup**
@@ -221,6 +254,15 @@ Allow a client to create snapshots, but not to remove any:
 Allow restores, confined to a scratch directory:
 
 	$ plakar mcp -allow-restore -restore-root /var/tmp/restores
+
+Serve over HTTP on the loopback address, for a client that connects rather
+than spawning the server:
+
+	$ plakar mcp -listen localhost:9877
+
+Serve over HTTPS to other hosts, requiring a bearer token:
+
+	$ plakar mcp -listen 0.0.0.0:9877 -token s3cret     -cert /etc/ssl/plakar.pem -key /etc/ssl/plakar.key
 
 # DIAGNOSTICS
 
