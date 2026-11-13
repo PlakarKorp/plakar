@@ -110,6 +110,29 @@ The subcommands are as follows:
 > for the store entry identified by
 > *name*.
 
+## ENCRYPTION OPTIONS
+
+A store holding an encrypted repository needs a passphrase to be
+unlocked, and one of the following options provides it without a
+terminal:
+
+**passphrase**
+
+> The passphrase itself.
+> It is kept in the configuration file, and
+> **show**
+> hides it unless
+> **-secrets**
+> is given.
+
+**passphrase\_cmd**
+
+> A command whose single line of standard output is the passphrase, for
+> when the secret should stay out of the configuration file.
+
+A store carrying neither option is prompted for on the terminal, which
+is why an unattended backup or synchronization needs one of them.
+
 ## HTTP AND HTTPS STORE OPTIONS
 
 When using an
