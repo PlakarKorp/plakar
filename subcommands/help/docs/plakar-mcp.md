@@ -11,7 +11,7 @@ PLAKAR-MCP(1) - General Commands Manual
 \[**-allow-delete**]
 \[**-allow-restore**&nbsp;**-restore-root**&nbsp;*directory*]
 \[**-allow-sync**]
-\[**-max-file-size**&nbsp;*size*]
+\[**-max-output**&nbsp;*size*]
 \[**-listen**&nbsp;*address*&nbsp;\[**-token**&nbsp;*token*]]
 \[**-cert**&nbsp;*file*&nbsp;**-key**&nbsp;*file*]
 
@@ -50,93 +50,72 @@ URIs of the form
 **plakar://SNAPSHOT/PATH**,
 so a client can attach a backed-up file directly.
 
-The read-only tools are:
+Reading goes through a single tool,
+**plakar**,
+which runs a read-only
+**plakar**
+command against the served Kloset store, in the server process, and returns
+what it printed: its standard output, its standard error and its exit code.
+A command answers exactly as it does on the command line, so there is no
+second implementation of it to keep in step with the first.
+The commands the tool runs are:
 
-**list\_snapshots**
+**ls**
 
-> List the snapshots stored in the Kloset store, with their ID, creation time,
-> source directory, size and tags.
-> The listing can be filtered by tag and paged with an offset and a limit.
+> List the snapshots, or the entries of a directory in a snapshot.
 
-**list\_tags**
+**cat**
 
-> List the tags carried by the snapshots, with how many snapshots carry each.
+> Print the contents of files in a snapshot.
 
-**repository\_health**
+**info**
 
-> Summarize the state of the backups: how fresh the latest snapshot is, a
-> per-source breakdown to spot a source whose backups stopped, sizes and held
-> locks.
+> Describe the Kloset store or a snapshot, including the entries a snapshot
+> could not read.
 
-**snapshot\_details**
+**locate**
 
-> Report the full metadata of a snapshot: when and where it was taken, by whom,
-> and a summary of what it contains.
+> Find the snapshots holding files whose name matches a pattern.
 
-**repository\_info**
+**diff**
 
-> Report configuration, storage and logical size information about the Kloset
-> store.
+> Compare a file or directory between two snapshots.
 
-**repository\_locks**
+**digest**
 
-> List the locks currently held on the Kloset store, to tell whether another
-> **plakar**
-> process is operating on it.
+> Compute the digest of files in a snapshot.
 
-**list\_files**
+**check**
 
-> List the files and directories contained in a snapshot, optionally recursively.
+> Verify the integrity of snapshots.
 
-**search\_files**
+**diag**
 
-> Search for files across one or every snapshot, by name pattern and/or MIME
-> type.
+> Describe the internals of the Kloset store, through its
+> **snapshot**,
+> **locks**,
+> **vfs**,
+> **xattr**,
+> **contenttype**,
+> **search**,
+> **chunks**,
+> **object**,
+> **blob**,
+> **packfile**
+> and
+> **state**
+> subcommands.
 
-**stat\_entry**
+**help**
 
-> Report the detailed metadata of a single entry: ownership, mode, content type,
-> entropy, extended attributes and classifications.
+> Show the manual of a command, as Markdown.
 
-**read\_file**
-
-> Read the contents of a regular file stored in a snapshot.
-> Files that are not valid UTF-8 text are reported as binary rather than
-> returned, and a file larger than
-> **-max-file-size**
-> can be paged through with a byte offset.
-
-**file\_history**
-
-> Report every version of a file across all snapshots, newest first, flagging
-> the snapshots where the content changed.
-
-**compare\_snapshots**
-
-> List the entries added, removed or modified between two snapshots.
-
-**diff\_snapshots**
-
-> Compare the same file in two snapshots and return a unified diff.
-> Unlike
-> plakar-diff(1),
-> this only ever compares two snapshots against each other, never a snapshot
-> against the local filesystem.
-
-**digest\_file**
-
-> Compute the cryptographic digest of a file stored in a snapshot.
-
-**check\_snapshot**
-
-> Verify the integrity of a snapshot.
-> Metadata is checked by default; a deep check re-reads and rehashes every chunk,
-> which is accurate but slow and I/O heavy on large snapshots.
-
-**snapshot\_errors**
-
-> List the entries that could not be read when a snapshot was created, to tell an
-> incomplete backup from a complete one.
+Every other command is refused by name before its arguments are parsed, so no
+command that writes to the Kloset store or to the local filesystem can be
+reached through the tool, whatever its arguments.
+Output past
+**-max-output**
+bytes is cut, the command is stopped, and the result says so.
 
 The options are as follows:
 
@@ -192,12 +171,13 @@ The options are as follows:
 > never prompts.
 > Disabled by default.
 
-**-max-file-size** *size*
+**-max-output** *size*
 
-> Maximum number of bytes returned by the
-> **read\_file**
-> tool.
-> Larger files are truncated, and flagged as such in the result.
+> Maximum number of bytes of output returned by the
+> **plakar**
+> tool, and the largest file served as a resource.
+> Longer output is cut and flagged as such in the result; a larger resource is
+> refused.
 > Defaults to 1048576.
 
 **-listen** *address*
@@ -263,9 +243,9 @@ Serve the default Kloset store, as an MCP client would:
 
 	$ plakar mcp
 
-Serve a specific Kloset store, allowing larger files to be read:
+Serve a specific Kloset store, allowing longer output:
 
-	$ plakar at /var/backups mcp -max-file-size 4194304
+	$ plakar at /var/backups mcp -max-output 4194304
 
 Allow a client to create snapshots, but not to remove any:
 
@@ -293,10 +273,11 @@ The **plakar-mcp** utility exits&#160;0 on success, and&#160;&gt;0 if an error o
 plakar(1),
 plakar-cat(1),
 plakar-check(1),
+plakar-diag(1),
 plakar-diff(1),
 plakar-digest(1),
 plakar-info(1),
 plakar-locate(1),
 plakar-ls(1)
 
-Plakar - September 22, 2026
+Plakar - November 13, 2026

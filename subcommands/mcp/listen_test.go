@@ -108,7 +108,7 @@ func TestServeHTTPServesTools(t *testing.T) {
 	snapID := hex.EncodeToString(snap.Header.GetIndexShortID())
 	snap.Close()
 
-	cmd := &Mcp{MaxFileSize: 1 << 20, ListenAddr: "127.0.0.1:0", Token: "s3cret"}
+	cmd := &Mcp{MaxOutput: 1 << 20, ListenAddr: "127.0.0.1:0", Token: "s3cret"}
 	url, wait := startTestServer(t, ctx, cmd, repo)
 
 	client := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "v1"}, nil)
@@ -125,8 +125,8 @@ func TestServeHTTPServesTools(t *testing.T) {
 	require.NotEmpty(t, tools.Tools)
 
 	res, err := session.CallTool(context.Background(), &mcp.CallToolParams{
-		Name:      "list_snapshots",
-		Arguments: map[string]any{},
+		Name:      "plakar",
+		Arguments: map[string]any{"args": []string{"ls"}},
 	})
 	require.NoError(t, err)
 	require.False(t, res.IsError)
@@ -152,7 +152,7 @@ func TestServeHTTPRequiresToken(t *testing.T) {
 	repo, ctx := ptesting.GenerateRepository(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil), nil)
 	defer ctx.Close()
 
-	cmd := &Mcp{MaxFileSize: 1 << 20, ListenAddr: "127.0.0.1:0", Token: "s3cret"}
+	cmd := &Mcp{MaxOutput: 1 << 20, ListenAddr: "127.0.0.1:0", Token: "s3cret"}
 	url, wait := startTestServer(t, ctx, cmd, repo)
 
 	resp, err := http.Post(url, "application/json", bytes.NewReader(nil))
@@ -208,7 +208,7 @@ func TestServeHTTPShutsDownWithClientAttached(t *testing.T) {
 	repo, ctx := ptesting.GenerateRepository(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil), nil)
 	defer ctx.Close()
 
-	cmd := &Mcp{MaxFileSize: 1 << 20, Token: "s3cret"}
+	cmd := &Mcp{MaxOutput: 1 << 20, Token: "s3cret"}
 	url, wait := startTestServer(t, ctx, cmd, repo)
 
 	client := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "v1"}, nil)
@@ -236,7 +236,7 @@ func TestServeHTTPKeepsWriteToolsGated(t *testing.T) {
 	repo, ctx := ptesting.GenerateRepository(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil), nil)
 	defer ctx.Close()
 
-	cmd := &Mcp{MaxFileSize: 1 << 20, Token: "s3cret"}
+	cmd := &Mcp{MaxOutput: 1 << 20, Token: "s3cret"}
 	url, wait := startTestServer(t, ctx, cmd, repo)
 
 	client := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "v1"}, nil)
@@ -254,7 +254,7 @@ func TestServeHTTPKeepsWriteToolsGated(t *testing.T) {
 		served[tool.Name] = true
 	}
 
-	require.True(t, served["list_snapshots"], "read-only tools stay available")
+	require.True(t, served["plakar"], "the read-only tool stays available")
 	for _, name := range []string{"create_backup", "remove_snapshots", "prune_snapshots", "restore_files", "sync_snapshots"} {
 		require.False(t, served[name], "%s must not be served without its flag", name)
 	}

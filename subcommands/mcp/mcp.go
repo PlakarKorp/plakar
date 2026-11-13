@@ -43,7 +43,7 @@ func init() {
 type Mcp struct {
 	subcommands.SubcommandBase
 
-	MaxFileSize  int64
+	MaxOutput    int64
 	AllowBackup  bool
 	AllowDelete  bool
 	AllowRestore bool
@@ -57,10 +57,10 @@ type Mcp struct {
 
 func (cmd *Mcp) CobraCommand() *cobra.Command {
 	c := &cobra.Command{
-		Use:   "mcp [-listen ADDR [-token TOKEN] [-cert FILE -key FILE]] [-max-file-size SIZE] [-allow-backup] [-allow-delete] [-allow-sync] [-allow-restore -restore-root DIR]",
+		Use:   "mcp [-listen ADDR [-token TOKEN] [-cert FILE -key FILE]] [-max-output SIZE] [-allow-backup] [-allow-delete] [-allow-sync] [-allow-restore -restore-root DIR]",
 		Short: "serve the repository over the Model Context Protocol",
 	}
-	c.Flags().Int64Var(&cmd.MaxFileSize, "max-file-size", 1<<20, "maximum size of a file returned by read_file")
+	c.Flags().Int64Var(&cmd.MaxOutput, "max-output", 1<<20, "maximum size of the output of a command, and of a file served as a resource")
 	c.Flags().BoolVar(&cmd.AllowBackup, "allow-backup", false, "enable the backup tool, allowing clients to create snapshots")
 	c.Flags().BoolVar(&cmd.AllowDelete, "allow-delete", false, "enable the remove and prune tools, allowing clients to delete snapshots permanently")
 	c.Flags().BoolVar(&cmd.AllowRestore, "allow-restore", false, "enable the restore tool, allowing clients to write snapshot contents under -restore-root")
@@ -83,8 +83,8 @@ func (cmd *Mcp) Parse(ctx *appcontext.AppContext, args []string) error {
 		return fmt.Errorf("too many arguments")
 	}
 
-	if cmd.MaxFileSize <= 0 {
-		return fmt.Errorf("max-file-size must be greater than zero")
+	if cmd.MaxOutput <= 0 {
+		return fmt.Errorf("max-output must be greater than zero")
 	}
 
 	// A restore writes to the local filesystem on behalf of a model, so it is
@@ -169,7 +169,7 @@ func (cmd *Mcp) Execute(ctx *appcontext.AppContext, repo *repository.Repository)
 // newServer builds the MCP server and registers everything the flags enable.
 // Both transports serve the same one: the tools do not know which is in use.
 func (cmd *Mcp) newServer(ctx *appcontext.AppContext, repo *repository.Repository) *mcp.Server {
-	description := "Read-only access to a Plakar repository: list snapshots, browse their contents and read files."
+	description := "Read-only access to a Plakar repository through its command line: list snapshots, browse their contents, read and compare files."
 	enabled := make([]string, 0, 4)
 	if cmd.AllowBackup {
 		enabled = append(enabled, "creating snapshots")

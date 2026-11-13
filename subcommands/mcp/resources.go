@@ -36,7 +36,7 @@ func (cmd *Mcp) registerResources(repo *repository.Repository, server *mcp.Serve
 	server.AddResourceTemplate(&mcp.ResourceTemplate{
 		Name:        "snapshot_file",
 		Title:       "File in a snapshot",
-		Description: "The contents of a file stored in a snapshot, addressed as plakar://SNAPSHOT/PATH with a snapshot ID from list_snapshots.",
+		Description: "The contents of a file stored in a snapshot, addressed as plakar://SNAPSHOT/PATH with a snapshot ID as listed by plakar ls.",
 		URITemplate: "plakar://{snapshot}/{+path}",
 	}, func(_ context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
 		uri := req.Params.URI
@@ -57,7 +57,7 @@ func (cmd *Mcp) registerResources(repo *repository.Repository, server *mcp.Serve
 		}
 		pathname = decoded
 
-		data, contentType, err := readResource(repo, snapshotID, "/"+pathname, cmd.MaxFileSize)
+		data, contentType, err := readResource(repo, snapshotID, "/"+pathname, cmd.MaxOutput)
 		if err != nil {
 			return nil, err
 		}
@@ -74,9 +74,9 @@ func (cmd *Mcp) registerResources(repo *repository.Repository, server *mcp.Serve
 	})
 }
 
-// readResource returns the full contents of a file in a snapshot. Unlike
-// read_file there is no way to page, so a file past the size limit is refused
-// rather than silently cut.
+// readResource returns the full contents of a file in a snapshot. A resource
+// cannot say it was cut the way the plakar tool does, so a file past the size
+// limit is refused rather than silently truncated.
 func readResource(repo *repository.Repository, snapshotID, pathname string, maxFileSize int64) ([]byte, string, error) {
 	snap, resolved, err := locate.OpenSnapshotByPath(repo, snapshotPath(snapshotID, pathname))
 	if err != nil {
@@ -97,7 +97,7 @@ func readResource(repo *repository.Repository, snapshotID, pathname string, maxF
 		return nil, "", fmt.Errorf("%s: not a regular file", pathname)
 	}
 	if entry.Stat().Size() > maxFileSize {
-		return nil, "", fmt.Errorf("%s: larger than max-file-size, read it with the read_file tool instead", pathname)
+		return nil, "", fmt.Errorf("%s: larger than max-output", pathname)
 	}
 
 	file, err := entry.Open(pvfs)
