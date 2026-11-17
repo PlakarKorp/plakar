@@ -102,11 +102,10 @@ func extraFiles(prefix string) []ptesting.MockFile {
 // storage (not the state index). Used to verify the actual delete on disk.
 func storePackfiles(t *testing.T, repo *repository.Repository) map[objects.MAC]struct{} {
 	t.Helper()
-	list, err := repo.Store().List(repo.AppContext(), storage.StorageResourcePackfile)
-	require.NoError(t, err)
-	out := make(map[objects.MAC]struct{}, len(list))
-	for _, m := range list {
-		out[m] = struct{}{}
+	out := make(map[objects.MAC]struct{})
+	for entry, err := range repo.Store().List(repo.AppContext(), storage.StorageResourcePackfile, 0) {
+		require.NoError(t, err)
+		out[entry.MAC] = struct{}{}
 	}
 	return out
 }
@@ -116,7 +115,8 @@ func storePackfiles(t *testing.T, repo *repository.Repository) map[objects.MAC]s
 func statePackfiles(t *testing.T, repo *repository.Repository) map[objects.MAC]struct{} {
 	t.Helper()
 	out := make(map[objects.MAC]struct{})
-	for m := range repo.ListPackfiles() {
+	for m, err := range repo.ListPackfiles() {
+		require.NoError(t, err)
 		out[m] = struct{}{}
 	}
 	return out
@@ -136,7 +136,7 @@ func colouredPackfiles(t *testing.T, repo *repository.Repository) map[objects.MA
 // used in NODELETION verification.
 func rawPackfileContents(t *testing.T, repo *repository.Repository, mac objects.MAC) ([]byte, error) {
 	t.Helper()
-	rd, err := repo.Store().Get(repo.AppContext(), storage.StorageResourcePackfile, mac, nil)
+	rd, err := repo.Store().Get(repo.AppContext(), storage.StorageResourcePackfile, 0, mac, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -796,21 +796,22 @@ func injectOrphanPackfile(t *testing.T, repo *repository.Repository) objects.MAC
 	t.Helper()
 	// pick any existing packfile to copy
 	var source objects.MAC
-	for m := range repo.ListPackfiles() {
+	for m, err := range repo.ListPackfiles() {
+		require.NoError(t, err)
 		source = m
 		break
 	}
 	if source == (objects.MAC{}) {
 		t.Fatalf("need at least one existing packfile to clone an orphan from")
 	}
-	rd, err := repo.Store().Get(repo.AppContext(), storage.StorageResourcePackfile, source, nil)
+	rd, err := repo.Store().Get(repo.AppContext(), storage.StorageResourcePackfile, 0, source, nil)
 	require.NoError(t, err)
 	defer rd.Close()
 	raw, err := io.ReadAll(rd)
 	require.NoError(t, err)
 
 	orphan := objects.RandomMAC()
-	_, err = repo.Store().Put(repo.AppContext(), storage.StorageResourcePackfile, orphan, bytes.NewReader(raw))
+	_, err = repo.Store().Put(repo.AppContext(), storage.StorageResourcePackfile, 0, orphan, bytes.NewReader(raw))
 	require.NoError(t, err)
 	return orphan
 }

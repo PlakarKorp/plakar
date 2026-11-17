@@ -4,9 +4,9 @@ import (
 	"context"
 	"strings"
 
+	"github.com/PlakarKorp/integration-sdk/location"
 	"github.com/PlakarKorp/kloset/connectors"
 	"github.com/PlakarKorp/kloset/connectors/importer"
-	"github.com/PlakarKorp/integration-sdk/location"
 )
 
 type MockImporter struct {
@@ -59,7 +59,7 @@ func (p *MockImporter) Type() string          { return "mock" }
 func (p *MockImporter) Root() string          { return "/" }
 func (p *MockImporter) Flags() location.Flags { return 0 }
 
-func (p *MockImporter) Import(ctx context.Context, records chan<- *connectors.Record, results <-chan *connectors.Result) error {
+func (p *MockImporter) Import(ctx context.Context, records chan<- *connectors.Record, results <-chan *connectors.Result) (map[string]string, error) {
 	defer close(records)
 
 	if p.gen != nil {
@@ -70,7 +70,7 @@ func (p *MockImporter) Import(ctx context.Context, records chan<- *connectors.Re
 		}
 	}
 
-	return nil
+	return nil, nil
 }
 
 func (p *MockImporter) Ping(ctx context.Context) error {

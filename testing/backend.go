@@ -6,12 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"iter"
 	"net/url"
 	"strings"
 	"time"
 
-	"github.com/PlakarKorp/kloset/connectors/storage"
+	"github.com/PlakarKorp/integration-sdk"
 	"github.com/PlakarKorp/integration-sdk/location"
+	"github.com/PlakarKorp/kloset/connectors/storage"
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/PlakarKorp/kloset/snapshot/header"
 	"github.com/vmihailenco/msgpack/v5"
@@ -145,33 +147,42 @@ func (mb *MockBackend) Size(ctx context.Context) (int64, error) {
 	return 0, nil
 }
 
-func (mb *MockBackend) List(ctx context.Context, res storage.StorageResource) ([]objects.MAC, error) {
-	switch res {
-	case storage.StorageResourcePackfile:
-		if mb.behavior == "brokenGetPackfiles" {
-			return nil, errors.New("broken get packfiles")
+func (mb *MockBackend) List(ctx context.Context, res storage.StorageResource, flag storage.StorageFlag) iter.Seq2[*integration.StorageResourceEntry, error] {
+	return func(yield func(*integration.StorageResourceEntry, error) bool) {
+		var macs []objects.MAC
+		switch res {
+		case storage.StorageResourcePackfile:
+			if mb.behavior == "brokenGetPackfiles" {
+				yield(nil, errors.New("broken get packfiles"))
+				return
+			}
+			macs = behaviors[mb.behavior].packfilesMACs
+		case storage.StorageResourceState:
+			if mb.behavior == "brokenState" {
+				yield(nil, errors.New("broken state"))
+				return
+			}
+			macs = behaviors[mb.behavior].statesMACs
+		case storage.StorageResourceLock:
+			panic("Not implemented yet")
+		default:
+			yield(nil, errors.ErrUnsupported)
+			return
 		}
 
-		packfiles := behaviors[mb.behavior].packfilesMACs
-		return packfiles, nil
-	case storage.StorageResourceState:
-		ret := make([]objects.MAC, 0)
-		if mb.behavior == "brokenState" {
-			return ret, errors.New("broken state")
+		for _, mac := range macs {
+			if !yield(&integration.StorageResourceEntry{MAC: mac}, nil) {
+				return
+			}
 		}
-		return behaviors[mb.behavior].statesMACs, nil
-	case storage.StorageResourceLock:
-		panic("Not implemented yet")
 	}
-
-	return nil, errors.ErrUnsupported
 }
 
-func (mb *MockBackend) Put(ctx context.Context, res storage.StorageResource, mac objects.MAC, rd io.Reader) (int64, error) {
+func (mb *MockBackend) Put(ctx context.Context, res storage.StorageResource, flag storage.StorageFlag, mac objects.MAC, rd io.Reader) (int64, error) {
 	return 0, nil
 }
 
-func (mb *MockBackend) Get(ctx context.Context, res storage.StorageResource, mac objects.MAC, rg *storage.Range) (io.ReadCloser, error) {
+func (mb *MockBackend) Get(ctx context.Context, res storage.StorageResource, flag storage.StorageFlag, mac objects.MAC, rg *storage.Range) (io.ReadCloser, error) {
 	switch res {
 	case storage.StorageResourcePackfile:
 		if rg == nil {
@@ -214,7 +225,7 @@ func (mb *MockBackend) Get(ctx context.Context, res storage.StorageResource, mac
 	return nil, errors.ErrUnsupported
 }
 
-func (mb *MockBackend) Delete(ctx context.Context, res storage.StorageResource, mac objects.MAC) error {
+func (mb *MockBackend) Delete(ctx context.Context, res storage.StorageResource, flag storage.StorageFlag, mac objects.MAC) error {
 	return nil
 }
 

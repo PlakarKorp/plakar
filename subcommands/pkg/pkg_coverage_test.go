@@ -11,8 +11,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/PlakarKorp/kloset/connectors"
 	"github.com/PlakarKorp/integration-sdk/location"
+	"github.com/PlakarKorp/kloset/connectors"
 	ppkg "github.com/PlakarKorp/pkg"
 	ptesting "github.com/PlakarKorp/plakar/testing"
 	"github.com/stretchr/testify/require"
@@ -330,7 +330,8 @@ func TestPkgerImporterScan(t *testing.T) {
 	imp := &pkgerImporter{cwd: dir, manifest: m}
 
 	ch := make(chan *connectors.Record, 128)
-	require.NoError(t, imp.Import(context.Background(), ch, nil))
+	_, err := imp.Import(context.Background(), ch, nil)
+	require.NoError(t, err)
 	recs := drain(ch)
 
 	seen := map[string]bool{}
