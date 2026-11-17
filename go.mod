@@ -5,14 +5,14 @@ go 1.26.10
 require (
 	github.com/PlakarKorp/go-human2duration v0.1.6
 	github.com/PlakarKorp/go-signify v0.1.0
-	github.com/PlakarKorp/integration-sdk v1.1.2
-	github.com/PlakarKorp/integrations/fs v1.1.10
-	github.com/PlakarKorp/integrations/http v1.1.5
-	github.com/PlakarKorp/integrations/ptar v1.1.2
-	github.com/PlakarKorp/integrations/stdio v1.1.1
-	github.com/PlakarKorp/integrations/tar v1.1.2
-	github.com/PlakarKorp/kloset v1.2.0-alpha.2.0.20261102102127-4709e4ac333d
-	github.com/PlakarKorp/pkg v1.1.11
+	github.com/PlakarKorp/integration-sdk v1.1.5
+	github.com/PlakarKorp/integrations/fs v1.1.12
+	github.com/PlakarKorp/integrations/http v1.1.6-0.20261117103450-caa46c96685b
+	github.com/PlakarKorp/integrations/ptar v1.1.3-0.20261117104921-4ab1dbbeb267
+	github.com/PlakarKorp/integrations/stdio v1.1.2-0.20261117095308-96c982ea98c9
+	github.com/PlakarKorp/integrations/tar v1.1.3-0.20261117095952-4e5fc9f674fd
+	github.com/PlakarKorp/kloset v1.2.0-beta.1
+	github.com/PlakarKorp/pkg v1.1.12-0.20261117111854-19a20cca66c7
 	github.com/alecthomas/chroma v0.10.0
 	github.com/anacrolix/fuse v0.3.3-0.20260723023734-9e1272bc0085
 	github.com/charmbracelet/bubbletea v1.3.10
@@ -33,10 +33,10 @@ require (
 	github.com/wagslane/go-password-validator v0.3.0
 	go.omarpolo.com/ttlmap v0.0.0-20231012080932-0154c95c7516
 	go.yaml.in/yaml/v3 v3.0.6
-	golang.org/x/mod v0.42.0
-	golang.org/x/sync v0.24.0
-	golang.org/x/sys v0.49.0
-	golang.org/x/term v0.47.0
+	golang.org/x/mod v0.43.0
+	golang.org/x/sync v0.25.0
+	golang.org/x/sys v0.50.0
+	golang.org/x/term v0.48.0
 	golang.org/x/tools v0.52.0
 	google.golang.org/grpc v1.85.0
 	gopkg.in/ini.v1 v1.67.3
@@ -94,7 +94,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/jstemmer/go-junit-report/v2 v2.1.0 // indirect
-	github.com/klauspost/compress v1.20.3 // indirect
+	github.com/klauspost/compress v1.20.4 // indirect
 	github.com/klauspost/cpuid/v2 v2.4.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
@@ -125,17 +125,17 @@ require (
 	github.com/yuin/goldmark v1.8.2 // indirect
 	github.com/yuin/goldmark-emoji v1.0.6 // indirect
 	github.com/zeebo/blake3 v0.2.4 // indirect
-	golang.org/x/crypto v0.58.0 // indirect
+	golang.org/x/crypto v0.59.0 // indirect
 	golang.org/x/exp v0.0.0-20260611194520-c48552f49976 // indirect
-	golang.org/x/net v0.61.0 // indirect
-	golang.org/x/text v0.43.0 // indirect
+	golang.org/x/net v0.62.0 // indirect
+	golang.org/x/text v0.44.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260817212433-ac3dfec99bb1 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
-	modernc.org/libc v1.79.0 // indirect
+	modernc.org/libc v1.80.1 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.12.1 // indirect
-	modernc.org/sqlite v1.61.0 // indirect
+	modernc.org/sqlite v1.62.0 // indirect
 )
 
 tool github.com/jstemmer/go-junit-report/v2
