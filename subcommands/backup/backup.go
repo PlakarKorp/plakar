@@ -504,7 +504,7 @@ func progress(ctx *appcontext.AppContext, imp importer.Importer, fn func(<-chan 
 		close(retch)
 	}()
 
-	err := imp.Import(ctx, records, results)
+	_, err := imp.Import(ctx, records, results)
 	<-retch
 	return err
 }
