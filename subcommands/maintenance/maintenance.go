@@ -391,16 +391,16 @@ func (cmd *Maintenance) Lock() (chan bool, error) {
 		return nil, err
 	}
 
-	_, err = cmd.repository.PutLock(cmd.maintenanceID, buffer)
+	_, err = cmd.repository.PutLock(cmd.repository.AppContext(), cmd.maintenanceID, buffer)
 	if err != nil {
 		return nil, err
 	}
 
 	// We installed the lock, now let's see if there is a conflicting exclusive lock or not.
-	locksID, err := cmd.repository.GetLocks()
+	locksID, err := cmd.repository.GetLocks(cmd.repository.AppContext())
 	if err != nil {
 		// We still need to delete it, and we need to do so manually.
-		cmd.repository.DeleteLock(cmd.maintenanceID)
+		cmd.repository.DeleteLock(cmd.repository.AppContext(), cmd.maintenanceID)
 		return nil, err
 	}
 
@@ -409,24 +409,24 @@ func (cmd *Maintenance) Lock() (chan bool, error) {
 			continue
 		}
 
-		rd, err := cmd.repository.GetLock(lockID)
+		rd, err := cmd.repository.GetLock(cmd.repository.AppContext(), lockID)
 		if err != nil {
-			cmd.repository.DeleteLock(cmd.maintenanceID)
+			cmd.repository.DeleteLock(cmd.repository.AppContext(), cmd.maintenanceID)
 			return nil, err
 		}
 
 		lock, err := repository.NewLockFromStream(rd)
 		rd.Close()
 		if err != nil {
-			cmd.repository.DeleteLock(cmd.maintenanceID)
+			cmd.repository.DeleteLock(cmd.repository.AppContext(), cmd.maintenanceID)
 			return nil, err
 		}
 
 		/* Kick out stale locks */
 		if lock.IsStale() {
-			err := cmd.repository.DeleteLock(lockID)
+			err := cmd.repository.DeleteLock(cmd.repository.AppContext(), lockID)
 			if err != nil {
-				cmd.repository.DeleteLock(cmd.maintenanceID)
+				cmd.repository.DeleteLock(cmd.repository.AppContext(), cmd.maintenanceID)
 				return nil, err
 			}
 
@@ -434,7 +434,7 @@ func (cmd *Maintenance) Lock() (chan bool, error) {
 		}
 
 		// There is a lock in place, we need to abort.
-		err = cmd.repository.DeleteLock(cmd.maintenanceID)
+		err = cmd.repository.DeleteLock(cmd.repository.AppContext(), cmd.maintenanceID)
 		if err != nil {
 			return nil, err
 		}
@@ -448,7 +448,7 @@ func (cmd *Maintenance) Lock() (chan bool, error) {
 		for {
 			select {
 			case <-lockDone:
-				cmd.repository.DeleteLock(cmd.maintenanceID)
+				cmd.repository.DeleteLock(cmd.repository.AppContext(), cmd.maintenanceID)
 				return
 			case <-time.After(repository.LOCK_REFRESH_RATE):
 				lock := repository.NewExclusiveLock(cmd.repository.AppContext().Hostname)
@@ -459,7 +459,7 @@ func (cmd *Maintenance) Lock() (chan bool, error) {
 				// correctly, and if they happen we will be ripped by the
 				// watchdog anyway.
 				lock.SerializeToStream(buffer)
-				cmd.repository.PutLock(cmd.maintenanceID, buffer)
+				cmd.repository.PutLock(cmd.repository.AppContext(), cmd.maintenanceID, buffer)
 			}
 		}
 	}()

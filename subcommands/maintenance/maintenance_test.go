@@ -59,7 +59,7 @@ func runMaintenance(t *testing.T, ctx *appcontext.AppContext, repo *repository.R
 	bufOut.Reset()
 	bufErr.Reset()
 
-	locksBefore, err := repo.GetLocks()
+	locksBefore, err := repo.GetLocks(repo.AppContext())
 	require.NoError(t, err)
 	preCount := len(locksBefore)
 
@@ -71,7 +71,7 @@ func runMaintenance(t *testing.T, ctx *appcontext.AppContext, repo *repository.R
 	// Execute errored without ever taking a lock the count may already be
 	// at preCount; Eventually returns immediately in that case.
 	require.Eventually(t, func() bool {
-		locks, lerr := repo.GetLocks()
+		locks, lerr := repo.GetLocks(repo.AppContext())
 		if lerr != nil {
 			return false
 		}
@@ -158,7 +158,7 @@ func preInstallExclusiveLock(t *testing.T, repo *repository.Repository, hostname
 
 	buf := &bytes.Buffer{}
 	require.NoError(t, lock.SerializeToStream(buf))
-	_, err := repo.PutLock(lockID, buf)
+	_, err := repo.PutLock(repo.AppContext(), lockID, buf)
 	require.NoError(t, err)
 	return lockID
 }
@@ -166,7 +166,7 @@ func preInstallExclusiveLock(t *testing.T, repo *repository.Repository, hostname
 // requireLockExists / requireLockGone assert presence/absence in the store.
 func requireLockExists(t *testing.T, repo *repository.Repository, id objects.MAC) {
 	t.Helper()
-	locks, err := repo.GetLocks()
+	locks, err := repo.GetLocks(repo.AppContext())
 	require.NoError(t, err)
 	for _, l := range locks {
 		if l == id {
@@ -178,7 +178,7 @@ func requireLockExists(t *testing.T, repo *repository.Repository, id objects.MAC
 
 func requireLockGone(t *testing.T, repo *repository.Repository, id objects.MAC) {
 	t.Helper()
-	locks, err := repo.GetLocks()
+	locks, err := repo.GetLocks(repo.AppContext())
 	require.NoError(t, err)
 	for _, l := range locks {
 		if l == id {
@@ -731,7 +731,7 @@ func TestExecuteLockReleasedAfterRun(t *testing.T) {
 	repo, ctx := ptesting.GenerateRepository(t, bufOut, bufErr, nil)
 	ptesting.GenerateSnapshot(t, repo, simpleFiles())
 
-	beforeLocks, err := repo.GetLocks()
+	beforeLocks, err := repo.GetLocks(repo.AppContext())
 	require.NoError(t, err)
 	require.Empty(t, beforeLocks)
 
@@ -743,7 +743,7 @@ func TestExecuteLockReleasedAfterRun(t *testing.T) {
 	// background goroutine then performs DeleteLock. Poll briefly until the
 	// lock disappears (or fail after ~1s).
 	require.Eventually(t, func() bool {
-		locks, err := repo.GetLocks()
+		locks, err := repo.GetLocks(repo.AppContext())
 		require.NoError(t, err)
 		return len(locks) == 0
 	}, time.Second, 10*time.Millisecond, "maintenance must remove its own lock on exit")

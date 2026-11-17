@@ -215,7 +215,7 @@ func TestExecuteCmdSyncFailure(t *testing.T) {
 			lock := repository.NewExclusiveLock(fixture.localCtx.Hostname)
 			buffer := &bytes.Buffer{}
 			require.NoError(t, lock.SerializeToStream(buffer))
-			_, err := dst.PutLock(objects.RandomMAC(), buffer)
+			_, err := dst.PutLock(dst.AppContext(), objects.RandomMAC(), buffer)
 			require.NoError(t, err)
 
 			subcommand := &Sync{}

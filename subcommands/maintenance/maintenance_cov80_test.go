@@ -64,7 +64,7 @@ func TestCov80MaintenanceLocklessLeavesNoLock(t *testing.T) {
 	require.Equal(t, 0, status)
 
 	// Lockless mode must not have written any lock.
-	locks, err := repo.GetLocks()
+	locks, err := repo.GetLocks(repo.AppContext())
 	require.NoError(t, err)
 	require.Empty(t, locks, "lockless maintenance must not install a lock")
 }
