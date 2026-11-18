@@ -33,6 +33,7 @@ const INTEGRATION_ICONS: IconType[] = [
   "vmware",
   "vss",
   "webdav",
+  "xcp-ng",
 ];
 
 function Template({ size }: ComponentProps<typeof Icon>) {

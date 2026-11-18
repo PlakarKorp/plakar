@@ -189,6 +189,7 @@ import { VaultLogoIcon } from "./custom/vault-logo";
 import { VMwareLogoIcon } from "./custom/vmware-logo";
 import { VSSLogoIcon } from "./custom/vss-logo";
 import { WebDAVLogoIcon } from "./custom/webdav-logo";
+import { XcpNgLogoIcon } from "./custom/xcp-ng-logo";
 import { IconSize, IconType } from "./icon.constants";
 import { getIconSizeClassName } from "./utils";
 
@@ -411,6 +412,7 @@ const ICONS: Record<IconType, ComponentType<IconGlyphProps>> = {
   vmware: VMwareLogoIcon,
   vss: VSSLogoIcon,
   webdav: WebDAVLogoIcon,
+  "xcp-ng": XcpNgLogoIcon,
 };
 
 export function Icon({ type, size, className, ...otherProps }: IconProps) {

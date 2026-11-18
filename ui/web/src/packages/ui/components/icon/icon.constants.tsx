@@ -185,6 +185,7 @@ export const IconTypes = [
   "wrench",
   "webdav",
   "vss",
+  "xcp-ng",
 ] as const;
 
 export type IconType = (typeof IconTypes)[number];
