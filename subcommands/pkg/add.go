@@ -122,7 +122,11 @@ func (cmd *PkgAdd) Execute(ctx *appcontext.AppContext, _ *repository.Repository)
 			addopts.Container = true
 		}
 		if err := pkgmgr.Add(plugin, &addopts); err != nil {
-			if cmd.upgrade && errors.Is(err, pkg.ErrAlreadyInstalled) {
+			if errors.Is(err, pkg.ErrAlreadyInstalled) {
+				if !cmd.upgrade {
+					fmt.Fprintf(ctx.Stderr, "%s: %s already installed; skipping...\n",
+						os.Args[0], plugin)
+				}
 				continue
 			}
 			return 1, addFailure(ctx, "install", filepath.Base(plugin), err)
