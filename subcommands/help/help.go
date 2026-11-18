@@ -63,13 +63,18 @@ type Help struct {
 	Command string
 }
 
-func (cmd *Help) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+// Document returns the manual of a command as Markdown, "diag-locks" for
+// plakar diag locks; the empty string names the plakar manual itself.
+func Document(command string) ([]byte, error) {
 	document := "docs/plakar.md"
-	if cmd.Command != "" {
-		document = fmt.Sprintf("docs/plakar-%s.md", cmd.Command)
+	if command != "" {
+		document = fmt.Sprintf("docs/plakar-%s.md", command)
 	}
+	return docs.ReadFile(document)
+}
 
-	content, err := docs.ReadFile(document)
+func (cmd *Help) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
+	content, err := Document(cmd.Command)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "unknown command: %s\n", cmd.Command)
 		return 1, err

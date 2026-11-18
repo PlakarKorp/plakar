@@ -281,6 +281,11 @@ nfpms:
         file_info:
           mode: 0644
 
+      - src: ./subcommands/mcp/plakar-mcp.1
+        dst: /usr/share/man/man1/plakar-mcp.1
+        file_info:
+          mode: 0644
+
       - src: ./subcommands/prune/plakar-prune.1
         dst: /usr/share/man/man1/plakar-prune.1
         file_info:
@@ -407,6 +412,7 @@ homebrew_casks:
       - ./man/plakar-version.1
       - ./man/plakar-mount.1
       - ./man/plakar-maintenance.1
+      - ./man/plakar-mcp.1
       - ./man/plakar-prune.1
       - ./man/plakar-ls.1
       - ./man/plakar-sync.1
