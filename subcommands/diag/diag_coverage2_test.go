@@ -24,13 +24,13 @@ func TestCov2DiagLocksWithLocks(t *testing.T) {
 	exclusive := repository.NewExclusiveLock("host-excl")
 	var exbuf bytes.Buffer
 	require.NoError(t, exclusive.SerializeToStream(&exbuf))
-	_, err := repo.PutLock(objects.MAC{0xAA, 0x01}, &exbuf)
+	_, err := repo.PutLock(repo.AppContext(), objects.MAC{0xAA, 0x01}, &exbuf)
 	require.NoError(t, err)
 
 	shared := repository.NewSharedLock("host-shared")
 	var shbuf bytes.Buffer
 	require.NoError(t, shared.SerializeToStream(&shbuf))
-	_, err = repo.PutLock(objects.MAC{0xBB, 0x02}, &shbuf)
+	_, err = repo.PutLock(repo.AppContext(), objects.MAC{0xBB, 0x02}, &shbuf)
 	require.NoError(t, err)
 
 	bufOut.Reset()

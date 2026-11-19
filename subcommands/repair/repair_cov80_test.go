@@ -22,14 +22,14 @@ func installExclusiveLock(t *testing.T, repo *repository.Repository, hostname st
 
 	buf := &bytes.Buffer{}
 	require.NoError(t, lock.SerializeToStream(buf))
-	_, err := repo.PutLock(lockID, buf)
+	_, err := repo.PutLock(repo.AppContext(), lockID, buf)
 	require.NoError(t, err)
 	return lockID
 }
 
 func lockExists(t *testing.T, repo *repository.Repository, id objects.MAC) bool {
 	t.Helper()
-	locks, err := repo.GetLocks()
+	locks, err := repo.GetLocks(repo.AppContext())
 	require.NoError(t, err)
 	for _, l := range locks {
 		if l == id {
@@ -98,7 +98,7 @@ func TestCov80RepairApplyReleasesOwnLock(t *testing.T) {
 	})
 	defer snap.Close()
 
-	before, err := repo.GetLocks()
+	before, err := repo.GetLocks(repo.AppContext())
 	require.NoError(t, err)
 	require.Empty(t, before)
 
@@ -110,7 +110,7 @@ func TestCov80RepairApplyReleasesOwnLock(t *testing.T) {
 
 	// Unlock is asynchronous (the ping goroutine performs DeleteLock), so poll.
 	require.Eventually(t, func() bool {
-		locks, lerr := repo.GetLocks()
+		locks, lerr := repo.GetLocks(repo.AppContext())
 		require.NoError(t, lerr)
 		return len(locks) == 0
 	}, 2*time.Second, 10*time.Millisecond, "repair must release its own lock on exit")

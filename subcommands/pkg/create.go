@@ -255,6 +255,7 @@ func (cmd *PkgCreate) Execute(ctx *appcontext.AppContext, _ *repository.Reposito
 
 	backupOptions := &snapshot.BuilderOptions{
 		NoCheckpoint: true,
+		NoLock:       true,
 	}
 
 	snap, err := snapshot.Create(repo, repository.PtarType, "", objects.NilMac, backupOptions)

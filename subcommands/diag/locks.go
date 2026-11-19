@@ -31,13 +31,13 @@ func (cmd *DiagLocks) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 func (cmd *DiagLocks) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	locksID, err := repo.GetLocks()
+	locksID, err := repo.GetLocks(repo.AppContext())
 	if err != nil {
 		return 1, err
 	}
 
 	for _, lockID := range locksID {
-		rd, err := repo.GetLock(lockID)
+		rd, err := repo.GetLock(repo.AppContext(), lockID)
 		if err != nil {
 			fmt.Fprintf(ctx.Stderr, "Failed to fetch lock %x\n", lockID)
 		}

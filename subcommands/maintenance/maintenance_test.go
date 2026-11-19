@@ -59,7 +59,7 @@ func runMaintenance(t *testing.T, ctx *appcontext.AppContext, repo *repository.R
 	bufOut.Reset()
 	bufErr.Reset()
 
-	locksBefore, err := repo.GetLocks()
+	locksBefore, err := repo.GetLocks(repo.AppContext())
 	require.NoError(t, err)
 	preCount := len(locksBefore)
 
@@ -71,7 +71,7 @@ func runMaintenance(t *testing.T, ctx *appcontext.AppContext, repo *repository.R
 	// Execute errored without ever taking a lock the count may already be
 	// at preCount; Eventually returns immediately in that case.
 	require.Eventually(t, func() bool {
-		locks, lerr := repo.GetLocks()
+		locks, lerr := repo.GetLocks(repo.AppContext())
 		if lerr != nil {
 			return false
 		}
@@ -102,11 +102,10 @@ func extraFiles(prefix string) []ptesting.MockFile {
 // storage (not the state index). Used to verify the actual delete on disk.
 func storePackfiles(t *testing.T, repo *repository.Repository) map[objects.MAC]struct{} {
 	t.Helper()
-	list, err := repo.Store().List(repo.AppContext(), storage.StorageResourcePackfile)
-	require.NoError(t, err)
-	out := make(map[objects.MAC]struct{}, len(list))
-	for _, m := range list {
-		out[m] = struct{}{}
+	out := make(map[objects.MAC]struct{})
+	for entry, err := range repo.Store().List(repo.AppContext(), storage.StorageResourcePackfile, 0) {
+		require.NoError(t, err)
+		out[entry.MAC] = struct{}{}
 	}
 	return out
 }
@@ -116,7 +115,8 @@ func storePackfiles(t *testing.T, repo *repository.Repository) map[objects.MAC]s
 func statePackfiles(t *testing.T, repo *repository.Repository) map[objects.MAC]struct{} {
 	t.Helper()
 	out := make(map[objects.MAC]struct{})
-	for m := range repo.ListPackfiles() {
+	for m, err := range repo.ListPackfiles() {
+		require.NoError(t, err)
 		out[m] = struct{}{}
 	}
 	return out
@@ -136,7 +136,7 @@ func colouredPackfiles(t *testing.T, repo *repository.Repository) map[objects.MA
 // used in NODELETION verification.
 func rawPackfileContents(t *testing.T, repo *repository.Repository, mac objects.MAC) ([]byte, error) {
 	t.Helper()
-	rd, err := repo.Store().Get(repo.AppContext(), storage.StorageResourcePackfile, mac, nil)
+	rd, err := repo.Store().Get(repo.AppContext(), storage.StorageResourcePackfile, 0, mac, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +158,7 @@ func preInstallExclusiveLock(t *testing.T, repo *repository.Repository, hostname
 
 	buf := &bytes.Buffer{}
 	require.NoError(t, lock.SerializeToStream(buf))
-	_, err := repo.PutLock(lockID, buf)
+	_, err := repo.PutLock(repo.AppContext(), lockID, buf)
 	require.NoError(t, err)
 	return lockID
 }
@@ -166,7 +166,7 @@ func preInstallExclusiveLock(t *testing.T, repo *repository.Repository, hostname
 // requireLockExists / requireLockGone assert presence/absence in the store.
 func requireLockExists(t *testing.T, repo *repository.Repository, id objects.MAC) {
 	t.Helper()
-	locks, err := repo.GetLocks()
+	locks, err := repo.GetLocks(repo.AppContext())
 	require.NoError(t, err)
 	for _, l := range locks {
 		if l == id {
@@ -178,7 +178,7 @@ func requireLockExists(t *testing.T, repo *repository.Repository, id objects.MAC
 
 func requireLockGone(t *testing.T, repo *repository.Repository, id objects.MAC) {
 	t.Helper()
-	locks, err := repo.GetLocks()
+	locks, err := repo.GetLocks(repo.AppContext())
 	require.NoError(t, err)
 	for _, l := range locks {
 		if l == id {
@@ -731,7 +731,7 @@ func TestExecuteLockReleasedAfterRun(t *testing.T) {
 	repo, ctx := ptesting.GenerateRepository(t, bufOut, bufErr, nil)
 	ptesting.GenerateSnapshot(t, repo, simpleFiles())
 
-	beforeLocks, err := repo.GetLocks()
+	beforeLocks, err := repo.GetLocks(repo.AppContext())
 	require.NoError(t, err)
 	require.Empty(t, beforeLocks)
 
@@ -743,7 +743,7 @@ func TestExecuteLockReleasedAfterRun(t *testing.T) {
 	// background goroutine then performs DeleteLock. Poll briefly until the
 	// lock disappears (or fail after ~1s).
 	require.Eventually(t, func() bool {
-		locks, err := repo.GetLocks()
+		locks, err := repo.GetLocks(repo.AppContext())
 		require.NoError(t, err)
 		return len(locks) == 0
 	}, time.Second, 10*time.Millisecond, "maintenance must remove its own lock on exit")
@@ -796,21 +796,22 @@ func injectOrphanPackfile(t *testing.T, repo *repository.Repository) objects.MAC
 	t.Helper()
 	// pick any existing packfile to copy
 	var source objects.MAC
-	for m := range repo.ListPackfiles() {
+	for m, err := range repo.ListPackfiles() {
+		require.NoError(t, err)
 		source = m
 		break
 	}
 	if source == (objects.MAC{}) {
 		t.Fatalf("need at least one existing packfile to clone an orphan from")
 	}
-	rd, err := repo.Store().Get(repo.AppContext(), storage.StorageResourcePackfile, source, nil)
+	rd, err := repo.Store().Get(repo.AppContext(), storage.StorageResourcePackfile, 0, source, nil)
 	require.NoError(t, err)
 	defer rd.Close()
 	raw, err := io.ReadAll(rd)
 	require.NoError(t, err)
 
 	orphan := objects.RandomMAC()
-	_, err = repo.Store().Put(repo.AppContext(), storage.StorageResourcePackfile, orphan, bytes.NewReader(raw))
+	_, err = repo.Store().Put(repo.AppContext(), storage.StorageResourcePackfile, 0, orphan, bytes.NewReader(raw))
 	require.NoError(t, err)
 	return orphan
 }

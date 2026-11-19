@@ -1,4 +1,5 @@
 //go:build linux
+
 package pkg
 
 import (
@@ -219,7 +220,8 @@ func TestPkgerImporterManifestData(t *testing.T) {
 	imp := &pkgerImporter{cwd: dir, manifest: &m, manifestData: data}
 
 	ch := make(chan *connectors.Record, 16)
-	require.NoError(t, imp.Import(context.Background(), ch, nil))
+	_, err := imp.Import(context.Background(), ch, nil)
+	require.NoError(t, err)
 
 	var recs []*connectors.Record
 	for r := range ch {

@@ -20,7 +20,7 @@ type countingImporter struct {
 	scans *atomic.Int64
 }
 
-func (c *countingImporter) Import(ctx context.Context, records chan<- *connectors.Record, results <-chan *connectors.Result) error {
+func (c *countingImporter) Import(ctx context.Context, records chan<- *connectors.Record, results <-chan *connectors.Result) (map[string]string, error) {
 	c.scans.Add(1)
 	return c.Importer.Import(ctx, records, results)
 }

@@ -117,7 +117,7 @@ func (imp *pkgerImporter) dofile(p string, ch chan<- *connectors.Record, it item
 	return nil
 }
 
-func (imp *pkgerImporter) Import(ctx context.Context, records chan<- *connectors.Record, results <-chan *connectors.Result) error {
+func (imp *pkgerImporter) Import(ctx context.Context, records chan<- *connectors.Record, results <-chan *connectors.Result) (map[string]string, error) {
 	defer close(records)
 
 	records <- &connectors.Record{
@@ -129,21 +129,21 @@ func (imp *pkgerImporter) Import(ctx context.Context, records chan<- *connectors
 		// Image connectors carry no executable; the binary lives in the image.
 		if conn.Executable != "" {
 			if err := imp.dofile(conn.Executable, records, itexe); err != nil {
-				return err
+				return nil, err
 			}
 		}
 		if conn.Validator != "" {
 			if err := imp.dofile(conn.Validator, records, itjson); err != nil {
-				return err
+				return nil, err
 			}
 		}
 		for _, file := range conn.ExtraFiles {
 			if err := imp.dofile(file, records, itextra); err != nil {
-				return err
+				return nil, err
 			}
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 func (imp *pkgerImporter) Ping(ctx context.Context) error {

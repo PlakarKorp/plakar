@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/PlakarKorp/integration-sdk"
 	"github.com/PlakarKorp/kloset/connectors/storage"
 	"github.com/PlakarKorp/kloset/objects"
 )
@@ -20,6 +21,7 @@ import (
 var ErrInvalidResourceType = fmt.Errorf("invalid resource type")
 var ErrInvalidMAC = fmt.Errorf("invalid MAC")
 var ErrInvalidRange = fmt.Errorf("invalid range")
+var ErrInvalidStorageFlag = fmt.Errorf("invalid storage flag")
 
 type server struct {
 	store    storage.Store
@@ -48,22 +50,28 @@ func (s *server) openRepository(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) listResource(w http.ResponseWriter, r *http.Request) {
-	typ, err := getResource(r)
+	typ, flag, err := getResource(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if indexes, err := s.store.List(r.Context(), typ); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	} else {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(indexes)
+	var indexes []*integration.StorageResourceEntry
+	for sre, err := range s.store.List(r.Context(), typ, flag) {
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		indexes = append(indexes, sre)
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(indexes)
 }
 
 func (s *server) getResource(w http.ResponseWriter, r *http.Request) {
-	typ, err := getResource(r)
+	typ, flag, err := getResource(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -81,7 +89,7 @@ func (s *server) getResource(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if rd, err := s.store.Get(r.Context(), typ, mac, rg); err != nil {
+	if rd, err := s.store.Get(r.Context(), typ, flag, mac, rg); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	} else {
@@ -99,7 +107,7 @@ func (s *server) getResource(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) putResource(w http.ResponseWriter, r *http.Request) {
-	typ, err := getResource(r)
+	typ, flag, err := getResource(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -115,14 +123,14 @@ func (s *server) putResource(w http.ResponseWriter, r *http.Request) {
 	// existing packfile or state destroys data just like deleting it.
 	// Locks are exempt, a running backup refreshes its lock in place.
 	if s.noDelete && typ != storage.StorageResourceLock {
-		if rd, err := s.store.Get(r.Context(), typ, mac, nil); err == nil {
+		if rd, err := s.store.Get(r.Context(), typ, flag, mac, nil); err == nil {
 			rd.Close()
 			http.Error(w, "not allowed to overwrite", http.StatusConflict)
 			return
 		}
 	}
 
-	if _, err = s.store.Put(r.Context(), typ, mac, r.Body); err != nil {
+	if _, err = s.store.Put(r.Context(), typ, flag, mac, r.Body); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -133,7 +141,7 @@ func (s *server) deleteResource(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	typ, err := getResource(r)
+	typ, flag, err := getResource(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -145,7 +153,7 @@ func (s *server) deleteResource(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.store.Delete(r.Context(), typ, mac); err != nil {
+	if err := s.store.Delete(r.Context(), typ, flag, mac); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -195,20 +203,30 @@ func Mux(store storage.Store, noDelete bool) http.Handler {
 	return mux
 }
 
-func getResource(r *http.Request) (storage.StorageResource, error) {
+func getResource(r *http.Request) (storage.StorageResource, integration.StorageFlag, error) {
+	sFlag := r.URL.Query().Get("flag")
+	var flag integration.StorageFlag
+	if sFlag != "" {
+		iFlag, err := strconv.ParseUint(sFlag, 10, 32)
+		if err != nil {
+			return 0, 0, ErrInvalidStorageFlag
+		}
+		flag = integration.StorageFlag(iFlag)
+	}
+
 	switch r.PathValue("resource") {
 	case "packfiles":
-		return storage.StorageResourcePackfile, nil
+		return storage.StorageResourcePackfile, flag, nil
 	case "states":
-		return storage.StorageResourceState, nil
+		return storage.StorageResourceState, flag, nil
 	case "locks":
-		return storage.StorageResourceLock, nil
+		return storage.StorageResourceLock, flag, nil
 	case "eccpackfiles":
-		return storage.StorageResourceECCPackfile, nil
+		return storage.StorageResourceECCPackfile, flag, nil
 	case "eccstates":
-		return storage.StorageResourceECCState, nil
+		return storage.StorageResourceECCState, flag, nil
 	default:
-		return 0, ErrInvalidResourceType
+		return 0, 0, ErrInvalidResourceType
 	}
 }
 

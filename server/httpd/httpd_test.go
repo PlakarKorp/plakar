@@ -8,13 +8,15 @@ import (
 	"errors"
 	"io"
 	"io/fs"
+	"iter"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
-	"github.com/PlakarKorp/kloset/connectors/storage"
+	"github.com/PlakarKorp/integration-sdk"
 	"github.com/PlakarKorp/integration-sdk/location"
+	"github.com/PlakarKorp/kloset/connectors/storage"
 	"github.com/PlakarKorp/kloset/objects"
 	"github.com/stretchr/testify/require"
 )
@@ -39,6 +41,7 @@ type fakeStore struct {
 
 	// recorded
 	lastGetType storage.StorageResource
+	lastGetFlag storage.StorageFlag
 	lastGetMAC  objects.MAC
 	lastGetRng  *storage.Range
 	lastPutData []byte
@@ -52,15 +55,22 @@ func (f *fakeStore) Open(ctx context.Context) ([]byte, error) {
 	return f.openConfig, f.openErr
 }
 
-func (f *fakeStore) List(ctx context.Context, typ storage.StorageResource) ([]objects.MAC, error) {
-	if f.listErr != nil {
-		return nil, f.listErr
+func (f *fakeStore) List(ctx context.Context, typ storage.StorageResource, flag storage.StorageFlag) iter.Seq2[*integration.StorageResourceEntry, error] {
+	return func(yield func(*integration.StorageResourceEntry, error) bool) {
+		if f.listErr != nil {
+			yield(nil, f.listErr)
+			return
+		}
+		for _, mac := range f.listResources[typ] {
+			if !yield(&integration.StorageResourceEntry{MAC: mac}, nil) {
+				return
+			}
+		}
 	}
-	return f.listResources[typ], nil
 }
 
-func (f *fakeStore) Get(ctx context.Context, typ storage.StorageResource, mac objects.MAC, rg *storage.Range) (io.ReadCloser, error) {
-	f.lastGetType, f.lastGetMAC, f.lastGetRng = typ, mac, rg
+func (f *fakeStore) Get(ctx context.Context, typ storage.StorageResource, flag storage.StorageFlag, mac objects.MAC, rg *storage.Range) (io.ReadCloser, error) {
+	f.lastGetType, f.lastGetFlag, f.lastGetMAC, f.lastGetRng = typ, flag, mac, rg
 	if f.getErr != nil {
 		return nil, f.getErr
 	}
@@ -74,14 +84,14 @@ func (f *fakeStore) Get(ctx context.Context, typ storage.StorageResource, mac ob
 	return io.NopCloser(bytes.NewReader(data)), nil
 }
 
-func (f *fakeStore) Put(ctx context.Context, typ storage.StorageResource, mac objects.MAC, rd io.Reader) (int64, error) {
+func (f *fakeStore) Put(ctx context.Context, typ storage.StorageResource, flag storage.StorageFlag, mac objects.MAC, rd io.Reader) (int64, error) {
 	f.lastPutType, f.lastPutMAC = typ, mac
 	data, _ := io.ReadAll(rd)
 	f.lastPutData = data
 	return int64(len(data)), f.putErr
 }
 
-func (f *fakeStore) Delete(ctx context.Context, typ storage.StorageResource, mac objects.MAC) error {
+func (f *fakeStore) Delete(ctx context.Context, typ storage.StorageResource, flag storage.StorageFlag, mac objects.MAC) error {
 	f.lastDelType, f.lastDelMAC = typ, mac
 	return f.deleteErr
 }
@@ -121,17 +131,34 @@ func TestGetResource_KnownTypes(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/resources/"+name, nil)
 			req.SetPathValue("resource", name)
-			got, err := getResource(req)
+			got, flag, err := getResource(req)
 			require.NoError(t, err)
 			require.Equal(t, want, got)
+			require.Equal(t, storage.StorageFlag(0), flag)
 		})
 	}
+}
+
+func TestGetResource_Flag(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/resources/packfiles?flag=1", nil)
+	req.SetPathValue("resource", "packfiles")
+	typ, flag, err := getResource(req)
+	require.NoError(t, err)
+	require.Equal(t, storage.StorageResourcePackfile, typ)
+	require.Equal(t, storage.StorageHot, flag)
+}
+
+func TestGetResource_InvalidFlag(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/resources/packfiles?flag=hot", nil)
+	req.SetPathValue("resource", "packfiles")
+	_, _, err := getResource(req)
+	require.ErrorIs(t, err, ErrInvalidStorageFlag)
 }
 
 func TestGetResource_Invalid(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/resources/bogus", nil)
 	req.SetPathValue("resource", "bogus")
-	if _, err := getResource(req); !errors.Is(err, ErrInvalidResourceType) {
+	if _, _, err := getResource(req); !errors.Is(err, ErrInvalidResourceType) {
 		t.Fatalf("err = %v, want ErrInvalidResourceType", err)
 	}
 }
@@ -276,11 +303,11 @@ func TestListResource_Ok(t *testing.T) {
 	mux.ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusOK, rec.Code)
-	var got []objects.MAC
+	var got []integration.StorageResourceEntry
 	err := json.NewDecoder(rec.Body).Decode(&got)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(got), "got %v, want [%v]", got, mac)
-	require.Equal(t, mac, got[0])
+	require.Equal(t, mac, got[0].MAC)
 }
 
 func TestListResource_BadType(t *testing.T) {

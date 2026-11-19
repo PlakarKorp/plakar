@@ -211,7 +211,7 @@ func TestScanEmitsErrorForMissingConnectorFiles(t *testing.T) {
 	imp := &pkgerImporter{cwd: dir, manifest: m}
 
 	ch := make(chan *connectors.Record, 128)
-	err := imp.Import(context.Background(), ch, nil)
+	_, err := imp.Import(context.Background(), ch, nil)
 
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "no such file or directory")
@@ -244,7 +244,7 @@ func TestScanPropagatesNotBelowManifestError(t *testing.T) {
 	imp := &pkgerImporter{cwd: sub, manifest: m}
 
 	ch := make(chan *connectors.Record, 64)
-	err := imp.Import(context.Background(), ch, nil)
+	_, err := imp.Import(context.Background(), ch, nil)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "not below the manifest")
 }

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/PlakarKorp/kloset/repository"
+	"github.com/PlakarKorp/kloset/repository/state"
 	ptesting "github.com/PlakarKorp/plakar/testing"
 	"github.com/stretchr/testify/require"
 )
@@ -31,7 +32,9 @@ func orphanPackfiles(t *testing.T, repo *repository.Repository) {
 
 	// Populate the cache with the snapshot's packfile entries while the state
 	// is still committed.
-	require.NoError(t, repo.RebuildStateWithCache(cache))
+	ls, err := state.NewLegacyState(cache)
+	require.NoError(t, err)
+	require.NoError(t, repo.RebuildLegacyState(ls))
 
 	states, err := repo.GetStates()
 	require.NoError(t, err)
