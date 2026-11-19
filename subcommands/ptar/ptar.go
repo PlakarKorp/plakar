@@ -407,6 +407,7 @@ func (cmd *Ptar) backup(ctx *appcontext.AppContext, repo *repository.RepositoryW
 			backupOptions := &snapshot.BuilderOptions{
 				NoCheckpoint: true,
 				NoCommit:     true,
+				NoLock:       true,
 			}
 
 			source, err := snapshot.NewSource(ctx, imp)
@@ -462,6 +463,7 @@ func (cmd *Ptar) synchronize(ctx *appcontext.AppContext, srcRepository *reposito
 		dstSnapshot, err := snapshot.CreateWithRepositoryWriter(dstRepository, &snapshot.BuilderOptions{
 			NoCheckpoint: true,
 			NoCommit:     true,
+			NoLock:       true,
 		}, srcSnapshot.Header.Identifier)
 		if err != nil {
 			return err

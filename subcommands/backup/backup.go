@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -203,6 +204,7 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 	emitter := repo.Emitter("import")
 	defer emitter.Close()
 
+	lockless, _ := strconv.ParseBool(os.Getenv("PLAKAR_LOCKLESS"))
 	opts := &snapshot.BuilderOptions{
 		Name:           cmd.Name,
 		Tags:           cmd.Tags,
@@ -211,6 +213,7 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 		Environment:    cmd.Environment,
 		Perimeter:      cmd.Perimeter,
 		NoXattr:        cmd.NoXattr,
+		NoLock:         lockless,
 		StateRefresher: stateRefresher(ctx, repo),
 	}
 

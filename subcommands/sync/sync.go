@@ -19,6 +19,7 @@ package sync
 import (
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/PlakarKorp/kloset/connectors/storage"
 	"github.com/PlakarKorp/kloset/encryption"
@@ -384,9 +385,11 @@ func (cmd *Sync) synchronize(ctx, peerCtx *appcontext.AppContext, srcRepository,
 	}
 	defer srcSnapshot.Close()
 
+	lockless, _ := strconv.ParseBool(os.Getenv("PLAKAR_LOCKLESS"))
 	dstSnapshot, err := snapshot.Create(dstRepository, repository.DefaultType, cmd.PackfileTempStorage, srcSnapshot.Header.Identifier, &snapshot.BuilderOptions{
 		NoCommit:       false,
 		NoCheckpoint:   false,
+		NoLock:         lockless,
 		StateRefresher: stateRefresher(peerCtx, dstRepository),
 	})
 	if err != nil {
