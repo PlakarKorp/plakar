@@ -1,6 +1,8 @@
 package cached
 
 import (
+	"context"
+	"errors"
 	"io"
 	"net"
 	"os"
@@ -68,6 +70,10 @@ type serverBehavior struct {
 
 	// onRequest, if set, receives every decoded request packet.
 	onRequest func(*RequestPkt)
+
+	// waitForClientClose leaves the request unanswered until the client closes
+	// the connection.
+	waitForClientClose bool
 }
 
 // startFakeServer listens on <cacheDir>/cached.sock and serves connections
@@ -152,6 +158,11 @@ func serveConn(conn net.Conn, b serverBehavior) {
 	}
 	if b.onRequest != nil {
 		b.onRequest(pkt)
+	}
+	if b.waitForClientClose {
+		var buf [1]byte
+		_, _ = conn.Read(buf[:])
+		return
 	}
 
 	if b.closeAfterRequest {
@@ -341,6 +352,46 @@ func TestRebuildStateContextCancelled(t *testing.T) {
 	}
 	if code != 1 {
 		t.Errorf("exit code = %d, want 1", code)
+	}
+}
+
+func TestRebuildStateCancellationInterruptsResponseWait(t *testing.T) {
+	const cancellationTimeout = time.Second
+	type rebuildResult struct {
+		code int
+		err  error
+	}
+
+	ctx := newTestContext(t)
+	requestReceived := make(chan struct{})
+	startFakeServer(t, ctx, serverBehavior{
+		onRequest:          func(*RequestPkt) { close(requestReceived) },
+		waitForClientClose: true,
+	})
+
+	resultCh := make(chan rebuildResult, 1)
+	go func() {
+		code, err := RebuildStateFromStore(ctx, uuid.New(), nil, false)
+		resultCh <- rebuildResult{code, err}
+	}()
+
+	select {
+	case <-requestReceived:
+	case <-time.After(cancellationTimeout):
+		t.Fatal("server did not receive the state rebuild request")
+	}
+	ctx.Cancel(nil)
+
+	select {
+	case result := <-resultCh:
+		if !errors.Is(result.err, context.Canceled) {
+			t.Fatalf("error = %v, want context.Canceled", result.err)
+		}
+		if result.code != 1 {
+			t.Fatalf("exit code = %d, want 1", result.code)
+		}
+	case <-time.After(cancellationTimeout):
+		t.Fatal("state rebuild did not stop after context cancellation")
 	}
 }
 
