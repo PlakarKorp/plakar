@@ -25,7 +25,7 @@
     "@tanstack/react-query": "^5.104.3",
     "@tanstack/react-query-devtools": "^5.106.1",
     "@tanstack/react-router": "^1.170.38",
-    "@tanstack/react-router-devtools": "^1.167.2",
+    "@tanstack/react-router-devtools": "^1.167.3",
     "@tanstack/react-table": "^9.3.1",
     "@tanstack/router-plugin": "^1.168.40",
     "@types/node": "^26.2.0",
@@ -42,7 +42,7 @@
     "storybook": "^10.6.5",
     "tailwindcss-react-aria-components": "^2.2.0",
     "typescript": "^5.9.3",
-    "vite": "^8.3.6",
+    "vite": "^8.3.8",
     "zod": "^4.6.5"
   }
 }
