@@ -4,11 +4,15 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/PlakarKorp/kloset/connectors"
+	"github.com/PlakarKorp/kloset/objects"
 	ptesting "github.com/PlakarKorp/plakar/testing"
 	"github.com/stretchr/testify/require"
 )
@@ -360,4 +364,39 @@ func TestRestoreToUnresolvableAlias(t *testing.T) {
 	require.Error(t, err)
 	require.Equal(t, 1, status)
 	require.Contains(t, err.Error(), "exporter")
+}
+
+func TestRestoreWarnsWhenSnapshotContainsBackupErrors(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	repo, ctx := ptesting.GenerateRepository(t, bufOut, bufErr, nil)
+	mtime := time.Unix(0, 0).UTC()
+	snap := ptesting.GenerateSnapshot(t, repo, nil,
+		ptesting.WithGenerator(func(ch chan<- *connectors.Record) {
+			ch <- connectors.NewRecord("/", "",
+				objects.NewFileInfo("/", 0, os.ModeDir|0755, mtime, 0, 0, 0, 0, 1),
+				nil, nil)
+			ch <- connectors.NewRecord("/data.txt", "",
+				objects.NewFileInfo("data.txt", int64(len("payload")), 0644, mtime, 0, 0, 0, 0, 1),
+				nil, func() (io.ReadCloser, error) {
+					return io.NopCloser(strings.NewReader("payload")), nil
+				})
+			// A record whose reader fails is what the snapshot records as a
+			// backup error; restore must warn instead of staying silent.
+			ch <- connectors.NewRecord("/denied.txt", "",
+				objects.NewFileInfo("denied.txt", 3, 0000, mtime, 0, 0, 0, 0, 1),
+				nil, func() (io.ReadCloser, error) { return nil, os.ErrPermission })
+		}),
+	)
+	defer snap.Close()
+
+	dir := mkRestoreDir(t)
+	id := snap.Header.GetIndexID()
+	cmd := &Restore{}
+	require.NoError(t, cmd.Parse(ctx, []string{"-to", dir, hex.EncodeToString(id[:])}))
+
+	status, err := cmd.Execute(ctx, repo)
+	require.NoError(t, err)
+	require.Equal(t, 0, status)
+	require.Contains(t, bufErr.String(), "snapshot contains 1 backup error")
 }
