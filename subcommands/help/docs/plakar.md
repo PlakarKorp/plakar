@@ -420,4 +420,4 @@ Remove snapshots older than 30 days:
 
 	$ plakar rm -before 30d
 
-Plakar - May 5, 2026 - PLAKAR(1)
+Plakar - May 5, 2026

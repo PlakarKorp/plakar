@@ -55,4 +55,4 @@ plakar-pkg-build(1),
 plakar-pkg-create(1),
 plakar-pkg-rm(1)
 
-Plakar - August 26, 2026 - PLAKAR-PKG-SHOW(1)
+Plakar - August 26, 2026

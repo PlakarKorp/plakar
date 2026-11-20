@@ -48,4 +48,4 @@ Show errors within a snapshot:
 plakar(1),
 plakar-backup(1)
 
-Plakar - May 5, 2026 - PLAKAR-INFO(1)
+Plakar - May 5, 2026

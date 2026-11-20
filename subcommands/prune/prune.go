@@ -56,7 +56,7 @@ func (cmd *Prune) CobraCommand() *cobra.Command {
 	cmd.policyOverride = locate.NewDefaultLocateOptions()
 
 	c := &cobra.Command{
-		Use: "prune [OPTIONS] SNAPSHOT...",
+		Use: "prune [OPTIONS]",
 	}
 	c.Flags().BoolVar(&cmd.Apply, "apply", false, "do the actual removal")
 	c.Flags().StringVar(&cmd.policyName, "policy", "", "policy to use")

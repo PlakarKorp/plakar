@@ -95,6 +95,21 @@ The options are as follows:
 > *option*
 > takes precedence over the configuration file.
 
+> When restoring to the local file system, the following options are
+> recognized:
+
+> **skip\_permissions**=**true**
+
+> > Do not restore file modes.
+> > By default the mode recorded in the snapshot is restored, including
+> > the setuid, setgid and sticky bits.
+
+> **skip\_ownership**=**true**
+
+> > Do not restore file ownership.
+> > By default, when running as root, files are given the user and group
+> > recorded in the snapshot.
+
 # EXIT STATUS
 
 The **plakar-restore** utility exits&#160;0 on success, and&#160;&gt;0 if an error occurs.
@@ -121,9 +136,14 @@ Restore specific path to a specific destination :
 
 	$ plakar restore -to  @s3target abc123:/etc/apache2
 
+Restore without reproducing the modes and ownership recorded in the
+snapshot:
+
+	$ plakar restore -o skip_permissions=true -o skip_ownership=true abc123
+
 # SEE ALSO
 
 plakar(1),
 plakar-backup(1)
 
-Plakar - May 5, 2026
+Plakar - October 30, 2026

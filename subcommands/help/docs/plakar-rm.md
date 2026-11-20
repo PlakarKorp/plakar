@@ -67,4 +67,4 @@ Remove snapshots older than 1 year with a specific tag:
 plakar(1),
 plakar-backup(1)
 
-Plakar - May 5, 2026 - PLAKAR-RM(1)
+Plakar - May 5, 2026

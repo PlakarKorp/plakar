@@ -27,4 +27,4 @@ The **plakar-maintenance** utility exits&#160;0 on success, and&#160;&gt;0 if an
 
 plakar(1)
 
-Plakar - May 5, 2026 - PLAKAR-MAINTENANCE(1)
+Plakar - May 5, 2026
