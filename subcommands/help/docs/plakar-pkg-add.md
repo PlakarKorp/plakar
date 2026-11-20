@@ -32,6 +32,10 @@ command, provided you have the necessary dependencies to build
 it locally
 (currently, official plugins require make and a working Go toolchain).
 
+A plugin the Plakar plugin server doesn't provide is looked up in the
+additional registries configured with
+plakar-pkg-registry(1).
+
 To install a specific version of a plugin, use the
 *name*@*version*
 syntax.
@@ -77,7 +81,8 @@ The options are as follows:
 plakar-login(1),
 plakar-pkg-build(1),
 plakar-pkg-create(1),
+plakar-pkg-registry(1),
 plakar-pkg-rm(1),
 plakar-pkg-show(1)
 
-Plakar - August 26, 2026 - PLAKAR-PKG-ADD(1)
+Plakar - September 26, 2026 - PLAKAR-PKG-ADD(1)

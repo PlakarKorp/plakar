@@ -89,7 +89,7 @@ func (cmd *PkgList) Execute(ctx *appcontext.AppContext, _ *repository.Repository
 		return verifier.Signer(sig)
 	}
 
-	print := func(name, version, os, arch string) {
+	print := func(name, version, os, arch, registry string) {
 		if cmd.LongName {
 			fmt.Fprintf(ctx.Stdout, "%s_%s_%s_%s.ptar", name, version, os, arch)
 		} else {
@@ -100,23 +100,31 @@ func (cmd *PkgList) Execute(ctx *appcontext.AppContext, _ *repository.Repository
 			fmt.Fprintf(ctx.Stdout, "\t%s", signer(name, version))
 		}
 
+		// Entries of the official catalog carry no registry name.
+		if registry != "" {
+			fmt.Fprintf(ctx.Stdout, "\t%s", registry)
+		}
+
 		fmt.Fprintln(ctx.Stdout)
 	}
 
-	integrations, err := pkgmgr.Query(&pkg.QueryOptions{
+	res, err := pkgmgr.QueryAll(&pkg.QueryOptions{
 		OnlyLocal: !cmd.ListAll,
 		Edition:   edition,
 	})
 	if err != nil {
 		return 1, err
 	}
-	for _, integration := range integrations {
+	for _, warning := range res.Warnings {
+		fmt.Fprintf(ctx.Stderr, "warning: %s\n", warning)
+	}
+	for _, integration := range res.Integrations {
 		version := integration.Installation.Version
 		if integration.LatestVersion != "" {
 			version = integration.LatestVersion
 		}
 
-		print(integration.Name, version, runtime.GOOS, runtime.GOARCH)
+		print(integration.Name, version, runtime.GOOS, runtime.GOARCH, integration.Registry)
 	}
 
 	return 0, nil

@@ -23,6 +23,14 @@ The options are as follows:
 
 > Instead of installed packages,
 > show the set of prebuilt packages available for this system.
+> Packages from an additional registry are followed by a tab and the name
+> of that registry, see
+> plakar-pkg-registry(1).
+> Registries that could not be queried, registry entries hidden by a
+> package of the same name, and installed packages whose registry was
+> removed are reported on the standard error, one per
+> line prefixed by
+> "warning:".
 
 **-devel**
 
@@ -53,6 +61,7 @@ The options are as follows:
 plakar-pkg-add(1),
 plakar-pkg-build(1),
 plakar-pkg-create(1),
+plakar-pkg-registry(1),
 plakar-pkg-rm(1)
 
-Plakar - August 26, 2026 - PLAKAR-PKG-SHOW(1)
+Plakar - September 26, 2026 - PLAKAR-PKG-SHOW(1)
