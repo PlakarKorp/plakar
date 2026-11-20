@@ -18,7 +18,7 @@
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/react-router": "^1.170.38",
     "@types/react": "^19.3.0",
-    "@vitejs/plugin-react": "^6.1.2",
+    "@vitejs/plugin-react": "^6.3.0",
     "eslint": "^10.14.0",
     "react": "^19.3.1",
     "storybook": "^10.6.5",
