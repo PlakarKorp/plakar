@@ -94,9 +94,6 @@ func (r *DockerRunner) Run(ctx context.Context) (net.Conn, error) {
 	}
 
 	dc := &dockerConn{Conn: conn, container: c}
-	// Mirror the native runner, whose plugin process is killed through
-	// exec.CommandContext when the connector context is cancelled.
-	context.AfterFunc(ctx, func() { dc.Close() })
 	return dc, nil
 }
 
