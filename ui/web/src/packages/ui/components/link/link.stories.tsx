@@ -34,3 +34,16 @@ export const InheritColor: Story = {
     </div>
   ),
 };
+
+export const Disabled: Story = {
+  args: {
+    isDisabled: true,
+  },
+};
+
+export const DisabledWithoutDestination: Story = {
+  args: {
+    href: undefined,
+    isDisabled: true,
+  },
+};
