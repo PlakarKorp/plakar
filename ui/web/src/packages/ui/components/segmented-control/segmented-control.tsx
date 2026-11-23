@@ -10,6 +10,11 @@ export type SegmentedControlItem = {
   icon?: IconType;
   count?: number;
   dot?: (typeof StatusDotVariant)[number];
+  /**
+   * Shows a dot of another colour than `dot` before the label. It must be a
+   * literal Tailwind class, e.g. "bg-violet-500".
+   */
+  dotClassName?: string;
 };
 
 export type SegmentedControlProps = {
@@ -85,7 +90,18 @@ export function SegmentedControl({
             )}
           >
             <>
-              {item.dot && <StatusDot variant={item.dot} />}
+              {item.dot ? (
+                <StatusDot variant={item.dot} />
+              ) : (
+                item.dotClassName && (
+                  <span
+                    className={clsx(
+                      "inline-block h-2 w-2 shrink-0 rounded-full in-data-disabled:opacity-50",
+                      item.dotClassName
+                    )}
+                  />
+                )
+              )}
               {item.icon && <Icon type={item.icon} size="sm" />}
               {!hideLabels && (
                 <Typography as="span" size="sm" weight="medium">

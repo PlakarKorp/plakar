@@ -102,3 +102,17 @@ export const WithCounts: Story = {
     ],
   },
 };
+
+export const WithColouredDots: Story = {
+  args: {
+    selectedId: "all",
+    ariaLabel: "Tiers",
+    items: [
+      { id: "all", label: "All" },
+      { id: "hours", label: "Hours", dotClassName: "bg-rose-500" },
+      { id: "days", label: "Days", dotClassName: "bg-violet-500" },
+      { id: "months", label: "Months", dotClassName: "bg-emerald-500" },
+      { id: "years", label: "Years", dotClassName: "bg-orange-600" },
+    ],
+  },
+};
