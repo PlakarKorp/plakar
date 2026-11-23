@@ -22,7 +22,7 @@ type LinkProps = (AnchorProps | ButtonProps) & {
 };
 
 function isAnchor(props: AnchorProps | ButtonProps): props is AnchorProps {
-  return props.href !== undefined;
+  return props.onPress === undefined;
 }
 
 export function Link({
@@ -31,13 +31,21 @@ export function Link({
   inheritColor,
   ...props
 }: LinkProps) {
-  if (props.href === undefined && props.onPress === undefined) {
+  if (
+    props.href === undefined &&
+    props.onPress === undefined &&
+    !props.isDisabled
+  ) {
     return <>{children}</>;
   }
 
   const classes = clsx(
-    inheritColor ? "text-inherit" : "text-accent",
-    "hover:text-accent-hover cursor-pointer hover:underline",
+    props.isDisabled
+      ? "text-disable cursor-not-allowed"
+      : [
+          inheritColor ? "text-inherit" : "text-accent",
+          "hover:text-accent-hover cursor-pointer hover:underline",
+        ],
     className
   );
 
