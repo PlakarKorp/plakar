@@ -53,6 +53,11 @@ func (cmd *Info) executeSnapshot(ctx *appcontext.AppContext, repo *repository.Re
 	fmt.Fprintf(ctx.Stdout, " - Type: %s\n", utils.SanitizeText(header.GetSource(0).Importer.Type))
 	fmt.Fprintf(ctx.Stdout, " - Origin: %s\n", utils.SanitizeText(header.GetSource(0).Importer.Origin))
 	fmt.Fprintf(ctx.Stdout, " - Directory: %s\n", utils.SanitizeText(header.GetSource(0).Importer.Directory))
+	fmt.Fprintf(ctx.Stdout, " - Context:\n")
+	for i := range header.GetSource(0).Context {
+		fmt.Fprintf(ctx.Stdout, "   - %s: %s\n", utils.SanitizeText(header.GetSource(0).Context[i].Key),
+			utils.SanitizeText(header.GetSource(0).Context[i].Value))
+	}
 
 	fmt.Fprintln(ctx.Stdout, "Context:")
 	fmt.Fprintf(ctx.Stdout, " - MachineID: %s\n", utils.SanitizeText(header.GetContext("MachineID")))
