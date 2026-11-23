@@ -9,17 +9,31 @@ import {
 
 import { Button, Illustration, IllustrationType, Typography } from "..";
 
+// A tint colours the header and gives the border the same hue, so a card
+// reads as one block. A new tint sets both here.
+const TINTS = {
+  accent: {
+    header: "bg-accent-quaternary",
+    border: "border-accent-tertiary",
+  },
+} as const;
+
+type CardTint = keyof typeof TINTS;
+
 type CardProps = PropsWithChildren<{
   className?: string;
   defaultCollapsed?: boolean;
   isCollapsible?: boolean;
   isError?: boolean;
+  /** Colours the header and the border. The header divider is full width. */
+  tint?: CardTint;
 }>;
 
 const Context = createContext<{
   isCollapsible: boolean;
   isCollapsed: boolean;
   toggleCollapsed: () => void;
+  tint?: CardTint;
 }>({
   isCollapsible: false,
   isCollapsed: false,
@@ -31,6 +45,7 @@ function CardRoot({
   defaultCollapsed = true,
   isCollapsible = false,
   isError = false,
+  tint,
   className,
 }: CardProps) {
   const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
@@ -38,11 +53,17 @@ function CardRoot({
   const toggleCollapsed = () => setIsCollapsed((prev) => !prev);
 
   return (
-    <Context.Provider value={{ isCollapsible, isCollapsed, toggleCollapsed }}>
+    <Context.Provider
+      value={{ isCollapsible, isCollapsed, toggleCollapsed, tint }}
+    >
       <div
         className={clsx(
           "bg-primary rounded-xl border",
-          isError ? "border-error" : "border-secondary",
+          isError
+            ? "border-error"
+            : tint
+              ? TINTS[tint].border
+              : "border-secondary",
           className
         )}
       >
@@ -73,14 +94,22 @@ function CardHeader({
   isDividerFullWidth = false,
   className,
 }: CardHeaderProps) {
-  const { isCollapsible, isCollapsed, toggleCollapsed } = useContext(Context);
+  const { isCollapsible, isCollapsed, toggleCollapsed, tint } =
+    useContext(Context);
+  const isOpen = !isCollapsible || !isCollapsed;
 
   return (
     <div
       className={clsx(
         "b flex flex-wrap items-center justify-between gap-2 py-2 md:py-4",
-        isDividerFullWidth ? "px-2 md:px-4" : "mx-2 md:mx-4",
-        (!isCollapsible || !isCollapsed) && "border-secondary border-b",
+        isDividerFullWidth || tint ? "px-2 md:px-4" : "mx-2 md:mx-4",
+        isOpen && "border-secondary border-b",
+        // The card radius less its border, so the tint meets the border. A
+        // header with nothing below it rounds its bottom too.
+        tint && [
+          TINTS[tint].header,
+          "rounded-t-[calc(var(--radius-xl)-1px)] last:rounded-b-[calc(var(--radius-xl)-1px)] last:border-b-0",
+        ],
         className
       )}
     >

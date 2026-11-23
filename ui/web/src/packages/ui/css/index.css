@@ -207,6 +207,11 @@ Supported variables:
 
   --border-color-accent: var(--blue-brand-500);
   --border-color-accent-secondary: var(--blue-brand-300);
+  --border-color-accent-tertiary: color-mix(
+    in oklab,
+    var(--border-color-accent-secondary) 50%,
+    var(--border-color-secondary)
+  );
   --border-color-accent-heavy: var(--color-slate-900);
   --border-color-on-accent: var(--color-white);
 
@@ -379,6 +384,11 @@ Supported variables:
 
   --border-color-accent: var(--blue-brand-500);
   --border-color-accent-secondary: var(--blue-brand-700);
+  --border-color-accent-tertiary: color-mix(
+    in oklab,
+    var(--border-color-accent-secondary) 50%,
+    var(--border-color-secondary)
+  );
   --border-color-accent-heavy: var(--color-white);
   --border-color-on-accent: oklch(0.18 0.017 278);
 

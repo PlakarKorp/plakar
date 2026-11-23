@@ -22,8 +22,14 @@ const meta = {
     isCollapsible: false,
     defaultCollapsed: false,
     isError: false,
+    tint: undefined,
   },
   argTypes: {
+    tint: {
+      control: "select",
+      options: [undefined, "accent"],
+      table: { type: { summary: '"accent"' } },
+    },
     className: {
       control: "text",
       table: { type: { summary: "string" } },
@@ -63,11 +69,13 @@ export const WithHeader: Story = {
     isCollapsible = false,
     defaultCollapsed = false,
     isError = false,
+    tint,
   }) => (
     <Card
       isCollapsible={isCollapsible}
       defaultCollapsed={defaultCollapsed}
       isError={isError}
+      tint={tint}
     >
       <Card.Header
         title={title}
@@ -82,6 +90,11 @@ export const WithHeader: Story = {
       </Card.Content>
     </Card>
   ),
+};
+
+export const Tinted: Story = {
+  ...WithHeader,
+  args: { ...WithHeader.args, tint: "accent" },
 };
 
 export const WithFooter: Story = {
