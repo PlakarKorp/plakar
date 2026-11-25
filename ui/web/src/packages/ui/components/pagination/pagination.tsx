@@ -13,6 +13,8 @@ type PaginationProps = {
   onPrev?: () => void;
   onNext?: () => void;
   onPageSizeChange?: (pageSize: number) => void;
+  /** The page sizes offered, for a grid whose rows must come out full. */
+  pageSizes?: number[];
 };
 
 export function Pagination({
@@ -21,13 +23,14 @@ export function Pagination({
   onPrev,
   onNext,
   onPageSizeChange,
+  pageSizes = DEFAULT_SIZES,
 }: PaginationProps) {
   const count = total?.count;
   const perPage = total?.perPage;
 
   // Create options for the per-page select adding the default sizes
   // and the current total perPage if it's not already included.
-  const sizeSet = new Set(DEFAULT_SIZES);
+  const sizeSet = new Set(pageSizes);
   if (perPage && !sizeSet.has(perPage)) {
     sizeSet.add(perPage);
   }

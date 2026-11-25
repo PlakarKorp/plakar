@@ -14,6 +14,7 @@ type TemplateProps = {
   onPrev: () => void;
   onNext: () => void;
   onPageSizeChange?: (perPage: number) => void;
+  pageSizes?: number[];
 };
 
 function Template({
@@ -25,6 +26,7 @@ function Template({
   perPage,
   onPrev,
   onNext,
+  pageSizes,
 }: TemplateProps) {
   const [pageSize, setPageSize] = useState(perPage);
 
@@ -39,6 +41,7 @@ function Template({
       onPrev={hasPrev ? onPrev : undefined}
       onNext={hasNext ? onNext : undefined}
       onPageSizeChange={setPageSize}
+      pageSizes={pageSizes}
     />
   );
 }
@@ -84,5 +87,13 @@ export const CustomPerPage: Story = {
   args: {
     ...Default.args,
     perPage: 42,
+  },
+};
+
+export const GridPageSizes: Story = {
+  args: {
+    ...Default.args,
+    perPage: 12,
+    pageSizes: [12, 24, 48, 96],
   },
 };
