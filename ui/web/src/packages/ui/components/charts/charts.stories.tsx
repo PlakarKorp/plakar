@@ -2,6 +2,7 @@ import type { StoryObj } from "@storybook/react-vite";
 import prettyBytes from "pretty-bytes";
 
 import { BytesLineChart } from "./bytes-line-chart";
+import { ChartLegend } from "./chart-legend";
 import { JobsBarChart } from "./jobs-bar-chart";
 import { MultiAxisLineChart } from "./multi-axis-line-chart";
 import {
@@ -11,6 +12,8 @@ import {
 } from "./multi-axis-line-chart.utils";
 import { PieChart as PieChartComponent } from "./pie-chart";
 import { RatioBar } from "./ratio-bar";
+import { SegmentBar } from "./segment-bar";
+import { ShareBar } from "./share-bar";
 import { SparkBars } from "./spark-bars";
 import { UsageBar } from "./usage-bar";
 
@@ -339,4 +342,50 @@ export const SparklineOutcomes: StoryObj<typeof SparkBars> = {
       <SparkBars {...args} />
     </div>
   ),
+};
+
+export const Segments: StoryObj<typeof SegmentBar> = {
+  args: {
+    segments: [
+      { label: "Protected", value: 112, className: "bg-success" },
+      { label: "Unprotected", value: 18, className: "bg-warning" },
+      { label: "Excluded", value: 9, className: "bg-chart-muted" },
+    ],
+  },
+  render: (args) => (
+    <div className="w-60">
+      <SegmentBar {...args} />
+    </div>
+  ),
+};
+
+export const SegmentsEmpty: StoryObj<typeof SegmentBar> = {
+  ...Segments,
+  args: {
+    segments: [{ label: "Protected", value: 0, className: "bg-success" }],
+  },
+};
+
+export const Share: StoryObj<typeof ShareBar> = {
+  args: {
+    percent: 72,
+    label: "Resources protected",
+    fillClassName: "bg-success",
+  },
+  render: (args) => (
+    <div className="flex w-60 flex-col gap-3">
+      <ShareBar {...args} />
+      <ShareBar {...args} className="h-4" />
+    </div>
+  ),
+};
+
+export const Legend: StoryObj<typeof ChartLegend> = {
+  args: {
+    items: [
+      { label: "completed", markClassName: "bg-success h-2 w-3" },
+      { label: "failed", markClassName: "bg-error h-2 w-3" },
+      { label: "stored", markClassName: "bg-accent h-1 w-3 rounded-full" },
+    ],
+  },
 };
