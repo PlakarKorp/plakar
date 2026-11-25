@@ -341,79 +341,27 @@ func (cmd *Cached) rebuildJob(ctx *appcontext.AppContext, jobChan chan jobReq, r
 
 	// lifted from repository. At some point this will get cleaned up
 	stateDBPath := filepath.Join(ctx.CacheDir, caching.CACHE_VERSION, "store", repoID.String(), "state.db")
-	if err := os.MkdirAll(filepath.Dir(stateDBPath), 0700); err != nil {
-		return err
-	}
 
-	f, err := os.OpenFile(stateDBPath, os.O_RDONLY|os.O_CREATE, 0600)
+	p, err := openPinnedRepo(stateDBPath, func() (*repository.Repository, error) {
+		return repository.NewNoRebuild(ctx.GetInner(), key, store, serializedConfig, false)
+	})
 	if err != nil {
-		return err
-	}
-
-	repo, err := repository.NewNoRebuild(ctx.GetInner(), key, store, serializedConfig, false)
-	if err != nil {
-		f.Close()
 		return fmt.Errorf("failed to open repository: %w", err)
 	}
 
-	if repoID != repo.Configuration().RepositoryID {
-		repo.Close()
-		f.Close()
-		return fmt.Errorf("invalid uuid given %q repository id is %q", repoID.String(), repo.Configuration().RepositoryID.String())
-	}
-
-	checkAndReopen := func() error {
-		liveStat, err := os.Stat(stateDBPath)
-		// safe because os.SameFile works on nil values
-		if err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return err
+	if repo, err := p.Repository(); err != nil {
+		p.Close()
+		return fmt.Errorf("failed to open repository: %w", err)
+	} else {
+		if repoID != repo.Configuration().RepositoryID {
+			p.Close()
+			return fmt.Errorf("invalid uuid given %q repository id is %q", repoID.String(), repo.Configuration().RepositoryID.String())
 		}
-
-		ourStat, err := f.Stat()
-		if err != nil {
-			return err
-		}
-
-		needsReopen := false
-		if !os.SameFile(liveStat, ourStat) {
-			needsReopen = true
-		}
-
-		// we should check NLink on the ourStat underlying Stat_t object but
-		// can't due to windows.
-		if !needsReopen {
-			return nil
-		}
-
-		if err := os.MkdirAll(filepath.Dir(stateDBPath), 0700); err != nil {
-			return err
-		}
-
-		newF, err := os.OpenFile(stateDBPath, os.O_RDONLY|os.O_CREATE, 0600)
-		if err != nil {
-			return err
-		}
-
-		newRepo, err := repository.NewNoRebuild(ctx.GetInner(), key, store, serializedConfig, false)
-		if err != nil {
-			newF.Close()
-			return fmt.Errorf("failed to open repository: %w", err)
-		}
-
-		f.Close()
-		repo.Close()
-
-		f = newF
-		repo = newRepo
-
-		return nil
 	}
 
 	go func() {
 		defer store.Close(ctx)
-		defer func() { repo.Close(); f.Close() }()
-
-		repoID := repo.Configuration().RepositoryID
+		defer p.Close()
 
 	jobLoop:
 		for {
@@ -421,9 +369,10 @@ func (cmd *Cached) rebuildJob(ctx *appcontext.AppContext, jobChan chan jobReq, r
 			case job := <-jobChan:
 				cmd.runningJobs <- newJob
 
-				// did the state disappear under our feet?
 				var err error
-				if err = checkAndReopen(); err == nil {
+				var repo *repository.Repository
+				// did the state disappear under our feet?
+				if repo, err = p.Repository(); err == nil {
 					if job.stateID == objects.NilMac {
 						err = repo.RebuildState()
 					} else {
@@ -479,4 +428,82 @@ func isDisconnectError(err error) bool {
 	}
 	var netErr net.Error
 	return errors.As(err, &netErr) && netErr.Timeout()
+}
+
+// cached can only open repositories through this structure. This allows
+// detecting if the database file changed under our feet (by keeping an fd open
+// on it). To access the repo you _must_ use the method pinnedRepo.Repository().
+type pinnedRepo struct {
+	filePath string
+	f        *os.File
+	_repo    *repository.Repository
+
+	opener func() (*repository.Repository, error)
+}
+
+func openPinnedRepo(path string, opener func() (*repository.Repository, error)) (*pinnedRepo, error) {
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		return nil, err
+	}
+
+	f, err := os.OpenFile(path, os.O_RDONLY|os.O_CREATE, 0600)
+	if err != nil {
+		return nil, err
+	}
+
+	repo, err := opener()
+	if err != nil {
+		f.Close()
+		return nil, err
+	}
+
+	return &pinnedRepo{
+		filePath: path,
+		f:        f,
+		_repo:    repo,
+		opener:   opener,
+	}, nil
+}
+
+func (pr *pinnedRepo) Repository() (*repository.Repository, error) {
+	liveStat, err := os.Stat(pr.filePath)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return nil, fmt.Errorf("failed to stat state file: %w", err)
+	}
+
+	ourStat, err := pr.f.Stat()
+	if err != nil {
+		return nil, fmt.Errorf("failed to stat pinned state file: %w", err)
+	}
+
+	if os.SameFile(liveStat, ourStat) {
+		return pr._repo, nil
+	}
+
+	if err := os.MkdirAll(filepath.Dir(pr.filePath), 0700); err != nil {
+		return nil, fmt.Errorf("failed to recreate state directory: %w", err)
+	}
+
+	newF, err := os.OpenFile(pr.filePath, os.O_RDONLY|os.O_CREATE, 0600)
+	if err != nil {
+		return nil, fmt.Errorf("failed to pin state file: %w", err)
+	}
+
+	newRepo, err := pr.opener()
+	if err != nil {
+		newF.Close()
+		return nil, fmt.Errorf("failed to reopen repository: %w", err)
+	}
+
+	// Close the old descriptors before setting the new ones.
+	pr.Close()
+
+	pr.f = newF
+	pr._repo = newRepo
+
+	return pr._repo, nil
+}
+
+func (pr *pinnedRepo) Close() error {
+	return errors.Join(pr._repo.Close(), pr.f.Close())
 }
