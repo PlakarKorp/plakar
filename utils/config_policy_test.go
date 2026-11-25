@@ -358,6 +358,37 @@ func TestPoliciesLocateFieldAllIntKeys(t *testing.T) {
 	}
 }
 
+// TestPoliciesSetKeepAndCapPerPeriod pins `<period>s` to Keep and
+// `per-<period>` to Cap: `policy set weekly per-week=1` must cap each week at
+// one snapshot, not keep a single week, or prune deletes the older ones.
+func TestPoliciesSetKeepAndCapPerPeriod(t *testing.T) {
+	c := newTestPolicies()
+	c.Add("p")
+	p := &c.Policies["p"].Periods
+	for _, tc := range []struct {
+		name   string
+		period *locate.LocatePeriod
+	}{
+		{"minute", &p.Minute}, {"hour", &p.Hour}, {"day", &p.Day},
+		{"week", &p.Week}, {"month", &p.Month}, {"year", &p.Year},
+		{"monday", &p.Monday}, {"tuesday", &p.Tuesday}, {"wednesday", &p.Wednesday},
+		{"thursday", &p.Thursday}, {"friday", &p.Friday}, {"saturday", &p.Saturday},
+		{"sunday", &p.Sunday},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := c.Set("p", tc.name+"s", "3"); err != nil {
+				t.Fatalf("Set %ss: %v", tc.name, err)
+			}
+			if err := c.Set("p", "per-"+tc.name, "2"); err != nil {
+				t.Fatalf("Set per-%s: %v", tc.name, err)
+			}
+			if want := (locate.LocatePeriod{Keep: 3, Cap: 2}); *tc.period != want {
+				t.Fatalf("%s = %+v, want %+v", tc.name, *tc.period, want)
+			}
+		})
+	}
+}
+
 // TestPoliciesLocateFieldSinceAndLatest exercises the last remaining
 // non-string/non-int branches: `since` (time.Time) and `latest` (bool).
 func TestPoliciesLocateFieldSinceAndLatest(t *testing.T) {
