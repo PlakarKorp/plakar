@@ -349,7 +349,7 @@ func (cmd *Cached) rebuildJob(ctx *appcontext.AppContext, jobChan chan jobReq, r
 		return fmt.Errorf("failed to open repository: %w", err)
 	}
 
-	if repo, err := p.Repository(); err != nil {
+	if repo, _, err := p.Repository(); err != nil {
 		p.Close()
 		return fmt.Errorf("failed to open repository: %w", err)
 	} else {
@@ -371,9 +371,11 @@ func (cmd *Cached) rebuildJob(ctx *appcontext.AppContext, jobChan chan jobReq, r
 
 				var err error
 				var repo *repository.Repository
-				// did the state disappear under our feet?
-				if repo, err = p.Repository(); err == nil {
-					if job.stateID == objects.NilMac {
+				var reopened bool
+				if repo, reopened, err = p.Repository(); err == nil {
+					// In case the state was removed under our feet, we can't
+					// just ingest the state file, we have to do a full rebuild
+					if job.stateID == objects.NilMac || reopened {
 						err = repo.RebuildState()
 					} else {
 						err = repo.IngestStateFile(job.stateID)
@@ -465,34 +467,34 @@ func openPinnedRepo(path string, opener func() (*repository.Repository, error)) 
 	}, nil
 }
 
-func (pr *pinnedRepo) Repository() (*repository.Repository, error) {
+func (pr *pinnedRepo) Repository() (*repository.Repository, bool, error) {
 	liveStat, err := os.Stat(pr.filePath)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return nil, fmt.Errorf("failed to stat state file: %w", err)
+		return nil, false, fmt.Errorf("failed to stat state file: %w", err)
 	}
 
 	ourStat, err := pr.f.Stat()
 	if err != nil {
-		return nil, fmt.Errorf("failed to stat pinned state file: %w", err)
+		return nil, false, fmt.Errorf("failed to stat pinned state file: %w", err)
 	}
 
 	if os.SameFile(liveStat, ourStat) {
-		return pr._repo, nil
+		return pr._repo, false, nil
 	}
 
 	if err := os.MkdirAll(filepath.Dir(pr.filePath), 0700); err != nil {
-		return nil, fmt.Errorf("failed to recreate state directory: %w", err)
+		return nil, false, fmt.Errorf("failed to recreate state directory: %w", err)
 	}
 
 	newF, err := os.OpenFile(pr.filePath, os.O_RDONLY|os.O_CREATE, 0600)
 	if err != nil {
-		return nil, fmt.Errorf("failed to pin state file: %w", err)
+		return nil, false, fmt.Errorf("failed to pin state file: %w", err)
 	}
 
 	newRepo, err := pr.opener()
 	if err != nil {
 		newF.Close()
-		return nil, fmt.Errorf("failed to reopen repository: %w", err)
+		return nil, false, fmt.Errorf("failed to reopen repository: %w", err)
 	}
 
 	// Close the old descriptors before setting the new ones.
@@ -501,7 +503,7 @@ func (pr *pinnedRepo) Repository() (*repository.Repository, error) {
 	pr.f = newF
 	pr._repo = newRepo
 
-	return pr._repo, nil
+	return pr._repo, true, nil
 }
 
 func (pr *pinnedRepo) Close() error {
