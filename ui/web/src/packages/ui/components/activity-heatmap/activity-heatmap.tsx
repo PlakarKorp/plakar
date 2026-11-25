@@ -9,6 +9,8 @@ export type ActivityDay = {
 
 type ActivityHeatmapProps = {
   days: ActivityDay[];
+  /** Stretches the weeks to the height of the parent, which must have one. */
+  fillsHeight?: boolean;
 };
 
 const WEEKDAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
@@ -50,12 +52,15 @@ function periodLabel(days: ActivityDay[]) {
   return `${shortDate(days[0].date)} → ${shortDate(days[days.length - 1].date)}`;
 }
 
-export function ActivityHeatmap({ days }: ActivityHeatmapProps) {
+export function ActivityHeatmap({
+  days,
+  fillsHeight = false,
+}: ActivityHeatmapProps) {
   const leadingBlanks = days.length > 0 ? mondayBasedWeekday(days[0].date) : 0;
   const maxCount = Math.max(0, ...days.map((day) => day.count));
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className={clsx("flex flex-col gap-3", fillsHeight && "h-full")}>
       <div className="grid grid-cols-7 gap-1">
         {WEEKDAY_LABELS.map((label, index) => (
           <Typography
@@ -69,7 +74,12 @@ export function ActivityHeatmap({ days }: ActivityHeatmapProps) {
           </Typography>
         ))}
       </div>
-      <ol className="grid grid-cols-7 gap-1">
+      <ol
+        className={clsx(
+          "grid grid-cols-7 gap-1",
+          fillsHeight && "min-h-0 flex-1 auto-rows-fr"
+        )}
+      >
         {Array.from({ length: leadingBlanks }, (_, index) => (
           <li key={`blank-${index}`} aria-hidden="true" />
         ))}
@@ -78,7 +88,11 @@ export function ActivityHeatmap({ days }: ActivityHeatmapProps) {
             key={day.date.toISOString()}
             title={dayLabel(day)}
             aria-label={dayLabel(day)}
-            className={clsx("h-5 rounded", levelClass(day.count, maxCount))}
+            className={clsx(
+              "rounded",
+              fillsHeight ? "min-h-1" : "h-5",
+              levelClass(day.count, maxCount)
+            )}
           />
         ))}
       </ol>
