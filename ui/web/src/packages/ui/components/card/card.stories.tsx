@@ -5,6 +5,7 @@ import { Card } from "./card";
 import { Button } from "../button/button";
 import { IllustrationType } from "../illustration/illustration.constants";
 import { StatusDot } from "../status-dot/status-dot";
+import { Tag } from "../tag/tag";
 import { Typography } from "../typography/typography";
 
 type CardStoryArgs = ComponentProps<typeof Card> & {
@@ -192,6 +193,29 @@ export const WithTitleSuffix: Story = {
           </span>
         }
         description="Shown inline with the title, before the description."
+      />
+      <Card.Content>
+        <p className="text-primary">{content}</p>
+      </Card.Content>
+    </Card>
+  ),
+};
+
+export const TruncatedTitle: Story = {
+  args: {
+    title: "Operations per day across every production inventory",
+    content: "A narrow card keeps its header on one line.",
+  },
+  render: ({ title = "", content = "" }) => (
+    <Card className="w-80">
+      <Card.Header
+        title={title}
+        titleSuffix={
+          <Tag size="sm" variant="default_borderless" leftIcon="clock">
+            7d
+          </Tag>
+        }
+        isTitleTruncated
       />
       <Card.Content>
         <p className="text-primary">{content}</p>

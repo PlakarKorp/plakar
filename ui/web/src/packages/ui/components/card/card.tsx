@@ -81,6 +81,7 @@ type CardHeaderProps = {
   suffix?: React.ReactNode;
   buttonProps?: ComponentProps<typeof Button>;
   isDividerFullWidth?: boolean;
+  isTitleTruncated?: boolean;
   className?: string;
 };
 
@@ -92,6 +93,7 @@ function CardHeader({
   suffix,
   buttonProps,
   isDividerFullWidth = false,
+  isTitleTruncated = false,
   className,
 }: CardHeaderProps) {
   const { isCollapsible, isCollapsed, toggleCollapsed, tint } =
@@ -101,7 +103,8 @@ function CardHeader({
   return (
     <div
       className={clsx(
-        "b flex flex-wrap items-center justify-between gap-2 py-2 md:py-4",
+        "b flex items-center justify-between gap-2 py-2 md:py-4",
+        !isTitleTruncated && "flex-wrap",
         isDividerFullWidth || tint ? "px-2 md:px-4" : "mx-2 md:mx-4",
         isOpen && "border-secondary border-b",
         // The card radius less its border, so the tint meets the border. A
@@ -113,17 +116,32 @@ function CardHeader({
         className
       )}
     >
-      <div className="flex items-center gap-3">
+      <div
+        className={clsx(
+          "flex items-center gap-3",
+          isTitleTruncated && "min-w-0"
+        )}
+      >
         {prefix}
 
-        <div>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <div className={clsx(isTitleTruncated && "min-w-0")}>
+          <div
+            className={clsx(
+              "flex items-center gap-x-3 gap-y-1",
+              isTitleTruncated ? "min-w-0" : "flex-wrap"
+            )}
+          >
             <Typography
               as="h2"
               variant="body"
               size="md"
               weight="medium"
-              className="text-primary"
+              className={clsx("text-primary", isTitleTruncated && "truncate")}
+              title={
+                isTitleTruncated && typeof title === "string"
+                  ? title
+                  : undefined
+              }
             >
               {title}
             </Typography>
@@ -137,7 +155,12 @@ function CardHeader({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div
+        className={clsx(
+          "flex items-center gap-2",
+          isTitleTruncated ? "shrink-0" : "ml-auto flex-wrap"
+        )}
+      >
         {buttonProps && (
           <Button size="sm" variant="tertiary" {...buttonProps} />
         )}
