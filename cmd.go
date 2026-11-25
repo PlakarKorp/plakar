@@ -183,7 +183,7 @@ func newRootCmd(opts *globalOpts, def defaults) *cobra.Command {
 	f.StringVar(&opts.cacheDir, "cachedir", def.cacheDir, "cache directory")
 	f.StringVar(&opts.dataDir, "datadir", def.dataDir, "data directory")
 	f.IntVar(&opts.cpuCount, "cpu", def.cpuCount, "limit the number of usable cores")
-	f.IntVar(&opts.maxConc, "concurrency", -1, "limit the number of concurrent operations")
+	f.IntVar(&opts.maxConc, "concurrency", 0, "limit the number of concurrent operations")
 	f.StringVar(&opts.cpuProfile, "profile-cpu", "", "profile CPU usage")
 	f.StringVar(&opts.memProfile, "profile-mem", "", "profile MEM usage")
 	f.BoolVar(&opts.time, "time", false, "display command execution time")
