@@ -54,3 +54,16 @@ export const Widths: Story = {
     </div>
   ),
 };
+
+export const FillsHeight: Story = {
+  args: { fillsHeight: true },
+  render: (args) => (
+    <div className="flex gap-6">
+      {[160, 240, 384].map((height) => (
+        <div key={height} className="w-64" style={{ height }}>
+          <ActivityHeatmap {...args} />
+        </div>
+      ))}
+    </div>
+  ),
+};
