@@ -334,7 +334,7 @@ func (cmd *Cached) rebuildJob(ctx *appcontext.AppContext, jobChan chan jobReq, r
 		return fmt.Errorf("failed to open storage: %w", err)
 	}
 
-	key, err := getSecret(ctx, secret, serializedConfig)
+	key, err := getSecret(secret, serializedConfig)
 	if err != nil {
 		return fmt.Errorf("failed to setup secret: %w", err)
 	}
@@ -343,7 +343,7 @@ func (cmd *Cached) rebuildJob(ctx *appcontext.AppContext, jobChan chan jobReq, r
 	stateDBPath := filepath.Join(ctx.CacheDir, caching.CACHE_VERSION, "store", repoID.String(), "state.db")
 
 	p, err := openPinnedRepo(stateDBPath, func() (*repository.Repository, error) {
-		return repository.NewNoRebuild(ctx.GetInner(), key, store, serializedConfig, false)
+		return repository.NewRepository(ctx.GetInner(), key, store, serializedConfig, &repository.RepositoryOpts{RWStateCache: true})
 	})
 	if err != nil {
 		return fmt.Errorf("failed to open repository: %w", err)
@@ -404,7 +404,7 @@ func (cmd *Cached) rebuildJob(ctx *appcontext.AppContext, jobChan chan jobReq, r
 
 }
 
-func getSecret(ctx *appcontext.AppContext, secret []byte, storageConfig []byte) ([]byte, error) {
+func getSecret(secret []byte, storageConfig []byte) ([]byte, error) {
 	config, err := storage.NewConfigurationFromWrappedBytes(storageConfig)
 	if err != nil {
 		return nil, err
