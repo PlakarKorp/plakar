@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net"
 	"os"
 	"path/filepath"
@@ -28,6 +29,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/PlakarKorp/kloset/caching"
 	"github.com/PlakarKorp/kloset/connectors/storage"
 	"github.com/PlakarKorp/kloset/encryption"
 	"github.com/PlakarKorp/kloset/objects"
@@ -337,18 +339,79 @@ func (cmd *Cached) rebuildJob(ctx *appcontext.AppContext, jobChan chan jobReq, r
 		return fmt.Errorf("failed to setup secret: %w", err)
 	}
 
+	// lifted from repository. At some point this will get cleaned up
+	stateDBPath := filepath.Join(ctx.CacheDir, caching.CACHE_VERSION, "store", repoID.String(), "state.db")
+	if err := os.MkdirAll(filepath.Dir(stateDBPath), 0700); err != nil {
+		return err
+	}
+
+	f, err := os.OpenFile(stateDBPath, os.O_RDONLY|os.O_CREATE, 0600)
+	if err != nil {
+		return err
+	}
+
 	repo, err := repository.NewNoRebuild(ctx.GetInner(), key, store, serializedConfig, false)
 	if err != nil {
+		f.Close()
 		return fmt.Errorf("failed to open repository: %w", err)
 	}
 
 	if repoID != repo.Configuration().RepositoryID {
+		repo.Close()
+		f.Close()
 		return fmt.Errorf("invalid uuid given %q repository id is %q", repoID.String(), repo.Configuration().RepositoryID.String())
+	}
+
+	checkAndReopen := func() error {
+		liveStat, err := os.Stat(stateDBPath)
+		// safe because os.SameFile works on nil values
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+
+		ourStat, err := f.Stat()
+		if err != nil {
+			return err
+		}
+
+		needsReopen := false
+		if !os.SameFile(liveStat, ourStat) {
+			needsReopen = true
+		}
+
+		// we should check NLink on the ourStat underlying Stat_t object but
+		// can't due to windows.
+		if !needsReopen {
+			return nil
+		}
+
+		if err := os.MkdirAll(filepath.Dir(stateDBPath), 0700); err != nil {
+			return err
+		}
+
+		newF, err := os.OpenFile(stateDBPath, os.O_RDONLY|os.O_CREATE, 0600)
+		if err != nil {
+			return err
+		}
+
+		newRepo, err := repository.NewNoRebuild(ctx.GetInner(), key, store, serializedConfig, false)
+		if err != nil {
+			newF.Close()
+			return fmt.Errorf("failed to open repository: %w", err)
+		}
+
+		f.Close()
+		repo.Close()
+
+		f = newF
+		repo = newRepo
+
+		return nil
 	}
 
 	go func() {
 		defer store.Close(ctx)
-		defer repo.Close()
+		defer func() { repo.Close(); f.Close() }()
 
 		repoID := repo.Configuration().RepositoryID
 
@@ -357,11 +420,15 @@ func (cmd *Cached) rebuildJob(ctx *appcontext.AppContext, jobChan chan jobReq, r
 			select {
 			case job := <-jobChan:
 				cmd.runningJobs <- newJob
+
+				// did the state disappear under our feet?
 				var err error
-				if job.stateID == objects.NilMac {
-					err = repo.RebuildState()
-				} else {
-					err = repo.IngestStateFile(job.stateID)
+				if err = checkAndReopen(); err == nil {
+					if job.stateID == objects.NilMac {
+						err = repo.RebuildState()
+					} else {
+						err = repo.IngestStateFile(job.stateID)
+					}
 				}
 
 				// Notify that we ended
