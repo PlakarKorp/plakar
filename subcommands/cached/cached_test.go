@@ -180,24 +180,21 @@ func wrapConfig(t *testing.T, config *storage.Configuration, key []byte) []byte 
 }
 
 func TestGetSecretNoEncryption(t *testing.T) {
-	ctx := newCachedCtx(t)
 	config := storage.NewConfiguration()
 	config.Encryption = nil
 
 	wrapped := wrapConfig(t, config, nil)
-	key, err := getSecret(ctx, nil, wrapped)
+	key, err := getSecret(nil, wrapped)
 	require.NoError(t, err)
 	require.Nil(t, key)
 }
 
 func TestGetSecretMalformedConfig(t *testing.T) {
-	ctx := newCachedCtx(t)
-	_, err := getSecret(ctx, nil, []byte("not a wrapped config"))
+	_, err := getSecret(nil, []byte("not a wrapped config"))
 	require.Error(t, err)
 }
 
 func TestGetSecretCorrectAndWrongKey(t *testing.T) {
-	ctx := newCachedCtx(t)
 	config := storage.NewConfiguration()
 
 	passphrase := []byte("correct horse battery staple")
@@ -210,7 +207,7 @@ func TestGetSecretCorrectAndWrongKey(t *testing.T) {
 	wrapped := wrapConfig(t, config, key)
 
 	// Correct key verifies the canary and is returned unchanged.
-	got, err := getSecret(ctx, key, wrapped)
+	got, err := getSecret(key, wrapped)
 	require.NoError(t, err)
 	require.Equal(t, key, got)
 
@@ -218,7 +215,7 @@ func TestGetSecretCorrectAndWrongKey(t *testing.T) {
 	wrongKey := make([]byte, len(key))
 	copy(wrongKey, key)
 	wrongKey[0] ^= 0xff
-	_, err = getSecret(ctx, wrongKey, wrapped)
+	_, err = getSecret(wrongKey, wrapped)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to verify key")
 }

@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net"
 	"os"
 	"path/filepath"
@@ -28,6 +29,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/PlakarKorp/kloset/caching"
 	"github.com/PlakarKorp/kloset/connectors/storage"
 	"github.com/PlakarKorp/kloset/encryption"
 	"github.com/PlakarKorp/kloset/objects"
@@ -332,36 +334,52 @@ func (cmd *Cached) rebuildJob(ctx *appcontext.AppContext, jobChan chan jobReq, r
 		return fmt.Errorf("failed to open storage: %w", err)
 	}
 
-	key, err := getSecret(ctx, secret, serializedConfig)
+	key, err := getSecret(secret, serializedConfig)
 	if err != nil {
 		return fmt.Errorf("failed to setup secret: %w", err)
 	}
 
-	repo, err := repository.NewNoRebuild(ctx.GetInner(), key, store, serializedConfig, false)
+	// lifted from repository. At some point this will get cleaned up
+	stateDBPath := filepath.Join(ctx.CacheDir, caching.CACHE_VERSION, "store", repoID.String(), "state.db")
+
+	p, err := openPinnedRepo(stateDBPath, func() (*repository.Repository, error) {
+		return repository.NewRepository(ctx.GetInner(), key, store, serializedConfig, &repository.RepositoryOpts{RWStateCache: true})
+	})
 	if err != nil {
 		return fmt.Errorf("failed to open repository: %w", err)
 	}
 
-	if repoID != repo.Configuration().RepositoryID {
-		return fmt.Errorf("invalid uuid given %q repository id is %q", repoID.String(), repo.Configuration().RepositoryID.String())
+	if repo, _, err := p.Repository(); err != nil {
+		p.Close()
+		return fmt.Errorf("failed to open repository: %w", err)
+	} else {
+		if repoID != repo.Configuration().RepositoryID {
+			p.Close()
+			return fmt.Errorf("invalid uuid given %q repository id is %q", repoID.String(), repo.Configuration().RepositoryID.String())
+		}
 	}
 
 	go func() {
 		defer store.Close(ctx)
-		defer repo.Close()
-
-		repoID := repo.Configuration().RepositoryID
+		defer p.Close()
 
 	jobLoop:
 		for {
 			select {
 			case job := <-jobChan:
 				cmd.runningJobs <- newJob
+
 				var err error
-				if job.stateID == objects.NilMac {
-					err = repo.RebuildState()
-				} else {
-					err = repo.IngestStateFile(job.stateID)
+				var repo *repository.Repository
+				var reopened bool
+				if repo, reopened, err = p.Repository(); err == nil {
+					// In case the state was removed under our feet, we can't
+					// just ingest the state file, we have to do a full rebuild
+					if job.stateID == objects.NilMac || reopened {
+						err = repo.RebuildState()
+					} else {
+						err = repo.IngestStateFile(job.stateID)
+					}
 				}
 
 				// Notify that we ended
@@ -388,7 +406,7 @@ func (cmd *Cached) rebuildJob(ctx *appcontext.AppContext, jobChan chan jobReq, r
 
 }
 
-func getSecret(ctx *appcontext.AppContext, secret []byte, storageConfig []byte) ([]byte, error) {
+func getSecret(secret []byte, storageConfig []byte) ([]byte, error) {
 	config, err := storage.NewConfigurationFromWrappedBytes(storageConfig)
 	if err != nil {
 		return nil, err
@@ -412,4 +430,82 @@ func isDisconnectError(err error) bool {
 	}
 	var netErr net.Error
 	return errors.As(err, &netErr) && netErr.Timeout()
+}
+
+// cached can only open repositories through this structure. This allows
+// detecting if the database file changed under our feet (by keeping an fd open
+// on it). To access the repo you _must_ use the method pinnedRepo.Repository().
+type pinnedRepo struct {
+	filePath string
+	f        *os.File
+	_repo    *repository.Repository
+
+	opener func() (*repository.Repository, error)
+}
+
+func openPinnedRepo(path string, opener func() (*repository.Repository, error)) (*pinnedRepo, error) {
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		return nil, err
+	}
+
+	f, err := os.OpenFile(path, os.O_RDONLY|os.O_CREATE, 0600)
+	if err != nil {
+		return nil, err
+	}
+
+	repo, err := opener()
+	if err != nil {
+		f.Close()
+		return nil, err
+	}
+
+	return &pinnedRepo{
+		filePath: path,
+		f:        f,
+		_repo:    repo,
+		opener:   opener,
+	}, nil
+}
+
+func (pr *pinnedRepo) Repository() (*repository.Repository, bool, error) {
+	liveStat, err := os.Stat(pr.filePath)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return nil, false, fmt.Errorf("failed to stat state file: %w", err)
+	}
+
+	ourStat, err := pr.f.Stat()
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to stat pinned state file: %w", err)
+	}
+
+	if os.SameFile(liveStat, ourStat) {
+		return pr._repo, false, nil
+	}
+
+	if err := os.MkdirAll(filepath.Dir(pr.filePath), 0700); err != nil {
+		return nil, false, fmt.Errorf("failed to recreate state directory: %w", err)
+	}
+
+	newF, err := os.OpenFile(pr.filePath, os.O_RDONLY|os.O_CREATE, 0600)
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to pin state file: %w", err)
+	}
+
+	newRepo, err := pr.opener()
+	if err != nil {
+		newF.Close()
+		return nil, false, fmt.Errorf("failed to reopen repository: %w", err)
+	}
+
+	// Close the old descriptors before setting the new ones.
+	pr.Close()
+
+	pr.f = newF
+	pr._repo = newRepo
+
+	return pr._repo, true, nil
+}
+
+func (pr *pinnedRepo) Close() error {
+	return errors.Join(pr._repo.Close(), pr.f.Close())
 }
