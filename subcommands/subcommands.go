@@ -3,6 +3,7 @@ package subcommands
 import (
 	goflag "flag"
 	"fmt"
+	"io"
 	"slices"
 	"strings"
 
@@ -24,6 +25,8 @@ const (
 	// a line per path.
 	Quiet
 )
+
+var helpOpts = []string{"-h", "-help", "--help"}
 
 // Subcommand is the contract every plakar command implements.  Parse must not
 // stash anything that only makes sense in this process -- a *cobra.Command, a
@@ -60,7 +63,6 @@ func (cmd *SubcommandBase) GetRepositorySecret() []byte {
 // expects, which it would otherwise read as bundles of shorthands.  Length is
 // not the criterion: -o, -k and -u are declared with StringVar and friends, so
 // they are one-letter long options rather than shorthands.
-//
 func SingleDash(flags *pflag.FlagSet, args []string) ([]string, error) {
 	out := make([]string, 0, len(args))
 
@@ -102,6 +104,46 @@ func SingleDash(flags *pflag.FlagSet, args []string) ([]string, error) {
 	return out, nil
 }
 
+func HasHelpOpt(flags *pflag.FlagSet, args []string) bool {
+	var afterOperand bool
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+
+		if arg == "--" {
+			return false
+		}
+
+		if slices.Contains(helpOpts, arg) {
+			return true
+		}
+
+		if afterOperand {
+			continue
+		}
+
+		if arg == "-" || !strings.HasPrefix(arg, "-") {
+			afterOperand = true
+			continue
+		}
+
+		name, _, found := strings.Cut(strings.TrimLeft(arg, "-"), "=")
+		f := flags.Lookup(name)
+		if f == nil && len(name) == 1 {
+			f = flags.ShorthandLookup(name)
+		}
+		if f == nil {
+			afterOperand = true
+			continue
+		}
+
+		// if the flag is not a bool, and we did not find an = pattern, value comes after and we ignore it
+		if f.Value.Type() != "bool" && !found {
+			i++
+		}
+	}
+	return false
+}
+
 // InstallGoFlags adopts the options kloset's LocateOptions installs into a
 // flag.FlagSet.
 func InstallGoFlags(flags *pflag.FlagSet, install func(*goflag.FlagSet)) {
@@ -138,6 +180,10 @@ func ParseCobra(cmd Subcommand, args []string) ([]string, error) {
 
 	flags := c.Flags()
 	flags.SetInterspersed(false)
+
+	if HasHelpOpt(flags, args) {
+		return nil, pflag.ErrHelp
+	}
 
 	rewritten, err := SingleDash(flags, args)
 	if err != nil {
@@ -311,4 +357,19 @@ func List() [][]string {
 		list = append(list, command.args)
 	}
 	return list
+}
+
+// SubcommandUsage writes the usage of the command root's tree holds at path:
+// its Use line and its own options, without root's global ones.
+func SubcommandUsage(out io.Writer, root *cobra.Command, path []string) error {
+	c, _, err := root.Find(path)
+	if err != nil {
+		return fmt.Errorf("looking up %q: %w", strings.Join(path, " "), err)
+	}
+	c.DisableFlagsInUseLine = true // no " [flags]" after "[OPTIONS]"
+	fmt.Fprintf(out, "Usage: %s\n", c.UseLine())
+	if flags := c.LocalFlags(); flags.HasAvailableFlags() {
+		fmt.Fprintf(out, "\nOPTIONS:\n%s", flags.FlagUsages())
+	}
+	return nil
 }
