@@ -34,3 +34,18 @@ export const Default: Story = {
     </Typography>
   ),
 };
+
+export const Ranges: Story = {
+  args: {
+    text: "Secret providers",
+    ranges: [
+      [0, 1],
+      [7, 8],
+    ],
+  },
+  render: (args) => (
+    <Typography className="text-primary">
+      <TextHighlight {...args} />
+    </Typography>
+  ),
+};

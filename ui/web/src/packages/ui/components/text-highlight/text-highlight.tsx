@@ -1,27 +1,36 @@
+import { ReactNode } from "react";
+
+export type TextRange = readonly [start: number, end: number];
+
 type TextHighlightProps = {
   text: string;
   search?: string;
+  ranges?: readonly TextRange[];
 };
 
-export function TextHighlight({ text, search }: TextHighlightProps) {
-  if (!search || !text) {
-    return <>{text}</>;
-  }
-  const lowerText = text.toLowerCase();
-  const lowerSearch = search.toLowerCase();
-  const startIndex = lowerText.indexOf(lowerSearch);
+export function TextHighlight({ text, search, ranges }: TextHighlightProps) {
+  const spans = ranges ?? searchRanges(text, search);
 
-  if (startIndex === -1) {
+  if (!text || spans.length === 0) {
     return <>{text}</>;
   }
 
-  const endIndex = startIndex + search.length;
+  const parts: ReactNode[] = [];
+  let cursor = 0;
 
-  return (
-    <>
-      {text.substring(0, startIndex)}
-      <mark>{text.substring(startIndex, endIndex)}</mark>
-      {text.substring(endIndex)}
-    </>
-  );
+  for (const [start, end] of [...spans].sort((a, b) => a[0] - b[0])) {
+    if (start < cursor || end <= start) continue;
+    parts.push(text.substring(cursor, start));
+    parts.push(<mark key={start}>{text.substring(start, end)}</mark>);
+    cursor = end;
+  }
+  parts.push(text.substring(cursor));
+
+  return <>{parts}</>;
+}
+
+function searchRanges(text: string, search?: string): TextRange[] {
+  if (!search || !text) return [];
+  const start = text.toLowerCase().indexOf(search.toLowerCase());
+  return start === -1 ? [] : [[start, start + search.length]];
 }

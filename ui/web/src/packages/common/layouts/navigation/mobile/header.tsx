@@ -1,5 +1,5 @@
 import { Button, Logo } from "@plakar-ui/ui/components";
-import { useState } from "react";
+import { cloneElement, useState } from "react";
 import { Dialog, Link, Modal, ModalOverlay } from "react-aria-components";
 
 import { Content, ContentProps } from "../content";
@@ -16,6 +16,7 @@ type HeaderProps = Pick<
   | "isDemo"
   | "controls"
   | "scope"
+  | "search"
   | "footer"
   | "logo"
   | "isOffline"
@@ -25,7 +26,7 @@ type HeaderProps = Pick<
 export function Header(contentProps: HeaderProps) {
   const [open, setOpen] = useState(false);
 
-  const { navItems, subNavItems, user, isDemo } = contentProps;
+  const { navItems, subNavItems, user, isDemo, search } = contentProps;
   const currentRoute = navItems
     .flatMap((item) => item.subItems || item)
     .find((item) => item.isSelected);
@@ -48,7 +49,8 @@ export function Header(contentProps: HeaderProps) {
             {currentRoute?.label}
           </Button>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          {search && cloneElement(search, { isCompact: true })}
           <UserMenu subNavItems={subNavItems} user={user} isDemo={isDemo}>
             <UserAvatarImage user={user} />
           </UserMenu>
@@ -67,6 +69,7 @@ export function Header(contentProps: HeaderProps) {
           >
             <Content
               {...contentProps}
+              search={undefined}
               isExpanded
               isFloating={false}
               canExpand={false}

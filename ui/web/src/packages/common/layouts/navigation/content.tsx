@@ -35,6 +35,7 @@ export type ContentProps = {
   user: User;
   controls?: React.ReactNode;
   scope?: React.ReactElement<NavigationScopeProps>;
+  search?: React.ReactElement<NavigationSearchProps>;
   footer?: React.ReactElement<{ forceClose?: boolean }>;
   /** Logo of the product, defaults to the Plakar logo. */
   logo?: ComponentType<{ variant: LogoVariant; className?: string }>;
@@ -43,6 +44,10 @@ export type ContentProps = {
   onCloseMenu?: () => void;
   handleToggle?: () => void;
   onPopoverOpenChange?: (isOpen: boolean) => void;
+};
+
+export type NavigationSearchProps = {
+  isCompact?: boolean;
 };
 
 export type NavigationScopeProps = {
@@ -62,6 +67,7 @@ export function Content({
   user,
   controls,
   scope,
+  search,
   footer,
   logo: ProductLogo = Logo,
   isOffline = false,
@@ -117,6 +123,12 @@ export function Content({
           </div>
         )}
       </div>
+
+      {search && (
+        <div className="-mt-2 shrink-0">
+          {cloneElement(search, { isCompact: !isExpanded })}
+        </div>
+      )}
 
       {/* Only the entries scroll: the logo and the account stay in reach. */}
       <div

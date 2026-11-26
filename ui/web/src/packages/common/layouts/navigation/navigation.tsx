@@ -16,6 +16,7 @@ export type NavigationProps = Pick<
   | "isDemo"
   | "controls"
   | "scope"
+  | "search"
   | "footer"
   | "logo"
   | "isOffline"
@@ -85,4 +86,4 @@ export function Navigation(contentProps: NavigationProps) {
     </>
   );
 }
-export type { NavigationScopeProps } from "./content";
+export type { NavigationScopeProps, NavigationSearchProps } from "./content";
