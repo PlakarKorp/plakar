@@ -12,6 +12,7 @@ export type NavigationProps = Pick<
   | "subNavItems"
   | "user"
   | "version"
+  | "onVersionPress"
   | "plan"
   | "isDemo"
   | "controls"

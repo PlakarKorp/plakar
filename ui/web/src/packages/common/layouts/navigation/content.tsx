@@ -28,6 +28,8 @@ export type ContentProps = {
   subNavItems: NavListItemProps[];
   isExpanded: boolean;
   version: EnrichedVersion;
+  /** Called when the version label is pressed, e.g. to show the release notes. */
+  onVersionPress?: () => void;
   plan?: string;
   isFloating: boolean;
   canExpand: boolean;
@@ -55,6 +57,7 @@ export function Content({
   subNavItems,
   isExpanded,
   version,
+  onVersionPress,
   plan,
   isFloating,
   canExpand,
@@ -113,7 +116,7 @@ export function Content({
                 <span className="capitalize">{plan}</span> plan
               </Tag>
             )}
-            <VersionLabel version={version} channel />
+            <VersionLabel version={version} channel onPress={onVersionPress} />
           </div>
         )}
       </div>

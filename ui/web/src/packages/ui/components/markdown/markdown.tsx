@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { dracula as dark } from "react-syntax-highlighter/dist/esm/styles/prism";
@@ -14,14 +15,26 @@ type MarkdownProps = {
   // function can be used to resolve the relative path to an absolute URL
   // pointing to the API serving the .ptar content.
   urlImageTransform?: (url: string) => string;
+
+  // sm renders smaller headings and text, for content shown inside a modal
+  // or a card.
+  size?: "md" | "sm";
 };
 
 export function Markdown({
   content,
   urlImageTransform = (url) => url,
+  size = "md",
 }: MarkdownProps) {
+  const compact = size === "sm";
+
   return (
-    <div className="text-primary flex flex-col gap-4">
+    <div
+      className={clsx(
+        "text-primary flex flex-col",
+        compact ? "gap-3" : "gap-4"
+      )}
+    >
       <ReactMarkdown
         skipHtml={false}
         remarkPlugins={[remarkGfm]}
@@ -37,6 +50,7 @@ export function Markdown({
               <Typography
                 as="h1"
                 variant="heading"
+                size={compact ? "sm" : "md"}
                 weight="medium"
                 children={children}
               />
@@ -47,6 +61,7 @@ export function Markdown({
               <Typography
                 as="h2"
                 variant="heading"
+                size={compact ? "xs" : "md"}
                 weight="medium"
                 children={children}
               />
@@ -56,7 +71,8 @@ export function Markdown({
             return (
               <Typography
                 as="h3"
-                variant="heading"
+                variant={compact ? "body" : "heading"}
+                size={compact ? "sm" : "md"}
                 weight="medium"
                 children={children}
               />
@@ -66,17 +82,32 @@ export function Markdown({
             return (
               <Typography
                 as="h4"
-                variant="heading"
+                variant={compact ? "body" : "heading"}
+                size={compact ? "sm" : "md"}
                 weight="medium"
                 children={children}
               />
             );
           },
           h5({ children }) {
-            return <Typography as="h5" variant="heading" children={children} />;
+            return (
+              <Typography
+                as="h5"
+                variant={compact ? "body" : "heading"}
+                size={compact ? "sm" : "md"}
+                children={children}
+              />
+            );
           },
           h6({ children }) {
-            return <Typography as="h6" variant="heading" children={children} />;
+            return (
+              <Typography
+                as="h6"
+                variant={compact ? "body" : "heading"}
+                size={compact ? "sm" : "md"}
+                children={children}
+              />
+            );
           },
           a({ href, children }) {
             return (
@@ -104,7 +135,15 @@ export function Markdown({
                 style={dark}
               />
             ) : (
-              <Typography as="code" monospace className="text-primary">
+              <Typography
+                as="code"
+                monospace
+                size={compact ? "xs" : "md"}
+                className={clsx(
+                  "text-primary",
+                  compact && "bg-tertiary rounded px-1 py-0.5"
+                )}
+              >
                 {children}
               </Typography>
             );
@@ -112,26 +151,42 @@ export function Markdown({
           ul({ children }) {
             return (
               <ul
-                className="text-secondary list-inside list-disc"
+                className={clsx(
+                  "text-secondary list-disc",
+                  compact ? "list-outside space-y-1 pl-5" : "list-inside"
+                )}
                 children={children}
               />
             );
           },
           ol({ children }) {
             return (
-              <ol className="list-inside list-decimal" children={children} />
+              <ol
+                className={clsx(
+                  "list-decimal",
+                  compact ? "list-outside space-y-1 pl-5" : "list-inside"
+                )}
+                children={children}
+              />
             );
           },
           li({ children }) {
-            return <Typography as="li" children={children} />;
+            return (
+              <Typography
+                as="li"
+                size={compact ? "sm" : "md"}
+                children={children}
+              />
+            );
           },
           p({ children }) {
             return (
               <Typography
                 as="p"
                 variant="body"
+                size={compact ? "sm" : "md"}
                 children={children}
-                className="text-secondary inline"
+                className={clsx("text-secondary", !compact && "inline")}
               />
             );
           },

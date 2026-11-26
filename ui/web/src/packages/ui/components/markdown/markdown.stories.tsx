@@ -19,3 +19,10 @@ export const Default: Story = {
     content: MARKDOWN_CONTENT,
   },
 };
+
+export const Small: Story = {
+  args: {
+    content: MARKDOWN_CONTENT,
+    size: "sm",
+  },
+};
