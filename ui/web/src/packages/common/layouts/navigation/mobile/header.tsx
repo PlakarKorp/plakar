@@ -12,6 +12,7 @@ type HeaderProps = Pick<
   | "subNavItems"
   | "user"
   | "version"
+  | "onVersionPress"
   | "plan"
   | "isDemo"
   | "controls"
