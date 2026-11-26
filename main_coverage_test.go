@@ -132,9 +132,28 @@ func TestEntryPoint_BadCPUValue(t *testing.T) {
 }
 
 func TestEntryPoint_BadConcurrencyValue(t *testing.T) {
-	status, _, stderr := runEntryPoint(t, "-concurrency", "0", "version")
-	require.Equal(t, 1, status)
-	require.Contains(t, stderr, "invalid -concurrency value")
+	// 0 is the only non-positive value accepted: it means "use the CPU
+	// count". Every negative value must be refused before it reaches kloset.
+	for _, v := range []string{"-1", "-2", "-5", "-1000"} {
+		t.Run(v, func(t *testing.T) {
+			status, _, stderr := runEntryPoint(t, "-concurrency", v, "version")
+			require.Equal(t, 1, status)
+			require.Contains(t, stderr, "invalid -concurrency value "+v)
+		})
+	}
+}
+
+func TestEntryPoint_ConcurrencyDefaultsToCPUCount(t *testing.T) {
+	for name, args := range map[string][]string{
+		"flag omitted": {"version"},
+		"explicit 0":   {"-concurrency", "0", "version"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			status, _, stderr := runEntryPoint(t, args...)
+			require.Equal(t, 0, status)
+			require.NotContains(t, stderr, "invalid -concurrency value")
+		})
+	}
 }
 
 func TestEntryPoint_UnknownCommand(t *testing.T) {

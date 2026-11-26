@@ -336,11 +336,11 @@ func entryPoint() int {
 	runtime.GOMAXPROCS(opt_cpuCount)
 
 	if opt_maxConcurrency == 0 {
+		opt_maxConcurrency = opt_cpuCount
+	}
+	if opt_maxConcurrency <= 0 {
 		fmt.Fprintf(os.Stderr, "%s: invalid -concurrency value %d\n", progName(), opt_maxConcurrency)
 		return 1
-	}
-	if opt_maxConcurrency == -1 {
-		opt_maxConcurrency = opt_cpuCount
 	}
 
 	if opt_cpuProfile != "" {
