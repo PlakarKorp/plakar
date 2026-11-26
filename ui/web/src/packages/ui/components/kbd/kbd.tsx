@@ -1,19 +1,14 @@
 import clsx from "clsx";
-import { PropsWithChildren } from "react";
+import { ComponentProps } from "react";
 
-type KbdProps = PropsWithChildren<{
-  className?: string;
-}>;
-
-export function Kbd({ children, className }: KbdProps) {
+export function Kbd({ className, ...props }: ComponentProps<"kbd">) {
   return (
     <kbd
+      {...props}
       className={clsx(
-        "border-primary bg-secondary text-tertiary inline-flex h-5 min-w-5 items-center justify-center rounded border border-b-2 px-1 font-sans text-xs leading-none font-medium",
+        "bg-tertiary border-secondary text-tertiary inline-flex h-5 min-w-5 items-center justify-center rounded-md border border-b-2 px-1.5 font-sans text-xs leading-none font-semibold",
         className
       )}
-    >
-      {children}
-    </kbd>
+    />
   );
 }

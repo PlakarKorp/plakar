@@ -1,6 +1,7 @@
 import {
   FieldButton,
   Icon,
+  Kbd,
   Link,
   SegmentedControl,
   SegmentedControlProps,
@@ -93,12 +94,9 @@ function FilterPanelSearch({
       {search.value ? (
         <FieldButton slot="close" icon="close" aria-label="Clear search" />
       ) : (
-        <kbd
-          aria-hidden="true"
-          className="bg-tertiary border-secondary text-tertiary hidden shrink-0 rounded-md border border-b-2 px-1.5 py-0.5 font-sans text-xs font-semibold sm:block"
-        >
+        <Kbd aria-hidden="true" className="hidden shrink-0 sm:inline-flex">
           {SEARCH_SHORTCUT}
-        </kbd>
+        </Kbd>
       )}
     </SearchField>
   );
