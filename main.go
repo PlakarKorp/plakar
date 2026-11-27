@@ -238,7 +238,7 @@ func entryPoint() int {
 	}
 
 	// The command is resolved before the renderer, which it gets a say in.
-	cmd, _, args := subcommands.Resolve(root, cmdArgs)
+	cmd, cmdPath, args := subcommands.Resolve(root, cmdArgs)
 	if cmd == nil {
 		fmt.Fprintf(os.Stderr, "%s: command not found: %s\n", progName(), cmdArgs[0])
 		return 1
@@ -481,6 +481,13 @@ func entryPoint() int {
 
 	t0 := time.Now()
 	if err := cmd.Parse(ctx, args); err != nil {
+		if errors.Is(err, pflag.ErrHelp) {
+			if err := subcommands.SubcommandUsage(os.Stdout, root, cmdPath); err != nil {
+				logger.Stderr("%s: %s\n", progName(), err)
+				return 1
+			}
+			return 0
+		}
 		logger.Stderr("%s: %s\n", progName(), err)
 		var usage subcommands.ErrUsage
 		if errors.As(err, &usage) {

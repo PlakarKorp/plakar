@@ -15,7 +15,7 @@
     "@plakar-ui/ui": "workspace:*",
     "@storybook/addon-docs": "^10.6.3",
     "@storybook/react-vite": "^10.6.4",
-    "@tailwindcss/vite": "^4.3.3",
+    "@tailwindcss/vite": "^4.3.5",
     "@tanstack/react-router": "^1.170.38",
     "@types/react": "^19.3.0",
     "@vitejs/plugin-react": "^6.3.0",
