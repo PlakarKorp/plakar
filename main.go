@@ -251,7 +251,7 @@ func entryPoint() int {
 	ctx.ProgressSummary = !plainOutput
 
 	var renderer ui.UI
-	if plainOutput {
+	if plainOutput && !opt_json {
 		renderer = stdio.New(ctx)
 	} else if opt_json {
 		renderer = jsonui.New(ctx)
