@@ -29,6 +29,7 @@ import (
 	"github.com/PlakarKorp/kloset/resources"
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/cached"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
@@ -351,16 +352,10 @@ func (cmd *Maintenance) Execute(ctx *appcontext.AppContext, repo *repository.Rep
 	}
 	defer cmd.Unlock(done)
 
-	// as this point we're locked and no new states can appear
-	// so check if we're still in sync with store, otherwise we fail this run
-	missing, err := repo.MissingStates()
-	if err != nil {
+	if _, err := cached.RebuildStateFromStore(ctx, repo.Configuration().RepositoryID, ctx.StoreConfig, false); err != nil {
+		fmt.Fprintf(ctx.Stderr, "maintenance: Failed to rebuild state from store %s\n", err)
 		return 1, err
 	}
-	if len(missing) > 0 {
-		return 1, fmt.Errorf("local state is missing %d state file(s) present in the store, refusing to colour packfiles", len(missing))
-	}
-
 
 	cache, err := repo.AppContext().GetCache().Maintenance(repo.Configuration().RepositoryID)
 	if err != nil {
