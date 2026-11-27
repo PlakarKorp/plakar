@@ -168,14 +168,16 @@ function Content({ icon, label, altText, iconNotification }: ContentProps) {
   return (
     <div className="flex flex-1 items-center justify-between gap-3">
       <div className="flex items-center gap-3">
-        <span className="relative flex items-center justify-center">
-          {icon && <Icon type={icon} size="md" />}
-          {iconNotification && (
-            <div className="absolute -top-1.5 -right-2.5 flex">
-              {iconNotification}
-            </div>
-          )}
-        </span>
+        {(icon || iconNotification) && (
+          <span className="relative flex items-center justify-center">
+            {icon && <Icon type={icon} size="md" />}
+            {iconNotification && (
+              <div className="absolute -top-1.5 -right-2.5 flex">
+                {iconNotification}
+              </div>
+            )}
+          </span>
+        )}
         <Typography as="span" size="sm" weight="medium" className="truncate">
           {label}
         </Typography>

@@ -20,6 +20,8 @@ export type MainProps = PropsWithChildren<{
   isLoading?: boolean;
   breadcrumb?: ReactNode;
   controls?: ReactNode;
+  /** Shown beside the heading of the sticky bar, from the small breakpoint up. */
+  stickyFilters?: ReactNode;
   className?: string;
   tabItems?: TabItem[];
   selectedTab?: string | null;
@@ -38,6 +40,7 @@ export function Main({
   isLoading = false,
   breadcrumb,
   controls,
+  stickyFilters,
   children,
   className,
   tabItems,
@@ -122,15 +125,21 @@ export function Main({
       {controls && isScrolledTo && (
         <StickyControls>
           <div className="flex w-full items-center justify-between gap-2">
-            <Typography
-              as="span"
-              variant="heading"
-              size="md"
-              weight="semibold"
-              className="text-primary hidden sm:block"
-            >
-              {stickyHeading}
-            </Typography>
+            <div className="hidden min-w-0 items-center gap-4 sm:flex">
+              <Typography
+                as="span"
+                variant="heading"
+                size="md"
+                weight="semibold"
+                className="text-primary truncate"
+              >
+                {stickyHeading}
+              </Typography>
+
+              {stickyFilters && (
+                <div className="flex items-center gap-2">{stickyFilters}</div>
+              )}
+            </div>
 
             <div className="w-full sm:w-auto">{controls}</div>
           </div>

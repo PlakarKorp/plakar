@@ -7,15 +7,16 @@ import { Drawer } from "./drawer";
 type TempalteProps = {
   children?: React.ReactNode;
   title: string;
+  footer?: React.ReactNode;
 };
 
-const Template = ({ children, title }: TempalteProps) => {
+const Template = ({ children, title, footer }: TempalteProps) => {
   const [open, setOpen] = useState(false);
 
   return (
     <>
       <Button onPress={() => setOpen(true)}>Open modal</Button>
-      <Drawer open={open} setOpen={setOpen} title={title}>
+      <Drawer open={open} setOpen={setOpen} title={title} footer={footer}>
         {children}
       </Drawer>
     </>
@@ -36,5 +37,26 @@ export const Default: Story = {
   args: {
     title: "Drawer Title",
     children: "This is the content of the drawer.",
+  },
+};
+
+export const WithFooter: Story = {
+  args: {
+    title: "Drawer Title",
+    children: (
+      <div className="flex flex-col gap-4">
+        {Array.from({ length: 30 }, (_, index) => (
+          <p key={index}>
+            Line {index + 1} of a content long enough to scroll.
+          </p>
+        ))}
+      </div>
+    ),
+    footer: (
+      <>
+        <Button variant="secondary">Cancel</Button>
+        <Button variant="primary">Apply</Button>
+      </>
+    ),
   },
 };

@@ -209,7 +209,7 @@ function SelectRoot({
                   className="flex min-w-0 flex-1 items-center gap-3"
                 >
                   {SelectValuePrefix}
-                  <SelectValue className="grid w-full grid-cols-1 text-left">
+                  <SelectValue className="grid w-full grid-cols-1 text-left [&_span]:truncate">
                     {({ defaultChildren, selectedText }) =>
                       selectedText
                         ? defaultChildren

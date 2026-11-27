@@ -7,6 +7,7 @@ import {
   Spinner,
   Typography,
 } from "@plakar-ui/ui/components";
+import clsx from "clsx";
 import { ReactNode, useEffect, useRef } from "react";
 import { Input, SearchField } from "react-aria-components";
 
@@ -104,9 +105,23 @@ function FilterPanelSearch({
   );
 }
 
-function FilterPanelGroups({ children }: { children: ReactNode }) {
+function FilterPanelGroups({
+  children,
+  isGrid = false,
+}: {
+  children: ReactNode;
+  /** Lays the groups out in equal columns rather than one after another. */
+  isGrid?: boolean;
+}) {
   return (
-    <div className="border-secondary flex flex-wrap items-end gap-x-5 gap-y-3 border-b px-4 py-3.5 last:rounded-b-xl last:border-b-0">
+    <div
+      className={clsx(
+        "border-secondary gap-x-5 gap-y-3 border-b px-4 py-3.5 last:rounded-b-xl last:border-b-0",
+        isGrid
+          ? "grid md:grid-cols-2 lg:grid-cols-4"
+          : "flex flex-wrap items-end"
+      )}
+    >
       {children}
     </div>
   );
@@ -115,12 +130,16 @@ function FilterPanelGroups({ children }: { children: ReactNode }) {
 function FilterPanelGroup({
   label,
   children,
+  className,
 }: {
   label: string;
   children: ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1.5 max-md:w-full">
+    <div
+      className={clsx("flex min-w-0 flex-col gap-1.5 max-md:w-full", className)}
+    >
       <Typography
         as="span"
         size="xs"
@@ -139,6 +158,11 @@ type FilterPanelFooterProps = {
   total: number | undefined;
   noun: string;
   onClear?: () => void;
+  /** Choices shown next to the sort, each with its label. */
+  toggles?: ({ label: string } & Pick<
+    SegmentedControlProps,
+    "items" | "selectedId" | "onSelect"
+  >)[];
   sort?: Pick<SegmentedControlProps, "items" | "selectedId" | "onSelect">;
 };
 
@@ -147,6 +171,7 @@ function FilterPanelFooter({
   total,
   noun,
   onClear,
+  toggles = [],
   sort,
 }: FilterPanelFooterProps) {
   return (
@@ -168,12 +193,18 @@ function FilterPanelFooter({
           </Link>
         )}
       </span>
-      {sort && (
-        <span className="flex items-center gap-2">
-          <Typography as="span" size="xs" className="text-tertiary">
-            Sort by
-          </Typography>
-          <SegmentedControl {...sort} ariaLabel="Sort by" />
+      {(toggles.length > 0 || sort) && (
+        <span className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          {[...toggles, ...(sort ? [{ label: "Sort by", ...sort }] : [])].map(
+            ({ label, ...toggle }) => (
+              <span key={label} className="flex items-center gap-2">
+                <Typography as="span" size="xs" className="text-tertiary">
+                  {label}
+                </Typography>
+                <SegmentedControl {...toggle} ariaLabel={label} />
+              </span>
+            )
+          )}
         </span>
       )}
     </div>

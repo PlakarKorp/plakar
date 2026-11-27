@@ -1,6 +1,7 @@
 import { Meta, StoryObj } from "@storybook/react-vite";
 
 import { StatCard } from "./stat-card";
+import { StatCounters } from "./stat-counters";
 import { Typography } from "../typography/typography";
 
 const meta = {
@@ -36,6 +37,23 @@ export const Grid: Story = {
       <StatCard title="Logical size" value="90.8 GB" label="of data" />
       <StatCard title="Storage size" value="6.51 GB" label="on disk" />
       <StatCard title="Efficiency" value="93%" label="space saved" />
+    </div>
+  ),
+};
+
+export const Counters: Story = {
+  render: () => (
+    <div className="w-96">
+      <StatCounters
+        items={[
+          { label: "Checked", value: "4 of 5" },
+          {
+            label: "Passing",
+            value: <span className="text-success">100%</span>,
+          },
+          { label: "Failing", value: <span className="text-tertiary">0</span> },
+        ]}
+      />
     </div>
   ),
 };

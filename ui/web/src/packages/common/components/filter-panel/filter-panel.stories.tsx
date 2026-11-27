@@ -149,3 +149,63 @@ export const SearchOnly: Story = {
     searchOnly: true,
   },
 };
+
+const OWNERS = [
+  { id: "plakar", name: "Plakar" },
+  { id: "alice", name: "Alice Martin" },
+];
+
+export const GridWithToggles: Story = {
+  render: function Render() {
+    const [protection, setProtection] = useState("all");
+    const [sort, setSort] = useState("class");
+    const select = (label: string, items: { id: string; name: string }[]) => (
+      <FilterPanel.Group label={label}>
+        <Select
+          aria-label={label}
+          placeholder="Any"
+          isClearable
+          popoverWidth="content"
+          className="w-full"
+        >
+          <Select.ListBox>
+            {items.map(({ id, name }) => (
+              <Select.Item key={id} id={id} name={name} />
+            ))}
+          </Select.ListBox>
+        </Select>
+      </FilterPanel.Group>
+    );
+
+    return (
+      <FilterPanel>
+        <FilterPanel.Search
+          value=""
+          onSearch={() => {}}
+          placeholder="Search…"
+          aria-label="Search"
+        />
+        <FilterPanel.Groups isGrid>
+          {select("Created by", OWNERS)}
+          {select("Resource class", CLASSES)}
+          {select("Owner", OWNERS)}
+          {select("Class", CLASSES)}
+        </FilterPanel.Groups>
+        <FilterPanel.Footer
+          shown={115}
+          total={115}
+          noun="resources"
+          toggles={[
+            {
+              label: "Protection",
+              items: PROTECTION,
+              selectedId: protection,
+              onSelect: setProtection,
+            },
+          ]}
+          sort={{ items: SORTS, selectedId: sort, onSelect: setSort }}
+        />
+      </FilterPanel>
+    );
+  },
+};
