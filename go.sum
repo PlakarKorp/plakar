@@ -27,8 +27,6 @@ github.com/PlakarKorp/integrations/stdio v1.1.2-0.20261117095308-96c982ea98c9 h1
 github.com/PlakarKorp/integrations/stdio v1.1.2-0.20261117095308-96c982ea98c9/go.mod h1:slR8BwjoybQEsKZ9GOqHDv0Ss5gl8QqmVI9I2i+9fE8=
 github.com/PlakarKorp/integrations/tar v1.1.3-0.20261117095952-4e5fc9f674fd h1:6LJus7MnuYJ+jy9c1lbOYHFoE4CDYcc51CWN3skptoY=
 github.com/PlakarKorp/integrations/tar v1.1.3-0.20261117095952-4e5fc9f674fd/go.mod h1:45i9WGeeoMopKZUwy0BENSG5yNaMRCvbGPbjmpw24MQ=
-github.com/PlakarKorp/kloset v1.2.0-beta.1 h1:bjoNa/y24fgPCIlv/rt8J5DYAMGPLq9NMvXJkJExfwQ=
-github.com/PlakarKorp/kloset v1.2.0-beta.1/go.mod h1:UugIm0GQM/5pny2ckxoGXvFuWkWeUfqGd13tmEodHhM=
 github.com/PlakarKorp/kloset v1.2.0-beta.2 h1:IDkn3HsNquMs4prL8MB5ZnWyyKgyjSZFJ7EWNEPRtKM=
 github.com/PlakarKorp/kloset v1.2.0-beta.2/go.mod h1:UugIm0GQM/5pny2ckxoGXvFuWkWeUfqGd13tmEodHhM=
 github.com/PlakarKorp/pkg v1.1.12-0.20261117111854-19a20cca66c7 h1:op5WHWT0T+Gfd4+d5xI7c7Wou0loF8MDoyWQn8O4zZc=
@@ -113,8 +111,8 @@ github.com/charmbracelet/glamour v1.0.0 h1:AWMLOVFHTsysl4WV8T8QgkQ0s/ZNZo7CiE4WK
 github.com/charmbracelet/glamour v1.0.0/go.mod h1:DSdohgOBkMr2ZQNhw4LZxSGpx3SvpeujNoXrQyH2hxo=
 github.com/charmbracelet/lipgloss v1.1.1-0.20250404203927-76690c660834 h1:ZR7e0ro+SZZiIZD7msJyA+NjkCNNavuiPBLgerbOziE=
 github.com/charmbracelet/lipgloss v1.1.1-0.20250404203927-76690c660834/go.mod h1:aKC/t2arECF6rNOnaKaVU6y4t4ZeHQzqfxedE/VkVhA=
-github.com/charmbracelet/x/ansi v0.11.9 h1:kIrqLBxtTVbLyyHO2Evoi93EjQo1mylWmpNEsfPxXAM=
-github.com/charmbracelet/x/ansi v0.11.9/go.mod h1:DG/hpOnaI2QJ/KMMqLL2h0KVhluuJLazf8973P+Vy5w=
+github.com/charmbracelet/x/ansi v0.11.10 h1:GjcX3+rAk+8wDX/jY0XwrZstxkjRcLkYU3TvwzZWiRA=
+github.com/charmbracelet/x/ansi v0.11.10/go.mod h1:DG/hpOnaI2QJ/KMMqLL2h0KVhluuJLazf8973P+Vy5w=
 github.com/charmbracelet/x/cellbuf v0.0.15 h1:ur3pZy0o6z/R7EylET877CBxaiE1Sp1GMxoFPAIztPI=
 github.com/charmbracelet/x/cellbuf v0.0.15/go.mod h1:J1YVbR7MUuEGIFPCaaZ96KDl5NoS0DAWkskup+mOY+Q=
 github.com/charmbracelet/x/exp/golden v0.0.0-20241011142426-46044092ad91 h1:payRxjMjKgx2PaCWLZ4p3ro9y97+TVLZNaRZgJwSVDQ=
