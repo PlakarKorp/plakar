@@ -406,10 +406,10 @@ importers:
         version: 10.6.5(@types/react@19.3.0)(prettier@3.9.8)(react@19.3.1)
       tailwindcss:
         specifier: ^4.3.3
-        version: 4.3.3
+        version: 4.3.5
       tailwindcss-react-aria-components:
         specifier: ^2.2.0
-        version: 2.2.0(tailwindcss@4.3.3)
+        version: 2.2.0(tailwindcss@4.3.5)
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -4559,10 +4559,6 @@ packages:
     peerDependencies:
       solid-js: ^1.6.12
 
-  source-map-js@1.2.2:
-    resolution: {integrity: sha512-KGj/8Y43x35aZVDtt+J4mK1hoLGHULMYfSkODJNQjNDC3oW1PqPoxMwo0pLUsWM/UEGzON/NxeHywEfNXNP3Vw==}
-    engines: {node: '>=0.10.0'}
-
   source-map-js@1.2.4:
     resolution: {integrity: sha512-J7ZjMvHd9O1fcT/5V09QWaaSl2BbWx3F6O08spde82Namf9UB0GxRVIPiNbVsdKkoizHiSpTodo3vp2bAy91MA==}
     engines: {node: '>=6.0.0'}
@@ -4677,9 +4673,6 @@ packages:
     resolution: {integrity: sha512-iNVDSQd6haXWiu4RakjaYnCUnLw/nOEFSFHEelFeIkT/0f8HSrJ23fwt59F93yNw4FrjjHDXIGHgEtqProNcmQ==}
     peerDependencies:
       tailwindcss: ^4.0.0
-
-  tailwindcss@4.3.3:
-    resolution: {integrity: sha512-gOhV3P7ufE62QDGg1zVaTgCR+EtPv92k2nIhVcVKcLmxT1sUBsQGhnZj175j+MqRt4zLF7ic+sCYjfhxMxj7YQ==}
 
   tailwindcss@4.3.5:
     resolution: {integrity: sha512-FcQk9BuffmEHJP2G0XmB2SplU1aLTI7j07Kunk+U74Ny+XiWOtzXz9aujFZ/avntw1e2cOv/3PkgzflQ7gX2vQ==}
@@ -8936,7 +8929,7 @@ snapshots:
     dependencies:
       nanoid: 3.3.20
       picocolors: 1.1.1
-      source-map-js: 1.2.2
+      source-map-js: 1.2.4
 
   powershell-utils@0.1.0: {}
 
@@ -9405,8 +9398,6 @@ snapshots:
       '@solid-primitives/transition-group': 1.1.2(solid-js@1.9.18)
       solid-js: 1.9.18
 
-  source-map-js@1.2.2: {}
-
   source-map-js@1.2.4: {}
 
   source-map@0.6.1: {}
@@ -9534,15 +9525,9 @@ snapshots:
 
   supports-preserve-symlinks-flag@1.0.0: {}
 
-  tailwindcss-react-aria-components@2.2.0(tailwindcss@4.3.3):
-    dependencies:
-      tailwindcss: 4.3.3
-
   tailwindcss-react-aria-components@2.2.0(tailwindcss@4.3.5):
     dependencies:
       tailwindcss: 4.3.5
-
-  tailwindcss@4.3.3: {}
 
   tailwindcss@4.3.5: {}
 
