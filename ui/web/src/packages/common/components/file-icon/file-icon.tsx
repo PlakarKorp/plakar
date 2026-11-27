@@ -14,6 +14,8 @@ export function FileIcon({ contentType, size = "lg" }: FileIconProps) {
     return <Icon type="md-video-file" size={size} />;
   } else if (contentType?.startsWith("audio")) {
     return <Icon type="md-audio-file" size={size} />;
+  } else if (contentType?.split(";")[0].trim() === "message/rfc822") {
+    return <Icon type="envelope" size={size} />;
   } else if (contentType === "application/zip") {
     return <Icon type="md-folder-zip" size={size} />;
   }
