@@ -153,6 +153,36 @@ func TestRmExecuteAmbiguousIDRemovesNothing(t *testing.T) {
 	require.Equal(t, before, countSnapshots(t, repo))
 }
 
+func TestRmApplyMultipleSnapshots(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	repo, ctx := ptesting.GenerateRepository(t, bufOut, bytes.NewBuffer(nil), nil)
+	keep := ptesting.GenerateSnapshot(t, repo, []ptesting.MockFile{
+		ptesting.NewMockFile("keep.txt", 0644, "keep"),
+	})
+	defer keep.Close()
+
+	ids := make([]string, 0, 2)
+	for i := range 2 {
+		snap := ptesting.GenerateSnapshot(t, repo, []ptesting.MockFile{
+			ptesting.NewMockFile(fmt.Sprintf("f%d.txt", i), 0644, fmt.Sprintf("content %d", i)),
+		})
+		id := snap.Header.GetIndexID()
+		snap.Close()
+		ids = append(ids, hex.EncodeToString(id[:]))
+	}
+
+	cmd := &Rm{}
+	require.NoError(t, cmd.Parse(ctx, append([]string{"-apply"}, ids...)))
+	status, err := cmd.Execute(ctx, repo)
+	require.NoError(t, err)
+	require.Equal(t, 0, status)
+
+	require.Equal(t, 1, countSnapshots(t, repo))
+	for _, id := range ids {
+		require.Contains(t, bufOut.String(), fmt.Sprintf("rm: removal of %s completed successfully", id[:8]))
+	}
+}
+
 func TestRmParseEmptyIDRejected(t *testing.T) {
 	_, snap, ctx := generateSnapshot(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil))
 	defer snap.Close()
@@ -163,8 +193,11 @@ func TestRmParseEmptyIDRejected(t *testing.T) {
 	require.Contains(t, err.Error(), "empty snapshot ID")
 }
 
+// countSnapshots counts the snapshots the store knows about. rm does not
+// update the local state (NoStateToLocalDisk), so rebuild it first.
 func countSnapshots(t *testing.T, repo *repository.Repository) int {
 	t.Helper()
+	require.NoError(t, repo.RebuildState())
 	n := 0
 	for _, err := range repo.ListSnapshots() {
 		require.NoError(t, err)

@@ -22,7 +22,6 @@ import (
 	"slices"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/PlakarKorp/kloset/locate"
@@ -163,26 +162,12 @@ func (cmd *Rm) Execute(ctx *appcontext.AppContext, repo *repository.Repository) 
 		return 0, nil
 	}
 
-	// execution
-	errors := 0
-	wg := sync.WaitGroup{}
 	repo.NoStateToLocalDisk = true
-	for _, matchID := range matches {
-		wg.Add(1)
-		go func(snapshotID objects.MAC) {
-			defer wg.Done()
-			if err := repo.DeleteSnapshot(snapshotID); err != nil {
-				ctx.GetLogger().Error("%s", err)
-				errors++
-				return
-			}
-			ctx.GetLogger().Info("rm: removal of %x completed successfully", snapshotID[:4])
-		}(matchID)
+	if err := repo.DeleteSnapshots(matches); err != nil {
+		return 1, fmt.Errorf("failed to remove %d snapshots: %w", len(matches), err)
 	}
-	wg.Wait()
-
-	if errors != 0 {
-		return 1, fmt.Errorf("failed to remove %d snapshots", errors)
+	for _, snapshotID := range matches {
+		ctx.GetLogger().Info("rm: removal of %x completed successfully", snapshotID[:4])
 	}
 
 	return 0, nil
