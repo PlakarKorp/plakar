@@ -1,6 +1,7 @@
 package subcommands
 
 import (
+	"bytes"
 	"strings"
 	"testing"
 
@@ -141,4 +142,54 @@ func TestArgSpec(t *testing.T) {
 	require.Equal(t, "", argSpec("diag locks", 2))
 	require.Equal(t, "", argSpec("version", 1))
 	require.Equal(t, " [OPTIONS] <name>", argSpec("service show [OPTIONS] <name>", 2))
+}
+
+// flaggedCmd declares an option of its own, which usage has to list.
+type flaggedCmd struct {
+	fakeCmd
+}
+
+func (c *flaggedCmd) CobraCommand() *cobra.Command {
+	cc := &cobra.Command{Use: c.use}
+	cc.Flags().Bool("decompress", false, "decompress output")
+	return cc
+}
+
+// A subcommand's usage names its full path and its own options, not root's.
+func TestSubcommandUsage(t *testing.T) {
+	withRegistry(t, []subcmd{
+		{
+			args:    []string{"diag", "blob"},
+			nargs:   2,
+			factory: func() Subcommand { return &flaggedCmd{fakeCmd{use: "diag blob [OPTIONS] MAC"}} },
+		},
+		reg("version", "version"),
+	})
+
+	root := &cobra.Command{Use: "plakar"}
+	root.PersistentFlags().Bool("quiet", false, "no output except errors")
+	Tree(root)
+
+	for _, tc := range []struct {
+		name string
+		path []string
+		want string
+	}{
+		{
+			name: "with options",
+			path: []string{"diag", "blob"},
+			want: "Usage: plakar diag blob [OPTIONS] MAC\n\nOPTIONS:\n      --decompress   decompress output\n",
+		},
+		{
+			name: "without options",
+			path: []string{"version"},
+			want: "Usage: plakar version\n",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			require.NoError(t, SubcommandUsage(&buf, root, tc.path))
+			require.Equal(t, tc.want, buf.String())
+		})
+	}
 }

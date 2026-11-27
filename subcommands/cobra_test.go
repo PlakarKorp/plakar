@@ -126,3 +126,53 @@ func TestSingleDashLeavesTrailingDataAlone(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, []string{"/data", "-nope"}, got)
 }
+
+func TestHasHelpOpt(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		in   []string
+		want bool
+	}{
+		{name: "single dash help", in: []string{"-help"}, want: true},
+		{name: "double dash help", in: []string{"--help"}, want: true},
+		{name: "short help", in: []string{"-h"}, want: true},
+		{name: "help after a bool flag", in: []string{"-quiet", "-h"}, want: true},
+		{name: "help after a flag and its value", in: []string{"-name", "snap", "-help"}, want: true},
+		{name: "help after an equals value", in: []string{"-name=snap", "-h"}, want: true},
+		{name: "help after a one letter long option", in: []string{"-o", "out.txt", "-h"}, want: true},
+		{
+			// People append --help to the command line they just ran.
+			name: "help after the first operand",
+			in:   []string{"-name", "-h", "/data", "--help"},
+			want: true,
+		},
+		{
+			// Past the first operand -name is data, not an option, so it
+			// does not consume the -h after it.
+			name: "help after an operand that looks like a flag",
+			in:   []string{"/data", "-name", "-h"},
+			want: true,
+		},
+		{
+			// The unknown option cannot be told to take a value or not;
+			// parsing will reject it, help is the better answer.
+			name: "help after an unknown option",
+			in:   []string{"-nope", "--help"},
+			want: true,
+		},
+		{name: "help after stdin", in: []string{"-", "-h"}, want: true},
+		{name: "help as the value of a flag", in: []string{"-name", "-h", "/data"}, want: false},
+		{name: "help as the value of a one letter long option", in: []string{"-o", "-help"}, want: false},
+		{name: "help word after dashdash", in: []string{"--", "--help"}, want: false},
+		{name: "help word after an operand and dashdash", in: []string{"/data", "--", "-h"}, want: false},
+		{name: "help word inside an operand", in: []string{"./--help"}, want: false},
+		{name: "help with a value is not a help word", in: []string{"-help=true"}, want: false},
+		{name: "no help", in: []string{"-quiet", "-name", "snap", "/data"}, want: false},
+		{name: "no arguments", in: []string{}, want: false},
+		{name: "nil arguments", in: nil, want: false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.want, HasHelpOpt(testFlags(), tc.in))
+		})
+	}
+}

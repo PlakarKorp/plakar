@@ -94,6 +94,25 @@ Remove the
 for the store entry identified by
 .Ar name .
 .El
+.Ss ENCRYPTION OPTIONS
+A store holding an encrypted repository needs a passphrase to be
+unlocked, and one of the following options provides it without a
+terminal:
+.Bl -tag -width passphrase_cmd
+.It Cm passphrase
+The passphrase itself.
+It is kept in the configuration file, and
+.Cm show
+hides it unless
+.Fl secrets
+is given.
+.It Cm passphrase_cmd
+A command whose single line of standard output is the passphrase, for
+when the secret should stay out of the configuration file.
+.El
+.Pp
+A store carrying neither option is prompted for on the terminal, which
+is why an unattended backup or synchronization needs one of them.
 .Ss HTTP AND HTTPS STORE OPTIONS
 When using an
 .Cm http://
