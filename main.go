@@ -516,7 +516,9 @@ func entryPoint() int {
 	// If we are working on a repo, rebuild the state.
 	if cmd.GetFlags()&subcommands.BeforeRepositoryOpen == 0 && cmd.GetFlags()&subcommands.BeforeRepositoryWithStorage == 0 {
 		status, err = cached.RebuildStateFromStore(ctx, repo.Configuration().RepositoryID, storeConfig, false)
-		if err == nil {
+		if err != nil {
+			err = fmt.Errorf("failed to rebuild state: %w", err)
+		} else {
 			status, err = task.RunCommand(ctx, cmd, repo, "@agentless")
 		}
 	} else {

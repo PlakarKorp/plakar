@@ -414,7 +414,7 @@ func (cmd *Backup) DoBackup(ctx *appcontext.AppContext, repo *repository.Reposit
 	if cmd.OptCheck {
 		_, err := cached.RebuildStateFromStore(ctx, repo.Configuration().RepositoryID, ctx.StoreConfig, false)
 		if err != nil {
-			return 1, fmt.Errorf("failed to rebuild state %w", err), objects.MAC{}, nil
+			return 1, fmt.Errorf("failed to rebuild state: %w", err), objects.MAC{}, nil
 		}
 
 		checkOptions := &snapshot.CheckOptions{
