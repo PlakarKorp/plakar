@@ -43,14 +43,13 @@ Useful when you want to share a common cache between multiple UIs.
 Do not automatically open the web browser.
 .It Fl cert Ar path
 Path to a full certificate file in PEM format.
-If both
-.Fl cert
-and
-.Fl key
-are provided, the server will expect https connections.
-If one or both are missing, the server will fall back to http.
+Must be used together with
+.Fl key ;
+the server then only accepts https connections.
 .It Fl key Ar path
 Path to a certificate private key file in PEM format.
+Must be used together with
+.Fl cert .
 .El
 .Sh ENVIRONMENT
 .Bl -tag -width Ds

@@ -75,6 +75,11 @@ func (cmd *Ui) Parse(ctx *appcontext.AppContext, args []string) error {
 		return fmt.Errorf("-cors cannot be used with -no-auth: any website could read the repository")
 	}
 
+	// One without the other used to fall back to plain http silently.
+	if (cmd.Cert == "") != (cmd.Key == "") {
+		return fmt.Errorf("-cert and -key must be used together")
+	}
+
 	cmd.RepositorySecret = ctx.GetSecret()
 
 	return nil
@@ -98,10 +103,8 @@ func (cmd *Ui) Execute(ctx *appcontext.AppContext, repo *repository.Repository) 
 		}
 	}
 
-	err := web.Ui(repo, ctx, cmd.Addr, &ui_opts)
-	if err != nil {
-		fmt.Fprintf(ctx.Stderr, "ui: %s\n", err)
+	if err := web.Ui(repo, ctx, cmd.Addr, &ui_opts); err != nil {
 		return 1, err
 	}
-	return 0, err
+	return 0, nil
 }
