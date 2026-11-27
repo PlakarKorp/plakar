@@ -98,11 +98,79 @@ func TestRmExecuteNoMatches(t *testing.T) {
 	defer snap.Close()
 
 	cmd := &Rm{}
-	require.NoError(t, cmd.Parse(ctx, []string{"deadbeefdeadbeef"}))
+	require.NoError(t, cmd.Parse(ctx, []string{"-name", "nosuch"}))
 	status, err := cmd.Execute(ctx, repo)
 	require.NoError(t, err)
 	require.Equal(t, 0, status)
 	require.Contains(t, bufOut.String()+bufErr.String(), "no snapshots matched")
+}
+
+func TestRmExecuteUnknownID(t *testing.T) {
+	// A named snapshot that does not exist is an error, not an empty selection.
+	repo, snap, ctx := generateSnapshot(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil))
+	defer snap.Close()
+
+	cmd := &Rm{}
+	require.NoError(t, cmd.Parse(ctx, []string{"-apply", "deadbeefdeadbeef"}))
+	status, err := cmd.Execute(ctx, repo)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "no snapshot has prefix")
+	require.Equal(t, 1, status)
+	require.Equal(t, 1, countSnapshots(t, repo))
+}
+
+func TestRmExecuteAmbiguousIDRemovesNothing(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	repo, ctx := ptesting.GenerateRepository(t, bufOut, bufErr, nil)
+
+	// 17 snapshots guarantee two share their first hex digit; stop at the
+	// first collision.
+	seen := make(map[byte]bool)
+	var prefix string
+	for i := 0; prefix == "" && i < 17; i++ {
+		snap := ptesting.GenerateSnapshot(t, repo, []ptesting.MockFile{
+			ptesting.NewMockFile(fmt.Sprintf("f%d.txt", i), 0644, fmt.Sprintf("content %d", i)),
+		})
+		id := snap.Header.GetIndexID()
+		snap.Close()
+
+		first := hex.EncodeToString(id[:])[0]
+		if seen[first] {
+			prefix = string(first)
+		}
+		seen[first] = true
+	}
+	require.NotEmpty(t, prefix)
+	before := countSnapshots(t, repo)
+
+	cmd := &Rm{}
+	require.NoError(t, cmd.Parse(ctx, []string{"-apply", prefix}))
+	status, err := cmd.Execute(ctx, repo)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "ambiguous")
+	require.Equal(t, 1, status)
+	require.Equal(t, before, countSnapshots(t, repo))
+}
+
+func TestRmParseEmptyIDRejected(t *testing.T) {
+	_, snap, ctx := generateSnapshot(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil))
+	defer snap.Close()
+
+	cmd := &Rm{}
+	err := cmd.Parse(ctx, []string{"-apply", ""})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "empty snapshot ID")
+}
+
+func countSnapshots(t *testing.T, repo *repository.Repository) int {
+	t.Helper()
+	n := 0
+	for _, err := range repo.ListSnapshots() {
+		require.NoError(t, err)
+		n++
+	}
+	return n
 }
 
 func TestRm_DryRun_MultipleSnapshotsSorted(t *testing.T) {
