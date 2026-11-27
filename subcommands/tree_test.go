@@ -178,7 +178,7 @@ func TestSubcommandUsage(t *testing.T) {
 		{
 			name: "with options",
 			path: []string{"diag", "blob"},
-			want: "Usage: plakar diag blob [OPTIONS] MAC\n\nOPTIONS:\n      --decompress   decompress output\n",
+			want: "Usage: plakar diag blob [OPTIONS] MAC\n\nOPTIONS:\n      --decompress[=true|false]   decompress output\n",
 		},
 		{
 			name: "without options",
