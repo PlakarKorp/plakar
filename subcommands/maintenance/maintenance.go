@@ -351,6 +351,17 @@ func (cmd *Maintenance) Execute(ctx *appcontext.AppContext, repo *repository.Rep
 	}
 	defer cmd.Unlock(done)
 
+	// as this point we're locked and no new states can appear
+	// so check if we're still in sync with store, otherwise we fail this run
+	missing, err := repo.MissingStates()
+	if err != nil {
+		return 1, err
+	}
+	if len(missing) > 0 {
+		return 1, fmt.Errorf("local state is missing %d state file(s) present in the store, refusing to colour packfiles", len(missing))
+	}
+
+
 	cache, err := repo.AppContext().GetCache().Maintenance(repo.Configuration().RepositoryID)
 	if err != nil {
 		fmt.Fprintf(ctx.Stderr, "maintenance: Failed to open local cache %s\n", err)
