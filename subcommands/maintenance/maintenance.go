@@ -29,6 +29,7 @@ import (
 	"github.com/PlakarKorp/kloset/resources"
 	"github.com/PlakarKorp/kloset/snapshot"
 	"github.com/PlakarKorp/plakar/appcontext"
+	"github.com/PlakarKorp/plakar/cached"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
@@ -350,6 +351,11 @@ func (cmd *Maintenance) Execute(ctx *appcontext.AppContext, repo *repository.Rep
 		return 1, err
 	}
 	defer cmd.Unlock(done)
+
+	if _, err := cached.RebuildStateFromStore(ctx, repo.Configuration().RepositoryID, ctx.StoreConfig, false); err != nil {
+		fmt.Fprintf(ctx.Stderr, "maintenance: Failed to rebuild state from store %s\n", err)
+		return 1, err
+	}
 
 	cache, err := repo.AppContext().GetCache().Maintenance(repo.Configuration().RepositoryID)
 	if err != nil {
