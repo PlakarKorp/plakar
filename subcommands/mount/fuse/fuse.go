@@ -62,13 +62,26 @@ func ExecuteFUSE(ctx *appcontext.AppContext, repo *repository.Repository, mountp
 	if allowOthers {
 		mountOptions = append(mountOptions, fuse.AllowOther())
 	}
-	mount := func() (*fuse.Conn, error) {
-		return fuse.Mount(mountpoint, mountOptions...)
+
+	type result struct {
+		conn *fuse.Conn
+		err  error
 	}
-	release := func(c *fuse.Conn) {
-		releaseLateMount(c, mountpoint)
+	var r result
+	res := make(chan result)
+	// mounting in a goroutine as it can hang without FUSE kext
+	go func() {
+		c, err := fuse.Mount(mountpoint, mountOptions...)
+		res <- result{c, err}
+	}()
+
+	select {
+	case r = <-res:
+	case <-ctx.Done():
+		return 1, fmt.Errorf("interrupted while waiting for the FUSE driver: %w", context.Cause(ctx))
 	}
-	c, err := mountCancellable(ctx, mount, release)
+	c, err := r.conn, r.err
+
 	if err != nil {
 		return 1, fmt.Errorf("mount: %v", err)
 	}
@@ -94,41 +107,6 @@ func ExecuteFUSE(ctx *appcontext.AppContext, repo *repository.Repository, mountp
 		return 1, err
 	}
 	return 0, nil
-}
-
-func mountCancellable(ctx context.Context, mount func() (*fuse.Conn, error), release func(*fuse.Conn)) (*fuse.Conn, error) {
-	type result struct {
-		conn *fuse.Conn
-		err  error
-	}
-	res := make(chan result)
-
-	go func() {
-		c, err := mount() // this runs in a goroutine as it can hang without kext
-		select {
-		case res <- result{c, err}:
-		case <-ctx.Done():
-			if err == nil {
-				release(c)
-			}
-		}
-	}()
-
-	select {
-	case r := <-res:
-		return r.conn, r.err
-	case <-ctx.Done():
-		return nil, fmt.Errorf("interrupted while waiting for the FUSE driver: %w", context.Cause(ctx))
-	}
-}
-
-func releaseLateMount(c *fuse.Conn, mountpoint string) {
-	if err := fuse.Unmount(mountpoint); err != nil {
-		fmt.Fprintf(os.Stderr, "%s is still mounted; run `umount -f %s` to remove it\n", mountpoint, mountpoint)
-	}
-	if err := c.Close(); err != nil {
-		fmt.Fprintf(os.Stderr, "failed closing FUSE connection for %s: %v\n", mountpoint, err)
-	}
 }
 
 func looksLikeMountpoint(p string) (bool, error) {
