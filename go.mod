@@ -10,7 +10,7 @@ require (
 	github.com/PlakarKorp/integrations/http v1.1.6-0.20261117103450-caa46c96685b
 	github.com/PlakarKorp/integrations/ptar v1.1.3-0.20261117104921-4ab1dbbeb267
 	github.com/PlakarKorp/integrations/stdio v1.1.2-0.20261117095308-96c982ea98c9
-	github.com/PlakarKorp/integrations/tar v1.1.3-0.20261117095952-4e5fc9f674fd
+	github.com/PlakarKorp/integrations/tar v1.1.3
 	github.com/PlakarKorp/kloset v1.2.0-beta.2
 	github.com/PlakarKorp/pkg v1.1.12-0.20261117111854-19a20cca66c7
 	github.com/alecthomas/chroma v0.10.0
