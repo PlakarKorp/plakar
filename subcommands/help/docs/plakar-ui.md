@@ -37,6 +37,8 @@ The options are as follows:
 > Set the
 > 'Access-Control-Allow-Origin'
 > HTTP headers to allow the UI to be accessed from any origin.
+> It cannot be combined with
+> **-no-auth**.
 
 **-no-auth**
 
@@ -55,16 +57,15 @@ The options are as follows:
 **-cert** *path*
 
 > Path to a full certificate file in PEM format.
-> If both
-> **-cert**
-> and
-> **-key**
-> are provided, the server will expect https connections.
-> If one or both are missing, the server will fall back to http.
+> Must be used together with
+> **-key**;
+> the server then only accepts https connections.
 
 **-key** *path*
 
 > Path to a certificate private key file in PEM format.
+> Must be used together with
+> **-cert**.
 
 # ENVIRONMENT
 
@@ -94,4 +95,4 @@ Create a https server with a custom certificate:
 
 plakar(1)
 
-Plakar - May 5, 2026 - PLAKAR-UI(1)
+Plakar - May 5, 2026
