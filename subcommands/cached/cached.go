@@ -36,6 +36,7 @@ import (
 	"github.com/PlakarKorp/kloset/repository"
 	"github.com/PlakarKorp/plakar/appcontext"
 	"github.com/PlakarKorp/plakar/cached"
+	"github.com/PlakarKorp/plakar/exitcodes"
 	"github.com/PlakarKorp/plakar/subcommands"
 	"github.com/PlakarKorp/plakar/utils"
 	"github.com/google/uuid"
@@ -315,7 +316,7 @@ func (cmd *Cached) handleCachedClient(ctx *appcontext.AppContext, conn net.Conn)
 	exitCode := 0
 	if err != nil {
 		errStr = err.Error()
-		exitCode = -1
+		exitCode = exitcodes.Failure
 	}
 
 	response := &cached.ResponsePkt{
