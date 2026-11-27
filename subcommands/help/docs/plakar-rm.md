@@ -26,7 +26,7 @@ or
 must be specified to filter the snapshots to delete.
 
 In addition to the flags described below,
-**plakar ls**
+**plakar rm**
 supports the location flags documented in
 plakar-query(7)
 to precisely select snapshots.
@@ -67,4 +67,4 @@ Remove snapshots older than 1 year with a specific tag:
 plakar(1),
 plakar-backup(1)
 
-Plakar - May 5, 2026 - PLAKAR-RM(1)
+Plakar - May 5, 2026

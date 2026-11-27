@@ -98,11 +98,112 @@ func TestRmExecuteNoMatches(t *testing.T) {
 	defer snap.Close()
 
 	cmd := &Rm{}
-	require.NoError(t, cmd.Parse(ctx, []string{"deadbeefdeadbeef"}))
+	require.NoError(t, cmd.Parse(ctx, []string{"-name", "nosuch"}))
 	status, err := cmd.Execute(ctx, repo)
 	require.NoError(t, err)
 	require.Equal(t, 0, status)
 	require.Contains(t, bufOut.String()+bufErr.String(), "no snapshots matched")
+}
+
+func TestRmExecuteUnknownID(t *testing.T) {
+	// A named snapshot that does not exist is an error, not an empty selection.
+	repo, snap, ctx := generateSnapshot(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil))
+	defer snap.Close()
+
+	cmd := &Rm{}
+	require.NoError(t, cmd.Parse(ctx, []string{"-apply", "deadbeefdeadbeef"}))
+	status, err := cmd.Execute(ctx, repo)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "no snapshot has prefix")
+	require.Equal(t, 1, status)
+	require.Equal(t, 1, countSnapshots(t, repo))
+}
+
+func TestRmExecuteAmbiguousIDRemovesNothing(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	bufErr := bytes.NewBuffer(nil)
+	repo, ctx := ptesting.GenerateRepository(t, bufOut, bufErr, nil)
+
+	// 17 snapshots guarantee two share their first hex digit; stop at the
+	// first collision.
+	seen := make(map[byte]bool)
+	var prefix string
+	for i := 0; prefix == "" && i < 17; i++ {
+		snap := ptesting.GenerateSnapshot(t, repo, []ptesting.MockFile{
+			ptesting.NewMockFile(fmt.Sprintf("f%d.txt", i), 0644, fmt.Sprintf("content %d", i)),
+		})
+		id := snap.Header.GetIndexID()
+		snap.Close()
+
+		first := hex.EncodeToString(id[:])[0]
+		if seen[first] {
+			prefix = string(first)
+		}
+		seen[first] = true
+	}
+	require.NotEmpty(t, prefix)
+	before := countSnapshots(t, repo)
+
+	cmd := &Rm{}
+	require.NoError(t, cmd.Parse(ctx, []string{"-apply", prefix}))
+	status, err := cmd.Execute(ctx, repo)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "ambiguous")
+	require.Equal(t, 1, status)
+	require.Equal(t, before, countSnapshots(t, repo))
+}
+
+func TestRmApplyMultipleSnapshots(t *testing.T) {
+	bufOut := bytes.NewBuffer(nil)
+	repo, ctx := ptesting.GenerateRepository(t, bufOut, bytes.NewBuffer(nil), nil)
+	keep := ptesting.GenerateSnapshot(t, repo, []ptesting.MockFile{
+		ptesting.NewMockFile("keep.txt", 0644, "keep"),
+	})
+	defer keep.Close()
+
+	ids := make([]string, 0, 2)
+	for i := range 2 {
+		snap := ptesting.GenerateSnapshot(t, repo, []ptesting.MockFile{
+			ptesting.NewMockFile(fmt.Sprintf("f%d.txt", i), 0644, fmt.Sprintf("content %d", i)),
+		})
+		id := snap.Header.GetIndexID()
+		snap.Close()
+		ids = append(ids, hex.EncodeToString(id[:]))
+	}
+
+	cmd := &Rm{}
+	require.NoError(t, cmd.Parse(ctx, append([]string{"-apply"}, ids...)))
+	status, err := cmd.Execute(ctx, repo)
+	require.NoError(t, err)
+	require.Equal(t, 0, status)
+
+	require.Equal(t, 1, countSnapshots(t, repo))
+	for _, id := range ids {
+		require.Contains(t, bufOut.String(), fmt.Sprintf("rm: removal of %s completed successfully", id[:8]))
+	}
+}
+
+func TestRmParseEmptyIDRejected(t *testing.T) {
+	_, snap, ctx := generateSnapshot(t, bytes.NewBuffer(nil), bytes.NewBuffer(nil))
+	defer snap.Close()
+
+	cmd := &Rm{}
+	err := cmd.Parse(ctx, []string{"-apply", ""})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "empty snapshot ID")
+}
+
+// countSnapshots counts the snapshots the store knows about. rm does not
+// update the local state (NoStateToLocalDisk), so rebuild it first.
+func countSnapshots(t *testing.T, repo *repository.Repository) int {
+	t.Helper()
+	require.NoError(t, repo.RebuildState())
+	n := 0
+	for _, err := range repo.ListSnapshots() {
+		require.NoError(t, err)
+		n++
+	}
+	return n
 }
 
 func TestRm_DryRun_MultipleSnapshotsSorted(t *testing.T) {

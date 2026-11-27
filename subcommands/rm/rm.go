@@ -19,9 +19,9 @@ package rm
 import (
 	"encoding/hex"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/PlakarKorp/kloset/locate"
@@ -68,6 +68,10 @@ func (cmd *Rm) Parse(ctx *appcontext.AppContext, args []string) error {
 		return fmt.Errorf("no filter specified, not going to remove everything")
 	}
 
+	if slices.Contains(rest, "") {
+		return fmt.Errorf("empty snapshot ID")
+	}
+
 	cmd.LocateOptions.Filters.IDs = rest
 
 	cmd.RepositorySecret = ctx.GetSecret()
@@ -76,7 +80,20 @@ func (cmd *Rm) Parse(ctx *appcontext.AppContext, args []string) error {
 }
 
 func (cmd *Rm) Execute(ctx *appcontext.AppContext, repo *repository.Repository) (int, error) {
-	matches, err := locate.LocateSnapshotIDs(repo, cmd.LocateOptions)
+	opts := *cmd.LocateOptions
+	if len(opts.Filters.IDs) > 0 {
+		ids := make([]string, 0, len(opts.Filters.IDs))
+		for _, prefix := range opts.Filters.IDs {
+			id, err := locate.LocateSnapshotByPrefix(repo, prefix)
+			if err != nil {
+				return 1, fmt.Errorf("rm: %w", err)
+			}
+			ids = append(ids, hex.EncodeToString(id[:]))
+		}
+		opts.Filters.IDs = ids
+	}
+
+	matches, err := locate.LocateSnapshotIDs(repo, &opts)
 	if err != nil {
 		return 1, err
 	}
@@ -145,26 +162,12 @@ func (cmd *Rm) Execute(ctx *appcontext.AppContext, repo *repository.Repository) 
 		return 0, nil
 	}
 
-	// execution
-	errors := 0
-	wg := sync.WaitGroup{}
 	repo.NoStateToLocalDisk = true
-	for _, matchID := range matches {
-		wg.Add(1)
-		go func(snapshotID objects.MAC) {
-			defer wg.Done()
-			if err := repo.DeleteSnapshot(snapshotID); err != nil {
-				ctx.GetLogger().Error("%s", err)
-				errors++
-				return
-			}
-			ctx.GetLogger().Info("rm: removal of %x completed successfully", snapshotID[:4])
-		}(matchID)
+	if err := repo.DeleteSnapshots(matches); err != nil {
+		return 1, fmt.Errorf("failed to remove %d snapshots: %w", len(matches), err)
 	}
-	wg.Wait()
-
-	if errors != 0 {
-		return 1, fmt.Errorf("failed to remove %d snapshots", errors)
+	for _, snapshotID := range matches {
+		ctx.GetLogger().Info("rm: removal of %x completed successfully", snapshotID[:4])
 	}
 
 	return 0, nil
