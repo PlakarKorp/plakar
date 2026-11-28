@@ -80,4 +80,4 @@ plakar(1),
 plakar-logout(1),
 plakar-service(1)
 
-Plakar - May 5, 2026 - PLAKAR-LOGIN(1)
+Plakar - May 5, 2026

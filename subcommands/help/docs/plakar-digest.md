@@ -54,4 +54,4 @@ Use BLAKE3 as the digest algorithm:
 
 plakar(1)
 
-Plakar - May 5, 2026 - PLAKAR-DIGEST(1)
+Plakar - May 5, 2026

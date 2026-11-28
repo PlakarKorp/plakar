@@ -88,4 +88,4 @@ Display filesystem details for a path within a snapshot:
 plakar(1),
 plakar-backup(1)
 
-Plakar - May 5, 2026 - PLAKAR-DIAG(1)
+Plakar - May 5, 2026
