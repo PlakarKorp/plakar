@@ -39,7 +39,7 @@ require (
 	golang.org/x/term v0.48.0
 	golang.org/x/tools v0.52.0
 	google.golang.org/grpc v1.85.0
-	gopkg.in/ini.v1 v1.67.3
+	gopkg.in/ini.v1 v1.68.0
 )
 
 require (
