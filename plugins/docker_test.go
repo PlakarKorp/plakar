@@ -77,27 +77,35 @@ func TestDockerRunnerOK(t *testing.T) {
 	}
 }
 
-func TestDockerRunnerContextCancelTearsDown(t *testing.T) {
+func TestDockerRunnerCancelLeavesContainerRunning(t *testing.T) {
 	bin, tmpdir, _ := fakeDocker(t, "ok")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	runner := &DockerRunner{Binary: bin, Image: "sha256:feedface", StartTimeout: 5 * time.Second}
-	if _, err := runner.Run(ctx); err != nil {
+	conn, err := runner.Run(ctx)
+	if err != nil {
 		t.Fatalf("run: %v", err)
 	}
 
-	// Cancelling the connector context must reap the container, like the
-	// native runner's exec.CommandContext kill.
+	// The connector context is cancelled on interrupt, before the plugin has
+	// been asked to Close; the container must survive it. Give a teardown
+	// that would run asynchronously time to happen.
 	cancel()
-	deadline := time.Now().Add(5 * time.Second)
-	for {
-		if ents, err := os.ReadDir(tmpdir); err == nil && len(ents) == 0 {
-			break
-		}
-		if time.Now().After(deadline) {
-			t.Fatal("socket dir still present after context cancellation")
-		}
-		time.Sleep(20 * time.Millisecond)
+	time.Sleep(200 * time.Millisecond)
+
+	if _, err := conn.Write([]byte("ping")); err != nil {
+		t.Fatalf("write after cancel: %v", err)
+	}
+	buf := make([]byte, 4)
+	if _, err := io.ReadFull(conn, buf); err != nil {
+		t.Fatalf("read after cancel: %v", err)
+	}
+
+	if err := conn.Close(); err != nil {
+		t.Fatalf("close: %v", err)
+	}
+	if ents, err := os.ReadDir(tmpdir); err != nil || len(ents) != 0 {
+		t.Fatalf("socket dir not cleaned up on close: %v %v", ents, err)
 	}
 }
 
