@@ -29,6 +29,8 @@ export function ContentType(value: string) {
     return { resolved: "audio", raw: value } as const;
   } else if (TEXT_APPLICATION_TYPES.includes(mime)) {
     return { resolved: "text", raw: value } as const;
+  } else if (mime === "message/rfc822") {
+    return { resolved: "email", raw: value } as const;
   }
   return { resolved: "unknown", raw: value } as const;
 }

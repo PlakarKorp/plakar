@@ -31,7 +31,7 @@ export function isDocumentContentType(contentType: string) {
   return DOCUMENT_TYPES.includes(ContentType(contentType).resolved);
 }
 
-export type ViewerKind = "photo" | "video" | "audio" | "document";
+export type ViewerKind = "photo" | "video" | "audio" | "document" | "email";
 
 export const BROWSE_VIEWS: BrowseView[] = [
   {
@@ -77,7 +77,7 @@ export const BROWSE_VIEWS: BrowseView[] = [
 export function viewerKind(contentType: string): ViewerKind | null {
   return (
     BROWSE_VIEWS.find((view) => view.kind && view.matches(contentType))?.kind ??
-    null
+    (ContentType(contentType).resolved === "email" ? "email" : null)
   );
 }
 

@@ -24,6 +24,7 @@ import {
   useSpinner,
 } from "@plakar-ui/common/hooks";
 
+import { EmailViewer } from "./email-viewer";
 import { MountFileButton } from "./mount-file-button";
 import { useEntryURL } from "./use-entry-url";
 
@@ -168,6 +169,18 @@ export function Viewer({
             contentType={contentType}
             entropy={entropy}
             contentMAC={contentMAC}
+          />
+        </DocumentSheet>
+      );
+    case "email":
+      return (
+        <DocumentSheet variant={variant}>
+          <EmailViewer
+            variant={variant}
+            name={name}
+            url={getUrl()}
+            onError={onError}
+            onExpand={onExpand}
           />
         </DocumentSheet>
       );
